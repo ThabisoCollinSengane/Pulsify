@@ -319,14 +319,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 @keyframes glow-ring{0%,100%{transform:scale(1);opacity:.75}50%{transform:scale(1.35);opacity:0}}
 /* Map slide panel */
 #map-side-panel{
-  position:absolute;bottom:0;left:0;right:0;z-index:100;
-  background:rgba(9,13,26,.97);backdrop-filter:blur(20px);
-  border-radius:20px 20px 0 0;border:1px solid rgba(255,255,255,.12);border-bottom:none;
-  padding:18px 16px 28px;
-  transform:translateY(100%);transition:transform .32s cubic-bezier(.4,0,.2,1);
-  max-width:520px;margin:0 auto;
+  position:fixed;bottom:var(--bh);left:0;right:0;z-index:500;
+  background:rgba(9,13,26,.98);backdrop-filter:blur(24px);
+  border-radius:20px 20px 0 0;border:1px solid rgba(255,255,255,.14);border-bottom:none;
+  padding:18px 16px 24px;
+  transform:translateY(110%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+  max-width:520px;margin:0 auto;pointer-events:none;
 }
-#map-side-panel.open{transform:translateY(0)}
+#map-side-panel.open{transform:translateY(0);pointer-events:auto}
 /* Businesses full overlay */
 #biz-page-overlay{position:fixed;inset:0;background:rgba(5,8,15,.98);z-index:900;display:none;flex-direction:column;overflow:hidden}
 #biz-page-overlay.open{display:flex}
@@ -455,8 +455,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   </div>
   <div class="sl"><span>📍 Places near you</span><a onclick="showTab('map');initMap();return false">View map →</a></div>
   <div class="hs" id="disc-biz-row"></div>
-  <div class="sl"><span>✨ Recommended for You</span><a onclick="return false" style="opacity:0;pointer-events:none"></a></div>
-  <div style="padding:0 14px 4px"><div class="rec-scroll" id="disc-recommendations"></div></div>
+  </div>
     <div class="sl" id="rec-sl"><span>✨ Recommended for You</span></div>
   <div style="padding:0 14px 4px"><div id="disc-recommendations"></div></div>
   <div class="sl"><span>🎉 Events</span></div>
@@ -1465,6 +1464,408 @@ window.addEventListener('DOMContentLoaded', () => {
       if (user) { currentUser = user; renderProfile(); }
     });
   }
+});
+
+
+/* ═══════════════════════════════════════════════════════
+   PULSIFY v3 FINAL — Clean overrides loaded last
+   ═══════════════════════════════════════════════════════ */
+
+/* ── MAP PANEL ──────────────────────────────────────────── */
+function showMapPanel(item, type) {
+  const panel = document.getElementById('map-side-panel');
+  if (!panel) { console.warn('map-side-panel not found'); return; }
+  const ico = type === 'event' ? ge(item.genre) : ce(item.category);
+  const img = item.image_url || item.cover_image_url || '';
+  const isFree = item.is_free;
+  const price  = isFree ? '<span style="color:var(--li)">FREE</span>'
+    : (item.price_min ? '<span style="color:var(--or)">R' + item.price_min + '</span>'
+    : (item.price_range ? '<span style="color:var(--mu)">' + item.price_range + '</span>' : ''));
+  const dateStr = (typeof fdate === 'function' && item.date_local) ? fdate(item.date_local) : '';
+  const timeStr = (typeof ft === 'function' && item.time_local) ? ' · ' + ft(item.time_local) : '';
+  const metaLine = type === 'event'
+    ? (dateStr + timeStr + (item.venue_name ? ' · ' + item.venue_name : ''))
+    : ((item.rating ? '⭐ ' + item.rating + '  (' + (item.review_count || 0).toLocaleString() + ' reviews)' : '')
+       + (item.suburb || item.city ? '  ·  ' + (item.suburb || item.city) : ''));
+
+  panel.innerHTML = `
+    <button onclick="closeMapPanel()" style="position:absolute;top:12px;right:14px;z-index:2;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)">✕</button>
+    <div style="display:flex;gap:13px;align-items:flex-start">
+      <div style="width:64px;height:64px;border-radius:12px;overflow:hidden;flex-shrink:0;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.8rem;border:1.5px solid rgba(255,255,255,.12)">
+        ${img ? '<img src="' + img + '" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentElement.textContent=\'' + ico + '\'">' : ico}
+      </div>
+      <div style="flex:1;min-width:0;padding-top:2px">
+        <div style="font-family:\'Syne\',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--or);margin-bottom:3px">${type === 'event' ? (item.genre || 'Event') : item.category}</div>
+        <div style="font-family:\'Syne\',sans-serif;font-size:.9rem;font-weight:800;line-height:1.25;margin-bottom:4px;word-break:break-word">${x(item.name || '')}</div>
+        <div style="font-size:.72rem;color:var(--mu2);line-height:1.4">${metaLine}</div>
+      </div>
+    </div>
+    ${price ? '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"><span style="font-size:.74rem;color:var(--mu)">Price</span><span style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:.9rem">' + price + '</span></div>' : ''}
+    <button onclick="${type === 'event' ? "openEv('" + item.id + "')" : "openBiz('" + item.id + "')"};closeMapPanel()" style="margin-top:12px;width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:13px;border-radius:12px;font-family:\'Syne\',sans-serif;font-size:.83rem;font-weight:700;cursor:pointer;letter-spacing:.03em">
+      ${type === 'event' ? '🎟 View Event & Buy Tickets →' : '📍 Visit Full Profile →'}
+    </button>`;
+
+  panel.classList.add('open');
+}
+
+function closeMapPanel() {
+  document.getElementById('map-side-panel')?.classList.remove('open');
+}
+
+/* ── FINAL placeMapMarkers — uses panel, not direct nav ── */
+function placeMapMarkers() {
+  if (!mapObj) return;
+  mapMarkers.forEach(m => { try { m.remove(); } catch(e) {} });
+  mapMarkers = [];
+
+  const catFilter   = (document.getElementById('map-cat')?.value   || 'all').toLowerCase();
+  const genreFilter = (document.getElementById('map-genre')?.value  || 'all').toLowerCase();
+
+  const STYLES = {
+    gqom:       { bg:'#FF2D78', sh:'255,45,120',  ico:'🔊' },
+    nightlife:  { bg:'#FF2D78', sh:'255,45,120',  ico:'🌙' },
+    amapiano:   { bg:'#B026FF', sh:'176,38,255',  ico:'🎶' },
+    sport:      { bg:'#00D4AA', sh:'0,212,170',   ico:'⚽' },
+    soccer:     { bg:'#00D4AA', sh:'0,212,170',   ico:'⚽' },
+    cricket:    { bg:'#00D4AA', sh:'0,212,170',   ico:'⚽' },
+    rugby:      { bg:'#00D4AA', sh:'0,212,170',   ico:'⚽' },
+    march:      { bg:'#C6FF4A', sh:'198,255,74',  ico:'✊', dark:true },
+    jazz:       { bg:'#FF9500', sh:'255,149,0',   ico:'🎷' },
+    shisanyama: { bg:'#FF5C00', sh:'255,92,0',    ico:'🥩' },
+    food:       { bg:'#FF5C00', sh:'255,92,0',    ico:'🍽️' },
+    hip:        { bg:'#FF0080', sh:'255,0,128',   ico:'🎤' },
+    comedy:     { bg:'#FFB800', sh:'255,184,0',   ico:'😂', dark:true },
+    festival:   { bg:'#00B4D8', sh:'0,180,216',   ico:'🎉' },
+    student:    { bg:'#0077B6', sh:'0,119,182',   ico:'🎓' },
+    experience: { bg:'#023E8A', sh:'2,62,138',    ico:'🛥️' },
+    market:     { bg:'#00A86B', sh:'0,168,107',   ico:'🛍️' },
+    afrobeats:  { bg:'#C800FF', sh:'200,0,255',   ico:'🥁' },
+  };
+  const BIZ_STYLES = {
+    shisanyama: { bg:'#DC3200', sh:'220,50,0',  ico:'🥩' },
+    restaurant: { bg:'#FF8C00', sh:'255,140,0', ico:'🍽️' },
+    bar:        { bg:'#8C00DC', sh:'140,0,220', ico:'🍸' },
+    club:       { bg:'#C800FF', sh:'200,0,255', ico:'💃' },
+    hotel:      { bg:'#0064DC', sh:'0,100,220', ico:'🏨' },
+    bnb:        { bg:'#00A064', sh:'0,160,100', ico:'🏡' },
+    venue:      { bg:'#00B4D8', sh:'0,180,216', ico:'🎪' },
+  };
+
+  function getStyle(item, type) {
+    if (type === 'event') {
+      const g = (item.genre || '').toLowerCase();
+      const key = Object.keys(STYLES).find(k => g.includes(k));
+      return key ? STYLES[key] : { bg:'#FF5C00', sh:'255,92,0', ico:'🎶' };
+    }
+    return BIZ_STYLES[item.category] || { bg:'#666', sh:'100,100,100', ico:'📍' };
+  }
+
+  let evItems = eventsForMap.filter(e => e.venue_lat && e.venue_lon);
+  let bzItems = bizForMap.filter(b => b.lat && b.lon);
+
+  if (catFilter === 'event')  bzItems = [];
+  else if (catFilter !== 'all') {
+    evItems = [];
+    bzItems = bzItems.filter(b => b.category === catFilter);
+  }
+  if (genreFilter !== 'all') evItems = evItems.filter(e => (e.genre||'').toLowerCase().includes(genreFilter));
+
+  const all = [
+    ...evItems.map(e => ({ item: e, type: 'event' })),
+    ...bzItems.map(b => ({ item: b, type: 'biz'   })),
+  ];
+
+  all.forEach(({ item, type }) => {
+    const lat = parseFloat(type === 'event' ? item.venue_lat : item.lat);
+    const lon = parseFloat(type === 'event' ? item.venue_lon : item.lon);
+    if (!lat || !lon || isNaN(lat) || isNaN(lon)) return;
+
+    const s   = getStyle(item, type);
+    const isEv = type === 'event';
+
+    const el = document.createElement('div');
+    el.style.cssText = `
+      width:40px;height:40px;border-radius:50%;
+      background:${s.bg};color:${s.dark?'#000':'#fff'};
+      display:flex;align-items:center;justify-content:center;
+      font-size:1.1rem;border:3px solid rgba(255,255,255,.85);
+      cursor:pointer;position:relative;
+      box-shadow:0 0 ${isEv?24:14}px rgba(${s.sh},.${isEv?8:55}),0 3px 8px rgba(0,0,0,.7);
+      transition:transform .18s;
+    `.replace(/\n\s+/g,' ');
+    el.textContent = s.ico;
+    el.title = item.name;
+
+    if (isEv) {
+      const ring = document.createElement('div');
+      ring.style.cssText = `position:absolute;inset:-7px;border-radius:50%;border:2.5px solid rgba(${s.sh},.65);animation:glow-ring 2s ease-in-out infinite;pointer-events:none;`;
+      el.appendChild(ring);
+    }
+
+    // ONLY show panel — do NOT navigate directly
+    el.addEventListener('click', function(e) {
+      e.stopPropagation();
+      showMapPanel(item, type);
+    });
+
+    const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+      .setLngLat([lon, lat])
+      .addTo(mapObj);
+    mapMarkers.push(marker);
+  });
+}
+
+function addHeatmap() {
+  if (!mapObj) return;
+  const features = eventsForMap
+    .filter(e => e.venue_lat && e.venue_lon)
+    .map(e => ({
+      type: 'Feature',
+      geometry: { type:'Point', coordinates:[parseFloat(e.venue_lon), parseFloat(e.venue_lat)] },
+      properties: { weight: (e.hype_score || 50) / 100 }
+    }));
+  if (!features.length) return;
+  try { mapObj.removeLayer('heat'); mapObj.removeSource('heat'); } catch(e) {}
+  mapObj.addSource('heat', { type:'geojson', data:{ type:'FeatureCollection', features }});
+  mapObj.addLayer({ id:'heat', type:'heatmap', source:'heat', paint:{
+    'heatmap-weight':    ['get','weight'],
+    'heatmap-intensity':  1.2,
+    'heatmap-color':     ['interpolate',['linear'],['heatmap-density'],
+      0,'rgba(0,0,0,0)',.15,'rgba(255,45,120,.3)',.4,'rgba(176,38,255,.5)',.7,'rgba(255,92,0,.7)',1,'rgba(198,255,74,.95)'],
+    'heatmap-radius':    50,
+    'heatmap-opacity':   .55
+  }});
+}
+
+function applyMapFilters() { if (mapInited && mapObj) placeMapMarkers(); }
+
+/* ── FIXED SEARCH ──────────────────────────────────────── */
+function handleSearch(val) {
+  clearTimeout(searchTimer);
+  const lbl  = document.getElementById('feed-lbl');
+  const feed = document.getElementById('events-feed');
+  const pg   = document.getElementById('feed-pg');
+  if (!val || !val.trim()) { loadFeed(true); return; }
+  searchTimer = setTimeout(async () => {
+    if (lbl) lbl.textContent = '🔍 Searching…';
+    if (pg)  pg.style.display = 'none';
+    if (feed) feed.innerHTML = [1,2,3].map(() =>
+      '<div class="skel-card"><div style="display:flex;gap:10px;margin-bottom:10px"><div class="skel" style="width:38px;height:38px;border-radius:50%;flex-shrink:0"></div><div style="flex:1"><div class="skel" style="height:13px;width:60%;margin-bottom:6px"></div><div class="skel" style="height:11px;width:40%"></div></div></div><div class="skel" style="height:180px;border-radius:8px"></div></div>'
+    ).join('');
+    try {
+      const res  = await fetch(API + '/events/search?q=' + encodeURIComponent(val.trim()) + '&limit=20');
+      const data = await res.json();
+      const results = data.results || data.events || [];
+      if (lbl) lbl.textContent = results.length ? ('🔍 ' + results.length + ' results for "' + val.trim() + '"') : '🔍 No results found';
+      if (feed) {
+        feed.innerHTML = results.length
+          ? results.map((ev, i) => buildCard(ev, i)).join('')
+          : `<div class="no-results"><div class="no-results-ico">🔍</div><div class="no-results-title">No results for "${x(val.trim())}"</div><div class="no-results-sub">Try a different name, city or genre.</div><button class="no-results-btn" onclick="document.getElementById('search-inp').value='';handleSearch('')">Clear Search</button></div>`;
+        triggerRev();
+      }
+    } catch(e) { loadFeed(true); }
+  }, 350);
+}
+
+/* ── SINGLE CLEAN RECOMMENDATIONS ─────────────────────── */
+async function loadRecommendations() {
+  const el = document.getElementById('disc-recommendations');
+  if (!el || el.innerHTML.trim()) return; // don't double-load
+  try {
+    const res  = await fetch(API + '/events?limit=8&page=1');
+    const data = await res.json();
+    const top  = (data.events || []).filter(e => (e.hype_score || 0) >= 75).slice(0, 5);
+    if (!top.length) return;
+    el.innerHTML = top.map(ev => `
+      <div onclick="openEv('${x(ev.id)}')" style="flex-shrink:0;width:180px;background:var(--surf);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;-webkit-tap-highlight-color:transparent">
+        <div style="height:74px;position:relative;background:${gg(ev.genre)};display:flex;align-items:center;justify-content:center;font-size:2rem;overflow:hidden">
+          ${ev.image_url ? `<img src="${x(ev.image_url)}" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>` : ge(ev.genre)}
+          <span style="position:absolute;top:5px;left:5px;background:linear-gradient(135deg,#B026FF,#FF5C00);font-family:'Syne',sans-serif;font-size:.52rem;font-weight:700;padding:2px 8px;border-radius:50px;color:#fff;z-index:1">🔥 ${ev.hype_score || 0}%</span>
+        </div>
+        <div style="padding:8px 10px 10px">
+          <div style="font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px">${x(ev.name)}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:.65rem;color:var(--mu)">${x(ev.venue_city)}</span>
+            <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:.72rem;color:${ev.is_free ? 'var(--li)' : 'var(--or)'}">${ev.is_free ? 'FREE' : ev.price_min ? 'R' + ev.price_min : 'TBA'}</span>
+          </div>
+        </div>
+      </div>`).join('');
+  } catch(e) { console.warn('Recommendations:', e.message); }
+}
+
+/* ── BUSINESSES PAGE ───────────────────────────────────── */
+let _bizPageData = [], _bizPageCat = 'all';
+const BIZ_CAT_MAP = {
+  all:[], food:['restaurant','shisanyama'], drinks:['bar','club'],
+  shisanyama:['shisanyama'], outdoor:['venue','bar','shisanyama'],
+  hotel:['hotel'], bnb:['bnb'], club:['club']
+};
+
+async function openBizPage() {
+  const ov = document.getElementById('biz-page-overlay');
+  if (!ov) return;
+  ov.classList.add('open');
+  _bizPageCat = 'all';
+  document.querySelectorAll('.biz-cat-chip').forEach(c =>
+    c.classList.toggle('active', c.textContent.trim().startsWith('✦')));
+  const grid = document.getElementById('biz-page-grid');
+  if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--mu)">Loading…</div>';
+  try {
+    const res  = await fetch(API + '/businesses?show_all=true&limit=50');
+    const data = await res.json();
+    _bizPageData = data.businesses || [];
+    renderBizPage();
+  } catch(e) {
+    if (grid) grid.innerHTML = '<div style="grid-column:1/-1;padding:30px;text-align:center;color:var(--mu)">Could not load businesses.</div>';
+  }
+}
+
+function closeBizPage() { document.getElementById('biz-page-overlay')?.classList.remove('open'); }
+
+function setBizCat(btn, cat) {
+  _bizPageCat = cat;
+  document.querySelectorAll('.biz-cat-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  renderBizPage();
+}
+
+function renderBizPage() {
+  const grid = document.getElementById('biz-page-grid');
+  if (!grid) return;
+  const cats = BIZ_CAT_MAP[_bizPageCat] || [];
+  const list = cats.length ? _bizPageData.filter(b => cats.includes(b.category)) : _bizPageData;
+  if (!list.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:40px 20px;text-align:center"><div style="font-size:2.5rem;margin-bottom:12px">📭</div><div style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:.9rem;margin-bottom:8px">No places in this category yet</div><div style="font-size:.8rem;color:var(--mu)">More being added soon.</div></div>';
+    return;
+  }
+  grid.innerHTML = list.map(b => `
+    <div onclick="closeBizPage();openBiz('${x(b.id)}')" style="background:var(--surf);border:1px solid var(--border);border-radius:16px;overflow:hidden;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .18s" ontouchstart="this.style.transform='scale(.97)'" ontouchend="this.style.transform=''">
+      <div style="height:88px;position:relative;overflow:hidden;background:${cg(b.category)};display:flex;align-items:center;justify-content:center;font-size:2rem">
+        ${b.cover_image_url ? `<img src="${x(b.cover_image_url)}" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>` : ce(b.category)}
+        <span style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.72);backdrop-filter:blur(5px);font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:50px;color:var(--or)">${x(b.category)}</span>
+        ${b.is_frontline ? `<span style="position:absolute;bottom:6px;right:6px;background:linear-gradient(135deg,#B026FF,#FF5C00);font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;padding:2px 8px;border-radius:50px;color:#fff">⭐ #${b.frontline_rank}</span>` : ''}
+      </div>
+      <div style="padding:9px 11px 12px">
+        <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;margin-bottom:2px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(b.name)}</div>
+        <div style="font-size:.65rem;color:var(--mu);margin-bottom:6px">📍 ${x(b.suburb || b.city || '')}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:.66rem;color:var(--li);font-family:'Syne',sans-serif;font-weight:700">${b.rating ? '★ ' + b.rating : 'New'}</span>
+          <span style="font-size:.62rem;color:var(--mu)">${b.price_range || ''}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+/* ── DETAIL PAGE MINI MAPS ─────────────────────────────── */
+const _dmaps2 = {};
+function initDetailMap(containerId, lat, lon, ico) {
+  if (!window.mapboxgl) return;
+  if (_dmaps2[containerId]) { try { _dmaps2[containerId].remove(); } catch(e) {} }
+  const c = document.getElementById(containerId);
+  if (!c) return;
+  mapboxgl.accessToken = MAPBOX_TOKEN;
+  const m = new mapboxgl.Map({ container: containerId, style:'mapbox://styles/mapbox/dark-v11', center:[lon, lat], zoom:14, interactive:false });
+  m.on('load', () => {
+    const el = document.createElement('div');
+    el.style.cssText = 'width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;border:2.5px solid rgba(255,255,255,.85);cursor:default;background:#FF5C00;color:#fff;box-shadow:0 0 16px rgba(255,92,0,.8)';
+    el.textContent = ico;
+    new mapboxgl.Marker({ element:el, anchor:'center' }).setLngLat([lon, lat]).addTo(m);
+  });
+  _dmaps2[containerId] = m;
+}
+
+function injectDetailMap(id, lat, lon, ico, parentEl) {
+  if (!parentEl || document.getElementById(id)) return;
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'margin-top:18px;padding-bottom:4px';
+  wrap.innerHTML = `<div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">📍 Location</div><div style="height:200px;border-radius:14px;overflow:hidden;border:1px solid var(--border)" id="${id}"></div>`;
+  parentEl.appendChild(wrap);
+  setTimeout(() => initDetailMap(id, lat, lon, ico), 200);
+}
+
+/* ── PATCH openEv ──────────────────────────────────────── */
+const __oe = typeof openEv === 'function' ? openEv : null;
+if (__oe) {
+  openEv = async function(evId) {
+    await __oe(evId);
+    setTimeout(async () => {
+      try {
+        const r = await fetch(API + '/events/' + evId);
+        const { event: ev } = await r.json();
+        if (!ev || !ev.venue_lat || !ev.venue_lon) return;
+        const db = document.querySelector('#ev-detail .db');
+        if (db) injectDetailMap('dm-ev-' + evId.replace(/\W/g,''), parseFloat(ev.venue_lat), parseFloat(ev.venue_lon), ge(ev.genre), db);
+      } catch(e) {}
+    }, 700);
+  };
+}
+
+/* ── PATCH openBiz ─────────────────────────────────────── */
+const __ob = typeof openBiz === 'function' ? openBiz : null;
+if (__ob) {
+  openBiz = async function(bizId) {
+    await __ob(bizId);
+    setTimeout(async () => {
+      try {
+        const r = await fetch(API + '/businesses/' + bizId);
+        const { business: b } = await r.json();
+        if (!b) return;
+        if (b.lat && b.lon) {
+          const infoPan = document.getElementById('bp-info');
+          if (infoPan) injectDetailMap('dm-biz-' + bizId.replace(/\W/g,''), parseFloat(b.lat), parseFloat(b.lon), ce(b.category), infoPan);
+        }
+        const tabs = document.querySelector('.bztb');
+        if (tabs && !document.getElementById('bp-menu')) {
+          const mt = document.createElement('div');
+          mt.className = 'bzt'; mt.textContent = '🍽️ Menu';
+          mt.onclick = function() { switchBT(this, 'bp-menu'); };
+          tabs.appendChild(mt);
+          const gallery = document.getElementById('bp-gallery');
+          if (gallery) {
+            const mp = document.createElement('div');
+            mp.className = 'bzp'; mp.id = 'bp-menu';
+            mp.innerHTML = '<div style="padding:32px 20px;text-align:center"><div style="font-size:2.5rem;margin-bottom:12px">🍽️</div><div style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:.9rem;margin-bottom:8px">Menu Coming Soon</div><div style="font-size:.8rem;color:var(--mu);line-height:1.5;margin-bottom:16px">Claim your profile to upload your menu and specials.</div><button onclick="showToast(\'Email: business@pulsify.co.za\')" style="background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:10px 24px;border-radius:50px;font-family:\'Syne\',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">Claim Profile →</button></div>';
+            gallery.parentNode.insertBefore(mp, gallery.nextSibling);
+          }
+        }
+      } catch(e) {}
+    }, 700);
+  };
+}
+
+/* ── PATCH loadDiscover ────────────────────────────────── */
+const __ld = typeof loadDiscover === 'function' ? loadDiscover : null;
+if (__ld) {
+  loadDiscover = async function(cat) {
+    await __ld(cat);
+    if (!cat || cat === 'all') setTimeout(loadRecommendations, 100);
+  };
+}
+
+/* ── TICKET SELLER on feed cards ──────────────────────── */
+const __bc = typeof buildCard === 'function' ? buildCard : null;
+if (__bc) {
+  buildCard = function(ev, idx) {
+    let card = __bc(ev, idx);
+    const label = ev.source === 'eventbrite' ? 'Eventbrite'
+      : ev.source === 'ticketmaster' ? 'Ticketmaster' : '🎟 Pulsify';
+    const clr = (!ev.source || ev.source === 'manual') ? 'rgba(198,255,74,.8)' : 'rgba(255,255,255,.4)';
+    const badge = `<div style="padding:0 14px 10px;display:flex;justify-content:flex-end"><span style="font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;color:${clr};letter-spacing:.04em">${label}</span></div>`;
+    // Insert before last </div></div> of the card
+    const lastClose = card.lastIndexOf('</div></div>');
+    if (lastClose !== -1) card = card.slice(0, lastClose) + badge + card.slice(lastClose);
+    return card;
+  };
+}
+
+/* ── WIRE DOM ──────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  // Wire "See all →" to businesses page
+  document.querySelectorAll('.sl a').forEach(a => {
+    if ((a.textContent || '').trim().toLowerCase().includes('see all')) {
+      a.onclick = e => { e.preventDefault(); openBizPage(); };
+    }
+  });
 });
 
 </script>
