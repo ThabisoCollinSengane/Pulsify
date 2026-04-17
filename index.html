@@ -28,7 +28,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .nd{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--or);border:1.5px solid var(--bg)}
 .sb{background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:8px 18px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer}
 .tkr{position:fixed;top:var(--th);left:0;right:0;height:var(--tk);z-index:700;background:linear-gradient(90deg,#B026FF,#FF5C00,#FF2D78);overflow:hidden;display:flex;align-items:center}
-.tkt{display:flex;white-space:nowrap;animation:sc 28s linear infinite}
+.tkt{display:flex;white-space:nowrap;animation:sc 70s linear infinite}
 .tkt:hover{animation-play-state:paused}
 .ti{display:inline-flex;align-items:center;gap:8px;padding:0 20px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.9)}
 .td{width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,.5)}
@@ -247,6 +247,73 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .no-results-btn{background:var(--or);color:#fff;border:none;padding:10px 24px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer}
 .api-error{margin:12px 14px;background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);border-radius:12px;padding:10px 14px;font-size:.78rem;color:var(--pk);display:flex;align-items:center;gap:8px}
 
+
+/* ── PULSIFY v2 CSS ── */
+/* Skeleton */
+.skel{background:linear-gradient(90deg,var(--surf) 25%,rgba(255,255,255,.05) 50%,var(--surf) 75%);background-size:200% 100%;animation:shim 1.6s infinite;border-radius:8px}
+.skel-card{margin:0 0 2px;border-bottom:1px solid var(--border);background:var(--surf);padding:14px}
+@keyframes shim{0%{background-position:200% 0}100%{background-position:-200% 0}}
+/* No results */
+.no-results{padding:48px 24px;text-align:center}
+.no-results-ico{font-size:3rem;margin-bottom:12px}
+.no-results-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:8px}
+.no-results-sub{font-size:.82rem;color:var(--mu);line-height:1.5;margin-bottom:20px}
+.no-results-btn{background:var(--or);color:#fff;border:none;padding:10px 24px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer}
+/* Glowing map markers */
+.mb-pin{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.05rem;border:2.5px solid rgba(255,255,255,.85);cursor:pointer;transition:transform .2s;position:relative;box-shadow:0 2px 10px rgba(0,0,0,.5)}
+.mb-pin:active{transform:scale(1.2)}
+.mb-pin.has-event::after{content:'';position:absolute;inset:-5px;border-radius:50%;border:2.5px solid rgba(255,255,255,.5);animation:glow-ring 2s ease-in-out infinite;pointer-events:none}
+@keyframes glow-ring{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.3);opacity:0}}
+.mb-pin.ev-gqom{background:rgba(255,45,120,.95);color:#fff;box-shadow:0 0 22px rgba(255,45,120,.8)}
+.mb-pin.ev-amapiano{background:rgba(176,38,255,.95);color:#fff;box-shadow:0 0 22px rgba(176,38,255,.8)}
+.mb-pin.ev-sport{background:rgba(0,212,170,.95);color:#fff;box-shadow:0 0 22px rgba(0,212,170,.8)}
+.mb-pin.ev-march{background:rgba(198,255,74,.9);color:#000;box-shadow:0 0 22px rgba(198,255,74,.7)}
+.mb-pin.ev-music{background:rgba(255,92,0,.95);color:#fff;box-shadow:0 0 22px rgba(255,92,0,.8)}
+.mb-pin.ev-nightlife{background:rgba(123,47,255,.95);color:#fff;box-shadow:0 0 22px rgba(123,47,255,.8)}
+.mb-pin.biz-shisa{background:rgba(220,50,0,.92);color:#fff;box-shadow:0 0 16px rgba(220,50,0,.6)}
+.mb-pin.biz-hotel{background:rgba(0,100,220,.92);color:#fff;box-shadow:0 0 16px rgba(0,100,220,.6)}
+.mb-pin.biz-bar{background:rgba(140,0,220,.92);color:#fff;box-shadow:0 0 16px rgba(140,0,220,.6)}
+.mb-pin.biz-bnb{background:rgba(0,160,100,.92);color:#fff;box-shadow:0 0 16px rgba(0,160,100,.6)}
+.mb-pin.biz-club{background:rgba(200,0,255,.92);color:#fff;box-shadow:0 0 16px rgba(200,0,255,.6)}
+.mb-pin.biz-rest{background:rgba(255,140,0,.92);color:#fff;box-shadow:0 0 16px rgba(255,140,0,.6)}
+/* Map popup mini-card */
+.mapboxgl-popup-content{background:var(--surf)!important;color:var(--tx)!important;border:1px solid var(--border2)!important;border-radius:16px!important;padding:0!important;overflow:hidden!important;font-family:'Syne',sans-serif!important;box-shadow:0 8px 32px rgba(0,0,0,.85)!important;min-width:220px!important}
+.mapboxgl-popup-tip{border-top-color:var(--surf)!important;border-bottom-color:var(--surf)!important}
+.mapboxgl-popup-close-button{color:rgba(255,255,255,.7)!important;font-size:1.2rem!important;top:6px!important;right:8px!important;background:rgba(0,0,0,.5)!important;border-radius:50%!important;width:24px!important;height:24px!important;line-height:24px!important;text-align:center!important;z-index:2!important}
+.mpc-img{width:100%;height:90px;object-fit:cover;display:block}
+.mpc-body{padding:10px 12px}
+.mpc-cat{font-size:.54rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:3px;color:var(--or)}
+.mpc-name{font-size:.9rem;font-weight:800;margin-bottom:4px;line-height:1.2;color:var(--tx)}
+.mpc-meta{font-size:.68rem;color:var(--mu2);margin-bottom:10px;line-height:1.4}
+.mpc-cta{display:block;width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff!important;padding:9px 14px;text-align:center;font-size:.72rem;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;border:none;letter-spacing:.04em;-webkit-tap-highlight-color:transparent}
+/* Detail page map */
+.detail-map-wrap{height:200px;border-radius:14px;overflow:hidden;border:1px solid var(--border);margin-bottom:20px}
+/* Recommendations */
+.rec-scroll{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+.rec-scroll::-webkit-scrollbar{display:none}
+.rec-card{flex-shrink:0;width:190px;background:var(--surf);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.rec-thumb{height:78px;position:relative;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.8rem;overflow:hidden}
+.rec-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.rec-pick{position:absolute;top:5px;left:5px;background:linear-gradient(135deg,#B026FF,#FF5C00);font-family:'Syne',sans-serif;font-size:.52rem;font-weight:700;padding:2px 8px;border-radius:50px;color:#fff}
+.rec-body{padding:8px 10px 10px}
+.rec-name{font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.rec-foot{display:flex;justify-content:space-between;align-items:center}
+.rec-city{font-size:.65rem;color:var(--mu)}
+.rec-price{font-family:'Syne',sans-serif;font-weight:700;font-size:.72rem}
+/* Biz all modal */
+#biz-all-overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(14px);z-index:1100;display:none;align-items:flex-end;justify-content:center}
+#biz-all-overlay.open{display:flex}
+.biz-all-sheet{width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;max-height:88vh;display:flex;flex-direction:column;animation:su .25s ease}
+.biz-all-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.biz-all-title{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.biz-all-close{width:30px;height:30px;border-radius:50%;background:var(--surf);border:none;color:var(--tx);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.biz-all-chips{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:10px 14px 6px;flex-shrink:0}
+.biz-all-chips::-webkit-scrollbar{display:none}
+.biz-all-grid{flex:1;overflow-y:auto;padding:8px 14px 20px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+/* biz tab menu */
+.biz-menu-empty{padding:28px 20px;text-align:center}
+.biz-menu-empty div:first-child{font-size:2.5rem;margin-bottom:10px}
+
 </style>
 </head>
 <body>
@@ -340,7 +407,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   </div>
   <div class="sl"><span>📍 Places near you</span><a onclick="showTab('map');initMap();return false">View map →</a></div>
   <div class="hs" id="disc-biz-row"></div>
-  <div class="sl"><span>🎉 Events</span></div>
+  <div class="sl"><span>✨ Recommended for You</span><a onclick="return false" style="opacity:0;pointer-events:none"></a></div>
+  <div style="padding:0 14px 4px"><div class="rec-scroll" id="disc-recommendations"></div></div>
+    <div class="sl"><span>🎉 Events</span></div>
   <div class="dg2" id="disc-events"></div>
 </div>
 
@@ -424,6 +493,25 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 </div>
 
 <!-- ══ BOTTOM NAV ══ -->
+<!-- ══ BUSINESSES ALL MODAL ══ -->
+<div id="biz-all-overlay" onclick="if(event.target===this)closeBizModal()">
+  <div class="biz-all-sheet">
+    <div class="biz-all-head">
+      <span class="biz-all-title">🏆 All Top Spots</span>
+      <button class="biz-all-close" onclick="closeBizModal()">✕</button>
+    </div>
+    <div class="biz-all-chips">
+      <button class="chip active" onclick="filterBizModal(this,'all')">✦ All</button>
+      <button class="chip" onclick="filterBizModal(this,'shisanyama')">🥩 Shisanyama</button>
+      <button class="chip" onclick="filterBizModal(this,'bar')">🍺 Bar</button>
+      <button class="chip" onclick="filterBizModal(this,'club')">💃 Club</button>
+      <button class="chip" onclick="filterBizModal(this,'restaurant')">🍽️ Restaurant</button>
+      <button class="chip" onclick="filterBizModal(this,'hotel')">🏨 Hotel</button>
+      <button class="chip" onclick="filterBizModal(this,'bnb')">🏡 BnB</button>
+    </div>
+    <div class="biz-all-grid" id="biz-all-grid"></div>
+  </div>
+</div>
 <nav class="bn">
   <button class="bb active" data-tab="home" onclick="showTab('home')"><svg viewBox="0 0 24 24"><path d="M12 3C12 3 4 9.5 4 15a8 8 0 0016 0C20 9.5 12 3 12 3Z"/><path d="M12 10v5M9.5 13h5"/></svg><span class="bl">Home</span></button>
   <button class="bb" data-tab="discover" onclick="showTab('discover')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"/></svg><span class="bl">Discover</span></button>
