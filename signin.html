@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#05080F"/>
+<title>Sign In — Pulsify</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="storage.js"></script>
+<style>
+/* ── Exact same base as index.html ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--te:#00D4AA;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0}
+html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+/* Exact same classes from index.html */
+.sht{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:.03em;margin-bottom:4px}
+.shs{font-size:.8rem;color:var(--mu);margin-bottom:18px}
+.gb{width:100%;background:var(--surf);color:var(--tx);border:1px solid var(--border);padding:13px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.86rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px;transition:border-color .2s}
+.gb:active{border-color:var(--or)}
+.ad{text-align:center;color:var(--mu);font-size:.72rem;margin-bottom:14px}
+.ff{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;margin-bottom:8px;transition:border-color .2s}
+.ff:focus{border-color:var(--or)!important}.ff::placeholder{color:var(--mu)}
+.fmb{width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;margin-top:4px;transition:opacity .2s}
+.fmb:active{opacity:.85}
+.asw{text-align:center;margin-top:14px;font-size:.78rem;color:var(--mu)}
+.asw a,.asw span{color:var(--or);cursor:pointer;font-weight:700;text-decoration:none}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--or);box-shadow:0 0 12px var(--or);animation:p 2s ease-in-out infinite;flex-shrink:0}
+@keyframes p{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}
+/* Page-specific */
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px 20px}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.06em;display:flex;align-items:center;gap:10px;margin-bottom:4px;cursor:pointer;text-decoration:none;color:var(--tx)}
+.tagline{font-size:.78rem;color:var(--mu);margin-bottom:32px;text-align:center}
+.card{width:100%;max-width:420px;background:var(--bg2);border:1px solid var(--border2);border-radius:22px;padding:26px 22px 30px}
+.pw-wrap{position:relative;margin-bottom:8px}
+.pw-wrap .ff{margin-bottom:0}
+.pw-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--mu);cursor:pointer;font-size:.78rem;font-family:'Syne',sans-serif;font-weight:700}
+.forgot{display:block;text-align:right;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--or);cursor:pointer;margin:8px 0 20px;text-decoration:none}
+.err{background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.3);border-radius:10px;padding:10px 14px;font-size:.78rem;color:var(--pk);margin-bottom:14px;display:none}
+.err.show{display:block}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 22px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--tx);z-index:999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{border-color:rgba(198,255,74,.4);color:var(--li)}
+.back-link{margin-top:16px;font-size:.76rem;color:var(--mu);cursor:pointer}
+.back-link span{color:var(--mu2);text-decoration:underline}
+</style>
+</head>
+<body>
+<a class="logo" href="index.html"><span class="dot"></span>PULSIFY</a>
+<p class="tagline">Feel the Vibe 🇿🇦</p>
+
+<div class="card">
+  <div class="sht">Welcome Back</div>
+  <div class="shs">Sign in to access your tickets, bookings &amp; squad</div>
+
+  <div class="err" id="err"></div>
+
+  <button class="gb" onclick="handleGoogle()">
+    <svg width="18" height="18" viewBox="0 0 24 24">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    </svg>
+    Continue with Google
+  </button>
+
+  <div class="ad">or sign in with email</div>
+
+  <input class="ff" id="email" type="email" placeholder="Email address" autocomplete="email"/>
+  <div class="pw-wrap">
+    <input class="ff" id="pw" type="password" placeholder="Password" autocomplete="current-password"/>
+    <button class="pw-eye" onclick="togglePw()" type="button">Show</button>
+  </div>
+  <a class="forgot" onclick="handleForgot()">Forgot password?</a>
+
+  <button class="fmb" id="signin-btn" onclick="handleSignIn()">Sign In</button>
+
+  <div class="asw">No account? <a href="create-account.html">Sign up free →</a></div>
+</div>
+
+<div class="back-link" onclick="history.back()">← <span>Back to Pulsify</span></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// If already logged in, go straight back
+if (typeof isLoggedIn === 'function' && isLoggedIn()) window.location.href = 'index.html';
+
+function togglePw() {
+  const i = document.getElementById('pw');
+  const s = i.type === 'password';
+  i.type  = s ? 'text' : 'password';
+  document.querySelector('.pw-eye').textContent = s ? 'Hide' : 'Show';
+}
+function showErr(m) { const e=document.getElementById('err'); e.textContent=m; e.classList.add('show'); }
+function hideErr()  { document.getElementById('err').classList.remove('show'); }
+function showToast(m, t='') {
+  const el=document.getElementById('toast'); el.textContent=m;
+  el.className='toast '+t+' show';
+  setTimeout(()=>el.classList.remove('show'),3000);
+}
+function handleGoogle() {
+  // TODO: wire to supabase.auth.signInWithOAuth({ provider:'google' })
+  showToast('Google sign-in coming soon');
+}
+function handleForgot() {
+  const email = document.getElementById('email').value.trim();
+  if (!email) return showErr('Enter your email address first.');
+  // TODO: supabase.auth.resetPasswordForEmail(email)
+  showToast('Password reset link sent to ' + email, 'ok');
+}
+async function handleSignIn() {
+  hideErr();
+  const email = document.getElementById('email').value.trim();
+  const pw    = document.getElementById('pw').value;
+  const btn   = document.getElementById('signin-btn');
+  if (!email) return showErr('Please enter your email address.');
+  if (!pw)    return showErr('Please enter your password.');
+
+  btn.textContent = 'Signing in…'; btn.style.opacity = '.7';
+
+  try {
+    // localStorage mock — replace with:
+    // const {data,error} = await supabase.auth.signInWithPassword({email, password:pw})
+    // if (error) throw new Error(error.message)
+    // saveUser(data.user); saveProfile(data.user.user_metadata)
+    if (typeof mockSignIn === 'function') await mockSignIn(email, pw);
+    showToast('✅ Welcome back!', 'ok');
+    setTimeout(() => window.location.href = 'index.html', 700);
+  } catch(e) {
+    btn.textContent = 'Sign In'; btn.style.opacity = '1';
+    showErr(e.message);
+  }
+}
+document.addEventListener('keydown', e => { if (e.key==='Enter') handleSignIn(); });
+</script>
+</body>
+</html>
