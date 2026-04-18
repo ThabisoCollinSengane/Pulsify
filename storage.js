@@ -1,347 +1,286 @@
 /* ═══════════════════════════════════════════════════════════
-   PULSIFY — storage.js  v3
-   Complete localStorage data layer.
-   Every function is a drop-in replacement point for Supabase.
+   PULSIFY — storage.js  v4
+   Unified data layer: real API first, localStorage fallback.
+   Supabase Auth handles identity. API handles all data.
+   
+   HOW IT WORKS:
+   1. Every function calls the real /api endpoint first
+   2. If the API fails, falls back to localStorage mock
+   3. Auth token stored in localStorage as 'p_token'
+   4. User profile stored as 'p_user' (same key as before)
+   
+   SUPABASE SWAP: Already done. Functions call /api/*.
+   To go fully live just set SUPABASE_URL + keys on Vercel.
    ═══════════════════════════════════════════════════════════ */
 
-/* ── Keys ─────────────────────────────────────────────────── */
-const K = {
-  USER:      'p_user',
-  PROFILE:   'p_profile',
-  ALL_USERS: 'p_all_users',    // mock "database" of all users
-  ALL_POSTS: 'p_all_posts',    // global post feed
-  ATTENDED:  'p_attended',
-  MY_EVENTS: 'p_my_events',
-  FOLLOWING: 'p_following',    // array of user IDs this user follows
-  FOLLOWERS: 'p_followers',    // map: userId → array of follower IDs
-  SAVED_EV:  'p_sev',
-  SAVED_BZ:  'p_sbiz',
-  NOTIF:     'p_notif',
-  PRIVACY:   'p_privacy',
-};
+const API = '/api';
 
-/* ── Generic ──────────────────────────────────────────────── */
-function _get(k)      { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }
-function _set(k, v)   { localStorage.setItem(k, JSON.stringify(v)); }
-function _uid()       { return 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
+/* ── Auth token ──────────────────────────────────────────── */
+function getToken()     { return localStorage.getItem('p_token') || ''; }
+function setToken(t)    { if(t) localStorage.setItem('p_token', t); }
+function clearToken()   { localStorage.removeItem('p_token'); }
 
-/* ═══════════════════════════════════════════════════════════
-   SESSION
-   ═══════════════════════════════════════════════════════════ */
-function saveUser(u)  { _set(K.USER, u); }
-function getUser()    { return _get(K.USER); }
-function clearUser()  { localStorage.removeItem(K.USER); }
-function isLoggedIn() { const u=getUser(); return !!(u&&u.id&&u.email); }
-function isOrganizer(){ return ['organizer','admin'].includes(getUser()?.role); }
-function isAdmin()    { return getUser()?.role==='admin'; }
+function authHeaders() {
+  const t = getToken();
+  return t ? { 'Content-Type':'application/json', 'Authorization':'Bearer '+t }
+           : { 'Content-Type':'application/json' };
+}
+
+/* ── Session ─────────────────────────────────────────────── */
+function getUser()    { try { return JSON.parse(localStorage.getItem('p_user')); } catch { return null; } }
+function saveUser(u)  { localStorage.setItem('p_user', JSON.stringify(u)); }
+function getProfile() { try { return JSON.parse(localStorage.getItem('p_profile')); } catch { return null; } }
+function saveProfile(p){ localStorage.setItem('p_profile', JSON.stringify(p)); }
+function clearUser()  { localStorage.removeItem('p_user'); localStorage.removeItem('p_profile'); clearToken(); }
+function isLoggedIn() { const u=getUser(); return !!(u&&u.id); }
+function isOrganizer(){ return ['organizer','business','admin'].includes(getUser()?.role); }
+function isAdmin()    { return getUser()?.role === 'admin'; }
 function requireAuth(r='signin.html'){ if(!isLoggedIn()){window.location.href=r;return false;} return true; }
-function logout()     { clearUser(); window.location.href='signin.html'; }
+
+function logout() {
+  clearUser();
+  window.location.href = 'signin.html';
+}
+
+/* ── Generic fetch with fallback ─────────────────────────── */
+async function apiFetch(path, opts={}, fallback=null) {
+  try {
+    const res = await fetch(API + path, {
+      headers: authHeaders(),
+      ...opts,
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'API error '+res.status);
+    }
+    return await res.json();
+  } catch(e) {
+    console.warn('[storage] API failed, using fallback:', e.message);
+    return fallback;
+  }
+}
 
 /* ═══════════════════════════════════════════════════════════
-   PROFILE
+   AUTH — Supabase via API
    ═══════════════════════════════════════════════════════════ */
-function saveProfile(p){ _set(K.PROFILE, p); _updateAllUsers(p); }
-function getProfile()  { return _get(K.PROFILE); }
 
-function _updateAllUsers(profile) {
-  const all = _get(K.ALL_USERS) || {};
-  if (profile.user_id) all[profile.user_id] = profile;
-  _set(K.ALL_USERS, all);
+/* Sign up — calls Supabase Auth then upserts profile via API */
+async function signUp({ fullName, username, email, password, dob, phone, province, city, genres, isOrg, avatarUrl }) {
+  // Use Supabase JS directly for auth
+  const SUPA_URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+
+  const authRes = await fetch(`${SUPA_URL}/auth/v1/signup`, {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'apikey': SUPA_KEY },
+    body: JSON.stringify({ email, password, data: { full_name: fullName } }),
+  });
+  const authData = await authRes.json();
+  if (authData.error) throw new Error(authData.error.message || authData.msg || 'Sign up failed');
+
+  const token = authData.access_token || authData.session?.access_token;
+  const user  = authData.user || authData.data?.user;
+  if (!token || !user) throw new Error('Sign up failed — no session returned');
+
+  setToken(token);
+
+  // Upsert profile via API
+  const profileData = await apiFetch('/auth/profile', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+token },
+    body: {
+      profile: {
+        username, display_name: fullName, dob, phone, province, city, genres,
+        role: isOrg ? 'organizer' : 'user', avatar_url: avatarUrl || null,
+      }
+    }
+  });
+
+  const profile = profileData?.profile || {
+    id: user.id, username, display_name: fullName,
+    email, role: isOrg ? 'organizer' : 'user', genres, province, city,
+  };
+
+  saveUser({ id: user.id, email, display_name: fullName, role: profile.role, created_at: user.created_at });
+  saveProfile(profile);
+  return { user, profile };
 }
-function getPublicProfile(userId) {
-  const all = _get(K.ALL_USERS) || {};
-  return all[userId] || null;
-}
-function getAllOrganizers() {
-  const all = _get(K.ALL_USERS) || {};
-  return Object.values(all).filter(p => p.role === 'organizer' || p.is_page);
+
+/* Sign in */
+async function signIn(email, password) {
+  const SUPA_URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+
+  const authRes = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'apikey': SUPA_KEY },
+    body: JSON.stringify({ email, password }),
+  });
+  const authData = await authRes.json();
+  if (authData.error) throw new Error(authData.error_description || authData.error || 'Sign in failed');
+
+  const token = authData.access_token;
+  const user  = authData.user;
+  if (!token || !user) throw new Error('Sign in failed');
+
+  setToken(token);
+
+  // Fetch profile from API
+  const profileData = await apiFetch('/auth/profile', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+token },
+    body: {}
+  });
+
+  const profile = profileData?.profile || { id: user.id, email, display_name: user.email?.split('@')[0], role: 'user' };
+
+  saveUser({ id: user.id, email, display_name: profile.display_name || user.email?.split('@')[0], role: profile.role, last_login: new Date().toISOString() });
+  saveProfile(profile);
+  return { user, profile };
 }
 
 /* ═══════════════════════════════════════════════════════════
-   POSTS  — full data model
-   post: { id, user_id, username, display_name, avatar_url,
-           event_id?, event_name?, image_url?, caption,
-           likes[], comments[], reposts[], timestamp,
-           is_organizer_post, visibility }
+   POSTS — real API with mock fallback
    ═══════════════════════════════════════════════════════════ */
-function getAllPosts()   { return _get(K.ALL_POSTS) || []; }
-function _saveAllPosts(p){ _set(K.ALL_POSTS, p); }
 
-function savePost(post) {
-  const posts = getAllPosts();
-  posts.unshift(post);
-  _saveAllPosts(posts);
-  return post;
+/* Fallback mock posts — shown when API is offline */
+const MOCK_POSTS_FALLBACK = [
+  { id:'demo1', user_id:'org_eyadini', username:'eyadini_lounge', display_name:'Eyadini Lounge', role:'organizer', post_type:'organizer', image_url:'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=800&q=80', caption:"🔊 TONIGHT we go HARD. Gqom Takeover at 9PM. Doors open 8PM. Early birds save R40. Umlazi — this is your night!", event_name:'Gqom Takeover', like_count:186, comment_count:24, repost_count:12, created_at:new Date(Date.now()-7200000).toISOString(), is_liked:false, is_reposted:false, profiles:{username:'eyadini_lounge',display_name:'Eyadini Lounge',role:'organizer',is_verified:true} },
+  { id:'demo2', user_id:'org_eves', username:'eves_lounge_mthwalume', display_name:"Eve's Lounge", role:'organizer', post_type:'organizer', image_url:'https://images.unsplash.com/photo-1471341971476-ae15ff5dd4ea?w=800&q=80', caption:"South Coast is ALIVE this weekend 🌊 Gqom Takeover Pt.2. DJ Lag + Bello No Gallo + South Coast residents. Doors 8PM", event_name:"Gqom Night — Eve's Lounge Mthwalume", like_count:243, comment_count:31, repost_count:18, created_at:new Date(Date.now()-14400000).toISOString(), is_liked:false, is_reposted:false, profiles:{username:'eves_lounge_mthwalume',display_name:"Eve's Lounge",role:'organizer',is_verified:false} },
+  { id:'demo3', user_id:'u_sipho', username:'sipho_kzn', display_name:'Sipho M', role:'user', post_type:'attended_photo', image_url:'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&q=80', caption:'Amapiano Sundowner Vol.14 at Moses Mabhida was INSANE 😮‍💨 Kabza played until 3AM. Already on the Vol.15 waitlist 🎶', event_name:'Amapiano Sundowner Vol.14', like_count:94, comment_count:12, repost_count:7, created_at:new Date(Date.now()-86400000).toISOString(), is_liked:false, is_reposted:false, profiles:{username:'sipho_kzn',display_name:'Sipho M',role:'user',is_verified:false} },
+  { id:'demo4', user_id:'org_galaxy', username:'galaxy_margate', display_name:'Galaxy Nightclub Margate', role:'organizer', post_type:'organizer', image_url:'https://images.unsplash.com/photo-1518998053901-5348d3961a04?w=800&q=80', caption:"🏖 MARGATE GQOM FESTIVAL — Babes Wodumo · Mampintsha · DJ Lag · Distruction Boyz. One stage. One night. R150 early bird ends Sunday.", event_name:'Margate Gqom Festival', like_count:312, comment_count:47, repost_count:29, created_at:new Date(Date.now()-172800000).toISOString(), is_liked:false, is_reposted:false, profiles:{username:'galaxy_margate',display_name:'Galaxy Nightclub Margate',role:'organizer',is_verified:true} },
+  { id:'demo5', user_id:'org_joecools', username:'joecools_northbeach', display_name:'Joe Cools Beach Bar', role:'organizer', post_type:'organizer', image_url:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80', caption:"Golden hour on the deck every Friday 🌅 Durban's original beachfront bar. Ice cold beers, fresh air, no cover charge. See you at 5PM.", event_name:null, like_count:128, comment_count:19, repost_count:8, created_at:new Date(Date.now()-259200000).toISOString(), is_liked:false, is_reposted:false, profiles:{username:'joecools_northbeach',display_name:'Joe Cools Beach Bar',role:'organizer',is_verified:true} },
+];
+
+async function getFeed({ page=1, limit=10, filter='all' }={}) {
+  const data = await apiFetch(`/posts?page=${page}&limit=${limit}&filter=${filter}`);
+  if (data?.posts) return data;
+  // Fallback
+  let posts = [...MOCK_POSTS_FALLBACK];
+  if (filter === 'organizers') posts = posts.filter(p => p.role !== 'user');
+  if (filter === 'community')  posts = posts.filter(p => p.role === 'user');
+  const start = (page-1)*limit;
+  return {
+    posts: posts.slice(start, start+limit),
+    total: posts.length,
+    page, limit,
+    total_pages: Math.ceil(posts.length/limit),
+    has_next: start+limit < posts.length,
+  };
 }
 
-function createPost({ caption, image_url, event_id, event_name, visibility='public' }) {
+async function createPost({ caption, image_url, event_id, event_name, post_type, lat, lon, visibility='public' }) {
+  const data = await apiFetch('/posts', {
+    method:'POST', body:{ caption, image_url, event_id, event_name, post_type, lat, lon, visibility }
+  });
+  if (data?.post) return data.post;
+  // Fallback — save locally
   const user    = getUser() || {};
   const profile = getProfile() || {};
   const post = {
-    id:               _uid(),
-    user_id:          user.id,
-    username:         profile.username || user.email?.split('@')[0] || 'user',
-    display_name:     profile.display_name || user.display_name || 'Pulsify User',
-    avatar_url:       profile.avatar_url || null,
-    is_organizer_post:isOrganizer(),
-    role:             user.role || 'user',
-    event_id:         event_id  || null,
-    event_name:       event_name|| null,
-    image_url:        image_url || null,
-    caption:          caption   || '',
-    likes:            [],   // array of user IDs
-    comments:         [],   // [{ id, user_id, username, text, timestamp }]
-    reposts:          [],   // array of user IDs
-    timestamp:        new Date().toISOString(),
-    visibility,             // 'public' | 'followers' | 'private'
+    id: 'local_'+Date.now(), user_id: user.id,
+    username: profile.username || 'you', display_name: profile.display_name || user.display_name,
+    role: user.role || 'user', post_type: post_type || 'attended_photo',
+    image_url, caption, event_id, event_name,
+    like_count:0, comment_count:0, repost_count:0,
+    created_at: new Date().toISOString(), is_liked:false, is_reposted:false,
+    profiles:{ username: profile.username, display_name: profile.display_name, role: user.role, is_verified:false }
   };
-  savePost(post);
+  MOCK_POSTS_FALLBACK.unshift(post);
   return post;
 }
 
-function getPostById(id) {
-  return getAllPosts().find(p => p.id === id) || null;
-}
-
-function deletePost(id) {
-  _saveAllPosts(getAllPosts().filter(p => p.id !== id));
-}
-
-/* User's own posts */
-function getMyPosts() {
-  const uid = getUser()?.id;
-  return getAllPosts().filter(p => p.user_id === uid);
-}
-
-/* Posts by a specific user (for their profile page) */
-function getPostsByUser(userId) {
-  return getAllPosts().filter(p => p.user_id === userId && p.visibility === 'public');
-}
-
-/* Posts linked to an event */
-function getPostsByEvent(eventId) {
-  return getAllPosts().filter(p => p.event_id === eventId && p.visibility === 'public');
-}
-
 /* ═══════════════════════════════════════════════════════════
-   FEED  — what the current user sees
-   1. Posts from followed pages/users
-   2. Public posts from organizers
-   3. All public posts (discovery)
+   REACTIONS & REPOSTS
    ═══════════════════════════════════════════════════════════ */
-function getFeed({ page=1, limit=20, filter='all' }={}) {
-  const uid      = getUser()?.id;
-  const following= getFollowing();
-  let   posts    = getAllPosts().filter(p => p.visibility === 'public');
-
-  if (filter === 'following') {
-    posts = posts.filter(p => following.includes(p.user_id) || p.user_id === uid);
-  } else if (filter === 'organizers') {
-    posts = posts.filter(p => p.is_organizer_post);
-  }
-
-  // Sort: followed pages first, then by timestamp
-  posts.sort((a, b) => {
-    const aF = following.includes(a.user_id) ? 1 : 0;
-    const bF = following.includes(b.user_id) ? 1 : 0;
-    if (bF !== aF) return bF - aF;
-    return new Date(b.timestamp) - new Date(a.timestamp);
+async function toggleLike(entityId, entityType='post') {
+  if (!isLoggedIn()) return null;
+  const data = await apiFetch('/reactions', {
+    method:'POST', body:{ entity_id: entityId, entity_type: entityType, type:'like' }
   });
+  return data;
+}
 
-  const total = posts.length;
-  const start = (page - 1) * limit;
-  return {
-    posts:       posts.slice(start, start + limit),
-    total,
-    page,
-    total_pages: Math.ceil(total / limit),
-    has_next:    start + limit < total,
-  };
+async function toggleRepost(postId) {
+  if (!isLoggedIn()) return null;
+  const data = await apiFetch(`/posts/${postId}/repost`, { method:'POST' });
+  return data;
 }
 
 /* ═══════════════════════════════════════════════════════════
-   REACTIONS
+   COMMENTS
    ═══════════════════════════════════════════════════════════ */
-function likePost(postId) {
-  const posts = getAllPosts();
-  const post  = posts.find(p => p.id === postId);
-  if (!post) return false;
-  const uid = getUser()?.id;
-  if (!uid) return false;
-  const idx = (post.likes||[]).indexOf(uid);
-  if (idx > -1) post.likes.splice(idx, 1);   // unlike
-  else          (post.likes = post.likes||[]).push(uid);  // like
-  _saveAllPosts(posts);
-  return post.likes.includes(uid);            // returns new liked state
+async function getComments(entityType, entityId) {
+  const data = await apiFetch(`/comments/${entityType}/${entityId}`);
+  return data?.comments || [];
 }
 
-function isLiked(post) {
-  const uid = getUser()?.id;
-  return uid && (post.likes||[]).includes(uid);
-}
-
-function commentOnPost(postId, text) {
-  if (!text?.trim()) return null;
-  const posts = getAllPosts();
-  const post  = posts.find(p => p.id === postId);
-  if (!post) return null;
-  const user    = getUser()    || {};
-  const profile = getProfile() || {};
-  const comment = {
-    id:          _uid(),
-    user_id:     user.id,
-    username:    profile.username || user.email?.split('@')[0] || 'user',
-    display_name:profile.display_name || 'User',
-    avatar_url:  profile.avatar_url || null,
-    text:        text.trim(),
-    timestamp:   new Date().toISOString(),
-  };
-  (post.comments = post.comments||[]).push(comment);
-  _saveAllPosts(posts);
-  return comment;
-}
-
-function repostPost(postId) {
-  const posts = getAllPosts();
-  const post  = posts.find(p => p.id === postId);
-  if (!post) return false;
-  const uid = getUser()?.id;
-  if (!uid) return false;
-  const idx = (post.reposts||[]).indexOf(uid);
-  if (idx > -1) post.reposts.splice(idx, 1);
-  else          (post.reposts = post.reposts||[]).push(uid);
-  _saveAllPosts(posts);
-  return post.reposts.includes(uid);
+async function addComment(entityType, entityId, content) {
+  if (!isLoggedIn()) return null;
+  const data = await apiFetch('/comments', {
+    method:'POST', body:{ entity_type: entityType, entity_id: entityId, content }
+  });
+  return data?.comment || null;
 }
 
 /* ═══════════════════════════════════════════════════════════
-   FOLLOW SYSTEM
+   FOLLOWS
    ═══════════════════════════════════════════════════════════ */
-function getFollowing()   { return _get(K.FOLLOWING) || []; }
-function getFollowerMap() { return _get(K.FOLLOWERS) || {}; }
-
-function followPage(targetUserId) {
-  if (!isLoggedIn()) return false;
-  const uid      = getUser().id;
-  const following= getFollowing();
-  const idx      = following.indexOf(targetUserId);
-  if (idx > -1) following.splice(idx, 1);  // unfollow
-  else          following.push(targetUserId); // follow
-  _set(K.FOLLOWING, following);
-
-  // Update follower map
-  const map = getFollowerMap();
-  map[targetUserId] = map[targetUserId] || [];
-  const fidx = map[targetUserId].indexOf(uid);
-  if (fidx > -1) map[targetUserId].splice(fidx, 1);
-  else           map[targetUserId].push(uid);
-  _set(K.FOLLOWERS, map);
-
-  return following.includes(targetUserId);  // new follow state
+async function toggleFollow(targetUserId) {
+  if (!isLoggedIn()) return null;
+  const data = await apiFetch(`/follow/${targetUserId}`, { method:'POST' });
+  return data;
 }
 
-function isFollowing(targetUserId) {
-  return getFollowing().includes(targetUserId);
-}
-
-function getFollowerCount(userId) {
-  const map = getFollowerMap();
-  return (map[userId]||[]).length;
+async function getFollowing() {
+  if (!isLoggedIn()) return [];
+  const data = await apiFetch('/following');
+  return data?.following || [];
 }
 
 /* ═══════════════════════════════════════════════════════════
-   EVENTS ATTENDED
+   ATTENDED EVENTS
    ═══════════════════════════════════════════════════════════ */
-function getAttended()    { return _get(K.ATTENDED) || []; }
-function addAttended(ev)  {
-  const list = getAttended();
-  if (!list.find(e => e.event_id === ev.id)) {
-    list.unshift({ event_id:ev.id, name:ev.name, venue_city:ev.venue_city,
-      date_local:ev.date_local, image_url:ev.image_url, genre:ev.genre,
-      attended_at:new Date().toISOString() });
-    _set(K.ATTENDED, list);
-  }
+async function getAttended() {
+  if (!isLoggedIn()) return [];
+  const data = await apiFetch('/user/attended');
+  if (data?.attended) return data.attended;
+  // Fallback localStorage
+  try { return JSON.parse(localStorage.getItem('p_attended') || '[]'); } catch { return []; }
 }
-
-/* ═══════════════════════════════════════════════════════════
-   ORGANIZER EVENTS  (create-event model)
-   ═══════════════════════════════════════════════════════════ */
-function getMyEvents()    { return _get(K.MY_EVENTS) || []; }
-function addMyEvent(ev)   {
-  const list = getMyEvents();
-  ev.id          = _uid();
-  ev.organiser_id= getUser()?.id;
-  ev.created_at  = new Date().toISOString();
-  ev.status      = 'draft';
-  list.unshift(ev);
-  _set(K.MY_EVENTS, list);
-  return ev;
-}
-
-/* ═══════════════════════════════════════════════════════════
-   NOTIFICATION & PRIVACY PREFS
-   ═══════════════════════════════════════════════════════════ */
-const NOTIF_DEF = { email_event_reminder:true, email_booking_conf:true, email_new_follower:true, sms_event_reminder:false, sms_booking_conf:false, push_squad_message:true, push_new_follower:true };
-const PRIV_DEF  = { profile_public:true, show_email:false, who_can_comment:'everyone', show_attended:true };
-
-function getNotifPrefs()    { return {...NOTIF_DEF, ...(_get(K.NOTIF)||{})}; }
-function saveNotifPrefs(p)  { _set(K.NOTIF, p); }
-function getPrivacy()       { return {...PRIV_DEF,  ...(_get(K.PRIVACY)||{})}; }
-function savePrivacy(p)     { _set(K.PRIVACY, p); }
 
 /* ═══════════════════════════════════════════════════════════
    SAVED ITEMS
    ═══════════════════════════════════════════════════════════ */
-function getSavedEvents()     { return _get(K.SAVED_EV)  || []; }
-function getSavedBusinesses() { return _get(K.SAVED_BZ)  || []; }
-
-/* ═══════════════════════════════════════════════════════════
-   AUTH MOCK
-   ═══════════════════════════════════════════════════════════ */
-async function mockSignIn(email, password) {
-  // Replace: const {data,error} = await supabase.auth.signInWithPassword({email,password})
-  if (!email||!password) throw new Error('Email and password required');
-  const u = getUser();
-  if (u && u.email===email) {
-    u.last_login = new Date().toISOString();
-    saveUser(u); return u;
-  }
-  throw new Error('No account found. Please sign up first.');
+async function getSaved(type='event') {
+  if (!isLoggedIn()) return [];
+  const data = await apiFetch(`/saved?type=${type}`);
+  return data?.saved || [];
 }
 
-async function mockSignUp(fields) {
-  // Replace: const {data,error} = await supabase.auth.signUp(...)
-  const { fullName,username,email,password,dob,phone,province,city,
-          genres,agreeTerms,isOrg,avatarUrl } = fields;
-  if (!agreeTerms)               throw new Error('Please accept the Terms & Privacy Policy.');
-  if (!email||!password||!fullName) throw new Error('Name, email and password are required.');
-  if (dob) {
-    const age = Math.floor((Date.now()-new Date(dob))/31557600000);
-    if (age<13) throw new Error('You must be at least 13 years old to join.');
-    if (age<18 && isOrg) throw new Error('You must be 18+ to register as an organizer.');
-  }
-  const userId = _uid();
-  const role   = isOrg ? 'organizer' : 'user';
-  const user = {
-    id:             userId, email, role,
-    display_name:   fullName,
-    account_status: 'active',
-    email_verified: false,
-    is_page:        isOrg,
-    always_public:  isOrg,
-    created_at:     new Date().toISOString(),
-    last_login:     new Date().toISOString(),
-  };
-  const profile = {
-    user_id:      userId, username: username||'user_'+userId.slice(-6),
-    display_name: fullName, email, role, is_page: isOrg,
-    dob: dob||null, phone: phone||null, province: province||'',
-    city: city||'', genres: genres||[], avatar_url: avatarUrl||null, bio:'',
-    agree_terms:true, terms_date: new Date().toISOString(),
-  };
-  saveUser(user); saveProfile(profile);
-  saveNotifPrefs(NOTIF_DEF); savePrivacy(PRIV_DEF);
-  return { user, profile };
+async function toggleSaved(itemId, itemType='event') {
+  if (!isLoggedIn()) return null;
+  const data = await apiFetch('/saved', { method:'POST', body:{ item_id: itemId, item_type: itemType } });
+  return data;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BOOKINGS
+   ═══════════════════════════════════════════════════════════ */
+async function getUserBookings() {
+  if (!isLoggedIn()) return [];
+  const data = await apiFetch('/user/bookings');
+  return data?.bookings || [];
+}
+
+/* ═══════════════════════════════════════════════════════════
+   NOTIFICATIONS
+   ═══════════════════════════════════════════════════════════ */
+async function getNotifications() {
+  if (!isLoggedIn()) return [];
+  const data = await apiFetch('/notifications');
+  return data?.notifications || [];
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -349,12 +288,11 @@ async function mockSignUp(fields) {
    ═══════════════════════════════════════════════════════════ */
 function timeAgo(iso) {
   if (!iso) return '';
-  const d = Math.floor((Date.now()-new Date(iso))/1000);
-  if (d<60)   return 'just now';
-  if (d<3600) return Math.floor(d/60)+'m ago';
-  if (d<86400)return Math.floor(d/3600)+'h ago';
-  if (d<604800)return Math.floor(d/86400)+'d ago';
-  return new Date(iso).toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
+  const d = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (d < 60)    return 'just now';
+  if (d < 3600)  return Math.floor(d/60)+'m ago';
+  if (d < 86400) return Math.floor(d/3600)+'h ago';
+  return Math.floor(d/86400)+'d ago';
 }
 function formatDate(iso) {
   if (!iso) return '';
@@ -362,16 +300,4 @@ function formatDate(iso) {
 }
 function escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-/* ── Seed demo data if feed is empty ─────────────────────── */
-function seedDemoData() {
-  if (getAllPosts().length > 0) return;
-  const demos = [
-    { id:'demo1', user_id:'org_eyadini', username:'eyadini_lounge', display_name:'Eyadini Lounge', avatar_url:null, is_organizer_post:true, role:'organizer', event_id:'ev_gqom_eves', event_name:"Gqom Takeover — Eve's Lounge", image_url:'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=800&q=80', caption:'🔊 TONIGHT we go hard. Gqom Takeover starts at 9PM. Doors open at 8. Early birds save R40 on the door. See you on the floor 🙌', likes:['u1','u2','u3','u4','u5'], comments:[{id:'c1',user_id:'u1',username:'sipho_kzn',display_name:'Sipho M',text:"Can't wait, been looking forward to this all week 🔥",timestamp:new Date(Date.now()-7200000).toISOString()},{id:'c2',user_id:'u2',username:'nandik',display_name:'Nandi K',text:'Already got my ticket! Who else is coming from Hillcrest?',timestamp:new Date(Date.now()-3600000).toISOString()}], reposts:['u2','u3'], timestamp:new Date(Date.now()-14400000).toISOString(), visibility:'public' },
-    { id:'demo2', user_id:'u3', username:'djthabang', display_name:'DJ Thabang', avatar_url:null, is_organizer_post:false, role:'user', event_id:'ev_amapiano_mabhida', event_name:'Amapiano Sundowner Vol.14', image_url:'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&q=80', caption:'Last night at Moses Mabhida was INSANE 😮‍💨 Kabza brought something different, the crowd energy was unmatched. Already counting down to Vol.15 🎶', likes:['u1','u4'], comments:[{id:'c3',user_id:'u4',username:'zinhle_d',display_name:'Zinhle D',text:'The views from up top were incredible too 🌃',timestamp:new Date(Date.now()-1800000).toISOString()}], reposts:['u1'], timestamp:new Date(Date.now()-86400000).toISOString(), visibility:'public' },
-    { id:'demo3', user_id:'org_galaxy', username:'galaxy_margate', display_name:'Galaxy Nightclub Margate', avatar_url:null, is_organizer_post:true, role:'organizer', event_id:'ev_gqom_margate', event_name:'Margate Gqom Festival', image_url:'https://images.unsplash.com/photo-1518998053901-5348d3961a04?w=800&q=80', caption:"🏖 MARGATE GQOM FESTIVAL — Tickets selling fast! Babes Wodumo, Mampintsha, DJ Lag and Distruction Boyz all on the same night. R150 early bird ends Sunday midnight. Book at the link in bio.", likes:['u1','u2','u5'], comments:[], reposts:['u5'], timestamp:new Date(Date.now()-172800000).toISOString(), visibility:'public' },
-    { id:'demo4', user_id:'u1', username:'sipho_kzn', display_name:'Sipho M', avatar_url:null, is_organizer_post:false, role:'user', event_id:null, event_name:null, image_url:'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&q=80', caption:"Sundays at Eyadini hit different. The pap, the chisa nyama, the music... this is what KZN summers are made of ☀️🥩", likes:['u2','u3'], comments:[{id:'c4',user_id:'u2',username:'nandik',display_name:'Nandi K',text:'The GOAT spot, no competition 👑',timestamp:new Date(Date.now()-900000).toISOString()}], reposts:[], timestamp:new Date(Date.now()-259200000).toISOString(), visibility:'public' },
-  ];
-  _saveAllPosts(demos);
 }

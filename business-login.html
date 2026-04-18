@@ -155,22 +155,53 @@ function showMsg(id, text, type) {
 function hideMsg(id) { document.getElementById(id).className = 'msg'; }
 
 /* ─── Login ─── */
-function doLogin() {
+async function doLogin() {
   const email = document.getElementById('l-email').value.trim();
   const pw    = document.getElementById('l-pw').value;
   if (!email || !pw) { showMsg('login-msg','Please fill in all fields','err'); return; }
 
-  const accounts = JSON.parse(localStorage.getItem('biz_accounts') || '[]');
-  const acc = accounts.find(a => a.email===email && a.password===pw);
-  if (!acc) { showMsg('login-msg','Incorrect email or password','err'); return; }
+  const btn = document.getElementById('login-btn');
+  btn.textContent = 'Signing in…'; btn.disabled = true;
 
-  const session = { id:acc.id, email:acc.email, name:acc.name, type:acc.type, city:acc.city, province:acc.province||'', phone:acc.phone, logo:acc.logo||'', address:acc.address||'' };
-  localStorage.setItem('biz_session', JSON.stringify(session));
+  try {
+    /* ── Try real Supabase auth ── */
+    const SUPA_URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+    const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+    const authRes = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`, {
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
+      body: JSON.stringify({ email, password: pw })
+    });
+    const authData = await authRes.json();
+    if (authData.error) throw new Error(authData.error_description || 'Incorrect email or password');
 
-  /* ── Sync to shared user feed so business posts appear in index.html ── */
-  _syncBizToSharedFeed(acc);
+    const token = authData.access_token;
+    const user  = authData.user;
+    localStorage.setItem('p_token', token);
 
-  showMsg('login-msg','Welcome back! Redirecting…','ok');
+    // Fetch profile from API
+    const pRes = await fetch('/api/auth/profile', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({})
+    });
+    const pData = await pRes.json();
+    const profile = pData.profile || { id: user.id, display_name: email.split('@')[0], role: 'business' };
+
+    if (!['business','organizer','admin'].includes(profile.role)) {
+      throw new Error('This account is not a business account. Use the regular sign in.');
+    }
+
+    const session = {
+      id: user.id, email, name: profile.display_name || profile.username,
+      type: profile.category || 'business', city: profile.city || '',
+      province: profile.province || '', phone: profile.phone || '',
+      logo: profile.avatar_url || '', address: profile.address || '',
+      role: profile.role
+    };
+    localStorage.setItem('biz_session', JSON.stringify(session));
+    localStorage.setItem('p_user', JSON.stringify({ id: user.id, email, display_name: profile.display_name, role: profile.role }));
+    localStorage.setItem('p_profile', JSON.stringify(profile));
+
+    showMsg('login-msg','Welcome back! Redirecting…','ok');
   setTimeout(() => window.location.href='business-dashboard.html', 800);
 }
 
@@ -195,17 +226,31 @@ function doRegister() {
     password: pw, logo:'', address:'', website:'', desc:'', created: Date.now()
   };
   accounts.push(newAcc);
+  // Save locally as fallback
   localStorage.setItem('biz_accounts', JSON.stringify(accounts));
+
+  // Register with Supabase Auth
+  try {
+    const SUPA_URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+    const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+    const authRes = await fetch(`${SUPA_URL}/auth/v1/signup`, {
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
+      body: JSON.stringify({ email, password:pw, data:{ full_name:name } })
+    });
+    const authData = await authRes.json();
+    if (!authData.error && (authData.access_token || authData.session?.access_token)) {
+      const token = authData.access_token || authData.session.access_token;
+      localStorage.setItem('p_token', token);
+      // Create profile via API
+      await fetch('/api/auth/profile', {
+        method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+        body: JSON.stringify({ profile:{ display_name:name, username: name.toLowerCase().replace(/\s+/g,'_').slice(0,20), role:'business', city, province, phone } })
+      });
+    }
+  } catch(e) { console.warn('Supabase registration failed, using local mode:', e.message); }
 
   const session = { id:newAcc.id, email, name, type, city, province, phone, logo:'', address:'' };
   localStorage.setItem('biz_session', JSON.stringify(session));
-
-  /* ── Seed default hours & empty stores ── */
-  const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-  const defHours = days.map(d => ({ day:d, open:d!=='Sunday', from:'10:00', to:'18:00' }));
-  if (!localStorage.getItem(newAcc.id + '_hours')) {
-    localStorage.setItem(newAcc.id + '_hours', JSON.stringify(defHours));
-  }
 
   showMsg('reg-msg','Account created! Redirecting…','ok');
   setTimeout(() => window.location.href='business-dashboard.html', 800);
