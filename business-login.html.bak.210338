@@ -132,29 +132,29 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 </div>
 
 <script>
+/* ─── Auto-redirect if already logged in ─── */
 if (localStorage.getItem('biz_session')) window.location.href = 'business-dashboard.html';
 
+/* ─── Tab switch ─── */
 function switchTab(tab) {
   document.querySelectorAll('.t-btn').forEach((b,i) => b.classList.toggle('active', tab==='login'?i===0:i===1));
   document.getElementById('login-view').classList.toggle('active', tab==='login');
-  document.getElementById('register-view').classList.toggle('active', tab!=='login');
-}
-
-function showMsg(id, txt, type) {
-  const el = document.getElementById(id);
-  el.textContent = txt;
-  el.className = 'msg ' + type + ' show';
-  setTimeout(() => el.classList.remove('show'), 4000);
+  document.getElementById('register-view').classList.toggle('active', tab==='register');
 }
 
 function togglePw(id, btn) {
-  const inp = document.getElementById(id);
-  const show = inp.type === 'password';
-  inp.type = show ? 'text' : 'password';
-  btn.textContent = show ? '🙈' : '👁';
+  const i = document.getElementById(id);
+  i.type = i.type==='password' ? 'text' : 'password';
+  btn.textContent = i.type==='password' ? '👁' : '🙈';
 }
 
-/* ── LOGIN ── */
+function showMsg(id, text, type) {
+  const el = document.getElementById(id);
+  el.textContent = text; el.className = 'msg ' + type + ' show';
+}
+function hideMsg(id) { document.getElementById(id).className = 'msg'; }
+
+/* ─── Login ─── */
 async function doLogin() {
   const email = document.getElementById('l-email').value.trim();
   const pw    = document.getElementById('l-pw').value;
@@ -163,117 +163,115 @@ async function doLogin() {
   const btn = document.getElementById('login-btn');
   btn.textContent = 'Signing in…'; btn.disabled = true;
 
-  // Try Supabase first
   try {
-    const SUPA = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
-    const KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
-    const r = await fetch(`${SUPA}/auth/v1/token?grant_type=password`,{
-      method:'POST', headers:{'Content-Type':'application/json','apikey':KEY},
-      body: JSON.stringify({email, password:pw})
+    /* ── Try real Supabase auth ── */
+    const SUPA_URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+    const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+    const authRes = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`, {
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
+      body: JSON.stringify({ email, password: pw })
     });
-    const d = await r.json();
-    if (d.access_token) {
-      localStorage.setItem('p_token', d.access_token);
-      const pRes = await fetch('/api/auth/profile',{
-        method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+d.access_token},
-        body:JSON.stringify({})
-      });
-      const pData = await pRes.json().catch(()=>({}));
-      const profile = pData.profile || {};
-      if (!['business','organizer','admin'].includes(profile.role)) {
-        btn.textContent='Sign In to Dashboard'; btn.disabled=false;
-        showMsg('login-msg','This is not a business account. Use the regular sign in page.','err');
-        return;
-      }
-      const session = {id:d.user.id, email, name:profile.display_name||email.split('@')[0],
-        type:profile.category||'business', city:profile.city||'', role:profile.role};
-      localStorage.setItem('biz_session', JSON.stringify(session));
-      localStorage.setItem('p_user', JSON.stringify({id:d.user.id,email,display_name:session.name,role:session.role}));
-      localStorage.setItem('p_profile', JSON.stringify(profile));
-      showMsg('login-msg','Welcome back! Redirecting…','ok');
-      setTimeout(()=>window.location.href='business-dashboard.html', 800);
-      return;
-    }
-  } catch(e) { console.warn('Supabase login failed, trying local:', e.message); }
+    const authData = await authRes.json();
+    if (authData.error) throw new Error(authData.error_description || 'Incorrect email or password');
 
-  // LocalStorage fallback
-  const accounts = JSON.parse(localStorage.getItem('biz_accounts') || '[]');
-  const acc = accounts.find(a => a.email===email && a.password===pw);
-  if (!acc) {
-    btn.textContent='Sign In to Dashboard'; btn.disabled=false;
-    showMsg('login-msg','Incorrect email or password. If new, please register.','err');
-    return;
-  }
-  const session = {id:acc.id, email:acc.email, name:acc.name, type:acc.type,
-    city:acc.city, province:acc.province||'', phone:acc.phone, logo:acc.logo||'', role:'business'};
-  localStorage.setItem('biz_session', JSON.stringify(session));
-  showMsg('login-msg','Welcome back! Redirecting…','ok');
-  setTimeout(()=>window.location.href='business-dashboard.html', 800);
+    const token = authData.access_token;
+    const user  = authData.user;
+    localStorage.setItem('p_token', token);
+
+    // Fetch profile from API
+    const pRes = await fetch('/api/auth/profile', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({})
+    });
+    const pData = await pRes.json();
+    const profile = pData.profile || { id: user.id, display_name: email.split('@')[0], role: 'business' };
+
+    if (!['business','organizer','admin'].includes(profile.role)) {
+      throw new Error('This account is not a business account. Use the regular sign in.');
+    }
+
+    const session = {
+      id: user.id, email, name: profile.display_name || profile.username,
+      type: profile.category || 'business', city: profile.city || '',
+      province: profile.province || '', phone: profile.phone || '',
+      logo: profile.avatar_url || '', address: profile.address || '',
+      role: profile.role
+    };
+    localStorage.setItem('biz_session', JSON.stringify(session));
+    localStorage.setItem('p_user', JSON.stringify({ id: user.id, email, display_name: profile.display_name, role: profile.role }));
+    localStorage.setItem('p_profile', JSON.stringify(profile));
+
+    showMsg('login-msg','Welcome back! Redirecting…','ok');
+  setTimeout(() => window.location.href='business-dashboard.html', 800);
 }
 
-/* ── REGISTER ── */
-async function doRegister() {
+/* ─── Register ─── */
+function doRegister() {
   const name     = document.getElementById('r-name').value.trim();
   const type     = document.getElementById('r-type').value;
   const email    = document.getElementById('r-email').value.trim();
   const phone    = document.getElementById('r-phone').value.trim();
   const city     = document.getElementById('r-city').value.trim();
-  const province = document.getElementById('r-province')?.value || '';
+  const province = document.getElementById('r-province').value;
   const pw       = document.getElementById('r-pw').value;
-  const pw2      = document.getElementById('r-pw2').value;
 
-  if (!name||!type||!email||!city||!pw) { showMsg('reg-msg','Please fill in all required fields','err'); return; }
-  if (pw.length < 8) { showMsg('reg-msg','Password must be at least 8 characters','err'); return; }
-  if (pw !== pw2)    { showMsg('reg-msg','Passwords do not match','err'); return; }
+  if (!name||!type||!email||!pw) { showMsg('reg-msg','Please fill in all required fields','err'); return; }
+  if (pw.length < 6) { showMsg('reg-msg','Password must be at least 6 characters','err'); return; }
 
-  const btn = document.getElementById('reg-btn');
-  btn.textContent = 'Creating account…'; btn.disabled = true;
-
-  // Try Supabase first
-  try {
-    const SUPA = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
-    const KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
-    const r = await fetch(`${SUPA}/auth/v1/signup`,{
-      method:'POST', headers:{'Content-Type':'application/json','apikey':KEY},
-      body: JSON.stringify({email, password:pw, data:{full_name:name}})
-    });
-    const d = await r.json();
-    const token = d.access_token || d.session?.access_token;
-    if (token) {
-      localStorage.setItem('p_token', token);
-      await fetch('/api/auth/profile',{
-        method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-        body: JSON.stringify({profile:{display_name:name, username:name.toLowerCase().replace(/\s+/g,'_').slice(0,20),
-          role:'business', city, province, phone, category:type}})
-      }).catch(()=>{});
-    }
-  } catch(e) { console.warn('Supabase register failed, using local:', e.message); }
-
-  // Always save locally as fallback
   const accounts = JSON.parse(localStorage.getItem('biz_accounts') || '[]');
-  if (accounts.find(a => a.email===email)) {
-    btn.textContent='Create Business Account'; btn.disabled=false;
-    showMsg('reg-msg','An account with this email already exists. Please sign in.','err');
-    return;
-  }
-  const newAcc = {id:'biz_'+Date.now(), name, type, email, phone, city, province, password:pw, logo:'', created:Date.now()};
+  if (accounts.find(a => a.email===email)) { showMsg('reg-msg','An account with this email already exists','err'); return; }
+
+  const newAcc = {
+    id: 'biz_' + Date.now(), name, type, email, phone, city, province,
+    password: pw, logo:'', address:'', website:'', desc:'', created: Date.now()
+  };
   accounts.push(newAcc);
+  // Save locally as fallback
   localStorage.setItem('biz_accounts', JSON.stringify(accounts));
 
-  const session = {id:newAcc.id, email, name, type, city, province, phone, logo:'', role:'business'};
-  localStorage.setItem('biz_session', JSON.stringify(session));
-  localStorage.setItem('p_user', JSON.stringify({id:newAcc.id, email, display_name:name, role:'business'}));
+  // Register with Supabase Auth
+  try {
+    const SUPA_URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+    const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+    const authRes = await fetch(`${SUPA_URL}/auth/v1/signup`, {
+      method:'POST', headers:{'Content-Type':'application/json','apikey':SUPA_KEY},
+      body: JSON.stringify({ email, password:pw, data:{ full_name:name } })
+    });
+    const authData = await authRes.json();
+    if (!authData.error && (authData.access_token || authData.session?.access_token)) {
+      const token = authData.access_token || authData.session.access_token;
+      localStorage.setItem('p_token', token);
+      // Create profile via API
+      await fetch('/api/auth/profile', {
+        method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+        body: JSON.stringify({ profile:{ display_name:name, username: name.toLowerCase().replace(/\s+/g,'_').slice(0,20), role:'business', city, province, phone } })
+      });
+    }
+  } catch(e) { console.warn('Supabase registration failed, using local mode:', e.message); }
 
-  showMsg('reg-msg','Business account created! Redirecting…','ok');
-  setTimeout(()=>window.location.href='business-dashboard.html', 800);
+  const session = { id:newAcc.id, email, name, type, city, province, phone, logo:'', address:'' };
+  localStorage.setItem('biz_session', JSON.stringify(session));
+
+  showMsg('reg-msg','Account created! Redirecting…','ok');
+  setTimeout(() => window.location.href='business-dashboard.html', 800);
 }
 
-document.addEventListener('keydown', e => {
-  if (e.key==='Enter') {
-    if (document.getElementById('login-view').classList.contains('active')) doLogin();
-    else doRegister();
-  }
-});
+/* ─── Sync so biz posts appear on shared frontend feed ─── */
+function _syncBizToSharedFeed(acc) {
+  /* business_posts key is read by index.html feed */
+  const posts = JSON.parse(localStorage.getItem(acc.id + '_posts') || '[]');
+  const shared = JSON.parse(localStorage.getItem('business_posts') || '[]');
+  posts.forEach(p => { if (!shared.find(s => s.id===p.id)) shared.unshift(p); });
+  localStorage.setItem('business_posts', JSON.stringify(shared.slice(0,200)));
+
+  const events = JSON.parse(localStorage.getItem(acc.id + '_events') || '[]');
+  const sevs = JSON.parse(localStorage.getItem('business_events') || '[]');
+  events.forEach(e => { if (!sevs.find(s => s.id===e.id)) sevs.unshift(e); });
+  localStorage.setItem('business_events', JSON.stringify(sevs.slice(0,200)));
+}
+
+/* ─── Enter key ─── */
+document.addEventListener('keydown', e => { if(e.key==='Enter') { if(document.getElementById('login-view').classList.contains('active')) doLogin(); else doRegister(); } });
 </script>
 </body>
 </html>

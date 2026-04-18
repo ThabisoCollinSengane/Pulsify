@@ -154,7 +154,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .bzs{font-family:'Syne',sans-serif;font-weight:700;color:#F0C040}
 .cr2{display:flex;gap:10px;padding:12px 18px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;align-items:center}
 .cr2::-webkit-scrollbar{display:none}
-.cb{width:28px;height:28px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;text-decoration:none;-webkit-tap-highlight-color:transparent;transition:transform .18s}
+.cb{width:40px;height:40px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;text-decoration:none;-webkit-tap-highlight-color:transparent;transition:transform .18s}
 .cb:active{transform:scale(.88)}
 .cb.ph{background:#34C759}.cb.wa{background:#25D366}.cb.fb2{background:#1877F2}.cb.wb{background:var(--or)}.cb.dr{background:var(--surf2);border:1px solid var(--border)}
 .bztb{display:flex;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:10}
@@ -1144,15 +1144,7 @@ function initMap() {
   if (mapInited) return; mapInited = true;
   if (!window.mapboxgl) { document.getElementById('mc').innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Map unavailable — add Mapbox script</div>'; return; }
   mapboxgl.accessToken = MAPBOX_TOKEN;
-  mapObj = new mapboxgl.Map({
-    container: 'mc',
-    style: 'mapbox://styles/mapbox/navigation-night-v1',
-    center: [30.75, -29.85], zoom: 7.5, minZoom: 4, maxZoom: 17,
-    dragRotate: false,
-    pitchWithRotate: false,
-    touchPitch: false,
-  });
-  mapObj.touchZoomRotate.disableRotation();
+  mapObj = new mapboxgl.Map({ container: 'mc', style: 'mapbox://styles/mapbox/dark-v11', center: [30.75, -29.85], zoom: 7.5, minZoom: 4, maxZoom: 17 });
   mapObj.addControl(new mapboxgl.NavigationControl(), 'top-right');
   mapObj.on('load', () => { placeMapMarkers(); addHeatmap(); });
 }

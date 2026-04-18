@@ -248,7 +248,23 @@ const now = Date.now();
 function dAgo(h) { return new Date(now - h * 3600000).toISOString(); }
 
 const MOCK_POSTS = [
-  /* SUPABASE SWAP: replace array contents with real API call to /api/posts */
+  /*
+   * ═══════════════════════════════════════════════════════
+   * MOCK DATA — reflects real Pulsify events & businesses
+   * Rules enforced in this data:
+   *   - Organizers/businesses: text posts + image posts (any time)
+   *   - Users: image-only posts tied to an event they attended
+   *   - Reposts: users sharing organizer posts (no new caption)
+   *
+   * SUPABASE SWAP: replace this array with:
+   *   const { data, count } = await supabase
+   *     .from('posts')
+   *     .select('*, profiles(username, display_name, avatar_url, role)', { count:'exact' })
+   *     .eq('visibility','public')
+   *     .order('created_at', { ascending:false })
+   *     .range((page-1)*PAGE_SIZE, page*PAGE_SIZE-1)
+   * ═══════════════════════════════════════════════════════
+   */
 
   /* ── ORGANIZER / BUSINESS POSTS (text + image, any time) ── */
 
@@ -862,36 +878,7 @@ function submitPost() {
 }
 
 /* ── Boot ────────────────────────────────────────────────── */
-// Try real API first, fall back to mock
-async function initFeed() {
-  try {
-    const res = await fetch('/api/posts?page=1&limit=10&filter=all');
-    if (res.ok) {
-      const data = await res.json();
-      if (data.posts && data.posts.length > 0) {
-        // Map API response to MOCK_POSTS format and render
-        data.posts.forEach(p => {
-          if (!MOCK_POSTS.find(m => m.id === p.id)) {
-            MOCK_POSTS.unshift({
-              id: p.id, user_id: p.user_id,
-              username: p.profiles?.username || 'user',
-              display_name: p.profiles?.display_name || 'User',
-              role: p.profiles?.role || 'user',
-              post_type: p.post_type || 'organizer',
-              image_url: p.image_url || null,
-              caption: p.caption || '',
-              event_name: p.event_name || null,
-              likes:[], comments:[], reposts:[],
-              ts: p.created_at
-            });
-          }
-        });
-      }
-    }
-  } catch(e) { console.log('API offline, using mock data'); }
-  render();
-}
-initFeed();
+render();
 </script>
 </body>
 </html>
