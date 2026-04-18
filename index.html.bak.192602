@@ -283,7 +283,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   <div class="top-r">
     <button class="back" id="back-btn" onclick="goBack()">← Back</button>
     <div class="ib" onclick="showTab('profile')">🔔<span class="nd"></span></div>
-    <button class="sb" id="auth-btn" onclick="window.location.href='signin.html'">Sign In</button>
+    <button class="sb" id="auth-btn" onclick="openModal('auth-modal')">Sign In</button>
   </div>
 </header>
 
@@ -1319,24 +1319,6 @@ function _renderBizPage() {
       </div>
     </div>`).join('');
 }
-
-
-/* ── Pulsify session restore ── */
-(function() {
-  try {
-    const s = JSON.parse(localStorage.getItem('p_user'));
-    if (s && s.id) {
-      // User is logged in — change top-right button to "Feed"
-      document.addEventListener('DOMContentLoaded', function() {
-        const btn = document.getElementById('auth-btn');
-        if (btn) {
-          btn.textContent = 'Feed';
-          btn.onclick = function() { window.location.href = 'feeds.html'; };
-        }
-      });
-    }
-  } catch(e) {}
-})();
 
 </script>
 </body>
