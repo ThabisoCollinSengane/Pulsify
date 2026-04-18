@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Pulsify — Order Confirmed!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--te:#00D4AA;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0}
+html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(0,212,170,.12),transparent),radial-gradient(ellipse 40% 30% at 80% 80%,rgba(198,255,74,.06),transparent);pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1;min-height:100vh;padding:32px 20px 48px;max-width:520px;margin:0 auto}
+.top-nav{display:flex;align-items:center;gap:10px;margin-bottom:32px}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.06em;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--tx)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--or);box-shadow:0 0 10px var(--or);animation:p 2s ease-in-out infinite}
+@keyframes p{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}
+
+/* ── Check animation ── */
+.check-wrap{text-align:center;margin-bottom:28px}
+.check-circle{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--te),var(--li));display:flex;align-items:center;justify-content:center;margin:0 auto 16px;animation:pop .5s cubic-bezier(.4,0,.2,1) both;box-shadow:0 0 48px rgba(0,212,170,.35)}
+@keyframes pop{0%{transform:scale(0.3);opacity:0}70%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+.check-ico{font-size:3rem;animation:popico .5s .1s both}
+@keyframes popico{0%{transform:scale(0);opacity:0}100%{transform:scale(1);opacity:1}}
+.check-title{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:6px;color:var(--li)}
+.check-sub{font-size:.84rem;color:var(--mu2);line-height:1.55}
+
+/* ── Ticket ── */
+.ticket{background:var(--surf);border:1px solid var(--border2);border-radius:20px;overflow:hidden;margin-bottom:16px;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.ticket-header{background:linear-gradient(135deg,rgba(0,212,170,.2),rgba(198,255,74,.1));padding:16px 18px 14px;border-bottom:1px dashed rgba(255,255,255,.12)}
+.ticket-biz{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.03em;margin-bottom:3px}
+.ticket-addr{font-size:.72rem;color:var(--mu2);display:flex;align-items:center;gap:5px}
+.ticket-body{padding:16px 18px}
+.info-row{display:flex;align-items:flex-start;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)}
+.info-row:last-child{border-bottom:none}
+.ir-label{font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:2px}
+.ir-val{font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem}
+.ir-val.hi{color:var(--te)}
+.ir-val.price{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--or)}
+.ir-val.time{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--cy)}
+
+/* ── Tear ── */
+.tear{display:flex;align-items:center;margin:0 -1px}
+.tear-circle{width:20px;height:20px;border-radius:50%;background:var(--bg);flex-shrink:0}
+.tear-line{flex:1;border-top:1px dashed rgba(255,255,255,.12)}
+
+/* ── QR ── */
+.qr-wrap{padding:16px 18px;display:flex;align-items:center;gap:16px}
+.qr-box{width:72px;height:72px;border-radius:10px;background:var(--bg2);border:1px solid var(--border2);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;padding:6px;gap:2px}
+.qr-row{display:flex;gap:2px;flex:1}
+.qr-cell{flex:1;border-radius:2px}
+.qr-info{flex:1}
+.qr-id{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:.06em;color:var(--cy);margin-bottom:3px}
+.qr-scan{font-size:.68rem;color:var(--mu);line-height:1.45}
+
+/* ── Items ── */
+.items-card{background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:16px}
+.items-title{font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--mu);margin-bottom:10px}
+.order-item{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:.82rem}
+.order-item:last-child{border-bottom:none}
+.oi-name{font-family:'Syne',sans-serif;font-weight:700}
+.oi-qty{color:var(--mu);font-size:.74rem;margin-top:1px}
+.oi-price{font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--li)}
+.totals-row{display:flex;justify-content:space-between;font-size:.8rem;padding:6px 0}
+.totals-row.total{padding-top:10px;border-top:1px solid var(--border);margin-top:4px}
+.totals-row.total .tl{font-family:'Syne',sans-serif;font-weight:700;font-size:.86rem}
+.totals-row.total .tv{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--or)}
+.tl{color:var(--mu)}.tv{font-family:'Syne',sans-serif;font-weight:700}
+
+/* ── What happens next ── */
+.next-card{background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:16px}
+.next-title{font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--mu);margin-bottom:12px}
+.next-step{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
+.next-step:last-child{margin-bottom:0}
+.step-num{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;flex-shrink:0}
+.step-info{flex:1}
+.step-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;margin-bottom:2px}
+.step-sub{font-size:.74rem;color:var(--mu2);line-height:1.45}
+
+/* ── Buttons ── */
+.actions{display:flex;flex-direction:column;gap:10px}
+.btn-main{width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;box-shadow:0 4px 24px rgba(176,38,255,.25);text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent;transition:opacity .18s}
+.btn-main:active{opacity:.85}
+.btn-wa{width:100%;background:#25D366;color:#fff;border:none;padding:14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent;transition:opacity .18s}
+.btn-wa:active{opacity:.85}
+.btn-sec{width:100%;background:transparent;border:1px solid var(--border2);border-radius:50px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;padding:13px;cursor:pointer;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;transition:border-color .2s;-webkit-tap-highlight-color:transparent}
+.btn-sec:active{border-color:var(--or)}
+
+/* ── Status badge ── */
+.status-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.s-pending{background:rgba(255,92,0,.12);color:var(--or);border:1px solid rgba(255,92,0,.25)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top-nav">
+    <a class="logo" href="index.html"><span class="dot"></span>PULSIFY</a>
+  </div>
+  <div id="content"></div>
+</div>
+
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  const raw = localStorage.getItem('last_order');
+  if (!raw) { renderError(); return; }
+  try { renderConfirmation(JSON.parse(raw)); }
+  catch (e) { renderError(); }
+});
+
+function renderConfirmation(o) {
+  const orderRef = o.id.slice(-8).toUpperCase();
+  const subtotal = o.subtotal || (o.items || []).reduce((s, i) => s + i.price * i.qty, 0);
+  const service  = o.service || 0;
+  const total    = o.total || subtotal + service;
+  const qrRows   = generateQrPattern(orderRef);
+
+  // WhatsApp message to notify business
+  const bizWA = (() => {
+    try {
+      const accs = JSON.parse(localStorage.getItem('biz_accounts') || '[]');
+      const acc  = accs.find(a => a.id === o.bizId);
+      const pf   = JSON.parse(localStorage.getItem((o.bizId || '') + '_profile') || '{}');
+      return (pf.wa || acc?.wa || acc?.phone || '').replace(/\D/g, '');
+    } catch { return ''; }
+  })();
+  const waMsg = encodeURIComponent(`Hi! I placed order #${orderRef} at ${xe(o.bizName || 'your venue')}. Total: R${total.toFixed(2)}. Pickup: ${xe(o.pickupTime || 'ASAP')}. Name: ${xe(o.customer)}.`);
+
+  document.getElementById('content').innerHTML = `
+  <div class="check-wrap">
+    <div class="check-circle"><div class="check-ico">✅</div></div>
+    <div class="check-title">Order Confirmed!</div>
+    <div class="check-sub">Your pickup order has been received.<br/>The business is preparing your order now.</div>
+  </div>
+
+  <div class="ticket">
+    <div class="ticket-header">
+      <div class="ticket-biz">${xe(o.bizName || 'Business')}</div>
+      <div class="ticket-addr">📍 ${xe(o.bizAddress || 'See business for address')}</div>
+    </div>
+    <div class="ticket-body">
+      <div class="info-row">
+        <div><div class="ir-label">Customer</div><div class="ir-val">${xe(o.customer)}</div></div>
+        <div style="text-align:right"><div class="ir-label">Phone</div><div class="ir-val">${xe(o.phone)}</div></div>
+      </div>
+      <div class="info-row">
+        <div><div class="ir-label">Pickup Time</div><div class="ir-val time">${xe(o.pickupTime || 'ASAP')}</div></div>
+        <div style="text-align:right"><div class="ir-label">Status</div><span class="status-badge s-pending">⏳ Pending</span></div>
+      </div>
+      <div class="info-row">
+        <div><div class="ir-label">Order Date</div><div class="ir-val">${new Date(o.created).toLocaleDateString('en-ZA', { day:'numeric', month:'short', year:'numeric' })}</div></div>
+        <div style="text-align:right"><div class="ir-label">Total Paid</div><div class="ir-val price">R${total.toFixed(2)}</div></div>
+      </div>
+      ${o.notes ? `<div class="info-row"><div><div class="ir-label">Special Instructions</div><div class="ir-val" style="color:var(--mu2)">${xe(o.notes)}</div></div></div>` : ''}
+    </div>
+    <div class="tear"><div class="tear-circle"></div><div class="tear-line"></div><div class="tear-circle"></div></div>
+    <div class="qr-wrap">
+      <div class="qr-box">${qrRows}</div>
+      <div class="qr-info">
+        <div class="qr-id">#${orderRef}</div>
+        <div class="qr-scan">Show this code at the counter when collecting your order.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="items-card">
+    <div class="items-title">Order Summary</div>
+    ${(o.items || []).map(i => `
+      <div class="order-item">
+        <div><div class="oi-name">${xe(i.name)}</div><div class="oi-qty">× ${i.qty}</div></div>
+        <div class="oi-price">R${(i.price * i.qty).toFixed(2)}</div>
+      </div>`).join('')}
+    <div class="totals-row"><span class="tl">Subtotal</span><span class="tv">R${subtotal.toFixed(2)}</span></div>
+    <div class="totals-row"><span class="tl">Service fee</span><span class="tv">R${service.toFixed(2)}</span></div>
+    <div class="totals-row total"><span class="tl">Total Paid</span><span class="tv">R${total.toFixed(2)}</span></div>
+  </div>
+
+  <div class="next-card">
+    <div class="next-title">What Happens Next</div>
+    <div class="next-step"><div class="step-num">1</div><div class="step-info"><div class="step-title">Business Receives Your Order</div><div class="step-sub">Your order was sent directly to ${xe(o.bizName || 'the venue')} and they start preparing it now.</div></div></div>
+    <div class="next-step"><div class="step-num">2</div><div class="step-info"><div class="step-title">Wait for Your Pickup Time</div><div class="step-sub">Head to the venue at <strong style="color:var(--cy)">${xe(o.pickupTime||'your selected time')}</strong>. Bring your order confirmation.</div></div></div>
+    <div class="next-step"><div class="step-num">3</div><div class="step-info"><div class="step-title">Show QR Code at Counter</div><div class="step-sub">Show order <strong style="color:var(--cy)">#${orderRef}</strong> to the staff. They'll hand over your order.</div></div></div>
+  </div>
+
+  <div class="actions">
+    ${bizWA ? `<a class="btn-wa" href="https://wa.me/27${bizWA.slice(-9)}?text=${waMsg}" target="_blank">💬 WhatsApp the Business</a>` : ''}
+    <a class="btn-main" href="index.html">🏠 Back to Pulsify Home</a>
+    <a class="btn-sec" href="business-menu.html?id=${xe(o.bizId || '')}">← Back to Menu</a>
+  </div>`;
+}
+
+function generateQrPattern(seed) {
+  const charCodes = seed.split('').map(c => c.charCodeAt(0));
+  let html = '';
+  for (let r = 0; r < 5; r++) {
+    html += '<div class="qr-row">';
+    for (let c = 0; c < 5; c++) {
+      const val = (charCodes[(r * 5 + c) % charCodes.length] + r + c) % 5;
+      const bg = val < 3 ? (val === 0 ? 'var(--or)' : val === 1 ? '#fff' : 'var(--cy)') : 'var(--surf2)';
+      html += `<div class="qr-cell" style="background:${bg}"></div>`;
+    }
+    html += '</div>';
+  }
+  return html;
+}
+
+function renderError() {
+  document.getElementById('content').innerHTML = `
+    <div style="text-align:center;padding:64px 24px">
+      <div style="font-size:4rem;margin-bottom:16px">🤔</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;margin-bottom:8px">No Order Found</div>
+      <div style="font-size:.84rem;color:var(--mu);line-height:1.6;margin-bottom:24px">We couldn't find your order details. It may have been cleared or the link expired.</div>
+      <a href="index.html" style="background:var(--or);color:#fff;border:none;padding:12px 28px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block">Back to Pulsify</a>
+    </div>`;
+}
+
+function xe(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>
+</body>
+</html>

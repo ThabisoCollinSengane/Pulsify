@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Pulsify Business — Sign In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--te:#00D4AA;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0}
+html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 50% -20%,rgba(176,38,255,.18),transparent),radial-gradient(ellipse 50% 40% at 80% 100%,rgba(255,92,0,.12),transparent);pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.08em;display:flex;align-items:center;gap:10px;margin-bottom:6px;cursor:pointer;text-decoration:none;color:var(--tx)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--or);box-shadow:0 0 12px var(--or);animation:p 2s ease-in-out infinite;flex-shrink:0}
+@keyframes p{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}
+.sub-logo{font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.25em;text-transform:uppercase;color:var(--mu2);margin-bottom:32px}
+.card{width:100%;max-width:420px;background:var(--surf);border:1px solid var(--border2);border-radius:24px;padding:28px 24px;box-shadow:0 24px 64px rgba(0,0,0,.5)}
+.tab-row{display:flex;background:var(--bg2);border-radius:12px;padding:4px;margin-bottom:24px;gap:4px}
+.t-btn{flex:1;padding:9px 0;text-align:center;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.04em;color:var(--mu);border:none;background:transparent;border-radius:9px;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.t-btn.active{background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;box-shadow:0 2px 12px rgba(176,38,255,.3)}
+.form-view{display:none}.form-view.active{display:block}
+.field-wrap{margin-bottom:14px}
+.field-label{font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu2);margin-bottom:6px;display:block}
+.ff{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:12px 14px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.9rem;outline:none;transition:border-color .2s}
+.ff:focus{border-color:var(--or)}.ff::placeholder{color:var(--mu)}
+.ff-select{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:12px 14px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.9rem;outline:none;-webkit-appearance:none;cursor:pointer}
+.ff-select option{background:#090D1A}
+.pw-wrap{position:relative}
+.pw-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--mu);cursor:pointer;font-size:1rem;padding:0}
+.ff-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-main{width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;margin-top:6px;box-shadow:0 4px 24px rgba(176,38,255,.28);transition:opacity .18s,transform .18s;-webkit-tap-highlight-color:transparent}
+.btn-main:active{opacity:.85;transform:scale(.98)}
+.btn-main:disabled{opacity:.45;cursor:not-allowed}
+.or-divider{display:flex;align-items:center;gap:10px;margin:18px 0;color:var(--mu);font-size:.72rem}
+.or-divider::before,.or-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.msg{padding:10px 14px;border-radius:10px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;margin-bottom:14px;display:none}
+.msg.err{background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.3);color:var(--pk)}
+.msg.ok{background:rgba(198,255,74,.08);border:1px solid rgba(198,255,74,.25);color:var(--li)}
+.msg.show{display:block}
+.home-link{margin-top:20px;font-size:.78rem;color:var(--mu2);text-align:center}
+.home-link a{color:var(--or);text-decoration:none;font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="index.html" class="logo"><span class="dot"></span>PULSIFY</a>
+  <div class="sub-logo">Business Portal</div>
+
+  <div class="card">
+    <div class="tab-row">
+      <button class="t-btn active" onclick="switchTab('login')">Sign In</button>
+      <button class="t-btn" onclick="switchTab('register')">Register</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div class="form-view active" id="login-view">
+      <div class="msg" id="login-msg"></div>
+      <div class="field-wrap">
+        <label class="field-label">Email Address</label>
+        <input class="ff" type="email" id="l-email" placeholder="your@business.co.za" autocomplete="email"/>
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">Password</label>
+        <div class="pw-wrap">
+          <input class="ff" type="password" id="l-pw" placeholder="••••••••" autocomplete="current-password"/>
+          <button class="pw-eye" onclick="togglePw('l-pw',this)">👁</button>
+        </div>
+      </div>
+      <button class="btn-main" id="login-btn" onclick="doLogin()">Sign In to Dashboard</button>
+      <div class="or-divider">or</div>
+      <p style="text-align:center;font-size:.76rem;color:var(--mu2)">No account? <a href="#" onclick="switchTab('register');return false" style="color:var(--or);font-weight:700">Register your business →</a></p>
+    </div>
+
+    <!-- REGISTER -->
+    <div class="form-view" id="register-view">
+      <div class="msg" id="reg-msg"></div>
+      <div class="field-wrap">
+        <label class="field-label">Business Name</label>
+        <input class="ff" type="text" id="r-name" placeholder="e.g. Eve's Lounge"/>
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">Business Type</label>
+        <select class="ff-select" id="r-type">
+          <option value="">Select category…</option>
+          <option value="club">🌙 Club / Nightlife</option>
+          <option value="shisanyama">🥩 Shisanyama / Braai</option>
+          <option value="restaurant">🍽️ Restaurant</option>
+          <option value="bar">🍺 Bar / Lounge</option>
+          <option value="hotel">🏨 Hotel / BnB</option>
+          <option value="venue">🎪 Event Venue</option>
+          <option value="food">🍔 Food & Takeout</option>
+          <option value="other">📍 Other</option>
+        </select>
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">Email Address</label>
+        <input class="ff" type="email" id="r-email" placeholder="owner@business.co.za"/>
+      </div>
+      <div class="ff-row" style="margin-bottom:14px">
+        <div class="field-wrap" style="margin-bottom:0">
+          <label class="field-label">Phone</label>
+          <input class="ff" type="tel" id="r-phone" placeholder="+27 xx xxx xxxx"/>
+        </div>
+        <div class="field-wrap" style="margin-bottom:0">
+          <label class="field-label">City</label>
+          <input class="ff" type="text" id="r-city" placeholder="e.g. Durban"/>
+        </div>
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">Province</label>
+        <select class="ff-select" id="r-province">
+          <option value="">Select…</option>
+          <option>KwaZulu-Natal</option><option>Gauteng</option><option>Western Cape</option>
+          <option>Eastern Cape</option><option>Limpopo</option><option>Mpumalanga</option>
+          <option>North West</option><option>Free State</option><option>Northern Cape</option>
+        </select>
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">Password (min 6 characters)</label>
+        <div class="pw-wrap">
+          <input class="ff" type="password" id="r-pw" placeholder="Min 6 characters" autocomplete="new-password"/>
+          <button class="pw-eye" onclick="togglePw('r-pw',this)">👁</button>
+        </div>
+      </div>
+      <button class="btn-main" id="reg-btn" onclick="doRegister()">Create Business Account</button>
+    </div>
+  </div>
+
+  <div class="home-link"><a href="index.html">← Back to Pulsify Home</a></div>
+</div>
+
+<script>
+/* ─── Auto-redirect if already logged in ─── */
+if (localStorage.getItem('biz_session')) window.location.href = 'business-dashboard.html';
+
+/* ─── Tab switch ─── */
+function switchTab(tab) {
+  document.querySelectorAll('.t-btn').forEach((b,i) => b.classList.toggle('active', tab==='login'?i===0:i===1));
+  document.getElementById('login-view').classList.toggle('active', tab==='login');
+  document.getElementById('register-view').classList.toggle('active', tab==='register');
+}
+
+function togglePw(id, btn) {
+  const i = document.getElementById(id);
+  i.type = i.type==='password' ? 'text' : 'password';
+  btn.textContent = i.type==='password' ? '👁' : '🙈';
+}
+
+function showMsg(id, text, type) {
+  const el = document.getElementById(id);
+  el.textContent = text; el.className = 'msg ' + type + ' show';
+}
+function hideMsg(id) { document.getElementById(id).className = 'msg'; }
+
+/* ─── Login ─── */
+function doLogin() {
+  const email = document.getElementById('l-email').value.trim();
+  const pw    = document.getElementById('l-pw').value;
+  if (!email || !pw) { showMsg('login-msg','Please fill in all fields','err'); return; }
+
+  const accounts = JSON.parse(localStorage.getItem('biz_accounts') || '[]');
+  const acc = accounts.find(a => a.email===email && a.password===pw);
+  if (!acc) { showMsg('login-msg','Incorrect email or password','err'); return; }
+
+  const session = { id:acc.id, email:acc.email, name:acc.name, type:acc.type, city:acc.city, province:acc.province||'', phone:acc.phone, logo:acc.logo||'', address:acc.address||'' };
+  localStorage.setItem('biz_session', JSON.stringify(session));
+
+  /* ── Sync to shared user feed so business posts appear in index.html ── */
+  _syncBizToSharedFeed(acc);
+
+  showMsg('login-msg','Welcome back! Redirecting…','ok');
+  setTimeout(() => window.location.href='business-dashboard.html', 800);
+}
+
+/* ─── Register ─── */
+function doRegister() {
+  const name     = document.getElementById('r-name').value.trim();
+  const type     = document.getElementById('r-type').value;
+  const email    = document.getElementById('r-email').value.trim();
+  const phone    = document.getElementById('r-phone').value.trim();
+  const city     = document.getElementById('r-city').value.trim();
+  const province = document.getElementById('r-province').value;
+  const pw       = document.getElementById('r-pw').value;
+
+  if (!name||!type||!email||!pw) { showMsg('reg-msg','Please fill in all required fields','err'); return; }
+  if (pw.length < 6) { showMsg('reg-msg','Password must be at least 6 characters','err'); return; }
+
+  const accounts = JSON.parse(localStorage.getItem('biz_accounts') || '[]');
+  if (accounts.find(a => a.email===email)) { showMsg('reg-msg','An account with this email already exists','err'); return; }
+
+  const newAcc = {
+    id: 'biz_' + Date.now(), name, type, email, phone, city, province,
+    password: pw, logo:'', address:'', website:'', desc:'', created: Date.now()
+  };
+  accounts.push(newAcc);
+  localStorage.setItem('biz_accounts', JSON.stringify(accounts));
+
+  const session = { id:newAcc.id, email, name, type, city, province, phone, logo:'', address:'' };
+  localStorage.setItem('biz_session', JSON.stringify(session));
+
+  /* ── Seed default hours & empty stores ── */
+  const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const defHours = days.map(d => ({ day:d, open:d!=='Sunday', from:'10:00', to:'18:00' }));
+  if (!localStorage.getItem(newAcc.id + '_hours')) {
+    localStorage.setItem(newAcc.id + '_hours', JSON.stringify(defHours));
+  }
+
+  showMsg('reg-msg','Account created! Redirecting…','ok');
+  setTimeout(() => window.location.href='business-dashboard.html', 800);
+}
+
+/* ─── Sync so biz posts appear on shared frontend feed ─── */
+function _syncBizToSharedFeed(acc) {
+  /* business_posts key is read by index.html feed */
+  const posts = JSON.parse(localStorage.getItem(acc.id + '_posts') || '[]');
+  const shared = JSON.parse(localStorage.getItem('business_posts') || '[]');
+  posts.forEach(p => { if (!shared.find(s => s.id===p.id)) shared.unshift(p); });
+  localStorage.setItem('business_posts', JSON.stringify(shared.slice(0,200)));
+
+  const events = JSON.parse(localStorage.getItem(acc.id + '_events') || '[]');
+  const sevs = JSON.parse(localStorage.getItem('business_events') || '[]');
+  events.forEach(e => { if (!sevs.find(s => s.id===e.id)) sevs.unshift(e); });
+  localStorage.setItem('business_events', JSON.stringify(sevs.slice(0,200)));
+}
+
+/* ─── Enter key ─── */
+document.addEventListener('keydown', e => { if(e.key==='Enter') { if(document.getElementById('login-view').classList.contains('active')) doLogin(); else doRegister(); } });
+</script>
+</body>
+</html>
