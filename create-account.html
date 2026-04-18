@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#05080F"/>
+<title>Create Account — Pulsify</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0}
+html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:"DM Sans",sans-serif;-webkit-font-smoothing:antialiased}
+body{padding:32px 20px 56px;display:flex;flex-direction:column;align-items:center}
+.logo{font-family:"Bebas Neue",sans-serif;font-size:2rem;letter-spacing:.06em;display:flex;align-items:center;gap:10px;margin-bottom:4px;cursor:pointer;text-decoration:none;color:var(--tx)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--or);box-shadow:0 0 12px var(--or);animation:p 2s ease-in-out infinite;flex-shrink:0}
+@keyframes p{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}
+.tagline{font-size:.78rem;color:var(--mu);margin-bottom:28px}
+.card{width:100%;max-width:440px;background:var(--bg2);border:1px solid var(--border2);border-radius:22px;padding:26px 22px 30px}
+.card-title{font-family:"Bebas Neue",sans-serif;font-size:1.75rem;letter-spacing:.03em;margin-bottom:4px}
+.card-sub{font-size:.8rem;color:var(--mu);margin-bottom:18px}
+.steps{display:flex;gap:6px;margin-bottom:6px}
+.step{flex:1;height:3px;border-radius:3px;background:var(--surf2);transition:background .3s}
+.step.done{background:var(--or)}.step.active{background:linear-gradient(90deg,var(--pu),var(--or))}
+.step-lbl{font-family:"Syne",sans-serif;font-size:.66rem;font-weight:700;color:var(--mu);margin-bottom:18px}
+.lbl{font-family:"Syne",sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu2);margin-bottom:5px;display:block}
+.inp{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--tx);font-family:"DM Sans",sans-serif;font-size:.88rem;outline:none;margin-bottom:14px;transition:border-color .2s}
+.inp:focus{border-color:var(--or)!important}.inp::placeholder{color:var(--mu)}
+select.inp{-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235A5870' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;cursor:pointer}
+select.inp option{background:#0D1424}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row2 .inp{margin-bottom:0}
+.pw-wrap{position:relative;margin-bottom:14px}
+.pw-wrap .inp{margin-bottom:0}
+.pw-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--mu);cursor:pointer;font-size:.78rem;font-family:"Syne",sans-serif;font-weight:700}
+.str{height:3px;border-radius:3px;background:var(--surf2);margin-top:4px;margin-bottom:14px}
+.str-bar{height:100%;border-radius:3px;transition:width .3s,background .3s}
+.sec-div{font-family:"Syne",sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);display:flex;align-items:center;gap:8px;margin:10px 0 10px}
+.sec-div::after{content:"";flex:1;height:1px;background:var(--border)}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.chip{padding:6px 14px;border-radius:50px;border:1px solid var(--border);background:rgba(255,255,255,.02);font-family:"Syne",sans-serif;font-size:.7rem;font-weight:700;color:var(--mu);cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.chip.on{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.09)}
+.tgl-row{display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.tgl-title{font-family:"Syne",sans-serif;font-size:.78rem;font-weight:700;margin-bottom:2px}
+.tgl-sub{font-size:.68rem;color:var(--mu)}
+.tgl{position:relative;display:inline-block;width:42px;height:22px;flex-shrink:0}
+.tgl input{opacity:0;width:0;height:0}
+.tgl-s{position:absolute;cursor:pointer;inset:0;background:var(--surf2);border-radius:22px;transition:.28s;border:1px solid var(--border2)}
+.tgl-s::before{content:"";position:absolute;height:16px;width:16px;left:2px;bottom:2px;background:var(--mu);border-radius:50%;transition:.28s}
+.tgl input:checked + .tgl-s{background:rgba(255,92,0,.2);border-color:var(--or)}
+.tgl input:checked + .tgl-s::before{transform:translateX(20px);background:var(--or)}
+.terms-row{display:flex;gap:12px;align-items:flex-start;background:rgba(255,255,255,.02);border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:16px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:border-color .2s}
+.terms-row.on{border-color:var(--or);background:rgba(255,92,0,.04)}
+.chkbox{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--border2);background:var(--surf);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.78rem;transition:all .18s;margin-top:1px}
+.terms-row.on .chkbox{background:var(--or);border-color:var(--or);color:#fff}
+.terms-txt{font-size:.76rem;color:var(--mu2);line-height:1.5}
+.terms-txt a{color:var(--or);text-decoration:none}
+.btn{width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:14px;border-radius:50px;font-family:"Syne",sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;margin-top:4px;transition:opacity .2s}
+.btn:active{opacity:.85}.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-back{width:100%;background:var(--surf);border:1px solid var(--border2);color:var(--mu2);border-radius:50px;padding:13px;font-family:"Syne",sans-serif;font-size:.86rem;font-weight:700;cursor:pointer;margin-bottom:10px}
+.err{background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.3);border-radius:10px;padding:10px 14px;font-size:.78rem;color:var(--pk);margin-bottom:14px;display:none}
+.err.show{display:block}
+.asw{text-align:center;margin-top:14px;font-size:.78rem;color:var(--mu)}
+.asw a{color:var(--or);font-weight:700;text-decoration:none}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 22px;font-family:"Syne",sans-serif;font-size:.78rem;font-weight:700;color:var(--tx);z-index:999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{border-color:rgba(198,255,74,.4);color:var(--li)}
+</style>
+</head>
+<body>
+<a class="logo" href="index.html"><span class="dot"></span>PULSIFY</a>
+<p class="tagline">Join South Africa's vibe platform 🇿🇦</p>
+
+<div class="card">
+  <div class="card-title">Create Account</div>
+  <div class="card-sub">Set up your free profile in 2 quick steps</div>
+  <div class="steps"><div class="step active" id="s1"></div><div class="step" id="s2"></div></div>
+  <div class="step-lbl" id="slbl">Step 1 of 2 — Your Details</div>
+  <div class="err" id="err"></div>
+
+  <!-- STEP 1 -->
+  <div id="p1">
+    <label class="lbl">Full Name *</label>
+    <input class="inp" id="fn" type="text" placeholder="Your full name" autocomplete="name"/>
+
+    <label class="lbl">Username *</label>
+    <input class="inp" id="un" type="text" placeholder="@yourhandle" autocomplete="off"/>
+
+    <label class="lbl">Email Address *</label>
+    <input class="inp" id="em" type="email" placeholder="you@example.com" autocomplete="email"/>
+
+    <label class="lbl">Password *</label>
+    <div class="pw-wrap">
+      <input class="inp" id="pw" type="password" placeholder="Min 8 characters" autocomplete="new-password" oninput="chkStr(this.value)"/>
+      <button class="pw-eye" type="button" onclick="togPw('pw',this)">Show</button>
+    </div>
+    <div class="str"><div class="str-bar" id="sbar"></div></div>
+
+    <label class="lbl">Confirm Password *</label>
+    <div class="pw-wrap">
+      <input class="inp" id="pw2" type="password" placeholder="Repeat password" autocomplete="new-password"/>
+      <button class="pw-eye" type="button" onclick="togPw('pw2',this)">Show</button>
+    </div>
+
+    <div class="row2" style="margin-bottom:14px">
+      <div>
+        <label class="lbl">Date of Birth</label>
+        <input class="inp" id="dob" type="date" style="color-scheme:dark"/>
+      </div>
+      <div>
+        <label class="lbl">Province</label>
+        <select class="inp" id="prov">
+          <option value="">Select…</option>
+          <option value="KZN">KwaZulu-Natal</option>
+          <option value="GP">Gauteng</option>
+          <option value="WC">Western Cape</option>
+          <option value="EC">Eastern Cape</option>
+          <option value="MP">Mpumalanga</option>
+          <option value="LP">Limpopo</option>
+          <option value="NW">North West</option>
+          <option value="FS">Free State</option>
+          <option value="NC">Northern Cape</option>
+        </select>
+      </div>
+    </div>
+
+    <label class="lbl">City / Suburb</label>
+    <input class="inp" id="city" type="text" placeholder="e.g. Soweto, Umhlanga, Sea Point"/>
+
+    <label class="lbl">Phone <span style="color:var(--mu);font-size:.6rem;font-weight:400">(optional)</span></label>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:12px;color:var(--mu2);font-family:Syne,sans-serif;font-size:.82rem;font-weight:700;white-space:nowrap;flex-shrink:0">🇿🇦 +27</div>
+      <input class="inp" id="ph" type="tel" placeholder="72 123 4567" style="margin-bottom:0" maxlength="15"/>
+    </div>
+
+    <button class="btn" onclick="goStep2()">Next — Step 2 →</button>
+  </div>
+
+  <!-- STEP 2 -->
+  <div id="p2" style="display:none">
+    <div class="sec-div">Music Preferences</div>
+    <div class="chips" id="genre-chips">
+      <div class="chip" onclick="togChip(this,'amapiano')">🎶 Amapiano</div>
+      <div class="chip" onclick="togChip(this,'gqom')">🔊 Gqom</div>
+      <div class="chip" onclick="togChip(this,'hiphop')">🎤 Hip Hop</div>
+      <div class="chip" onclick="togChip(this,'house')">🎧 House</div>
+      <div class="chip" onclick="togChip(this,'afrobeats')">🥁 Afrobeats</div>
+      <div class="chip" onclick="togChip(this,'rock')">🎸 Rock</div>
+      <div class="chip" onclick="togChip(this,'gospel')">🙏 Gospel</div>
+      <div class="chip" onclick="togChip(this,'jazz')">🎷 Jazz</div>
+      <div class="chip" onclick="togChip(this,'sport')">⚽ Sport</div>
+      <div class="chip" onclick="togChip(this,'maskandi')">🪗 Maskandi</div>
+      <div class="chip" onclick="togChip(this,'comedy')">😂 Comedy</div>
+    </div>
+
+    <div class="sec-div">Account Type</div>
+    <div class="tgl-row">
+      <div>
+        <div class="tgl-title">I am an event organizer / business</div>
+        <div class="tgl-sub">Your account becomes a public page others can follow</div>
+      </div>
+      <label class="tgl"><input type="checkbox" id="isorg"/><span class="tgl-s"></span></label>
+    </div>
+
+    <div class="sec-div">Terms</div>
+    <div class="terms-row" id="trow" onclick="togTerms()">
+      <div class="chkbox" id="tchk"></div>
+      <div class="terms-txt">I agree to the Pulsify <a href="terms.html" target="_blank" onclick="event.stopPropagation()">Terms of Service</a> and <a href="terms.html" target="_blank" onclick="event.stopPropagation()">Privacy Policy</a>. I confirm I am at least 13 years old.</div>
+    </div>
+
+    <button class="btn-back" onclick="goStep1()">← Back</button>
+    <button class="btn" id="cbtn" onclick="doCreate()">Create My Account 🔥</button>
+  </div>
+</div>
+
+<div class="asw">Already have an account? <a href="signin.html">Sign in →</a></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// Redirect if already logged in
+try { var _s=JSON.parse(localStorage.getItem("p_user")); if(_s&&_s.id) window.location.href="index.html"; } catch(e){}
+
+var genres  = [];
+var termsOn = false;
+
+function togPw(id,btn){var i=document.getElementById(id);var s=i.type==="password";i.type=s?"text":"password";btn.textContent=s?"Hide":"Show";}
+
+function chkStr(v){
+  var bar=document.getElementById("sbar");
+  var s=0;
+  if(v.length>=8)s++;if(/[A-Z]/.test(v))s++;if(/[0-9]/.test(v))s++;if(/[^A-Za-z0-9]/.test(v))s++;
+  var c=["#FF2D78","#FF5C00","#FFB800","#C6FF4A"];
+  bar.style.width=s>0?(s*25)+"%":"0";
+  bar.style.background=s>0?c[s-1]:"transparent";
+}
+
+function togChip(el,g){
+  var idx=genres.indexOf(g);
+  if(idx>-1){genres.splice(idx,1);el.classList.remove("on");}
+  else{genres.push(g);el.classList.add("on");}
+}
+
+function togTerms(){
+  termsOn=!termsOn;
+  document.getElementById("trow").classList.toggle("on",termsOn);
+  document.getElementById("tchk").textContent=termsOn?"✓":"";
+}
+
+function showErr(m){var e=document.getElementById("err");e.textContent=m;e.classList.add("show");e.scrollIntoView({behavior:"smooth",block:"nearest"});}
+function hideErr(){document.getElementById("err").classList.remove("show");}
+function showToast(m,t){var el=document.getElementById("toast");el.textContent=m;el.className="toast "+(t||"")+" show";setTimeout(function(){el.classList.remove("show");},3000);}
+
+function goStep2(){
+  hideErr();
+  var fn = document.getElementById("fn").value.trim();
+  var un = document.getElementById("un").value.trim().replace("@","");
+  var em = document.getElementById("em").value.trim();
+  var pw = document.getElementById("pw").value;
+  var pw2= document.getElementById("pw2").value;
+
+  if(!fn)                           return showErr("Please enter your full name.");
+  if(!un || un.length < 3)          return showErr("Username must be at least 3 characters.");
+  if(!/^[a-zA-Z0-9_]+$/.test(un))  return showErr("Username: letters, numbers and underscores only.");
+  if(!em || !em.includes("@"))      return showErr("Please enter a valid email address.");
+  if(pw.length < 8)                 return showErr("Password must be at least 8 characters.");
+  if(pw !== pw2)                    return showErr("Passwords do not match.");
+
+  document.getElementById("p1").style.display = "none";
+  document.getElementById("p2").style.display = "block";
+  document.getElementById("s1").className = "step done";
+  document.getElementById("s2").className = "step active";
+  document.getElementById("slbl").textContent = "Step 2 of 2 — Your Preferences";
+  window.scrollTo(0,0);
+}
+
+function goStep1(){
+  document.getElementById("p2").style.display = "none";
+  document.getElementById("p1").style.display = "block";
+  document.getElementById("s1").className = "step active";
+  document.getElementById("s2").className = "step";
+  document.getElementById("slbl").textContent = "Step 1 of 2 — Your Details";
+}
+
+function doCreate(){
+  hideErr();
+  if(!termsOn) return showErr("Please accept the Terms & Privacy Policy.");
+
+  var btn = document.getElementById("cbtn");
+  btn.textContent = "Creating…";
+  btn.disabled = true;
+
+  var fn   = document.getElementById("fn").value.trim();
+  var un   = document.getElementById("un").value.trim().replace("@","");
+  var em   = document.getElementById("em").value.trim();
+  var pw   = document.getElementById("pw").value;
+  var dob  = document.getElementById("dob").value || null;
+  var prov = document.getElementById("prov").value;
+  var city = document.getElementById("city").value.trim();
+  var ph   = document.getElementById("ph").value.trim();
+  var isOrg= document.getElementById("isorg").checked;
+
+  // Age check
+  if(dob){
+    var age = Math.floor((Date.now()-new Date(dob))/31557600000);
+    if(age<13){btn.textContent="Create My Account 🔥";btn.disabled=false;return showErr("You must be at least 13 years old to join.");}
+  }
+
+  // Save session to localStorage — same keys used by index.html and feeds.html
+  var uid = "user_"+Date.now();
+  var user = {
+    id: uid,
+    email: em,
+    display_name: fn,
+    role: isOrg ? "organizer" : "user",
+    account_status: "active",
+    email_verified: false,
+    created_at: new Date().toISOString(),
+    last_login: new Date().toISOString()
+  };
+  var profile = {
+    user_id: uid,
+    username: un,
+    display_name: fn,
+    email: em,
+    role: isOrg ? "organizer" : "user",
+    is_page: isOrg,
+    dob: dob,
+    phone: ph ? "+27"+ph.replace(/^0/,"").replace(/\s/g,"") : null,
+    province: prov,
+    city: city,
+    genres: genres,
+    avatar_url: null,
+    bio: "",
+    agree_terms: true,
+    terms_date: new Date().toISOString()
+  };
+
+  // Write to localStorage — index.html reads p_user to show Feed button
+  localStorage.setItem("p_user", JSON.stringify(user));
+  localStorage.setItem("p_profile", JSON.stringify(profile));
+
+  showToast(isOrg ? "🎪 Organizer page created! Welcome to Pulsify" : "🎉 Welcome to Pulsify!", "ok");
+
+  // Go back to homepage — button will now say "Feed"
+  setTimeout(function(){ window.location.href = "index.html"; }, 1200);
+}
+</script>
+</body>
+</html>
