@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>Pulsify Admin — Business Coordinates</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0}
+html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+body{padding:0}
+.topbar{position:sticky;top:0;z-index:100;background:rgba(5,8,15,.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.05em;display:flex;align-items:center;gap:10px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--or);box-shadow:0 0 10px var(--or)}
+.admin-badge{font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;background:rgba(255,45,120,.15);border:1px solid rgba(255,45,120,.3);color:var(--pk);padding:3px 10px;border-radius:50px}
+.page{max-width:960px;margin:0 auto;padding:24px 16px 80px}
+/* Auth gate */
+.auth-gate{max-width:380px;margin:80px auto;background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:28px 24px}
+.auth-gate h2{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;margin-bottom:4px}
+.auth-gate p{font-size:.82rem;color:var(--mu);margin-bottom:20px}
+/* Stats bar */
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 16px}
+.stat-n{font-family:'Bebas Neue',sans-serif;font-size:2rem;line-height:1}
+.stat-l{font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-top:3px}
+.ok-n{color:var(--li)}
+.bad-n{color:var(--pk)}
+.warn-n{color:#FFB800}
+/* Search */
+.search-row{display:flex;gap:10px;margin-bottom:20px}
+.inp{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:12px;padding:11px 14px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;transition:border-color .2s}
+.inp:focus{border-color:var(--or)}
+.inp::placeholder{color:var(--mu)}
+.btn{padding:11px 18px;border-radius:12px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;border:none;transition:opacity .2s;white-space:nowrap}
+.btn:active{opacity:.8}
+.btn-or{background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff}
+.btn-surf{background:var(--surf);border:1px solid var(--border2);color:var(--mu2)}
+.btn-li{background:rgba(198,255,74,.1);border:1px solid rgba(198,255,74,.25);color:var(--li)}
+.btn-pk{background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.25);color:var(--pk)}
+.btn-cy{background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.25);color:var(--cy)}
+/* Filter chips */
+.filter-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.fchip{padding:5px 14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;cursor:pointer;border:1px solid var(--border);background:rgba(255,255,255,.02);color:var(--mu);transition:all .18s}
+.fchip.on{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.09)}
+/* Table */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:16px;margin-bottom:24px}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+th{font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);padding:10px 14px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle;color:var(--mu2)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.name-cell{font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;color:var(--tx);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.coord-cell{font-family:'JetBrains Mono',monospace;font-size:.72rem}
+.coord-ok{color:var(--li)}
+.coord-bad{color:var(--pk)}
+.coord-warn{color:#FFB800}
+.status-badge{font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;padding:3px 8px;border-radius:50px;white-space:nowrap}
+.s-ok{background:rgba(198,255,74,.1);border:1px solid rgba(198,255,74,.2);color:var(--li)}
+.s-bad{background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.2);color:var(--pk)}
+.s-warn{background:rgba(255,184,0,.1);border:1px solid rgba(255,184,0,.2);color:#FFB800}
+/* Edit panel */
+.edit-panel{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:20px;margin-bottom:24px;display:none}
+.edit-panel.open{display:block}
+.edit-panel h3{font-family:'Syne',sans-serif;font-size:.86rem;font-weight:800;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.field-lbl{font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu2);margin-bottom:5px;display:block}
+.field-full{grid-column:1/-1}
+.act-row{display:flex;gap:8px;flex-wrap:wrap}
+/* Log */
+.log{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--mu2);max-height:180px;overflow-y:auto;margin-top:16px;line-height:1.8}
+.log-ok{color:var(--li)}
+.log-err{color:var(--pk)}
+.log-info{color:var(--cy)}
+/* Map preview */
+.map-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);border-radius:8px;padding:4px 10px;font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--cy)}
+/* Msg */
+.msg{padding:10px 14px;border-radius:10px;font-size:.78rem;margin-bottom:14px;display:none;line-height:1.5}
+.msg.show{display:block}
+.msg-ok{background:rgba(198,255,74,.08);border:1px solid rgba(198,255,74,.25);color:var(--li)}
+.msg-err{background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);color:var(--pk)}
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:currentColor;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo"><div class="dot"></div>PULSIFY</div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span class="admin-badge">🔐 Admin Panel</span>
+    <button class="btn btn-surf" onclick="signOutAdmin()" id="logout-btn" style="display:none">Sign Out</button>
+  </div>
+</div>
+
+<!-- Auth Gate -->
+<div id="auth-gate" class="page">
+  <div class="auth-gate">
+    <h2>Admin Access</h2>
+    <p>Sign in with your admin Supabase account to manage business coordinates.</p>
+    <div class="msg" id="auth-msg"></div>
+    <label class="field-lbl">Email</label>
+    <input class="inp" id="admin-email" type="email" placeholder="admin@pulsify.co.za" style="width:100%;margin-bottom:10px"/>
+    <label class="field-lbl">Password</label>
+    <input class="inp" id="admin-pw" type="password" placeholder="••••••••" style="width:100%;margin-bottom:14px"/>
+    <button class="btn btn-or" style="width:100%" id="login-btn" onclick="adminLogin()">Sign In to Admin Panel</button>
+  </div>
+</div>
+
+<!-- Main Admin -->
+<div id="admin-main" style="display:none">
+<div class="page">
+
+  <div style="margin-bottom:20px">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Business Coordinates</div>
+    <div style="font-size:.82rem;color:var(--mu2)">Fix invalid map positions for businesses and events</div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar" id="stats-bar">
+    <div class="stat"><div class="stat-n" id="s-total">—</div><div class="stat-l">Total Businesses</div></div>
+    <div class="stat"><div class="stat-n ok-n" id="s-ok">—</div><div class="stat-l">Valid SA Coords</div></div>
+    <div class="stat"><div class="stat-n bad-n" id="s-bad">—</div><div class="stat-l">Missing / Invalid</div></div>
+    <div class="stat"><div class="stat-n warn-n" id="s-out">—</div><div class="stat-l">Outside SA</div></div>
+  </div>
+
+  <!-- Edit panel (shown when a row is selected) -->
+  <div class="edit-panel" id="edit-panel">
+    <h3>
+      <span id="edit-title">Edit Business</span>
+      <button class="btn btn-surf" style="padding:5px 12px;font-size:.68rem" onclick="closeEdit()">✕ Close</button>
+    </h3>
+    <div class="msg" id="edit-msg"></div>
+    <div class="edit-grid">
+      <div class="field-full">
+        <label class="field-lbl">Address (street / suburb)</label>
+        <input class="inp" id="e-address" placeholder="e.g. 14 Stanger Street, Umlazi" style="width:100%"/>
+      </div>
+      <div>
+        <label class="field-lbl">City</label>
+        <input class="inp" id="e-city" placeholder="Durban" style="width:100%"/>
+      </div>
+      <div>
+        <label class="field-lbl">Province</label>
+        <select class="inp" id="e-province" style="width:100%;-webkit-appearance:none">
+          <option value="">Select…</option>
+          <option>KwaZulu-Natal</option><option>Gauteng</option><option>Western Cape</option>
+          <option>Eastern Cape</option><option>Mpumalanga</option><option>Limpopo</option>
+          <option>North West</option><option>Free State</option><option>Northern Cape</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-lbl">Latitude (manual)</label>
+        <input class="inp" id="e-lat" type="number" step="0.0001" placeholder="-29.8587" style="width:100%;font-family:'JetBrains Mono',monospace"/>
+      </div>
+      <div>
+        <label class="field-lbl">Longitude (manual)</label>
+        <input class="inp" id="e-lon" type="number" step="0.0001" placeholder="31.0218" style="width:100%;font-family:'JetBrains Mono',monospace"/>
+      </div>
+    </div>
+    <div class="act-row">
+      <button class="btn btn-cy" onclick="geocodeSelected()">🔍 Auto-Geocode Address</button>
+      <button class="btn btn-li" onclick="saveCoords()">💾 Save Coordinates</button>
+      <button class="btn btn-pk" onclick="clearCoords()">🗑 Clear Coordinates</button>
+    </div>
+    <div class="log" id="edit-log" style="display:none"></div>
+  </div>
+
+  <!-- Search + filters -->
+  <div class="search-row">
+    <input class="inp" id="search-inp" placeholder="Search by business name or city…" oninput="filterTable()"/>
+    <button class="btn btn-or" onclick="runBulkGeocode()">⚡ Fix All Invalid</button>
+    <button class="btn btn-surf" onclick="loadBusinesses()">↺ Refresh</button>
+  </div>
+
+  <div class="filter-row">
+    <div class="fchip on" onclick="setFilter('all',this)">All</div>
+    <div class="fchip" onclick="setFilter('bad',this)">❌ Missing Coords</div>
+    <div class="fchip" onclick="setFilter('out',this)">⚠️ Outside SA</div>
+    <div class="fchip" onclick="setFilter('ok',this)">✅ Valid</div>
+  </div>
+
+  <div id="msg-main" class="msg"></div>
+
+  <div class="tbl-wrap">
+    <table id="biz-table">
+      <thead>
+        <tr>
+          <th>Business</th>
+          <th>City</th>
+          <th>Category</th>
+          <th>Latitude</th>
+          <th>Longitude</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="biz-tbody">
+        <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ── Supabase client ── */
+const SUPA_URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+let ALL_BIZ   = [];
+let activeFilter = 'all';
+let editId    = null;
+
+/* ── Auth ── */
+async function adminLogin() {
+  const email = document.getElementById('admin-email').value.trim();
+  const pw    = document.getElementById('admin-pw').value;
+  if (!email || !pw) return showAuthMsg('Please enter email and password', 'err');
+  const btn = document.getElementById('login-btn');
+  btn.innerHTML = '<span class="spinner"></span>Signing in…'; btn.disabled = true;
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+  if (error) { btn.textContent = 'Sign In to Admin Panel'; btn.disabled = false; return showAuthMsg(error.message, 'err'); }
+  const { data: prof } = await sb.from('profiles').select('role').eq('id', data.user.id).single();
+  if (!['admin'].includes(prof?.role)) {
+    await sb.auth.signOut();
+    btn.textContent = 'Sign In to Admin Panel'; btn.disabled = false;
+    return showAuthMsg('Access denied. Admin role required.', 'err');
+  }
+  showAdminUI();
+}
+
+function showAuthMsg(m, t) { const el=document.getElementById('auth-msg'); el.textContent=m; el.className='msg show msg-'+(t==='err'?'err':'ok'); }
+
+async function checkSession() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    const { data: prof } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
+    if (prof?.role === 'admin') { showAdminUI(); return; }
+  }
+}
+
+function showAdminUI() {
+  document.getElementById('auth-gate').style.display  = 'none';
+  document.getElementById('admin-main').style.display  = 'block';
+  document.getElementById('logout-btn').style.display  = 'block';
+  loadBusinesses();
+}
+
+async function signOutAdmin() { await sb.auth.signOut(); location.reload(); }
+
+/* ── SA validation ── */
+function validSA(lat, lon) {
+  const la = parseFloat(lat), lo = parseFloat(lon);
+  if (isNaN(la) || isNaN(lo)) return 'missing';
+  if (la >= -35 && la <= -22 && lo >= 16 && lo <= 33) return 'ok';
+  return 'outside';
+}
+
+/* ── Load businesses ── */
+async function loadBusinesses() {
+  document.getElementById('biz-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>';
+  const { data, error } = await sb.from('businesses')
+    .select('id,name,category,city,suburb,address,province,lat,lon')
+    .order('name');
+  if (error) { showMainMsg('Failed to load: ' + error.message, 'err'); return; }
+  ALL_BIZ = data || [];
+  updateStats();
+  renderTable();
+}
+
+function updateStats() {
+  const ok  = ALL_BIZ.filter(b => validSA(b.lat, b.lon) === 'ok').length;
+  const bad = ALL_BIZ.filter(b => validSA(b.lat, b.lon) === 'missing').length;
+  const out = ALL_BIZ.filter(b => validSA(b.lat, b.lon) === 'outside').length;
+  document.getElementById('s-total').textContent = ALL_BIZ.length;
+  document.getElementById('s-ok').textContent    = ok;
+  document.getElementById('s-bad').textContent   = bad;
+  document.getElementById('s-out').textContent   = out;
+}
+
+function setFilter(f, el) {
+  activeFilter = f;
+  document.querySelectorAll('.fchip').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  renderTable();
+}
+
+function filterTable() { renderTable(); }
+
+function renderTable() {
+  const search = document.getElementById('search-inp').value.toLowerCase();
+  let items = ALL_BIZ;
+  if (activeFilter === 'bad') items = items.filter(b => validSA(b.lat, b.lon) === 'missing');
+  else if (activeFilter === 'out') items = items.filter(b => validSA(b.lat, b.lon) === 'outside');
+  else if (activeFilter === 'ok')  items = items.filter(b => validSA(b.lat, b.lon) === 'ok');
+  if (search) items = items.filter(b => (b.name||'').toLowerCase().includes(search) || (b.city||'').toLowerCase().includes(search));
+
+  if (!items.length) {
+    document.getElementById('biz-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--mu)">No businesses match this filter.</td></tr>';
+    return;
+  }
+
+  document.getElementById('biz-tbody').innerHTML = items.map(b => {
+    const st  = validSA(b.lat, b.lon);
+    const lat = parseFloat(b.lat);
+    const lon = parseFloat(b.lon);
+    const coordClass = st === 'ok' ? 'coord-ok' : st === 'outside' ? 'coord-warn' : 'coord-bad';
+    const badge = st === 'ok'
+      ? '<span class="status-badge s-ok">✅ Valid</span>'
+      : st === 'outside'
+      ? '<span class="status-badge s-warn">⚠️ Outside SA</span>'
+      : '<span class="status-badge s-bad">❌ Missing</span>';
+    return `<tr>
+      <td class="name-cell" title="${esc(b.name)}">${esc(b.name)}</td>
+      <td>${esc(b.city || b.suburb || '—')}</td>
+      <td>${esc(b.category || '—')}</td>
+      <td class="coord-cell ${coordClass}">${isNaN(lat) ? '—' : lat.toFixed(4)}</td>
+      <td class="coord-cell ${coordClass}">${isNaN(lon) ? '—' : lon.toFixed(4)}</td>
+      <td>${badge}</td>
+      <td><button class="btn btn-surf" style="padding:5px 12px;font-size:.68rem" onclick="openEdit('${b.id}')">✏️ Edit</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ── Edit panel ── */
+function openEdit(id) {
+  const biz = ALL_BIZ.find(b => b.id === id);
+  if (!biz) return;
+  editId = id;
+  document.getElementById('edit-title').textContent  = `Editing: ${biz.name}`;
+  document.getElementById('e-address').value  = biz.address || biz.suburb || '';
+  document.getElementById('e-city').value     = biz.city || '';
+  document.getElementById('e-province').value = biz.province || '';
+  document.getElementById('e-lat').value      = biz.lat || '';
+  document.getElementById('e-lon').value      = biz.lon || '';
+  document.getElementById('edit-msg').className = 'msg';
+  document.getElementById('edit-log').style.display = 'none';
+  document.getElementById('edit-panel').classList.add('open');
+  document.getElementById('edit-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function closeEdit() { document.getElementById('edit-panel').classList.remove('open'); editId = null; }
+
+function appendLog(msg, type = 'info') {
+  const log = document.getElementById('edit-log');
+  log.style.display = 'block';
+  const line = document.createElement('div');
+  line.className = `log-${type}`;
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+async function geocodeSelected() {
+  const address  = document.getElementById('e-address').value.trim();
+  const city     = document.getElementById('e-city').value.trim();
+  const province = document.getElementById('e-province').value.trim();
+  if (!address && !city) { showEditMsg('Enter an address or city first', 'err'); return; }
+
+  const query = [address, city, province, 'South Africa'].filter(Boolean).join(', ');
+  appendLog(`Geocoding: "${query}"`, 'info');
+
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/search?` + new URLSearchParams({ q: query, format: 'json', limit: 1, countrycodes: 'za' }),
+      { headers: { 'User-Agent': 'Pulsify/2.0 Admin' } }
+    );
+    const results = await r.json();
+    if (!results.length) { appendLog('No results found. Try a more specific address.', 'err'); return; }
+
+    const lat = parseFloat(results[0].lat);
+    const lon = parseFloat(results[0].lon);
+    const display = results[0].display_name;
+
+    if (lat < -35 || lat > -22 || lon < 16 || lon > 33) {
+      appendLog(`Outside SA bounds: ${lat.toFixed(4)}, ${lon.toFixed(4)}`, 'err');
+      return;
+    }
+
+    document.getElementById('e-lat').value = lat.toFixed(6);
+    document.getElementById('e-lon').value = lon.toFixed(6);
+    appendLog(`✅ Found: ${lat.toFixed(4)}, ${lon.toFixed(4)}`, 'ok');
+    appendLog(`Address: ${display}`, 'info');
+    showEditMsg('Coordinates found — tap Save to apply', 'ok');
+  } catch(e) {
+    appendLog(`Error: ${e.message}`, 'err');
+  }
+}
+
+async function saveCoords() {
+  if (!editId) return;
+  const lat = parseFloat(document.getElementById('e-lat').value);
+  const lon = parseFloat(document.getElementById('e-lon').value);
+
+  if (isNaN(lat) || isNaN(lon)) { showEditMsg('Invalid coordinates', 'err'); return; }
+  if (lat < -35 || lat > -22 || lon < 16 || lon > 33) { showEditMsg(`Coordinates outside SA bounds: ${lat.toFixed(4)}, ${lon.toFixed(4)}`, 'err'); return; }
+
+  const address  = document.getElementById('e-address').value.trim();
+  const city     = document.getElementById('e-city').value.trim();
+  const province = document.getElementById('e-province').value.trim();
+
+  const updates = { lat, lon };
+  if (address)  updates.address  = address;
+  if (city)     updates.city     = city;
+  if (province) updates.province = province;
+
+  const { error } = await sb.from('businesses').update(updates).eq('id', editId);
+  if (error) { showEditMsg('Save failed: ' + error.message, 'err'); return; }
+
+  appendLog(`✅ Saved: ${lat.toFixed(4)}, ${lon.toFixed(4)}`, 'ok');
+  showEditMsg('✅ Saved successfully', 'ok');
+
+  // Update local data
+  const idx = ALL_BIZ.findIndex(b => b.id === editId);
+  if (idx > -1) ALL_BIZ[idx] = { ...ALL_BIZ[idx], ...updates };
+  updateStats();
+  renderTable();
+}
+
+async function clearCoords() {
+  if (!editId || !confirm('Clear coordinates for this business?')) return;
+  const { error } = await sb.from('businesses').update({ lat: null, lon: null }).eq('id', editId);
+  if (error) { showEditMsg('Error: ' + error.message, 'err'); return; }
+  document.getElementById('e-lat').value = '';
+  document.getElementById('e-lon').value = '';
+  const idx = ALL_BIZ.findIndex(b => b.id === editId);
+  if (idx > -1) { ALL_BIZ[idx].lat = null; ALL_BIZ[idx].lon = null; }
+  updateStats(); renderTable();
+  showEditMsg('Coordinates cleared', 'ok');
+}
+
+/* ── Bulk geocode ── */
+async function runBulkGeocode() {
+  const invalid = ALL_BIZ.filter(b => validSA(b.lat, b.lon) !== 'ok');
+  if (!invalid.length) { showMainMsg('All businesses already have valid SA coordinates!', 'ok'); return; }
+  if (!confirm(`Auto-geocode ${invalid.length} businesses with invalid coordinates? This may take a while.`)) return;
+
+  showMainMsg(`<span class="spinner"></span>Geocoding ${invalid.length} businesses…`, 'ok');
+  let fixed = 0, failed = 0;
+
+  for (const biz of invalid) {
+    const addr  = biz.address || biz.suburb || '';
+    const query = [addr, biz.city, biz.province, 'South Africa'].filter(Boolean).join(', ');
+    if (!query.replace(/,?\s*South Africa/, '').trim()) { failed++; continue; }
+
+    try {
+      await new Promise(r => setTimeout(r, 1200)); // Nominatim rate limit 1/sec
+      const r = await fetch(
+        `https://nominatim.openstreetmap.org/search?` + new URLSearchParams({ q: query, format: 'json', limit: 1, countrycodes: 'za' }),
+        { headers: { 'User-Agent': 'Pulsify/2.0 Admin' } }
+      );
+      const results = await r.json();
+      if (!results.length) { failed++; continue; }
+      const lat = parseFloat(results[0].lat);
+      const lon = parseFloat(results[0].lon);
+      if (lat < -35 || lat > -22 || lon < 16 || lon > 33) { failed++; continue; }
+      const { error } = await sb.from('businesses').update({ lat, lon }).eq('id', biz.id);
+      if (!error) {
+        const idx = ALL_BIZ.findIndex(b => b.id === biz.id);
+        if (idx > -1) { ALL_BIZ[idx].lat = lat; ALL_BIZ[idx].lon = lon; }
+        fixed++;
+        showMainMsg(`<span class="spinner"></span>Fixed ${fixed}/${invalid.length}…`, 'ok');
+      } else { failed++; }
+    } catch(e) { failed++; }
+  }
+
+  updateStats(); renderTable();
+  showMainMsg(`✅ Done. Fixed: ${fixed} · Failed: ${failed} (fix manually)`, fixed > 0 ? 'ok' : 'err');
+}
+
+function showMainMsg(m, t) { const el=document.getElementById('msg-main'); el.innerHTML=m; el.className='msg show msg-'+(t==='err'?'err':'ok'); }
+function showEditMsg(m, t) { const el=document.getElementById('edit-msg'); el.innerHTML=m; el.className='msg show msg-'+(t==='err'?'err':'ok'); }
+
+checkSession();
+</script>
+</body>
+</html>

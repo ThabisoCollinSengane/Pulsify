@@ -404,7 +404,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 <div class="panel dp" id="tab-biz-detail"><div id="biz-detail"></div></div>
 
 <!-- ══ MAP ══ -->
-<div class="panel" id="tab-map" style="overflow:hidden">
+<div class="panel" id="tab-map">
   <!-- Filter bar -->
   <div style="position:absolute;top:calc(var(--th) + var(--tk));left:0;right:0;z-index:50;background:rgba(5,8,15,.94);backdrop-filter:blur(18px);padding:8px 12px 7px;border-bottom:1px solid var(--border2)">
     <div style="display:flex;gap:6px">
@@ -415,7 +415,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   </div>
 
   <!-- Map canvas — fills from filter bar to bottom nav -->
-  <div id="mc" style="position:absolute;top:calc(var(--th) + var(--tk) + 48px);left:0;right:0;bottom:var(--bh);overflow:hidden;will-change:transform"></div>
+  <div id="mc" style="position:absolute;top:calc(var(--th) + var(--tk) + 48px);left:0;right:0;bottom:var(--bh);overflow:hidden"></div>
 
   <!-- Legend — collapsible, bottom-left -->
   <div id="map-legend" style="position:absolute;bottom:calc(var(--bh) + 14px);left:12px;z-index:100;background:rgba(5,8,15,.93);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;pointer-events:auto">
@@ -1254,8 +1254,8 @@ function placeMapMarkers() {
   [...evs.map(e=>({item:e,type:'event'})), ...bzs.map(b=>({item:b,type:'biz'}))].forEach(({item,type}) => {
     const lat = parseFloat(type==='event' ? item.venue_lat : item.lat);
     const lon = parseFloat(type==='event' ? item.venue_lon : item.lon);
-    if (!lat||!lon||isNaN(lat)||isNaN(lon)) { console.warn("[Map] Invalid coords for", item.name); return; }
-    if (lat<-35||lat>-22||lon<16||lon>33) { console.warn("[Map] Outside SA:", item.name, lat, lon); return; }
+    if (!lat||!lon||isNaN(lat)||isNaN(lon)) return;
+    if (lat<-35||lat>-22||lon<16||lon>33) return;
 
     const s    = _ms(item, type);
     const isEv = type === 'event';
