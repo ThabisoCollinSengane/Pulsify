@@ -3,459 +3,432 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<meta name="theme-color" content="#05080F"/>
 <title>Profile Settings — Pulsify</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
-<script src="storage.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0;--bh:70px}
-html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
-body{padding-bottom:40px}
-.tb{position:fixed;top:0;left:0;right:0;height:58px;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:rgba(5,8,15,.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
-.back{display:flex;align-items:center;gap:5px;background:transparent;border:none;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;cursor:pointer;padding:0}
-.tb-title{font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
-.content{padding:70px 16px 24px}
-/* Avatar */
-.av-wrap{display:flex;flex-direction:column;align-items:center;padding:20px 0 22px;border-bottom:1px solid var(--border);margin-bottom:20px}
-.av{width:82px;height:82px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:2rem;border:3px solid rgba(255,255,255,.12);position:relative;cursor:pointer;overflow:hidden}
-.av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.av-ov{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#fff;border-radius:50%;opacity:0;transition:opacity .2s}
-.av:active .av-ov{opacity:1}
-.av-name{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;margin-top:11px}
-.av-handle{font-size:.76rem;color:var(--mu)}
-.av-btn{margin-top:11px;background:transparent;border:1px solid var(--border2);border-radius:50px;padding:7px 18px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu2);cursor:pointer}
-.av-btn:active{border-color:var(--or);color:var(--or)}
-/* Sections */
-.sec{background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:14px}
-.sec-head{padding:13px 15px 9px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);border-bottom:1px solid var(--border)}
-.field{padding:13px 15px;border-bottom:1px solid var(--border)}
-.field:last-child{border-bottom:none}
-.lbl{font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu2);margin-bottom:5px;display:flex;align-items:center;gap:6px}
-.ro{font-size:.57rem;background:rgba(255,255,255,.05);padding:2px 7px;border-radius:50px;color:var(--mu);font-weight:400}
-.verified{font-size:.57rem;background:rgba(198,255,74,.1);border:1px solid rgba(198,255,74,.25);color:var(--li);padding:2px 8px;border-radius:50px;font-weight:700}
-.unverified{font-size:.57rem;background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.25);color:var(--or);padding:2px 8px;border-radius:50px;cursor:pointer;font-weight:700}
-.inp{width:100%;background:var(--surf);border:1.5px solid var(--border);border-radius:10px;padding:11px 13px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.87rem;outline:none;transition:border-color .2s}
-.inp:focus{border-color:var(--or)}
-.inp::placeholder{color:var(--mu)}
-.inp:disabled{opacity:.45;cursor:not-allowed}
-select.inp{-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235A5870' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;cursor:pointer}
-select.inp option{background:#0D1424}
-textarea.inp{resize:none;height:78px;line-height:1.5}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.phone-row{display:flex;gap:8px}
-.pcode{background:var(--surf);border:1.5px solid var(--border);border-radius:10px;padding:11px 12px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;white-space:nowrap;flex-shrink:0}
-/* Toggle rows */
-.trow{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
-.trow:last-child{border-bottom:none}
-.trow-info{}
-.trow-title{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;margin-bottom:2px}
-.trow-sub{font-size:.68rem;color:var(--mu)}
-.tgl{position:relative;display:inline-block;width:42px;height:22px;flex-shrink:0}
-.tgl input{opacity:0;width:0;height:0}
-.tgl-s{position:absolute;cursor:pointer;inset:0;background:var(--surf2);border-radius:22px;transition:.28s;border:1px solid var(--border2)}
-.tgl-s::before{content:'';position:absolute;height:16px;width:16px;left:2px;bottom:2px;background:var(--mu);border-radius:50%;transition:.28s}
-.tgl input:checked + .tgl-s{background:rgba(255,92,0,.2);border-color:var(--or)}
-.tgl input:checked + .tgl-s::before{transform:translateX(20px);background:var(--or)}
-/* Genre grid */
-.gg{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:13px 15px}
-.gc{display:flex;align-items:center;gap:7px;background:var(--surf);border:1.5px solid var(--border);border-radius:10px;padding:9px 11px;cursor:pointer;transition:all .18s;-webkit-tap-highlight-color:transparent}
-.gc.on{border-color:var(--or);background:rgba(255,92,0,.07)}
-.gc-ico{font-size:.88rem}
-.gc-lbl{font-family:'Syne',sans-serif;font-size:.69rem;font-weight:700;color:var(--mu);transition:color .18s}
-.gc.on .gc-lbl{color:var(--or)}
-.gc-chk{margin-left:auto;font-size:.72rem;color:var(--or);opacity:0;transition:opacity .18s}
-.gc.on .gc-chk{opacity:1}
-/* Privacy select */
-.psel{width:100%;background:var(--surf);border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;outline:none;cursor:pointer;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235A5870' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
-.psel option{background:#0D1424}
-/* Role badge */
-.role-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700}
-.role-user{background:rgba(255,255,255,.05);color:var(--mu)}
-.role-admin{background:rgba(255,92,0,.12);color:var(--or);border:1px solid rgba(255,92,0,.3)}
-.role-mod{background:rgba(176,38,255,.12);color:#B026FF;border:1px solid rgba(176,38,255,.3)}
-/* Status */
-.status-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);font-size:.78rem;color:var(--mu2)}
-.status-row:last-child{border-bottom:none}
-.status-lbl{font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;color:var(--mu);min-width:90px}
-/* Buttons */
-.save-btn{width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:15px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;margin-bottom:10px;transition:opacity .2s}
-.save-btn:active{opacity:.85}
-.out-btn{width:100%;background:rgba(255,45,120,.07);border:1px solid rgba(255,45,120,.22);color:var(--pk);border-radius:13px;padding:13px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;margin-bottom:8px}
-.del-btn{width:100%;background:transparent;border:none;color:var(--mu);font-family:'Syne',sans-serif;font-size:.76rem;cursor:pointer;padding:10px;text-decoration:underline}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 22px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;color:var(--tx);z-index:999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.5)}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.toast.ok{border-color:rgba(198,255,74,.4);color:var(--li)}
-.toast.err{border-color:rgba(255,45,120,.4);color:var(--pk)}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+body {
+  background: #05080F;
+  color: #F0EEF8;
+  font-family: 'DM Sans', sans-serif;
+  padding: 20px;
+  padding-top: 80px;
+}
+.tb {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 58px;
+  background: rgba(5,8,15,.96);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(255,255,255,.07);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 100;
+}
+.back {
+  background: none;
+  border: none;
+  color: #9997B0;
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tb-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+}
+.sec {
+  background: #090D1A;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 16px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.sec-head {
+  padding: 14px 16px;
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #5A5870;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.field {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.field:last-child {
+  border-bottom: none;
+}
+.lbl {
+  display: block;
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #9997B0;
+  margin-bottom: 6px;
+}
+.inp {
+  width: 100%;
+  background: #0D1424;
+  border: 1.5px solid rgba(255,255,255,.07);
+  border-radius: 10px;
+  padding: 11px 14px;
+  color: #F0EEF8;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  outline: none;
+}
+.inp:focus {
+  border-color: #FF5C00;
+}
+select.inp {
+  appearance: none;
+  cursor: pointer;
+}
+textarea.inp {
+  resize: vertical;
+  min-height: 70px;
+}
+.gg {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding: 14px;
+}
+.gc {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #0D1424;
+  border: 1.5px solid rgba(255,255,255,.07);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.gc.on {
+  border-color: #FF5C00;
+  background: rgba(255,92,0,.08);
+}
+.gc-lbl {
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5A5870;
+}
+.gc.on .gc-lbl {
+  color: #FF5C00;
+}
+.gc-chk {
+  margin-left: auto;
+  color: #FF5C00;
+  font-size: 14px;
+  opacity: 0;
+}
+.gc.on .gc-chk {
+  opacity: 1;
+}
+.save-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #B026FF, #FF5C00);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 50px;
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+.out-btn {
+  width: 100%;
+  background: rgba(255,45,120,.07);
+  border: 1px solid rgba(255,45,120,.22);
+  color: #FF2D78;
+  border-radius: 50px;
+  padding: 13px;
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0D1424;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 50px;
+  padding: 10px 22px;
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  z-index: 999;
+  opacity: 0;
+  transition: all 0.3s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.toast.show {
+  opacity: 1;
+}
+.toast.ok {
+  border-color: rgba(198,255,74,.4);
+  color: #C6FF4A;
+}
+.toast.err {
+  border-color: rgba(255,45,120,.4);
+  color: #FF2D78;
+}
 </style>
 </head>
 <body>
+
 <div class="tb">
   <button class="back" onclick="history.back()">← Back</button>
   <span class="tb-title">Profile Settings</span>
-  <div style="width:60px"></div>
+  <div style="width: 40px;"></div>
 </div>
 
-<div class="content">
-
-  <!-- Avatar -->
-  <div class="av-wrap">
-    <div class="av" id="av-el" onclick="document.getElementById('av-file').click()">
-      <span id="av-emoji">😊</span>
-      <div class="av-ov">Change Photo</div>
-    </div>
-    <input type="file" id="av-file" accept="image/*" style="display:none" onchange="handleAvatar(this)"/>
-    <div class="av-name" id="av-name">Your Name</div>
-    <div class="av-handle" id="av-handle">@handle</div>
-    <button class="av-btn" onclick="window.location.href='user-profile.html'">View Profile →</button>
+<div class="sec">
+  <div class="sec-head">Personal Information</div>
+  <div class="field">
+    <label class="lbl">Display Name</label>
+    <input class="inp" id="display-name" type="text" placeholder="Your name"/>
   </div>
-
-  <!-- Account info -->
-  <div class="sec">
-    <div class="sec-head">Account Information</div>
-    <div class="field">
-      <div class="lbl">Account Status &amp; Role</div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <span class="role-badge role-user" id="role-badge">👤 Standard User</span>
-        <span id="status-badge" style="font-size:.7rem;color:var(--li)">● Active</span>
-      </div>
-    </div>
-    <div class="field">
-      <div class="lbl">Member Since</div>
-      <div style="font-size:.84rem;color:var(--mu2)" id="created-at">—</div>
-    </div>
-    <div class="field">
-      <div class="lbl">Email Verification</div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <span id="email-verif-badge" class="unverified" onclick="resendVerification()">⚠ Unverified — Tap to resend</span>
-      </div>
-    </div>
+  <div class="field">
+    <label class="lbl">Username</label>
+    <input class="inp" id="username" type="text" placeholder="@username"/>
   </div>
-
-  <!-- Personal -->
-  <div class="sec">
-    <div class="sec-head">Personal Information</div>
-    <div class="field">
-      <div class="lbl">Display Name</div>
-      <input class="inp" id="display-name" type="text" placeholder="How you appear on Pulsify"/>
-    </div>
-    <div class="field">
-      <div class="lbl">Username / Handle</div>
-      <input class="inp" id="username" type="text" placeholder="@yourhandle" autocomplete="off"/>
-    </div>
-    <div class="field">
-      <div class="lbl">Email <span class="ro">Read only</span></div>
-      <input class="inp" id="email-field" type="email" disabled/>
-    </div>
-    <div class="field">
-      <div class="lbl">Phone Number <span class="ro">Optional</span></div>
-      <div class="phone-row">
-        <div class="pcode">🇿🇦 +27</div>
-        <input class="inp" id="phone" type="tel" placeholder="72 123 4567" style="margin:0" maxlength="15"/>
-      </div>
-    </div>
-    <div class="field">
-      <div class="lbl">Date of Birth</div>
-      <input class="inp" id="dob" type="date" style="color-scheme:dark"/>
-    </div>
-    <div class="field">
-      <div class="lbl">Bio</div>
-      <textarea class="inp" id="bio" placeholder="Tell the squad about yourself…"></textarea>
-    </div>
-    <div class="field">
-      <div class="row2">
-        <div>
-          <div class="lbl">Province</div>
-          <select class="inp" id="province">
-            <option value="">Select…</option>
-            <option value="KZN">KwaZulu-Natal</option>
-            <option value="GP">Gauteng</option>
-            <option value="WC">Western Cape</option>
-            <option value="EC">Eastern Cape</option>
-            <option value="MP">Mpumalanga</option>
-            <option value="LP">Limpopo</option>
-            <option value="NW">North West</option>
-            <option value="FS">Free State</option>
-            <option value="NC">Northern Cape</option>
-          </select>
-        </div>
-        <div>
-          <div class="lbl">City / Suburb</div>
-          <input class="inp" id="city" type="text" placeholder="e.g. Soweto"/>
-        </div>
-      </div>
-    </div>
+  <div class="field">
+    <label class="lbl">Email</label>
+    <input class="inp" id="email-field" type="email" disabled/>
   </div>
-
-  <!-- Genres -->
-  <div class="sec">
-    <div class="sec-head">Music &amp; Vibe Preferences</div>
-    <div class="gg">
-      <div class="gc" onclick="tg(this,'amapiano')" data-g="amapiano"><span class="gc-ico">🎶</span><span class="gc-lbl">Amapiano</span><span class="gc-chk">✓</span></div>
-      <div class="gc" onclick="tg(this,'gqom')" data-g="gqom"><span class="gc-ico">🔊</span><span class="gc-lbl">Gqom</span><span class="gc-chk">✓</span></div>
-      <div class="gc" onclick="tg(this,'hiphop')" data-g="hiphop"><span class="gc-ico">🎤</span><span class="gc-lbl">Hip Hop</span><span class="gc-chk">✓</span></div>
-      <div class="gc" onclick="tg(this,'house')" data-g="house"><span class="gc-ico">🎧</span><span class="gc-lbl">House</span><span class="gc-chk">✓</span></div>
-      <div class="gc" onclick="tg(this,'afrobeats')" data-g="afrobeats"><span class="gc-ico">🥁</span><span class="gc-lbl">Afrobeats</span><span class="gc-chk">✓</span></div>
-      <div class="gc" onclick="tg(this,'rock')" data-g="rock"><span class="gc-ico">🎸</span><span class="gc-lbl">Rock</span><span class="gc-chk">✓</span></div>
-      <div class="gc" onclick="tg(this,'gospel')" data-g="gospel"><span class="gc-ico">🙏</span><span class="gc-lbl">Gospel</span><span class="gc-chk">✓</span></div>
-      <div class="gc" onclick="tg(this,'jazz')" data-g="jazz"><span class="gc-ico">🎷</span><span class="gc-lbl">Jazz</span><span class="gc-chk">✓</span></div>
-      <div class="gc" onclick="tg(this,'sport')" data-g="sport"><span class="gc-ico">⚽</span><span class="gc-lbl">Sport</span><span class="gc-chk">✓</span></div>
-      <div class="gc" onclick="tg(this,'maskandi')" data-g="maskandi"><span class="gc-ico">🪗</span><span class="gc-lbl">Maskandi</span><span class="gc-chk">✓</span></div>
-    </div>
+  <div class="field">
+    <label class="lbl">Bio</label>
+    <textarea class="inp" id="bio" placeholder="Tell us about yourself..."></textarea>
   </div>
-
-  <!-- Notifications -->
-  <div class="sec">
-    <div class="sec-head">Notification Preferences</div>
-    <div style="padding:4px 15px">
-      <div class="trow"><div class="trow-info"><div class="trow-title">Email — Event reminders</div><div class="trow-sub">24h before events you've booked</div></div><label class="tgl"><input type="checkbox" id="n-email-ev"/><span class="tgl-s"></span></label></div>
-      <div class="trow"><div class="trow-info"><div class="trow-title">Email — Booking confirmations</div><div class="trow-sub">Receipt after ticket purchase</div></div><label class="tgl"><input type="checkbox" id="n-email-bk"/><span class="tgl-s"></span></label></div>
-      <div class="trow"><div class="trow-info"><div class="trow-title">Email — New followers</div><div class="trow-sub">When someone follows you</div></div><label class="tgl"><input type="checkbox" id="n-email-fl"/><span class="tgl-s"></span></label></div>
-      <div class="trow"><div class="trow-info"><div class="trow-title">SMS — Event reminders</div><div class="trow-sub">Requires phone number</div></div><label class="tgl"><input type="checkbox" id="n-sms-ev"/><span class="tgl-s"></span></label></div>
-      <div class="trow"><div class="trow-info"><div class="trow-title">SMS — Booking confirmations</div><div class="trow-sub">Ticket details via SMS</div></div><label class="tgl"><input type="checkbox" id="n-sms-bk"/><span class="tgl-s"></span></label></div>
-      <div class="trow"><div class="trow-info"><div class="trow-title">Push — Squad messages</div><div class="trow-sub">New messages in your squads</div></div><label class="tgl"><input type="checkbox" id="n-push-sq"/><span class="tgl-s"></span></label></div>
-      <div class="trow"><div class="trow-info"><div class="trow-title">Push — New followers</div><div class="trow-sub">When someone starts vibing with you</div></div><label class="tgl"><input type="checkbox" id="n-push-fl"/><span class="tgl-s"></span></label></div>
-    </div>
+  <div class="field">
+    <label class="lbl">Province</label>
+    <select class="inp" id="province">
+      <option value="">Select...</option>
+      <option value="KZN">KwaZulu-Natal</option>
+      <option value="GP">Gauteng</option>
+      <option value="WC">Western Cape</option>
+      <option value="EC">Eastern Cape</option>
+      <option value="MP">Mpumalanga</option>
+      <option value="LP">Limpopo</option>
+      <option value="NW">North West</option>
+      <option value="FS">Free State</option>
+      <option value="NC">Northern Cape</option>
+    </select>
   </div>
-
-  <!-- Privacy -->
-  <div class="sec">
-    <div class="sec-head">Privacy Settings</div>
-    <div class="field">
-      <div class="lbl">Profile Visibility</div>
-      <select class="psel" id="priv-profile">
-        <option value="true">🌍 Public — anyone can view</option>
-        <option value="false">🔒 Private — only followers</option>
-      </select>
-    </div>
-    <div class="field">
-      <div class="lbl">Who Can Comment</div>
-      <select class="psel" id="priv-comment">
-        <option value="everyone">Everyone</option>
-        <option value="followers">Followers only</option>
-        <option value="nobody">Nobody</option>
-      </select>
-    </div>
-    <div class="field">
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <div><div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">Show email on profile</div><div style="font-size:.68rem;color:var(--mu)">Visible to other users</div></div>
-        <label class="tgl"><input type="checkbox" id="priv-email"/><span class="tgl-s"></span></label>
-      </div>
-    </div>
-    <div class="field">
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <div><div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">Show events attended</div><div style="font-size:.68rem;color:var(--mu)">Others can see your history</div></div>
-        <label class="tgl"><input type="checkbox" id="priv-attended"/><span class="tgl-s"></span></label>
-      </div>
-    </div>
+  <div class="field">
+    <label class="lbl">City / Suburb</label>
+    <input class="inp" id="city" type="text" placeholder="e.g. Durban, Soweto"/>
   </div>
-
-  <!-- Actions -->
-  <div style="margin-top:6px">
-    <button class="save-btn" onclick="saveAll()">Save All Changes</button>
-    <button class="out-btn" onclick="if(confirm('Sign out?'))logout()">Sign Out</button>
-    <button class="del-btn" onclick="if(confirm('Delete account? This cannot be undone.')){localStorage.clear();window.location.href='signin.html'}">Delete account</button>
-  </div>
-
 </div>
+
+<div class="sec">
+  <div class="sec-head">Music Preferences</div>
+  <div class="gg" id="genres-container"></div>
+</div>
+
+<button class="save-btn" id="save-btn">💾 Save All Changes</button>
+<button class="out-btn" id="logout-btn">🚪 Sign Out</button>
+
 <div class="toast" id="toast"></div>
 
 <script>
-requireAuth();
-const user    = getUser()    || {};
-const profile = getProfile() || {};
-const notif   = getNotifPrefs();
-const privacy = getPrivacy();
-const genres  = new Set(profile.genres || []);
+// Supabase config
+const SUPA_URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
-// ── Populate ──────────────────────────────────────────────
-document.getElementById('av-name').textContent    = profile.display_name || user.display_name || 'Your Name';
-document.getElementById('av-handle').textContent   = '@' + (profile.username || (user.email||'user').split('@')[0]);
-document.getElementById('display-name').value      = profile.display_name || user.display_name || '';
-document.getElementById('username').value           = profile.username || '';
-document.getElementById('email-field').value        = user.email || '';
-document.getElementById('bio').value               = profile.bio || '';
-document.getElementById('province').value          = profile.province || '';
-document.getElementById('city').value              = profile.city || '';
-document.getElementById('dob').value               = profile.dob || '';
-document.getElementById('phone').value             = (profile.phone||'').replace('+27','');
-document.getElementById('created-at').textContent  = user.created_at ? formatDate(user.created_at) : '—';
+// Available genres
+const GENRES_LIST = [
+  { id: 'amapiano', label: '🎶 Amapiano' },
+  { id: 'gqom', label: '🔊 Gqom' },
+  { id: 'hiphop', label: '🎤 Hip Hop' },
+  { id: 'house', label: '🎧 House' },
+  { id: 'afrobeats', label: '🥁 Afrobeats' },
+  { id: 'rock', label: '🎸 Rock' },
+  { id: 'gospel', label: '🙏 Gospel' },
+  { id: 'jazz', label: '🎷 Jazz' },
+  { id: 'sport', label: '⚽ Sport' },
+  { id: 'maskandi', label: '🪗 Maskandi' }
+];
 
-// Email verification
-if (user.email_verified) {
-  const b = document.getElementById('email-verif-badge');
-  b.className = 'verified'; b.textContent = '✓ Verified'; b.onclick = null;
+let currentUser = null;
+let selectedGenresSet = new Set();
+
+function showToast(msg, type) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast ' + (type || '') + ' show';
+  setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-// Role
-const rb = document.getElementById('role-badge');
-if (user.role === 'admin') { rb.className='role-badge role-admin'; rb.textContent='🔑 Admin'; }
-else if (user.role === 'moderator') { rb.className='role-badge role-mod'; rb.textContent='🛡 Moderator'; }
-
-// Avatar
-if (profile.avatar_url) {
-  const img = document.createElement('img');
-  img.src = profile.avatar_url;
-  document.getElementById('av-el').appendChild(img);
-  document.getElementById('av-emoji').style.display = 'none';
-}
-
-// Genre chips
-document.querySelectorAll('.gc').forEach(el => { if (genres.has(el.dataset.g)) el.classList.add('on'); });
-function tg(el, g) { if(genres.has(g)){genres.delete(g);el.classList.remove('on');}else{genres.add(g);el.classList.add('on');} }
-
-// Notification toggles
-document.getElementById('n-email-ev').checked = !!notif.email_event_reminder;
-document.getElementById('n-email-bk').checked = !!notif.email_booking_conf;
-document.getElementById('n-email-fl').checked = !!notif.email_new_follower;
-document.getElementById('n-sms-ev').checked   = !!notif.sms_event_reminder;
-document.getElementById('n-sms-bk').checked   = !!notif.sms_booking_conf;
-document.getElementById('n-push-sq').checked  = !!notif.push_squad_message;
-document.getElementById('n-push-fl').checked  = !!notif.push_new_follower;
-
-// Privacy
-document.getElementById('priv-profile').value  = String(privacy.profile_public !== false);
-document.getElementById('priv-comment').value  = privacy.who_can_comment || 'everyone';
-document.getElementById('priv-email').checked  = !!privacy.show_email;
-document.getElementById('priv-attended').checked = privacy.show_attended !== false;
-
-// ── Avatar upload ─────────────────────────────────────────
-function handleAvatar(input) {
-  const file = input.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const url = e.target.result;
-    const av  = document.getElementById('av-el');
-    let img   = av.querySelector('img');
-    if(!img){ img=document.createElement('img'); av.appendChild(img); document.getElementById('av-emoji').style.display='none'; }
-    img.src = url;
-    const p = getProfile()||{};
-    p.avatar_url = url; saveProfile(p);
-    showToast('Photo updated ✓','ok');
-  };
-  reader.readAsDataURL(file);
-}
-
-// ── Resend verification ───────────────────────────────────
-function resendVerification() {
-  showToast('Verification email sent to ' + (user.email||'your inbox'), 'ok');
-}
-
-// ── Save all ──────────────────────────────────────────────
-function saveAll() {
-  const p  = getProfile() || {};
-  const u  = getUser()    || {};
-
-  p.display_name = document.getElementById('display-name').value.trim();
-  p.username     = document.getElementById('username').value.trim().replace('@','');
-  p.bio          = document.getElementById('bio').value.trim();
-  p.province     = document.getElementById('province').value;
-  p.city         = document.getElementById('city').value.trim();
-  p.dob          = document.getElementById('dob').value || null;
-  const ph       = document.getElementById('phone').value.trim();
-  p.phone        = ph ? '+27' + ph.replace(/^0/,'').replace(/\s/g,'') : null;
-  p.genres       = [...genres];
-
-  u.display_name = p.display_name;
-  saveProfile(p); saveUser(u);
-
-  saveNotifPrefs({
-    email_event_reminder: document.getElementById('n-email-ev').checked,
-    email_booking_conf:   document.getElementById('n-email-bk').checked,
-    email_new_follower:   document.getElementById('n-email-fl').checked,
-    sms_event_reminder:   document.getElementById('n-sms-ev').checked,
-    sms_booking_conf:     document.getElementById('n-sms-bk').checked,
-    push_squad_message:   document.getElementById('n-push-sq').checked,
-    push_new_follower:    document.getElementById('n-push-fl').checked,
+function renderGenreChips() {
+  const container = document.getElementById('genres-container');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  GENRES_LIST.forEach(genre => {
+    const div = document.createElement('div');
+    div.className = 'gc' + (selectedGenresSet.has(genre.id) ? ' on' : '');
+    div.setAttribute('data-genre', genre.id);
+    div.innerHTML = `
+      <span class="gc-lbl">${genre.label}</span>
+      <span class="gc-chk">✓</span>
+    `;
+    div.onclick = (function(g) {
+      return function() {
+        if (selectedGenresSet.has(g.id)) {
+          selectedGenresSet.delete(g.id);
+          this.classList.remove('on');
+        } else {
+          selectedGenresSet.add(g.id);
+          this.classList.add('on');
+        }
+        console.log('Selected genres:', Array.from(selectedGenresSet));
+      };
+    })(genre);
+    container.appendChild(div);
   });
-
-  savePrivacy({
-    profile_public:  document.getElementById('priv-profile').value === 'true',
-    who_can_comment: document.getElementById('priv-comment').value,
-    show_email:      document.getElementById('priv-email').checked,
-    show_attended:   document.getElementById('priv-attended').checked,
-  });
-
-  document.getElementById('av-name').textContent   = p.display_name || 'Your Name';
-  document.getElementById('av-handle').textContent  = '@' + (p.username || (u.email||'user').split('@')[0]);
-  showToast('✅ All changes saved!','ok');
 }
 
-function showToast(msg,type='') {
-  const t=document.getElementById('toast'); t.textContent=msg; t.className='toast '+type+' show';
-  setTimeout(()=>t.classList.remove('show'),3000);
-}
-
-async function saveAll() {
-  const profile = getProfile() || {};
-  const user = getUser() || {};
+async function loadProfile() {
+  console.log('Loading profile...');
   
-  profile.display_name = document.getElementById('display-name').value.trim();
-  profile.username = document.getElementById('username').value.trim().replace('@', '');
-  profile.bio = document.getElementById('bio').value.trim();
-  profile.province = document.getElementById('province').value;
-  profile.city = document.getElementById('city').value.trim();
-  profile.dob = document.getElementById('dob').value || null;
+  const { data: { session }, error: sessionError } = await sb.auth.getSession();
   
-  const phone = document.getElementById('phone').value.trim();
-  profile.phone = phone ? '+27' + phone.replace(/^0/, '').replace(/\s/g, '') : null;
-  profile.genres = [...genres];
-  
-  // Save to Supabase
-  const supabase = window.supabase?.createClient(
-    'https://cjzewfvtdayjgjdpdmln.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk'
-  );
-  
-  const { error } = await supabase
-    .from('profiles')
-    .update({
-      display_name: profile.display_name,
-      username: profile.username,
-      bio: profile.bio,
-      province: profile.province,
-      city: profile.city,
-      dob: profile.dob,
-      phone: profile.phone,
-      genres: profile.genres,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', user.id);
-  
-  if (error) {
-    console.error('Save error:', error);
-    showToast('Error saving: ' + error.message, 'err');
+  if (sessionError) {
+    console.error('Session error:', sessionError);
+    showToast('Session error', 'err');
     return;
   }
   
-  // Update local cache
-  saveProfile(profile);
-  saveUser(user);
+  if (!session) {
+    console.log('No session, redirecting to signin');
+    window.location.href = 'signin.html';
+    return;
+  }
   
-  // Save notification preferences
-  saveNotifPrefs({
-    email_event_reminder: document.getElementById('n-email-ev').checked,
-    email_booking_conf: document.getElementById('n-email-bk').checked,
-    email_new_follower: document.getElementById('n-email-fl').checked,
-    sms_event_reminder: document.getElementById('n-sms-ev').checked,
-    sms_booking_conf: document.getElementById('n-sms-bk').checked,
-    push_squad_message: document.getElementById('n-push-sq').checked,
-    push_new_follower: document.getElementById('n-push-fl').checked,
-  });
+  currentUser = session.user;
+  console.log('User email:', currentUser.email);
   
-  savePrivacy({
-    profile_public: document.getElementById('priv-profile').value === 'true',
-    who_can_comment: document.getElementById('priv-comment').value,
-    show_email: document.getElementById('priv-email').checked,
-    show_attended: document.getElementById('priv-attended').checked,
-  });
+  document.getElementById('email-field').value = currentUser.email || '';
   
-  // Update UI
-  document.getElementById('av-name').textContent = profile.display_name || 'Your Name';
-  document.getElementById('av-handle').textContent = '@' + (profile.username || (user.email || 'user').split('@')[0]);
+  const { data: profile, error: profileError } = await sb
+    .from('profiles')
+    .select('*')
+    .eq('id', currentUser.id)
+    .single();
   
-  showToast('✅ All changes saved!', 'ok');
+  if (profileError) {
+    console.error('Profile error:', profileError);
+  } else if (profile) {
+    console.log('Profile data:', profile);
+    document.getElementById('display-name').value = profile.display_name || '';
+    document.getElementById('username').value = profile.username || '';
+    document.getElementById('bio').value = profile.bio || '';
+    document.getElementById('province').value = profile.province || '';
+    document.getElementById('city').value = profile.city || '';
+    
+    if (profile.genres && Array.isArray(profile.genres)) {
+      selectedGenresSet.clear();
+      profile.genres.forEach(g => selectedGenresSet.add(g));
+    }
+  }
+  
+  renderGenreChips();
 }
+
+async function saveProfile() {
+  console.log('Save button clicked');
+  
+  if (!currentUser) {
+    showToast('Please sign in again', 'err');
+    return;
+  }
+  
+  const displayName = document.getElementById('display-name').value.trim();
+  const username = document.getElementById('username').value.trim();
+  const bio = document.getElementById('bio').value.trim();
+  const province = document.getElementById('province').value;
+  const city = document.getElementById('city').value.trim();
+  const genresArray = Array.from(selectedGenresSet);
+  
+  console.log('Saving:', { displayName, username, bio, province, city, genresArray });
+  
+  const updateData = {
+    display_name: displayName || null,
+    username: username || null,
+    bio: bio || null,
+    province: province || null,
+    city: city || null,
+    genres: genresArray,
+    updated_at: new Date().toISOString()
+  };
+  
+  const { error } = await sb
+    .from('profiles')
+    .update(updateData)
+    .eq('id', currentUser.id);
+  
+  if (error) {
+    console.error('Save error:', error);
+    showToast('Error: ' + error.message, 'err');
+  } else {
+    console.log('Save successful');
+    showToast('✅ All changes saved!', 'ok');
+  }
+}
+
+async function logoutUser() {
+  console.log('Logout clicked');
+  await sb.auth.signOut();
+  window.location.href = 'signin.html';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM ready, setting up event listeners');
+  
+  const saveBtn = document.getElementById('save-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+  
+  if (saveBtn) {
+    saveBtn.onclick = saveProfile;
+    console.log('Save button attached');
+  }
+  
+  if (logoutBtn) {
+    logoutBtn.onclick = logoutUser;
+    console.log('Logout button attached');
+  }
+  
+  loadProfile();
+});
 </script>
 </body>
 </html>
