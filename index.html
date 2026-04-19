@@ -247,7 +247,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .no-results-btn{background:var(--or);color:#fff;border:none;padding:10px 24px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer}
 .api-error{margin:12px 14px;background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);border-radius:12px;padding:10px 14px;font-size:.78rem;color:var(--pk);display:flex;align-items:center;gap:8px}
 
-
 /* ── Businesses Full Page ── */
 #biz-page-overlay{position:fixed;inset:0;background:var(--bg);z-index:900;display:none;flex-direction:column;overflow:hidden}
 #biz-page-overlay.open{display:flex}
@@ -272,7 +271,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .bp-foot{display:flex;align-items:center;justify-content:space-between}
 .bp-rating{font-size:.66rem;color:var(--li);font-family:'Syne',sans-serif;font-weight:700}
 .bp-price{font-size:.62rem;color:var(--mu)}
-
 
 /* ── Map slide panel ── */
 #map-panel{position:absolute;bottom:0;left:0;right:0;z-index:200;background:rgba(5,8,15,.97);backdrop-filter:blur(28px);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.12);border-bottom:none;padding:18px 16px 20px;transform:translateY(110%);transition:transform .32s cubic-bezier(.4,0,.2,1);pointer-events:none;max-width:520px;margin:0 auto}
@@ -1531,7 +1529,6 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-
 /* ── BUSINESSES FULL PAGE ── */
 let _bizPageData = [];
 let _bizPageCat  = 'all';
@@ -1598,7 +1595,6 @@ function _renderBizPage() {
     </div>`).join('');
 }
 
-
 /* ── Pulsify session restore ── */
 (function() {
   try {
@@ -1621,20 +1617,20 @@ async function initSupabaseSession() {
     'https://cjzewfvtdayjgjdpdmln.supabase.co',
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk'
   );
-  
+
   const { data: { session } } = await supabase.auth.getSession();
-  
+
   if (session) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', session.user.id)
       .single();
-    
+
     if (profile) {
       localStorage.setItem('p_user', JSON.stringify(session.user));
       localStorage.setItem('p_profile', JSON.stringify(profile));
-      
+
       const btn = document.getElementById('auth-btn');
       if (btn) {
         btn.textContent = profile.display_name?.split(' ')[0] || 'Profile';
@@ -1644,7 +1640,7 @@ async function initSupabaseSession() {
   } else {
     localStorage.removeItem('p_user');
     localStorage.removeItem('p_profile');
-    
+
     const btn = document.getElementById('auth-btn');
     if (btn) {
       btn.textContent = 'Sign In';
