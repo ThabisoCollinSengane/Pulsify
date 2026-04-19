@@ -456,106 +456,18 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 
 <!-- ══ SQUAD ══ -->
 <div class="panel" id="tab-squad">
-  <div style="padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between">
-    <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu)">👥 Friends Feed</div>
-    <a href="feeds.html" style="font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--or);text-decoration:none">See all →</a>
-  </div>
-  <div id="squad-content"></div>
-  <div style="padding:12px 14px">
-    <button onclick="window.location.href='feeds.html'" style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:13px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer">📰 Open Full Social Feed →</button>
-  </div>
-</div>
-
-<!-- ══ PROFILE ══ -->
-<div class="panel" id="tab-profile" style="padding:0 0 20px">
-
-  <!-- LOGGED OUT -->
-  <div id="prof-out" style="padding:40px 20px;text-align:center">
-    <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 16px;border:3px solid rgba(255,255,255,.1)">😊</div>
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;margin-bottom:6px">Sign In to Pulsify</div>
-    <div style="font-size:.82rem;color:var(--mu);margin-bottom:24px">Access your tickets, saves &amp; squad</div>
-    <button class="fmb" onclick="window.location.href='signin.html'" style="border-radius:50px;padding:13px;letter-spacing:.05em;margin-bottom:10px">Sign In</button>
-    <div style="font-size:.78rem;color:var(--mu)">No account? <a href="create-account.html" style="color:var(--or);font-weight:700;text-decoration:none">Sign up free →</a></div>
-  </div>
-
-  <!-- LOGGED IN -->
-  <div id="prof-in" style="display:none">
-    <!-- Banner -->
-    <div style="height:90px;background:linear-gradient(135deg,rgba(176,38,255,.3),rgba(255,92,0,.2));position:relative"></div>
-    <!-- Avatar + actions row -->
-    <div style="padding:0 16px;margin-top:-40px;margin-bottom:12px;display:flex;align-items:flex-end;justify-content:space-between">
-      <div id="profile-av" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:2rem;border:3px solid var(--bg);overflow:hidden;flex-shrink:0">😊</div>
-      <div style="display:flex;gap:8px;padding-bottom:6px">
-        <button onclick="window.location.href='profile-settings.html'" style="background:var(--surf);border:1px solid var(--border2);border-radius:50px;padding:7px 14px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu2);cursor:pointer">⚙️ Settings</button>
-      </div>
+  <div style="padding:14px 16px 8px">
+    <div class="sw" style="padding:0; margin-bottom:12px">
+      <span class="sic">🔍</span>
+      <input class="si" type="search" id="friend-search" placeholder="Search by name or username..." autocomplete="off" oninput="searchUsers(this.value)"/>
     </div>
-    <!-- Name -->
-    <div style="padding:0 16px 6px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.7rem;line-height:1;margin-bottom:2px" id="profile-name">Your Name</div>
-      <div style="font-size:.76rem;color:var(--mu);margin-bottom:12px" id="profile-sub">@handle</div>
-    </div>
-    <!-- Stats -->
-    <div class="vsr" style="margin:0 0 4px">
-      <div class="vs"><div class="vn" id="ps-saved">0</div><div class="vl">Saved</div></div>
-      <div class="vs"><div class="vn" id="ps-tickets">0</div><div class="vl">Tickets</div></div>
-      <div class="vs"><div class="vn" id="ps-posts">0</div><div class="vl">Posts</div></div>
-    </div>
-    <!-- Quick links -->
-    <div style="padding:8px 14px">
-      <button onclick="window.location.href='feeds.html'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;-webkit-tap-highlight-color:transparent">
-        <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">📰</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Social Feed</div><div style="font-size:.68rem;color:var(--mu)">Posts from people you follow</div></div></div>
-        <span style="color:var(--or);font-size:.8rem">→</span>
-      </button>
-      <button onclick="window.location.href='user-profile.html'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;-webkit-tap-highlight-color:transparent">
-        <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">👤</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">My Profile & Posts</div><div style="font-size:.68rem;color:var(--mu)">Your memories and events attended</div></div></div>
-        <span style="color:var(--or);font-size:.8rem">→</span>
-      </button>
-      <button onclick="showTab('tickets')" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;-webkit-tap-highlight-color:transparent">
-        <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">🎟</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">My Bookings</div><div style="font-size:.68rem;color:var(--mu)">Tickets and QR codes</div></div></div>
-        <span style="color:var(--or);font-size:.8rem">→</span>
-      </button>
-      <button onclick="window.location.href='business-login.html'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;-webkit-tap-highlight-color:transparent">
-        <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">🏪</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Business Dashboard</div><div style="font-size:.68rem;color:var(--mu)">Manage your venue or event page</div></div></div>
-        <span style="color:var(--or);font-size:.8rem">→</span>
-      </button>
-    </div>
-    <!-- Sign out -->
-    <div style="padding:0 14px 20px">
-      <button id="signout-btn" style="width:100%;background:rgba(255,45,120,.07);border:1px solid rgba(255,45,120,.2);color:var(--pk);border-radius:14px;padding:13px;font-family:'Syne',sans-serif;font-size:.86rem;font-weight:700;cursor:pointer">Sign Out</button>
+    <div id="search-results" style="margin-top:12px"></div>
+    <div style="margin-top:16px">
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">✨ People You May Know</div>
+      <div id="squad-content"></div>
     </div>
   </div>
-
-</div>
-
-<!-- ══ COMMENTS DRAWER ══ -->
-<div class="co" id="comments-overlay" onclick="if(event.target===this)closeComments()">
-  <div class="cs">
-    <div class="ch"><span class="ct">💬 <span id="comment-title">Comments</span></span><button class="cc" onclick="closeComments()">✕</button></div>
-    <div class="cl" id="comments-list"></div>
-    <div class="cir"><input class="ci" id="comment-input" placeholder="Add a comment…" maxlength="200"/><button class="csnd" onclick="postComment()">➤</button></div>
-  </div>
-</div>
-
-<!-- ══ AUTH MODAL ══ -->
-<div class="ov" id="auth-modal" onclick="if(event.target===this)this.classList.remove('open')">
-  <div class="sh"><div class="shh"></div>
-    <div class="shi">
-      <div class="sht">Welcome to Pulsify 🔥</div>
-      <div class="shs">Sign in to buy tickets, post memories &amp; join squads.</div>
-      <button class="gb" onclick="signInGoogle()">
-        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-        Continue with Google
-      </button>
-      <div class="ad">or</div>
-      <input class="ff" id="auth-email" type="email" placeholder="Email address"/>
-      <input class="ff" id="auth-pw" type="password" placeholder="Password"/>
-      <button class="fmb" onclick="handleAuth()">Sign In</button>
-      <div class="asw">No account? <span onclick="handleSignUp()">Sign Up free</span></div>
-    </div>
-  </div>
-</div>
-
-<!-- ══ BOTTOM NAV ══ -->
+</div><!-- ══ BOTTOM NAV ══ -->
 <!-- BUSINESSES FULL PAGE OVERLAY -->
 <div id="biz-page-overlay">
   <div class="bp-head">
@@ -1651,6 +1563,106 @@ async function initSupabaseSession() {
 
 // Run on page load
 document.addEventListener('DOMContentLoaded', initSupabaseSession);
-</script>
+
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    
+    // ── FRIEND SEARCH & FOLLOW ──
+    let searchTimeout = null;
+    let currentSearchResults = [];
+
+    async function searchUsers(query) {
+      clearTimeout(searchTimeout);
+      if (!query.trim() || query.length < 2) {
+        document.getElementById('search-results').innerHTML = '';
+        return;
+      }
+      searchTimeout = setTimeout(async () => {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, display_name, username, avatar_url')
+          .ilike('display_name', `%${query}%`)
+          .limit(10);
+        if (error) {
+          console.error(error);
+          return;
+        }
+        // Exclude current user
+        const { data: { session } } = await supabase.auth.getSession();
+        const filtered = data.filter(p => p.id !== session?.user?.id);
+        currentSearchResults = filtered;
+        renderSearchResults(filtered);
+      }, 300);
+    }
+
+    async function renderSearchResults(users) {
+      const container = document.getElementById('search-results');
+      if (!users.length) {
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--mu)">No users found</div>';
+        return;
+      }
+      // Get current user's following list
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data: followingData } = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', session.user.id);
+      const followingIds = followingData ? followingData.map(f => f.following_id) : [];
+      
+      container.innerHTML = users.map(user => `
+        <div class="pc" style="margin:0 0 8px 0">
+          <div class="pav" style="background:linear-gradient(135deg,#B026FF,#FF5C00); overflow:hidden">
+            ${user.avatar_url ? `<img src="${user.avatar_url}" style="width:100%;height:100%;object-fit:cover">` : (user.display_name?.[0]?.toUpperCase() || '😊')}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div class="pn">${escapeHtml(user.display_name || user.username)}</div>
+            <div class="ph">@${escapeHtml(user.username || 'user')}</div>
+          </div>
+          <button class="vb ${followingIds.includes(user.id) ? 'cd' : 'cn'}" onclick="toggleFollow('${user.id}', this)">
+            ${followingIds.includes(user.id) ? '✓ Following' : '+ Follow'}
+          </button>
+        </div>
+      `).join('');
+    }
+
+    async function toggleFollow(targetId, btn) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { showToast('Please sign in first', 'err'); return; }
+      const isFollowing = btn.classList.contains('cd');
+      if (isFollowing) {
+        // Unfollow
+        const { error } = await supabase
+          .from('follows')
+          .delete()
+          .eq('follower_id', session.user.id)
+          .eq('following_id', targetId);
+        if (!error) {
+          btn.classList.remove('cd');
+          btn.classList.add('cn');
+          btn.textContent = '+ Follow';
+          showToast('Unfollowed', 'ok');
+          // Refresh search results to update button states
+          const searchInput = document.getElementById('friend-search');
+          if (searchInput.value.trim()) searchUsers(searchInput.value);
+        } else showToast(error.message, 'err');
+      } else {
+        // Follow
+        const { error } = await supabase
+          .from('follows')
+          .insert({ follower_id: session.user.id, following_id: targetId });
+        if (!error) {
+          btn.classList.remove('cn');
+          btn.classList.add('cd');
+          btn.textContent = '✓ Following';
+          showToast('Followed!', 'ok');
+          if (searchInput.value.trim()) searchUsers(searchInput.value);
+        } else showToast(error.message, 'err');
+      }
+    }
+
+    // Also update the existing renderSquad function to show followed users or recommendations
+    // Keep original MOCK_SQUAD for now, but we can later replace with real data
+    </script>
 </body>
 </html>
