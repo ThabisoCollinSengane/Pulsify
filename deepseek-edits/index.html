@@ -1615,46 +1615,7 @@ function _renderBizPage() {
     }
   } catch(e) {}
 })();
-/* ── Pulsify session restore with Supabase ── */
-async function initSupabaseSession() {
-  const supabase = window.supabase?.createClient(
-    'https://cjzewfvtdayjgjdpdmln.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk'
-  );
-  
-  const { data: { session } } = await supabase.auth.getSession();
-  
-  if (session) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single();
-    
-    if (profile) {
-      localStorage.setItem('p_user', JSON.stringify(session.user));
-      localStorage.setItem('p_profile', JSON.stringify(profile));
-      
-      const btn = document.getElementById('auth-btn');
-      if (btn) {
-        btn.textContent = profile.display_name?.split(' ')[0] || 'Profile';
-        btn.onclick = function() { window.location.href = 'user-profile.html'; };
-      }
-    }
-  } else {
-    localStorage.removeItem('p_user');
-    localStorage.removeItem('p_profile');
-    
-    const btn = document.getElementById('auth-btn');
-    if (btn) {
-      btn.textContent = 'Sign In';
-      btn.onclick = function() { window.location.href = 'signin.html'; };
-    }
-  }
-}
 
-// Run on page load
-document.addEventListener('DOMContentLoaded', initSupabaseSession);
 </script>
 </body>
 </html>

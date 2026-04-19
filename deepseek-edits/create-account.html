@@ -388,62 +388,6 @@ async function resendEmail(em) {
   await sb.auth.resend({ type: 'signup', email: em });
   toast('Verification email resent to ' + em, 'ok');
 }
-
-async function handleCreate() {
-  hideErr();
-  if (!termsOn) return showErr('Please accept the Terms & Privacy Policy to continue.');
-  
-  const name = document.getElementById('name').value.trim();
-  const username = document.getElementById('username').value.trim().replace('@', '');
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('pw').value;
-  const phone = document.getElementById('phone').value.trim();
-  const province = document.getElementById('prov').value;
-  const city = document.getElementById('city').value.trim();
-  
-  if (!name) return showErr('Please enter your full name.');
-  if (!username || username.length < 3) return showErr('Username must be at least 3 characters.');
-  if (!email || !email.includes('@')) return showErr('Please enter a valid email address.');
-  if (password.length < 6) return showErr('Password must be at least 6 characters.');
-  
-  const btn = document.getElementById('create-btn');
-  btn.textContent = 'Creating…';
-  btn.disabled = true;
-  
-  const supabase = window.supabase?.createClient(
-    'https://cjzewfvtdayjgjdpdmln.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk'
-  );
-  
-  const { data, error } = await supabase.auth.signUp({
-    email: email,
-    password: password,
-    options: {
-      data: {
-        full_name: name,
-        display_name: name,
-        username: username,
-        phone: phone ? '+27' + phone.replace(/^0/, '').replace(/\s/g, '') : null,
-        province: province,
-        city: city,
-        genres: [...genres]
-      }
-    }
-  });
-  
-  if (error) {
-    btn.textContent = 'Create Account 🔥';
-    btn.disabled = false;
-    return showErr(error.message);
-  }
-  
-  showToast('✅ Account created! Please check your email to verify.', 'ok');
-  
-  setTimeout(() => {
-    window.location.href = 'signin.html';
-  }, 2000);
-}
 </script>
-
 </body>
 </html>

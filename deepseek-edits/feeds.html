@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#05080F"/>
+<title>Feed — Pulsify</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ══ Exact same CSS variables and base as index.html ══ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);
+  --or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;
+  --pu:#B026FF;--te:#00D4AA;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0;
+  --th:58px;--bh:70px
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:2px}::-webkit-scrollbar-thumb{background:var(--or);border-radius:2px}
+
+/* ── Topbar — identical to index.html ── */
+.tb{position:fixed;top:0;left:0;right:0;height:var(--th);z-index:800;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:rgba(5,8,15,.95);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.06em;display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--tx);text-decoration:none}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--or);box-shadow:0 0 12px var(--or);animation:p 2s ease-in-out infinite}
+@keyframes p{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}
+.back-btn{display:flex;align-items:center;gap:6px;background:transparent;border:none;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;padding:0}
+.tb2-btn{background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:7px 16px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;cursor:pointer}
+
+/* ── Filter chips — same .cr/.chip as index.html ── */
+.cr{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:8px 14px 6px;position:fixed;top:var(--th);left:0;right:0;z-index:100;background:rgba(5,8,15,.95);backdrop-filter:blur(18px);border-bottom:1px solid var(--border)}
+.cr::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;padding:6px 14px;border-radius:50px;border:1px solid var(--border);background:rgba(255,255,255,.02);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu);cursor:pointer;transition:all .2s;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.chip.active{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.09)}
+
+/* ── Feed scroll — same as .hi in index.html ── */
+.feed{position:fixed;top:calc(var(--th) + 42px);left:0;right:0;bottom:var(--bh);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.feed::-webkit-scrollbar{display:none}
+
+/* ── Post card — built on same .fc style as index.html event cards ── */
+.fc{margin:0 0 2px;border-bottom:1px solid var(--border);background:var(--surf);cursor:default;-webkit-tap-highlight-color:transparent}
+
+/* Post header — same as .fh */
+.fh{display:flex;align-items:center;gap:10px;padding:12px 14px 8px}
+.fa{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;border:1.5px solid var(--border);overflow:hidden;background:linear-gradient(135deg,#B026FF,#FF5C00)}
+.fa img{width:100%;height:100%;object-fit:cover}
+.fa.org{border-color:rgba(255,92,0,.6)}
+.fo{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;line-height:1.2;display:flex;align-items:center;gap:6px}
+.fl{font-size:.66rem;color:var(--mu)}
+.org-pill{font-size:.54rem;background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.28);color:var(--or);padding:2px 7px;border-radius:50px;font-weight:700}
+.follow-btn{margin-left:auto;padding:5px 13px;border-radius:50px;border:1px solid var(--border2);background:transparent;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer;transition:all .2s;flex-shrink:0;-webkit-tap-highlight-color:transparent}
+.follow-btn.on{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.08)}
+
+/* Post image — same as .fb */
+.fb{width:100%;max-height:420px;object-fit:cover;display:block}
+
+/* Caption — same as .fd */
+.fd{padding:10px 14px 4px}
+.cap{font-size:.84rem;line-height:1.6;color:var(--mu2)}
+.cap-ev{font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;color:var(--or);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+.cap-more{color:var(--or);cursor:pointer;font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700}
+
+/* Action bar — same as .fac */
+.fac{display:flex;align-items:center;gap:8px;padding:6px 14px 12px}
+.ab{display:flex;align-items:center;gap:5px;background:transparent;border:none;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu);cursor:pointer;padding:4px 6px;border-radius:50px;transition:color .18s;-webkit-tap-highlight-color:transparent}
+.ab:active{background:rgba(255,255,255,.04)}
+.ab.lk{color:var(--pk)}
+.ab.rp{color:var(--li)}
+.ai{font-size:1rem;line-height:1}
+
+/* Comments — slides down, same card surface */
+.cmt-wrap{background:rgba(0,0,0,.2);border-top:1px solid var(--border);display:none}
+.cmt-item{display:flex;gap:9px;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.03)}
+.cmt-item:last-of-type{border-bottom:none}
+.cmt-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:.78rem;overflow:hidden}
+.cmt-av img{width:100%;height:100%;object-fit:cover}
+.cmt-name{font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;margin-bottom:2px}
+.cmt-text{font-size:.78rem;color:var(--mu2);line-height:1.45}
+.cmt-time{font-size:.6rem;color:var(--mu);margin-top:3px}
+/* Comment input — same as .cir in index.html */
+.cir{display:flex;gap:8px;padding:9px 14px;border-top:1px solid var(--border);align-items:center}
+.ci{flex:1;background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:8px 14px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none;transition:border-color .2s}
+.ci:focus{border-color:var(--or)!important}
+.ci::placeholder{color:var(--mu)}
+.csnd{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* Compose FAB */
+.fab{position:fixed;bottom:calc(var(--bh) + 14px);right:16px;z-index:200;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:1.2rem;cursor:pointer;box-shadow:0 4px 18px rgba(176,38,255,.4);display:flex;align-items:center;justify-content:center}
+
+/* Compose sheet — same .co/.cs as index.html */
+.co{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(10px);z-index:1200;display:none;align-items:flex-end;justify-content:center}
+.co.open{display:flex}
+.cs{width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;animation:su .25s ease;display:flex;flex-direction:column;max-height:85vh;overflow-y:auto}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg2);z-index:1;flex-shrink:0}
+.ct{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.cc{width:30px;height:30px;border-radius:50%;background:var(--surf);border:none;color:var(--tx);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.compose-body{padding:16px 18px 28px}
+.img-drop{height:150px;background:rgba(255,255,255,.03);border:1.5px dashed rgba(0,229,255,.3);border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-bottom:12px;overflow:hidden;flex-direction:column;gap:8px}
+.img-drop img{width:100%;height:100%;object-fit:cover;border-radius:12px}
+.ff-c{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:11px 14px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;margin-bottom:10px;transition:border-color .2s}
+.ff-c:focus{border-color:var(--or)}.ff-c::placeholder{color:var(--mu)}
+textarea.ff-c{resize:none;height:80px;line-height:1.55}
+.post-btn{width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:opacity .2s}
+.post-btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* Pagination — same .pg/.pb/.pi as index.html */
+.pg{display:flex;gap:10px;padding:16px 14px 24px;justify-content:center;align-items:center}
+.pb{background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 22px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;color:var(--tx);cursor:pointer;transition:all .2s}
+.pb:active{border-color:var(--or);color:var(--or)}.pb:disabled{opacity:.3;cursor:default}
+.pi{font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu)}
+
+/* Empty state — same .es as index.html */
+.es{padding:60px 24px;text-align:center}
+.ei{font-size:3rem;margin-bottom:14px}
+.et{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:8px}
+.em{font-size:.82rem;color:var(--mu);line-height:1.5;margin-bottom:20px}
+
+/* Bottom nav — identical to index.html .bn/.bb/.bl */
+.bn{position:fixed;bottom:0;left:0;right:0;height:var(--bh);z-index:800;background:rgba(5,8,15,.97);backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;align-items:stretch}
+.bb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:transparent;border:none;cursor:pointer;padding:8px 2px 10px;position:relative;-webkit-tap-highlight-color:transparent}
+.bb svg{width:22px;height:22px;stroke:var(--mu);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;transition:stroke .2s,transform .2s}
+.bb.active svg{stroke:var(--or);transform:scale(1.12)}
+.bl{font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);transition:color .2s}
+.bb.active .bl{color:var(--or)}
+.bb.active::after{content:'';position:absolute;top:0;left:20%;right:20%;height:2px;background:linear-gradient(90deg,#B026FF,#FF5C00);border-radius:0 0 4px 4px}
+
+/* Toast — exact same as index.html */
+.toast{position:fixed;bottom:calc(var(--bh) + 16px);left:50%;transform:translateX(-50%) translateY(12px);background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 20px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--tx);z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 24px rgba(0,0,0,.5)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{border-color:rgba(198,255,74,.4);color:var(--li)}
+.toast.err{border-color:rgba(255,45,120,.4);color:var(--pk)}
+
+/* Section label — same .sl as index.html */
+.sl{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 6px;font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--mu)}
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<header class="tb">
+  <button class="back-btn" onclick="window.location.href='index.html'">← Back</button>
+  <a class="logo" href="feeds.html"><span class="dot"></span>
+    <span style="font-size:1.4rem">Feed</span>
+  </a>
+  <button class="tb2-btn" onclick="openCompose()">+ Post</button>
+</header>
+
+<!-- Filter chips -->
+<div class="cr">
+  <button class="chip active" onclick="setFilter(this,'all')">✦ All</button>
+  <button class="chip" onclick="setFilter(this,'following')">👥 Following</button>
+  <button class="chip" onclick="setFilter(this,'organizers')">📢 Organizers</button>
+  <button class="chip" onclick="setFilter(this,'community')">👤 Community</button>
+</div>
+
+<!-- Feed -->
+<div class="feed" id="feed"></div>
+
+<!-- Compose FAB -->
+<button class="fab" onclick="openCompose()" title="Share a post">✏️</button>
+
+<!-- Bottom nav — same as index.html -->
+<nav class="bn">
+  <button class="bb" onclick="window.location.href='index.html'">
+    <svg viewBox="0 0 24 24"><path d="M12 3C12 3 4 9.5 4 15a8 8 0 0016 0C20 9.5 12 3 12 3Z"/><path d="M12 10v5M9.5 13h5"/></svg>
+    <span class="bl">Home</span>
+  </button>
+  <button class="bb active">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+    <span class="bl">Feed</span>
+  </button>
+  <button class="bb" onclick="window.location.href='index.html'">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3M9 20V7m6 13l5.447-2.724A1 1 0 0021 16.382V5.618a1 1 0 00-1.447-.894L15 7m0 13V7M9 7l6-3"/></svg>
+    <span class="bl">Map</span>
+  </button>
+  <button class="bb" onclick="window.location.href='index.html'">
+    <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M16 7v-.5a3.5 3.5 0 00-7 0V7M16 17v.5a3.5 3.5 0 01-7 0V17"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    <span class="bl">Bookings</span>
+  </button>
+  <button class="bb" onclick="window.location.href='index.html'">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+    <span class="bl">Profile</span>
+  </button>
+</nav>
+
+<!-- Compose sheet -->
+<div class="co" id="compose-modal" onclick="if(event.target===this)closeCompose()">
+  <div class="cs">
+    <div class="ch">
+      <span class="ct">📸 Share a Post</span>
+      <button class="cc" onclick="closeCompose()">✕</button>
+    </div>
+    <div class="compose-body">
+      <!-- Photo upload — all users -->
+      <div class="img-drop" id="img-drop" onclick="document.getElementById('post-img-file').click()">
+        <span style="font-size:2rem">📷</span>
+        <span style="font-size:.8rem;color:var(--mu)" id="img-drop-hint">Tap to add a photo</span>
+      </div>
+      <input type="file" id="post-img-file" accept="image/*" style="display:none" onchange="handleImg(this)"/>
+
+      <!-- Caption — visible to all, required for users -->
+      <textarea class="ff-c" id="post-caption" placeholder="Add a caption…" maxlength="500"></textarea>
+
+      <!-- Text-only note — shown to regular users -->
+      <div id="user-posting-note" style="display:none;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:10px 13px;font-size:.74rem;color:var(--mu2);line-height:1.5;margin-bottom:10px">
+        📸 Upload a photo from an event you attended. Caption is optional.
+      </div>
+
+      <!-- Text-only post section — organizers/businesses only -->
+      <div id="organizer-text-section" style="display:none">
+        <div style="font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--or);margin-bottom:6px">Or post text only</div>
+        <textarea class="ff-c" id="post-text-only" placeholder="Write an update, promo or announcement…" maxlength="1000" style="height:96px"></textarea>
+      </div>
+
+      <input class="ff-c" id="post-event-name" placeholder="Tag an event name (optional)"/>
+      <button class="post-btn" id="post-submit" onclick="submitPost()">Share 🔥</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   PULSIFY FEEDS — storage.js not required here
+   All data functions are self-contained with clear
+   comments showing the Supabase equivalent.
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Session ─────────────────────────────────────────────── */
+let _session = null;
+let _profile  = null;
+try { _session = JSON.parse(localStorage.getItem('p_user'));   } catch(e) {}
+try { _profile = JSON.parse(localStorage.getItem('p_profile')); } catch(e) {}
+const _uid = _session?.id || null;
+
+/* ── Mock data — 22 posts ───────────────────────────────── */
+/* SUPABASE SWAP: replace MOCK_POSTS with:
+   const { data } = await supabase
+     .from('posts')
+     .select('*, profiles(username, display_name, avatar_url, role)')
+     .eq('visibility', 'public')
+     .order('created_at', { ascending: false })
+     .range(offset, offset + PAGE_SIZE - 1)
+*/
+const now = Date.now();
+function dAgo(h) { return new Date(now - h * 3600000).toISOString(); }
+
+const MOCK_POSTS = [
+  /* SUPABASE SWAP: replace array contents with real API call to /api/posts */
+
+  /* ── ORGANIZER / BUSINESS POSTS (text + image, any time) ── */
+
+  // 1. Eve's Lounge — event promo (text + image)
+  { id:'p1', user_id:'org_eves', username:'eves_lounge_mthwalume', display_name:"Eve's Lounge",
+    role:'organizer', post_type:'organizer', avatar_url:null,
+    event_id:'ev_gqom_eves', event_name:"Gqom Takeover — Eve's Lounge",
+    image_url:'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=800&q=80',
+    caption:"TONIGHT 🔊 Gqom Takeover kicks off at 9PM. Doors open 8PM. DJ Lag + Bello No Gallo + South Coast residents. Early birds save R40 at the door. Mthwalume come out — this is your night 🌊",
+    likes:['u1','u2','u3','u4','u5','u6'], reposts:['u2','u3','u5'],
+    comments:[
+      {id:'c1',user_id:'u1',username:'sipho_kzn',display_name:'Sipho M',text:"Driving from Durban for this one. South Coast always delivers 🙌",ts:dAgo(1)},
+      {id:'c2',user_id:'u2',username:'nandik',display_name:'Nandi K',text:'Who else is coming from Hillcrest? Need a squad 👀',ts:dAgo(2)},
+      {id:'c3',user_id:'u6',username:'themba_sc',display_name:'Themba SC',text:"South Coast represent!! Can't miss this one",ts:dAgo(3)}
+    ], ts:dAgo(2) },
+
+  // 2. Eyadini Lounge — plain text only, no image (organizer freedom)
+  { id:'p2', user_id:'org_eyadini', username:'eyadini_lounge', display_name:'Eyadini Lounge',
+    role:'organizer', post_type:'organizer', avatar_url:null,
+    event_id:null, event_name:null, image_url:null,
+    caption:"Umlazi's #1 shisanyama is BACK this weekend 🔥 New menu has dropped — herb butter pap, premium cuts, fresh-off-the-fire experience you will not find anywhere else in KZN. Walk-ins from 11AM. VVIP tables book on WhatsApp.",
+    likes:['u1','u2','u3','u4','u5','u6','u7'], reposts:['u1','u4','u7'],
+    comments:[
+      {id:'c4',user_id:'u3',username:'djthabang',display_name:'DJ Thabang',text:'The herb butter pap needs to be a national holiday 😂🍖',ts:dAgo(20)},
+      {id:'c5',user_id:'u5',username:'lebo_t',display_name:'Lebo T',text:'Eyadini is the standard. Everything else is just a braai stand.',ts:dAgo(22)}
+    ], ts:dAgo(24) },
+
+  // 3. Galaxy Nightclub Margate — event promo (text + image)
+  { id:'p3', user_id:'org_galaxy', username:'galaxy_margate', display_name:'Galaxy Nightclub Margate',
+    role:'organizer', post_type:'organizer', avatar_url:null,
+    event_id:'ev_gqom_margate', event_name:'Margate Gqom Festival',
+    image_url:'https://images.unsplash.com/photo-1518998053901-5348d3961a04?w=800&q=80',
+    caption:"🏖 MARGATE GQOM FESTIVAL IS UPON US — Babes Wodumo · Mampintsha · DJ Lag · Distruction Boyz. One night. One stage. South Coast going crazy. R150 early bird ends Sunday midnight. Galaxy never disappoints.",
+    likes:['u1','u2','u4','u5','u6','u8'], reposts:['u5','u6'],
+    comments:[
+      {id:'c6',user_id:'u1',username:'sipho_kzn',display_name:'Sipho M',text:'Galaxy always brings the best artists to Margate 🔊',ts:dAgo(28)},
+      {id:'c7',user_id:'u8',username:'ayanda_ct',display_name:'Ayanda CT',text:'Considering the drive from CT for this lineup 😅',ts:dAgo(30)}
+    ], ts:dAgo(32) },
+
+  // 4. User repost — Sipho attended Gqom Takeover and shared his photo
+  { id:'p4', user_id:'u1', username:'sipho_kzn', display_name:'Sipho M',
+    role:'user', post_type:'attended_photo', avatar_url:null,
+    event_id:'ev_gqom_eves', event_name:"Gqom Takeover — Eve's Lounge",
+    image_url:'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&q=80',
+    caption:'Made the drive from Durban and it was worth every single kilometre 🔊🌊 South Coast you never disappoint. DJ Lag played for 3 hours straight.',
+    likes:['u2','u3','u5'], reposts:['u3'],
+    comments:[
+      {id:'c8',user_id:'u3',username:'djthabang',display_name:'DJ Thabang',text:'You could feel the bass from the parking lot 😂🔊',ts:dAgo(40)}
+    ], ts:dAgo(42) },
+
+  // 5. Joe Cools — plain text promo (organizer freedom)
+  { id:'p5', user_id:'org_joecools', username:'joecools_northbeach', display_name:'Joe Cools Beach Bar',
+    role:'organizer', post_type:'organizer', avatar_url:null,
+    event_id:null, event_name:null, image_url:null,
+    caption:"Golden hour on the deck every Friday. Durban's original beachfront bar since 1994. Ice-cold beers, fresh salty air, best sunset view on Marine Parade. No cover charge. Walk-ins always welcome. See you at 5PM 🌅",
+    likes:['u1','u3','u4','u7'], reposts:['u3'],
+    comments:[
+      {id:'c9',user_id:'u7',username:'lebo_t',display_name:'Lebo T',text:'Joe Cools upper deck at sunset is a Durban institution ✅',ts:dAgo(48)},
+      {id:'c10',user_id:'u4',username:'zinhle_d',display_name:'Zinhle D',text:'My favourite spot in the whole city honestly',ts:dAgo(50)}
+    ], ts:dAgo(52) },
+
+  // 6. Moses Mabhida Events — Amapiano Sundowner promo (text + image)
+  { id:'p6', user_id:'org_mabhida', username:'moses_mabhida_events', display_name:'Moses Mabhida Events',
+    role:'organizer', post_type:'organizer', avatar_url:null,
+    event_id:'ev_amapiano_mabhida', event_name:'Amapiano Sundowner Vol.14',
+    image_url:'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80',
+    caption:"⚡ AMAPIANO SUNDOWNER VOL.14 — Kabza De Small · DJ Maphorisa · DJ Lag. Moses Mabhida Stadium open-air experience. Vol.13 sold out in 48 hours. Vol.14 tickets going fast. R180 general · R350 VIP table. This is KZN's biggest amapiano night and you already know why.",
+    likes:['u1','u2','u3','u4','u5','u6','u7','u8'], reposts:['u1','u2','u4','u6'],
+    comments:[
+      {id:'c11',user_id:'u2',username:'nandik',display_name:'Nandi K',text:'Vol.13 was unreal. Booked immediately. See you all there 🎶',ts:dAgo(58)},
+      {id:'c12',user_id:'u5',username:'lebo_t',display_name:'Lebo T',text:'Kabza + Maphorisa at Moses Mabhida = untouchable 💜',ts:dAgo(60)},
+      {id:'c13',user_id:'u3',username:'djthabang',display_name:'DJ Thabang',text:'The sound system at Mabhida is something else entirely',ts:dAgo(62)}
+    ], ts:dAgo(65) },
+
+  // 7. User — Nandi attended Amapiano Sundowner Vol.14, posted her photo
+  { id:'p7', user_id:'u2', username:'nandik', display_name:'Nandi K',
+    role:'user', post_type:'attended_photo', avatar_url:null,
+    event_id:'ev_amapiano_mabhida', event_name:'Amapiano Sundowner Vol.14',
+    image_url:'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80',
+    caption:'Vol.14 exceeded every expectation 😭🎶 Kabza played until 3AM. The stadium was ALIVE. Already on the waitlist for Vol.15.',
+    likes:['u1','u3','u4','u5'], reposts:['u4'],
+    comments:[
+      {id:'c14',user_id:'u4',username:'zinhle_d',display_name:'Zinhle D',text:'The crowd energy was on another level that night 🙌',ts:dAgo(72)},
+      {id:'c15',user_id:'u1',username:'sipho_kzn',display_name:'Sipho M',text:"Couldn't make it. Seeing everyone's posts is painful 😭",ts:dAgo(74)}
+    ], ts:dAgo(76) },
+
+  // 8. Braai Republic Joburg — text only (organizer freedom)
+  { id:'p8', user_id:'org_braai', username:'braai_republic_joburg', display_name:'Braai Republic Joburg',
+    role:'organizer', post_type:'organizer', avatar_url:null,
+    event_id:null, event_name:null, image_url:null,
+    caption:"DJ Fridays at Braai Republic 🔥 Premium cuts on the fire. Craft beer on tap. The finest selectors in Maboneng spinning from 6PM. No booking needed — walk-ins welcome. Fox Street comes alive every Friday and we are the reason why.",
+    likes:['u1','u3','u6','u8'], reposts:['u6'],
+    comments:[
+      {id:'c16',user_id:'u6',username:'themba_sc',display_name:'Themba SC',text:'Maboneng on a Friday night is a completely different city energy',ts:dAgo(90)},
+      {id:'c17',user_id:'u8',username:'ayanda_ct',display_name:'Ayanda CT',text:'The braai smell hits you from two blocks away 😂🍖',ts:dAgo(92)}
+    ], ts:dAgo(95) },
+
+  // 9. User — DJ Thabang attended Piano City Johannesburg, posted photo
+  { id:'p9', user_id:'u3', username:'djthabang', display_name:'DJ Thabang',
+    role:'user', post_type:'attended_photo', avatar_url:null,
+    event_id:'ev_joburg_amapiano', event_name:'Piano City Johannesburg',
+    image_url:'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80',
+    caption:'Piano City Joburg at Arts on Main was something else. 5 stages, 40+ DJs and Maboneng doing what Maboneng does. SA amapiano is genuinely the best music movement on the continent right now.',
+    likes:['u1','u2','u5','u6'], reposts:['u2','u5'],
+    comments:[
+      {id:'c18',user_id:'u2',username:'nandik',display_name:'Nandi K',text:'Joburg always goes harder with the amapiano events 🎶',ts:dAgo(105)},
+      {id:'c19',user_id:'u5',username:'lebo_t',display_name:'Lebo T',text:'The Arts on Main venue is perfect for this kind of event',ts:dAgo(107)}
+    ], ts:dAgo(110) },
+
+  // 10. Cape Town Jazz Festival — event promo (text + image)
+  { id:'p10', user_id:'org_ctjf', username:'capetown_jazz_festival', display_name:'CT International Jazz Festival',
+    role:'organizer', post_type:'organizer', avatar_url:null,
+    event_id:'ev_ct_jazz', event_name:'Cape Town International Jazz Festival',
+    image_url:'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=800&q=80',
+    caption:"Africa's greatest jazz festival returns to the CTICC 🎷 40 performances over 2 days. International and local acts sharing one legendary stage. Day passes R500 · VIP Weekend R1200. Cape Town, this is ours.",
+    likes:['u1','u4','u5','u7','u8'], reposts:['u4','u7'],
+    comments:[
+      {id:'c20',user_id:'u4',username:'zinhle_d',display_name:'Zinhle D',text:'Flew down from Joburg for this last year. Worth every rand 🎷',ts:dAgo(118)},
+      {id:'c21',user_id:'u8',username:'ayanda_ct',display_name:'Ayanda CT',text:'CT Jazz Fest is the one event I never miss. Booked already.',ts:dAgo(120)}
+    ], ts:dAgo(123) },
+
+  // 11. User — Zinhle attended CT Jazz Festival, posted photo
+  { id:'p11', user_id:'u4', username:'zinhle_d', display_name:'Zinhle D',
+    role:'user', post_type:'attended_photo', avatar_url:null,
+    event_id:'ev_ct_jazz', event_name:'Cape Town International Jazz Festival',
+    image_url:'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=800&q=80',
+    caption:'CTICC lit up like this on night two. The music, the people, the energy of Cape Town at its finest. SA jazz is not dead — it is thriving and then some 🎷',
+    likes:['u1','u2','u5','u7'], reposts:['u7'],
+    comments:[
+      {id:'c22',user_id:'u7',username:'lebo_t',display_name:'Lebo T',text:'The photography is incredible. Jazz and beautiful spaces always work together',ts:dAgo(132)},
+    ], ts:dAgo(135) },
+
+  // 12. Shimmy Beach Club — image post (organizer promo)
+  { id:'p12', user_id:'org_shimmy', username:'shimmy_beach_club', display_name:'Shimmy Beach Club',
+    role:'organizer', post_type:'organizer', avatar_url:null,
+    event_id:null, event_name:null,
+    image_url:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80',
+    caption:"The private beach is open. Resident DJs are locked in. Cocktail pools are ready. Table Mountain does the rest. Cape Town season is officially here — limited tables available, first come first served 🌊",
+    likes:['u4','u7','u8'], reposts:['u8'],
+    comments:[
+      {id:'c23',user_id:'u8',username:'ayanda_ct',display_name:'Ayanda CT',text:'Shimmy in summer is genuinely unmatched in this country 🌊',ts:dAgo(145)},
+    ], ts:dAgo(148) },
+
+  // 13. Mzoli's Place CT — text only (business freedom)
+  { id:'p13', user_id:'org_mzoli', username:'mzolis_gugulethu', display_name:"Mzoli's Place",
+    role:'organizer', post_type:'organizer', avatar_url:null,
+    event_id:null, event_name:null, image_url:null,
+    caption:"Sundays in Gugulethu since forever 🔥 You choose the meat. We braai it. BYO drinks. Township vibes, world-class flavour. This is where Cape Town comes to eat on Sundays — locals, tourists, presidents. Come from 11AM.",
+    likes:['u1','u2','u3','u4','u5','u6','u7','u8'], reposts:['u1','u2','u5','u7'],
+    comments:[
+      {id:'c24',user_id:'u8',username:'ayanda_ct',display_name:'Ayanda CT',text:'International visitors fly to Cape Town and come directly here. That says everything.',ts:dAgo(158)},
+      {id:'c25',user_id:'u3',username:'djthabang',display_name:'DJ Thabang',text:'Mzoli is a cultural institution not just a restaurant',ts:dAgo(160)}
+    ], ts:dAgo(163) },
+
+  // 14. User — Lebo attended Soweto Derby, posted photo
+  { id:'p14', user_id:'u5', username:'lebo_t', display_name:'Lebo T',
+    role:'user', post_type:'attended_photo', avatar_url:null,
+    event_id:'ev_soccer_fnb', event_name:'Soweto Derby — Chiefs vs Pirates',
+    image_url:'https://images.unsplash.com/photo-1459865264687-595d652de67e?w=800&q=80',
+    caption:'90,000 people. One city. Two tribes. Soweto Derby is a religious experience and no football match anywhere in the world comes close to this atmosphere 🟡⚫🔴',
+    likes:['u1','u2','u3','u6','u7','u8'], reposts:['u1','u3','u6'],
+    comments:[
+      {id:'c26',user_id:'u6',username:'themba_sc',display_name:'Themba SC',text:"Nobody does a derby atmosphere like South Africa. Nobody. 🏟️",ts:dAgo(170)},
+      {id:'c27',user_id:'u1',username:'sipho_kzn',display_name:'Sipho M',text:'FNB on derby day is a completely different experience to every other event',ts:dAgo(172)}
+    ], ts:dAgo(175) },
+
+  // 15. The Oyster Box Hotel — image post (business promo)
+  { id:'p15', user_id:'org_oyster', username:'oyster_box_umhlanga', display_name:'The Oyster Box Hotel',
+    role:'organizer', post_type:'organizer', avatar_url:null,
+    event_id:null, event_name:null,
+    image_url:'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&q=80',
+    caption:"Umhlanga Lighthouse. Indian Ocean. 5-star dining. The Oyster Box is Durban's most iconic hotel for a reason. Weekend packages available — pool, spa and Sunday curry lunch included. Some things in life are simply worth it 🌊",
+    likes:['u1','u4','u7'], reposts:[],
+    comments:[
+      {id:'c28',user_id:'u4',username:'zinhle_d',display_name:'Zinhle D',text:'The Sunday curry lunch at Oyster Box is a non-negotiable KZN experience 🍛',ts:dAgo(182)},
+    ], ts:dAgo(185) },
+
+  // 16. User — Ayanda attended BLOC Cape Town, posted photo
+  { id:'p16', user_id:'u8', username:'ayanda_ct', display_name:'Ayanda CT',
+    role:'user', post_type:'attended_photo', avatar_url:null,
+    event_id:'ev_bloc_ct', event_name:'BLOC Cape Town — Season Opener',
+    image_url:'https://images.unsplash.com/photo-1571266028243-d220c6a71ed9?w=800&q=80',
+    caption:'BLOC Cape Town season opener was everything we needed after winter 🌙 The sound, the crowd, the energy of De Waterkant at midnight. Cape Town nightlife is a completely different animal.',
+    likes:['u4','u5','u7'], reposts:['u7'],
+    comments:[
+      {id:'c29',user_id:'u7',username:'lebo_t',display_name:'Lebo T',text:'BLOC is in a category of its own for CT nightlife',ts:dAgo(192)},
+    ], ts:dAgo(195) },
+
+  // 17. Joe Cools — image post (business lifestyle)
+  { id:'p17', user_id:'org_joecools', username:'joecools_northbeach', display_name:'Joe Cools Beach Bar',
+    role:'organizer', post_type:'organizer', avatar_url:null,
+    event_id:null, event_name:null,
+    image_url:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80',
+    caption:"Marine Parade. North Beach. Five bars. Durban's best deck. 30 years of good times and we are just getting started. Come for lunch, stay for the sunset, leave at midnight 🌊🍺",
+    likes:['u1','u2','u3','u6'], reposts:['u2'],
+    comments:[
+      {id:'c30',user_id:'u6',username:'themba_sc',display_name:'Themba SC',text:'Joe Cools upper deck is where Durban memories are made',ts:dAgo(202)},
+      {id:'c31',user_id:'u3',username:'djthabang',display_name:'DJ Thabang',text:"30 years and still the best spot on the beachfront. That's earned.",ts:dAgo(204)}
+    ], ts:dAgo(207) },
+
+  // 18. User — Themba attended Umlazi Shisanyama Festival, posted photo
+  { id:'p18', user_id:'u6', username:'themba_sc', display_name:'Themba SC',
+    role:'user', post_type:'attended_photo', avatar_url:null,
+    event_id:'ev_shisa_umlazi', event_name:'Umlazi Shisanyama Festival',
+    image_url:'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&q=80',
+    caption:'Umlazi Shisanyama Festival was incredible. 30+ vendors, gqom stage, amapiano stage, maskandi corner and the best braai I have had in years. KZN food culture is unmatched 🥩🔥',
+    likes:['u1','u2','u4','u7'], reposts:['u1'],
+    comments:[
+      {id:'c32',user_id:'u2',username:'nandik',display_name:'Nandi K',text:'The variety of food at this festival was insane',ts:dAgo(215)},
+      {id:'c33',user_id:'u4',username:'zinhle_d',display_name:'Zinhle D',text:'Missing the shisanyama festival every year is a crime',ts:dAgo(217)}
+    ], ts:dAgo(220) },
+
+  // 19. Eyadini Lounge — image post (event night photos)
+  { id:'p19', user_id:'org_eyadini', username:'eyadini_lounge', display_name:'Eyadini Lounge',
+    role:'organizer', post_type:'organizer', avatar_url:null,
+    event_id:null, event_name:null,
+    image_url:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80',
+    caption:"Friday nights at Eyadini 📸 The people, the vibes, the culture. Umlazi's finest doing what we do best. Come see why we have been KZN's number one shisanyama for over 15 years straight.",
+    likes:['u1','u2','u3','u4','u5','u6'], reposts:['u3','u5'],
+    comments:[
+      {id:'c34',user_id:'u1',username:'sipho_kzn',display_name:'Sipho M',text:'15 years and still setting the standard. Respect. 🏆',ts:dAgo(228)},
+    ], ts:dAgo(232) },
+
+  // 20. User — Nandi attended South Coast Solidarity March, posted photo
+  { id:'p20', user_id:'u2', username:'nandik', display_name:'Nandi K',
+    role:'user', post_type:'attended_photo', avatar_url:null,
+    event_id:'ev_march_kzn', event_name:'South Coast Solidarity March',
+    image_url:'https://images.unsplash.com/photo-1568219656418-15c329312bf1?w=800&q=80',
+    caption:'Port Shepstone showed up today 🤝 Peaceful, powerful, purposeful. Hundreds of families marching together through the South Coast. This is community. This is KZN.',
+    likes:['u1','u5','u6'], reposts:[],
+    comments:[
+      {id:'c35',user_id:'u5',username:'lebo_t',display_name:'Lebo T',text:'Community solidarity like this is what builds a province',ts:dAgo(240)},
+    ], ts:dAgo(243) },
+
+  // 21. Marble Restaurant Joburg — text only (restaurant freedom)
+  { id:'p21', user_id:'org_marble', username:'marble_rosebank', display_name:'Marble Restaurant',
+    role:'organizer', post_type:'organizer', avatar_url:null,
+    event_id:null, event_name:null, image_url:null,
+    caption:"Wood-fired dining above the Joburg skyline. Rosebank rooftop. Open flame. Premium SA wines. Marble is where Joburg comes to celebrate. New winter menu launching this Friday — book now, tables are filling fast 🍷",
+    likes:['u4','u7','u8'], reposts:['u8'],
+    comments:[
+      {id:'c36',user_id:'u8',username:'ayanda_ct',display_name:'Ayanda CT',text:'Best restaurant view in Joburg by a mile. The skyline is incredible.',ts:dAgo(250)},
+    ], ts:dAgo(253) },
+
+  // 22. User — DJ Thabang attended Sunset Beach Sessions, posted photo
+  { id:'p22', user_id:'u3', username:'djthabang', display_name:'DJ Thabang',
+    role:'user', post_type:'attended_photo', avatar_url:null,
+    event_id:'ev_beach_sessions', event_name:'Sunset Beach Sessions',
+    image_url:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80',
+    caption:'Free live music on North Beach every Saturday and people still sleep on this. Ami Faku acoustic set with the Indian Ocean behind her. Only in Durban 🌊🎵',
+    likes:['u1','u2','u4','u5'], reposts:['u4'],
+    comments:[
+      {id:'c37',user_id:'u4',username:'zinhle_d',display_name:'Zinhle D',text:'The fact that this is FREE every week is crazy. Durban is generous.',ts:dAgo(260)},
+      {id:'c38',user_id:'u1',username:'sipho_kzn',display_name:'Sipho M',text:'Ami Faku acoustic hits completely different outdoors',ts:dAgo(262)}
+    ], ts:dAgo(265) },
+]];
+
+/* ── State ───────────────────────────────────────────────── */
+const PAGE_SIZE  = 8;
+let _filter      = 'all';
+let _page        = 1;
+let _totalPages  = 1;
+
+/* SUPABASE SWAP: replace this function with API call
+   async function fetchPosts(filter, page) {
+     let query = supabase.from('posts')
+       .select('*, profiles(username, display_name, avatar_url, role)', { count: 'exact' })
+       .eq('visibility', 'public')
+       .order('created_at', { ascending: false })
+       .range((page-1)*PAGE_SIZE, page*PAGE_SIZE-1);
+     if (filter === 'following') {
+       const following = (await supabase.from('follows').select('following_id').eq('follower_id', userId)).data.map(r=>r.following_id);
+       query = query.in('user_id', following);
+     }
+     if (filter === 'organizers') query = query.eq('profiles.role', 'organizer');
+     return query;
+   }
+*/
+function getFilteredPosts() {
+  let following = [];
+  try { following = JSON.parse(localStorage.getItem('p_following') || '[]'); } catch(e) {}
+
+  let posts = [...MOCK_POSTS];
+  if (_filter === 'following') {
+    posts = posts.filter(p => following.includes(p.user_id) || p.user_id === _uid);
+  } else if (_filter === 'organizers') {
+    posts = posts.filter(p => p.role === 'organizer');
+  } else if (_filter === 'community') {
+    posts = posts.filter(p => p.role === 'user');
+  }
+  // Posts from followed pages appear first
+  posts.sort((a, b) => {
+    const af = following.includes(a.user_id) ? 1 : 0;
+    const bf = following.includes(b.user_id) ? 1 : 0;
+    if (bf !== af) return bf - af;
+    return new Date(b.ts) - new Date(a.ts);
+  });
+  return posts;
+}
+
+/* ── Persist reactions in localStorage ──────────────────── */
+/* SUPABASE SWAP: replace _getLikes / _getReposts with:
+   supabase.from('post_likes').upsert/delete({ post_id, user_id })
+   supabase.from('post_reposts').upsert/delete({ post_id, user_id })
+*/
+function _getLikes(postId) {
+  try { return JSON.parse(localStorage.getItem('p_likes_'+postId) || 'null'); } catch { return null; }
+}
+function _setLikes(postId, arr) { localStorage.setItem('p_likes_'+postId, JSON.stringify(arr)); }
+function _getReposts(postId) {
+  try { return JSON.parse(localStorage.getItem('p_rp_'+postId) || 'null'); } catch { return null; }
+}
+function _setReposts(postId, arr) { localStorage.setItem('p_rp_'+postId, JSON.stringify(arr)); }
+function _getComments(postId) {
+  try { return JSON.parse(localStorage.getItem('p_cmts_'+postId) || 'null'); } catch { return null; }
+}
+function _setComments(postId, arr) { localStorage.setItem('p_cmts_'+postId, JSON.stringify(arr)); }
+
+function getLikes(post)    { return _getLikes(post.id)    || post.likes    || []; }
+function getReposts(post)  { return _getReposts(post.id)  || post.reposts  || []; }
+function getComments(post) { return _getComments(post.id) || post.comments || []; }
+
+/* ── Helpers ─────────────────────────────────────────────── */
+function x(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function timeAgo(iso) {
+  if (!iso) return '';
+  const d = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (d < 60)    return 'just now';
+  if (d < 3600)  return Math.floor(d/60)+'m ago';
+  if (d < 86400) return Math.floor(d/3600)+'h ago';
+  return Math.floor(d/86400)+'d ago';
+}
+function fn(n) { return n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n||0); }
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast '+type+' show';
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* ── Render ──────────────────────────────────────────────── */
+function setFilter(btn, filter) {
+  document.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _filter = filter; _page = 1;
+  render();
+}
+
+function render() {
+  const feedEl = document.getElementById('feed');
+  feedEl.innerHTML = '';
+  feedEl.scrollTop = 0;
+
+  const all   = getFilteredPosts();
+  _totalPages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
+  if (_page > _totalPages) _page = _totalPages;
+  const posts = all.slice((_page-1)*PAGE_SIZE, _page*PAGE_SIZE);
+
+  if (!posts.length) {
+    feedEl.innerHTML = `<div class="es"><div class="ei">📰</div><div class="et">Nothing here yet</div><div class="em">${_filter==='following'?'Follow event pages and organizers to see their posts here.':'Posts from the community will appear here.'}</div></div>`;
+    return;
+  }
+
+  posts.forEach(post => feedEl.appendChild(buildCard(post)));
+
+  // Pagination
+  if (_totalPages > 1) {
+    const pg = document.createElement('div');
+    pg.className = 'pg';
+    pg.innerHTML = `
+      <button class="pb" onclick="changePage(-1)" ${_page===1?'disabled':''}>← Prev</button>
+      <span class="pi">${_page} / ${_totalPages}</span>
+      <button class="pb" onclick="changePage(1)" ${_page>=_totalPages?'disabled':''}>Next →</button>`;
+    feedEl.appendChild(pg);
+  }
+}
+
+function changePage(delta) { _page += delta; render(); }
+
+function buildCard(post) {
+  const likes    = getLikes(post);
+  const reposts  = getReposts(post);
+  const comments = getComments(post);
+  const liked    = _uid && likes.includes(_uid);
+  const reposted = _uid && reposts.includes(_uid);
+  const isOrg    = post.role === 'organizer';
+  let following  = [];
+  try { following = JSON.parse(localStorage.getItem('p_following') || '[]'); } catch(e) {}
+  const isFollowing = following.includes(post.user_id);
+  const isOwn    = post.user_id === _uid;
+
+  const cap = post.caption || '';
+  const shortCap = cap.length > 220 ? cap.slice(0,220) : cap;
+
+  const el = document.createElement('div');
+  el.className = 'fc';
+  el.id = 'post-' + post.id;
+  el.innerHTML = `
+    <div class="fh">
+      <div class="fa ${isOrg?'org':''}">
+        ${post.avatar_url ? `<img src="${x(post.avatar_url)}" loading="lazy" onerror="this.style.display='none'"/>` : (post.display_name?.[0]?.toUpperCase()||'😊')}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="fo">
+          ${x(post.display_name || post.username)}
+          ${isOrg ? '<span class="org-pill">📢 Page</span>' : ''}
+        </div>
+        ${post.event_name ? `<div style="font-size:.64rem;color:var(--or);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.04em">🎟 ${x(post.event_name)}</div>` : ''}
+        <div class="fl">@${x(post.username)} · ${timeAgo(post.ts)}</div>
+      </div>
+      ${!isOwn ? `<button class="follow-btn ${isFollowing?'on':''}" id="fbtn-${x(post.id)}" onclick="doFollow('${x(post.user_id)}','${x(post.id)}')">${isFollowing?'✓ Following':'+ Follow'}</button>` : ''}
+    </div>
+    ${post.image_url ? `<img class="fb" src="${x(post.image_url)}" loading="lazy" onerror="this.remove()"/>` : ''}
+    ${cap ? `<div class="fd"><div class="cap" id="cap-${x(post.id)}">${x(shortCap)}${cap.length>220?` <span class="cap-more" onclick="expandCap('${x(post.id)}')">more</span>`:''}` + `</div></div>` : ''}
+    <div class="fac">
+      <button class="ab ${liked?'lk':''}" id="lb-${x(post.id)}" onclick="doLike('${x(post.id)}')">
+        <span class="ai">${liked?'❤️':'🤍'}</span> <span id="lc-${x(post.id)}">${fn(likes.length)}</span>
+      </button>
+      <button class="ab" onclick="toggleCmt('${x(post.id)}')">
+        <span class="ai">💬</span> <span id="cc-${x(post.id)}">${fn(comments.length)}</span>
+      </button>
+      <button class="ab ${reposted?'rp':''}" id="rb-${x(post.id)}" onclick="doRepost('${x(post.id)}')">
+        <span class="ai">🔁</span> <span id="rc-${x(post.id)}">${fn(reposts.length)}</span>
+      </button>
+      <button class="ab" onclick="doShare('${x(post.caption||'')}')">
+        <span class="ai">🔗</span>
+      </button>
+    </div>
+    <div class="cmt-wrap" id="cmt-${x(post.id)}">
+      <div id="cmtl-${x(post.id)}">${buildCmts(comments)}</div>
+      <div class="cir">
+        <input class="ci" id="cmti-${x(post.id)}" placeholder="Add a comment…" maxlength="300"
+          onkeydown="if(event.key==='Enter')doComment('${x(post.id)}')"/>
+        <button class="csnd" onclick="doComment('${x(post.id)}')">➤</button>
+      </div>
+    </div>`;
+  return el;
+}
+
+function buildCmts(comments) {
+  if (!comments.length) return '<div style="padding:10px 14px;font-size:.76rem;color:var(--mu)">No comments yet. Be first 💬</div>';
+  return comments.slice(-10).map(c => `
+    <div class="cmt-item">
+      <div class="cmt-av">${(c.display_name||c.username||'?')[0].toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div class="cmt-name">${x(c.display_name||c.username)}</div>
+        <div class="cmt-text">${x(c.text)}</div>
+        <div class="cmt-time">${timeAgo(c.ts||c.timestamp)}</div>
+      </div>
+    </div>`).join('');
+}
+
+/* ── Actions ─────────────────────────────────────────────── */
+function expandCap(postId) {
+  const post = MOCK_POSTS.find(p => p.id === postId);
+  if (!post) return;
+  const el = document.getElementById('cap-'+postId);
+  if (el) el.innerHTML = x(post.caption);
+}
+
+function doLike(postId) {
+  if (!_uid) return showToast('Sign in to like posts');
+  const post  = MOCK_POSTS.find(p => p.id === postId);
+  if (!post) return;
+  const likes = getLikes(post);
+  const idx   = likes.indexOf(_uid);
+  if (idx > -1) likes.splice(idx, 1); else likes.push(_uid);
+  _setLikes(postId, likes);
+  const liked = likes.includes(_uid);
+  const btn   = document.getElementById('lb-'+postId);
+  const cnt   = document.getElementById('lc-'+postId);
+  if (btn) { btn.classList.toggle('lk', liked); btn.querySelector('.ai').textContent = liked?'❤️':'🤍'; }
+  if (cnt) cnt.textContent = fn(likes.length);
+}
+
+function doRepost(postId) {
+  if (!_uid) return showToast('Sign in to repost');
+  const post    = MOCK_POSTS.find(p => p.id === postId);
+  if (!post) return;
+  const reposts = getReposts(post);
+  const idx     = reposts.indexOf(_uid);
+  if (idx > -1) reposts.splice(idx, 1); else reposts.push(_uid);
+  _setReposts(postId, reposts);
+  const rp  = reposts.includes(_uid);
+  const btn = document.getElementById('rb-'+postId);
+  const cnt = document.getElementById('rc-'+postId);
+  if (btn) btn.classList.toggle('rp', rp);
+  if (cnt) cnt.textContent = fn(reposts.length);
+  if (rp) showToast('🔁 Reposted!', 'ok');
+}
+
+function toggleCmt(postId) {
+  const el = document.getElementById('cmt-'+postId);
+  if (el) { el.style.display = el.style.display === 'block' ? 'none' : 'block'; }
+}
+
+function doComment(postId) {
+  if (!_uid) return showToast('Sign in to comment');
+  const inp = document.getElementById('cmti-'+postId);
+  const txt = inp?.value.trim(); if (!txt) return;
+  const post = MOCK_POSTS.find(p => p.id === postId);
+  if (!post) return;
+  const comments = getComments(post);
+  const name     = _profile?.display_name || _session?.display_name || 'You';
+  const uname    = _profile?.username || _session?.email?.split('@')[0] || 'you';
+  const comment  = { id:'c_'+Date.now(), user_id:_uid, username:uname, display_name:name, text:txt, ts:new Date().toISOString() };
+  comments.push(comment);
+  _setComments(postId, comments);
+  inp.value = '';
+  const lEl = document.getElementById('cmtl-'+postId);
+  if (lEl) lEl.innerHTML = buildCmts(comments);
+  const cEl = document.getElementById('cc-'+postId);
+  if (cEl) cEl.textContent = fn(comments.length);
+}
+
+function doFollow(targetUserId, postId) {
+  if (!_uid) return showToast('Sign in to follow');
+  let following = [];
+  try { following = JSON.parse(localStorage.getItem('p_following') || '[]'); } catch(e) {}
+  const idx = following.indexOf(targetUserId);
+  if (idx > -1) following.splice(idx, 1); else following.push(targetUserId);
+  localStorage.setItem('p_following', JSON.stringify(following));
+  const fol = following.includes(targetUserId);
+  // Update all follow buttons for this user
+  document.querySelectorAll(`[id^="fbtn-"]`).forEach(btn => {
+    const pid = btn.id.replace('fbtn-','');
+    const p   = MOCK_POSTS.find(mp => mp.id === pid);
+    if (p && p.user_id === targetUserId) {
+      btn.classList.toggle('on', fol);
+      btn.textContent = fol ? '✓ Following' : '+ Follow';
+    }
+  });
+  showToast(fol ? '✓ Following' : 'Unfollowed', fol ? 'ok' : '');
+  if (_filter === 'following') { _page=1; render(); }
+}
+
+function doShare(caption) {
+  if (navigator.share) navigator.share({title:'Pulsify Post', text:caption||'Check this out on Pulsify!', url:location.href});
+  else { navigator.clipboard?.writeText(location.href); showToast('🔗 Link copied!'); }
+}
+
+/* ── Compose ─────────────────────────────────────────────── */
+let _cImg = null;
+function openCompose() {
+  if (!_uid) { window.location.href='signin.html'; return; }
+
+  const isOrg = _session?.role === 'organizer' || _session?.role === 'admin';
+
+  // Show/hide sections based on role
+  const orgSection  = document.getElementById('organizer-text-section');
+  const userNote    = document.getElementById('user-posting-note');
+  const imgHint     = document.getElementById('img-drop-hint');
+
+  if (orgSection) orgSection.style.display = isOrg ? 'block' : 'none';
+  if (userNote)   userNote.style.display   = isOrg ? 'none'  : 'block';
+  if (imgHint)    imgHint.textContent      = isOrg ? 'Tap to add a photo (optional)' : 'Tap to add a photo from the event *';
+
+  document.getElementById('compose-modal').classList.add('open');
+}
+function closeCompose() {
+  document.getElementById('compose-modal').classList.remove('open');
+  document.getElementById('post-caption').value    = '';
+  document.getElementById('post-event-name').value = '';
+  const to = document.getElementById('post-text-only');
+  if (to) to.value = '';
+  document.getElementById('img-drop').innerHTML = '<span style="font-size:2rem">📷</span><span style="font-size:.8rem;color:var(--mu)" id="img-drop-hint">Tap to add a photo</span>';
+  _cImg = null;
+}
+function handleImg(input) {
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _cImg = e.target.result;
+    document.getElementById('img-drop').innerHTML = `<img src="${e.target.result}"/>`;
+  };
+  reader.readAsDataURL(file);
+}
+function submitPost() {
+  const isOrg    = _session?.role === 'organizer' || _session?.role === 'admin';
+  const caption  = document.getElementById('post-caption').value.trim();
+  const textOnly = (document.getElementById('post-text-only')?.value || '').trim();
+  const evName   = document.getElementById('post-event-name').value.trim();
+  const finalCap = caption || textOnly;
+
+  // Enforce rules
+  if (!isOrg && !_cImg) return showToast('Please upload a photo from the event 📸', 'err');
+  if (isOrg && !_cImg && !textOnly && !caption) return showToast('Add a photo or write something');
+  if (!isOrg && !finalCap) return showToast('Add a caption to your photo');
+  const btn = document.getElementById('post-submit');
+  btn.disabled = true; btn.textContent = 'Sharing…';
+
+  /* SUPABASE SWAP: replace with:
+     await supabase.from('posts').insert({
+       user_id: _uid, caption, event_name: evName||null,
+       image_url: _cImg, visibility: 'public',
+       created_at: new Date().toISOString()
+     })
+  */
+  const name  = _profile?.display_name || _session?.display_name || 'You';
+  const uname = _profile?.username || _session?.email?.split('@')[0] || 'you';
+  const newPost = {
+    id: 'p_'+Date.now(), user_id: _uid, username: uname, display_name: name,
+    role: _session?.role||'user', avatar_url: _profile?.avatar_url||null,
+    event_name: evName||null, image_url: _cImg||null, caption,
+    likes:[], comments:[], reposts:[], ts: new Date().toISOString()
+  };
+  MOCK_POSTS.unshift(newPost);
+  closeCompose();
+  btn.disabled = false; btn.textContent = 'Share Post 🔥';
+  _page = 1; render();
+  showToast('🔥 Post shared!', 'ok');
+}
+
+/* ── Boot ────────────────────────────────────────────────── */
+// Try real API first, fall back to mock
+async function initFeed() {
+  try {
+    const res = await fetch('/api/posts?page=1&limit=10&filter=all');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.posts && data.posts.length > 0) {
+        // Map API response to MOCK_POSTS format and render
+        data.posts.forEach(p => {
+          if (!MOCK_POSTS.find(m => m.id === p.id)) {
+            MOCK_POSTS.unshift({
+              id: p.id, user_id: p.user_id,
+              username: p.profiles?.username || 'user',
+              display_name: p.profiles?.display_name || 'User',
+              role: p.profiles?.role || 'user',
+              post_type: p.post_type || 'organizer',
+              image_url: p.image_url || null,
+              caption: p.caption || '',
+              event_name: p.event_name || null,
+              likes:[], comments:[], reposts:[],
+              ts: p.created_at
+            });
+          }
+        });
+      }
+    }
+  } catch(e) { console.log('API offline, using mock data'); }
+  render();
+}
+initFeed();
+</script>
+</body>
+</html>

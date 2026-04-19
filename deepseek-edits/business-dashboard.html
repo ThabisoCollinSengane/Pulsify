@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Pulsify Business Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--te:#00D4AA;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0;--th:58px;--bh:68px}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:2px}::-webkit-scrollbar-thumb{background:var(--or);border-radius:2px}
+
+/* ── TOP BAR ── */
+.tb{position:fixed;top:0;left:0;right:0;height:var(--th);z-index:900;display:flex;align-items:center;padding:0 16px;gap:12px;background:rgba(5,8,15,.97);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.06em;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--tx)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--or);box-shadow:0 0 10px var(--or);animation:p 2s ease-in-out infinite;flex-shrink:0}
+@keyframes p{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}
+.biz-name-top{font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu2);margin-left:4px;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.logout-btn{background:transparent;border:1px solid var(--border);border-radius:50px;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;padding:6px 14px;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.logout-btn:active{border-color:var(--pk);color:var(--pk)}
+.notif-badge{position:relative;width:34px;height:34px;border-radius:50%;background:var(--surf);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.95rem;flex-shrink:0}
+.nd{position:absolute;top:3px;right:3px;width:9px;height:9px;border-radius:50%;background:var(--pk);border:2px solid var(--bg);display:none}
+.nd.show{display:block}
+
+/* ── BOTTOM NAV ── */
+.bn{position:fixed;bottom:0;left:0;right:0;height:var(--bh);z-index:900;background:rgba(5,8,15,.97);backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;align-items:stretch}
+.bb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:transparent;border:none;cursor:pointer;padding:8px 2px;position:relative;-webkit-tap-highlight-color:transparent;transition:all .2s}
+.bb-ico{font-size:1.25rem;line-height:1;transition:transform .2s}
+.bb.active .bb-ico{transform:scale(1.15)}
+.bb-lbl{font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);transition:color .2s}
+.bb.active .bb-lbl{color:var(--or)}
+.bb.active::after{content:'';position:absolute;top:0;left:20%;right:20%;height:2px;background:linear-gradient(90deg,#B026FF,#FF5C00);border-radius:0 0 4px 4px}
+.bb-badge{position:absolute;top:6px;right:calc(50% - 16px);background:var(--pk);color:#fff;font-size:.52rem;font-weight:800;min-width:16px;height:16px;border-radius:50px;display:none;align-items:center;justify-content:center;padding:0 3px;font-family:'Syne',sans-serif}
+.bb-badge.show{display:flex}
+
+/* ── PANELS ── */
+.panel{display:none;position:fixed;top:var(--th);left:0;right:0;bottom:var(--bh);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:var(--bg);z-index:10}
+.panel::-webkit-scrollbar{display:none}
+.panel.active{display:block}
+
+/* ── SHARED COMPONENTS ── */
+.sec-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px}
+.sec-title{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.03em}
+.sec-sub{font-size:.72rem;color:var(--mu2);margin-top:1px}
+.btn-primary{background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:10px 20px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:opacity .2s,transform .2s}
+.btn-primary:active{opacity:.85;transform:scale(.97)}
+.btn-sec{background:transparent;border:1px solid var(--border2);color:var(--tx);padding:9px 18px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;cursor:pointer;transition:border-color .2s;-webkit-tap-highlight-color:transparent}
+.btn-sec:active{border-color:var(--or)}
+.btn-ghost{background:transparent;border:1px solid var(--border);border-radius:50px;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;padding:6px 14px;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.btn-ghost:active{border-color:var(--or);color:var(--or)}
+.btn-danger{background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.25);color:var(--pk);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;padding:6px 14px;border-radius:50px;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.btn-danger:active{background:rgba(255,45,120,.2)}
+
+/* ── STATS ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 14px}
+.stat-card{background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px 10px;text-align:center}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;line-height:1;color:var(--or)}
+.stat-lbl{font-family:'Syne',sans-serif;font-size:.52rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-top:2px}
+
+/* ── OVERLAY / SHEET ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);z-index:2000;display:none;align-items:flex-end;justify-content:center}
+.overlay.open{display:flex}
+.sheet{width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;animation:su .26s ease;max-height:92vh;display:flex;flex-direction:column}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sheet-handle{width:40px;height:4px;border-radius:2px;background:var(--border2);margin:12px auto 0;flex-shrink:0}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sheet-title{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.03em}
+.sheet-close{width:30px;height:30px;border-radius:50%;background:var(--surf);border:none;color:var(--tx);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.sheet-body{overflow-y:auto;padding:16px 18px 32px;flex:1}
+
+/* ── FORM FIELDS ── */
+.ff{width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:12px;padding:11px 14px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;margin-bottom:10px;transition:border-color .2s}
+.ff:focus{border-color:var(--or)}.ff::placeholder{color:var(--mu)}
+.ff-label{font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu2);margin-bottom:5px;display:block}
+.ff-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
+
+/* ── POST CARDS ── */
+.post-card{background:var(--surf);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin:0 14px 12px}
+.post-img{width:100%;height:180px;object-fit:cover;display:block}
+.post-img-placeholder{height:140px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:linear-gradient(135deg,rgba(176,38,255,.2),rgba(255,92,0,.1))}
+.post-body{padding:12px 14px 10px}
+.post-cap{font-size:.85rem;color:var(--tx);line-height:1.5;margin-bottom:8px}
+.post-meta{font-size:.65rem;color:var(--mu);font-family:'Syne',sans-serif}
+.post-actions{display:flex;gap:8px;padding:8px 14px 12px;border-top:1px solid var(--border)}
+
+/* ── EVENT LIST ── */
+.ev-row{display:flex;align-items:center;gap:12px;background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:12px 14px;margin:0 14px 10px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:border-color .2s}
+.ev-row:active{border-color:rgba(255,92,0,.3)}
+.ev-thumb{width:52px;height:52px;border-radius:10px;background:linear-gradient(135deg,rgba(176,38,255,.3),rgba(255,92,0,.2));flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;position:relative}
+.ev-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ev-info{flex:1;min-width:0}
+.ev-name{font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.ev-sub{font-size:.68rem;color:var(--mu)}
+.ev-price{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--or);flex-shrink:0}
+
+/* ── MENU ITEMS ── */
+.menu-item-card{display:flex;align-items:center;gap:12px;background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:12px 14px;margin:0 14px 10px}
+.mi-img{width:52px;height:52px;border-radius:10px;background:var(--surf2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;position:relative}
+.mi-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.mi-info{flex:1;min-width:0}
+.mi-name{font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;margin-bottom:2px}
+.mi-desc{font-size:.68rem;color:var(--mu);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mi-price{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--li)}
+.mi-actions{display:flex;gap:6px;flex-shrink:0}
+
+/* ── ORDERS TABLE ── */
+.orders-wrap{padding:0 14px 20px;overflow-x:auto}
+.ord-table{width:100%;border-collapse:collapse;min-width:560px}
+.ord-table th{font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+.ord-table td{padding:11px 12px;border-bottom:1px solid var(--border);font-size:.78rem;vertical-align:middle}
+.ord-table tr:last-child td{border-bottom:none}
+.status-badge{display:inline-block;padding:3px 10px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.s-pending{background:rgba(255,92,0,.12);color:var(--or);border:1px solid rgba(255,92,0,.25)}
+.s-ready{background:rgba(0,212,170,.1);color:var(--te);border:1px solid rgba(0,212,170,.25)}
+.s-completed{background:rgba(198,255,74,.08);color:var(--li);border:1px solid rgba(198,255,74,.2)}
+.s-cancelled{background:rgba(255,45,120,.08);color:var(--pk);border:1px solid rgba(255,45,120,.2)}
+.status-sel{background:var(--surf);border:1px solid var(--border);border-radius:8px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;padding:4px 8px;cursor:pointer;outline:none}
+.status-sel option{background:#0D1424}
+
+/* ── PICKUP HOURS ── */
+.hour-row{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border)}
+.hour-day{font-family:'Syne',sans-serif;font-weight:700;font-size:.76rem;width:80px;flex-shrink:0}
+.hour-toggle{width:40px;height:22px;border-radius:11px;background:var(--mu);border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.hour-toggle.on{background:var(--or)}
+.hour-toggle::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s}
+.hour-toggle.on::after{transform:translateX(18px)}
+.hour-times{display:flex;align-items:center;gap:6px;flex:1;flex-wrap:wrap}
+.time-input{background:var(--surf);border:1px solid var(--border2);border-radius:8px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.8rem;padding:5px 8px;outline:none;width:90px}
+.time-input:focus{border-color:var(--or)}
+
+/* ── PROFILE ── */
+.profile-hero{background:var(--surf);border:1px solid var(--border);border-radius:18px;margin:14px;padding:20px;display:flex;gap:14px;align-items:center}
+.profile-logo{width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0;overflow:hidden;position:relative}
+.profile-logo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pf-name{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.03em;line-height:1}
+.pf-type{font-size:.7rem;color:var(--mu2);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+.pf-city{font-size:.72rem;color:var(--mu);margin-top:4px}
+
+/* ── MENU LINK CARD ── */
+.menu-link-card{background:linear-gradient(135deg,rgba(176,38,255,.15),rgba(255,92,0,.1));border:1px solid rgba(176,38,255,.3);border-radius:18px;margin:14px;padding:16px 18px;display:flex;align-items:center;gap:14px}
+.ml-ico{font-size:2rem;flex-shrink:0}
+.ml-text{flex:1;min-width:0}
+.ml-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;margin-bottom:3px}
+.ml-url{font-size:.68rem;color:var(--cy);word-break:break-all}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:calc(var(--bh) + 14px);left:50%;transform:translateX(-50%) translateY(8px);background:var(--surf2);border:1px solid var(--border2);border-radius:50px;padding:10px 22px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;color:var(--tx);z-index:9999;opacity:0;transition:all .28s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 24px rgba(0,0,0,.5)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{border-color:rgba(198,255,74,.3);color:var(--li)}
+.toast.err{border-color:rgba(255,45,120,.3);color:var(--pk)}
+
+/* ── MISC ── */
+.empty-state{padding:48px 24px;text-align:center}
+.empty-ico{font-size:3rem;margin-bottom:14px}
+.empty-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:8px}
+.empty-sub{font-size:.8rem;color:var(--mu);line-height:1.5;margin-bottom:20px}
+.chip-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.chip{padding:5px 14px;border-radius:50px;border:1px solid var(--border2);background:transparent;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;color:var(--mu);cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.chip.active,.chip:active{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.08)}
+.info-box{background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.18);border-radius:12px;padding:10px 14px;font-size:.76rem;color:var(--cy);margin-bottom:12px;line-height:1.5}
+.section-label{font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--mu);margin-bottom:10px}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="tb">
+  <a href="index.html" class="logo"><span class="dot"></span>PULSIFY</a>
+  <span class="biz-name-top" id="tb-biz-name"></span>
+  <div class="tb-right">
+    <div class="notif-badge" onclick="showTab('orders')" title="Orders">🔔<span class="nd" id="notif-dot"></span></div>
+    <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+  </div>
+</header>
+
+<!-- BOTTOM NAV -->
+<nav class="bn">
+  <button class="bb active" data-tab="home" onclick="showTab('home')"><span class="bb-ico">🏠</span><span class="bb-lbl">Home</span></button>
+  <button class="bb" data-tab="posts" onclick="showTab('posts')"><span class="bb-ico">📸</span><span class="bb-lbl">Posts</span></button>
+  <button class="bb" data-tab="events" onclick="showTab('events')"><span class="bb-ico">🎉</span><span class="bb-lbl">Events</span></button>
+  <button class="bb" data-tab="menu-mgr" onclick="showTab('menu-mgr')"><span class="bb-ico">🍽️</span><span class="bb-lbl">Menu</span></button>
+  <button class="bb" data-tab="orders" onclick="showTab('orders')"><span class="bb-ico">📦</span><span class="bb-lbl">Orders</span><span class="bb-badge" id="orders-badge">0</span></button>
+  <button class="bb" data-tab="profile" onclick="showTab('profile')"><span class="bb-ico">⚙️</span><span class="bb-lbl">Profile</span></button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<!-- ══ HOME ══ -->
+<div class="panel active" id="tab-home">
+  <div class="sec-head">
+    <div><div class="sec-title" id="home-greeting">Welcome!</div><div class="sec-sub" id="home-date"></div></div>
+  </div>
+  <div class="stats-row" id="stats-row"></div>
+  <div style="padding:4px 14px 10px">
+    <div class="section-label">Quick Actions</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button class="btn-primary" onclick="openSheet('post-sheet')">+ New Post</button>
+      <button class="btn-primary" onclick="openSheet('event-sheet')">+ New Event</button>
+      <button class="btn-sec" onclick="openSheet('menu-sheet')">+ Menu Item</button>
+      <button class="btn-sec" onclick="showTab('orders')">View Orders</button>
+    </div>
+  </div>
+  <div style="padding:4px 14px 0">
+    <div class="section-label">Pending Orders</div>
+    <div id="home-orders-preview"></div>
+  </div>
+  <div class="menu-link-card" id="menu-link-card">
+    <span class="ml-ico">🔗</span>
+    <div class="ml-text">
+      <div class="ml-title">Your Public Order Page</div>
+      <div class="ml-url" id="menu-url-display">Loading…</div>
+    </div>
+    <button class="btn-ghost" onclick="copyMenuLink()">Copy</button>
+  </div>
+</div>
+
+<!-- ══ POSTS ══ -->
+<div class="panel" id="tab-posts">
+  <div class="sec-head">
+    <div><div class="sec-title">Posts</div><div class="sec-sub">Content shared to the Pulsify feed</div></div>
+    <button class="btn-primary" onclick="openSheet('post-sheet')">+ Post</button>
+  </div>
+  <div id="posts-list"></div>
+</div>
+
+<!-- ══ EVENTS ══ -->
+<div class="panel" id="tab-events">
+  <div class="sec-head">
+    <div><div class="sec-title">Events</div><div class="sec-sub">Visible on the Pulsify home feed</div></div>
+    <button class="btn-primary" onclick="openSheet('event-sheet')">+ Event</button>
+  </div>
+  <div id="events-list"></div>
+</div>
+
+<!-- ══ MENU MANAGER ══ -->
+<div class="panel" id="tab-menu-mgr">
+  <div class="sec-head">
+    <div><div class="sec-title">Menu Manager</div><div class="sec-sub">Items customers can order for pickup</div></div>
+    <button class="btn-primary" onclick="openSheet('menu-sheet')">+ Item</button>
+  </div>
+  <div id="menu-list"></div>
+  <div style="margin:4px 14px 20px">
+    <div class="section-label" style="margin-top:10px">Pickup Hours</div>
+    <div style="background:var(--surf);border:1px solid var(--border);border-radius:18px;overflow:hidden" id="hours-editor"></div>
+    <button class="btn-primary" style="width:100%;margin-top:10px" onclick="saveHours()">Save Pickup Hours</button>
+  </div>
+</div>
+
+<!-- ══ ORDERS ══ -->
+<div class="panel" id="tab-orders">
+  <div class="sec-head">
+    <div><div class="sec-title">Incoming Orders</div><div class="sec-sub" id="orders-sub">All orders</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:0 14px 12px" id="order-stats-row"></div>
+  <div style="display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:0 14px 10px">
+    <button class="chip active" onclick="filterOrders(this,'all')">All</button>
+    <button class="chip" onclick="filterOrders(this,'pending')">🟠 Pending</button>
+    <button class="chip" onclick="filterOrders(this,'ready')">🟢 Ready</button>
+    <button class="chip" onclick="filterOrders(this,'completed')">✅ Done</button>
+    <button class="chip" onclick="filterOrders(this,'cancelled')">❌ Cancelled</button>
+  </div>
+  <div class="orders-wrap">
+    <table class="ord-table">
+      <thead><tr><th>Order ID</th><th>Customer</th><th>Items</th><th>Total</th><th>Pickup</th><th>Status</th></tr></thead>
+      <tbody id="orders-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══ PROFILE ══ -->
+<div class="panel" id="tab-profile">
+  <div class="profile-hero" id="profile-hero"></div>
+  <div style="padding:0 14px 20px">
+    <div class="section-label" style="margin-top:10px">Edit Profile</div>
+    <label class="ff-label">Business Name</label>
+    <input class="ff" type="text" id="pf-name" placeholder="Business Name"/>
+    <label class="ff-label">Tagline / Description</label>
+    <textarea class="ff" id="pf-desc" placeholder="Describe your business…" rows="3"></textarea>
+    <label class="ff-label">Address</label>
+    <input class="ff" type="text" id="pf-address" placeholder="Full street address"/>
+    <div class="ff-row">
+      <div><label class="ff-label">Phone</label><input class="ff" type="tel" id="pf-phone" placeholder="+27 xx xxx xxxx"/></div>
+      <div><label class="ff-label">City</label><input class="ff" type="text" id="pf-city" placeholder="e.g. Durban"/></div>
+    </div>
+    <label class="ff-label">Logo URL</label>
+    <input class="ff" type="url" id="pf-logo" placeholder="https://…/logo.jpg"/>
+    <label class="ff-label">Website / Social Link</label>
+    <input class="ff" type="url" id="pf-website" placeholder="https://…"/>
+    <label class="ff-label">WhatsApp Number (for order notifications)</label>
+    <input class="ff" type="tel" id="pf-wa" placeholder="+27 82 xxx xxxx"/>
+    <button class="btn-primary" style="width:100%;margin-top:4px" onclick="saveProfile()">Save Profile</button>
+    <div class="info-box" style="margin-top:12px">🌐 Your public order page: <span id="profile-menu-url" style="font-weight:700"></span></div>
+  </div>
+</div>
+
+<!-- ══ SHEETS ══ -->
+
+<!-- NEW POST -->
+<div class="overlay" id="post-sheet" onclick="if(event.target===this)closeSheet('post-sheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div class="sheet-title">New Post</div><button class="sheet-close" onclick="closeSheet('post-sheet')">✕</button></div>
+    <div class="sheet-body">
+      <div class="info-box">Posts appear on the shared Pulsify feed visible to all users.</div>
+      <label class="ff-label">Image URL (optional)</label>
+      <input class="ff" type="url" id="post-img" placeholder="https://…/image.jpg"/>
+      <label class="ff-label">Caption *</label>
+      <textarea class="ff" id="post-cap" placeholder="What's happening? Share with your followers…" rows="4"></textarea>
+      <button class="btn-primary" style="width:100%" onclick="submitPost()">Publish Post 🚀</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW EVENT -->
+<div class="overlay" id="event-sheet" onclick="if(event.target===this)closeSheet('event-sheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div class="sheet-title" id="ev-sheet-title">New Event</div><button class="sheet-close" onclick="closeSheet('event-sheet')">✕</button></div>
+    <div class="sheet-body">
+      <input type="hidden" id="ev-edit-id"/>
+      <div class="info-box">Events appear on the shared Pulsify discover feed for all users.</div>
+      <label class="ff-label">Event Name *</label>
+      <input class="ff" type="text" id="ev-name" placeholder="e.g. Gqom Friday Night"/>
+      <div class="ff-row">
+        <div><label class="ff-label">Date *</label><input class="ff" type="date" id="ev-date"/></div>
+        <div><label class="ff-label">Time</label><input class="ff" type="time" id="ev-time"/></div>
+      </div>
+      <label class="ff-label">Venue / Location</label>
+      <input class="ff" type="text" id="ev-venue" placeholder="e.g. 123 Main Rd, Durban"/>
+      <div class="ff-row">
+        <div><label class="ff-label">City</label><input class="ff" type="text" id="ev-city" placeholder="e.g. Durban"/></div>
+        <div><label class="ff-label">Genre</label><input class="ff" type="text" id="ev-genre" placeholder="e.g. Gqom, Amapiano"/></div>
+      </div>
+      <div class="ff-row">
+        <div><label class="ff-label">Ticket Price (R)</label><input class="ff" type="number" id="ev-price" placeholder="0 = Free" min="0"/></div>
+        <div><label class="ff-label">Hype Score (1–100)</label><input class="ff" type="number" id="ev-hype" placeholder="75" min="1" max="100"/></div>
+      </div>
+      <label class="ff-label">Description</label>
+      <textarea class="ff" id="ev-desc" placeholder="Describe the event…" rows="3"></textarea>
+      <label class="ff-label">Lineup (comma separated)</label>
+      <input class="ff" type="text" id="ev-lineup" placeholder="DJ Lag, Bello No Gallo"/>
+      <label class="ff-label">Banner Image URL (optional)</label>
+      <input class="ff" type="url" id="ev-img" placeholder="https://…/banner.jpg"/>
+      <button class="btn-primary" style="width:100%" onclick="submitEvent()">Save Event 🎟</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW MENU ITEM -->
+<div class="overlay" id="menu-sheet" onclick="if(event.target===this)closeSheet('menu-sheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div class="sheet-title" id="mi-sheet-title">Add Menu Item</div><button class="sheet-close" onclick="closeSheet('menu-sheet')">✕</button></div>
+    <div class="sheet-body">
+      <input type="hidden" id="mi-edit-id"/>
+      <label class="ff-label">Item Name *</label>
+      <input class="ff" type="text" id="mi-name" placeholder="e.g. Braai Mixed Platter"/>
+      <label class="ff-label">Description</label>
+      <input class="ff" type="text" id="mi-desc" placeholder="Brief description…"/>
+      <div class="ff-row">
+        <div><label class="ff-label">Price (R) *</label><input class="ff" type="number" id="mi-price" placeholder="0.00" min="0"/></div>
+        <div><label class="ff-label">Emoji</label><input class="ff" type="text" id="mi-emoji" placeholder="🍖" maxlength="4"/></div>
+      </div>
+      <label class="ff-label">Category</label>
+      <input class="ff" type="text" id="mi-cat" placeholder="e.g. Mains, Drinks, Sides…"/>
+      <label class="ff-label">Image URL (optional)</label>
+      <input class="ff" type="url" id="mi-img" placeholder="https://…/food.jpg"/>
+      <label class="ff-label">Availability</label>
+      <select class="ff" id="mi-avail">
+        <option value="1">✅ Available</option>
+        <option value="0">❌ Unavailable (hidden from customers)</option>
+      </select>
+      <button class="btn-primary" style="width:100%" onclick="submitMenuItem()">Save Item ✅</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+//  STATE & SESSION
+// ════════════════════════════════════════════════════════════
+let BIZ = null;
+let orderFilter = 'all';
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const GENRE_EMOJI = {gqom:'🔊',amapiano:'🎶',nightlife:'🌙',sport:'⚽',march:'✊',food:'🍔',jazz:'🎷',comedy:'😂',house:'🎵',kwaito:'🎤',shisanyama:'🥩',braai:'🔥'};
+
+function getBizId() { return BIZ?.id || ''; }
+function key(k)     { return getBizId() + '_' + k; }
+function load(k, def) { try { return JSON.parse(localStorage.getItem(key(k))) || def; } catch { return def; } }
+function save(k, v)   { localStorage.setItem(key(k), JSON.stringify(v)); }
+
+// ── Boot ─────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const s = localStorage.getItem('biz_session');
+  if (!s) { window.location.href = 'business-login.html'; return; }
+  BIZ = JSON.parse(s);
+  document.getElementById('tb-biz-name').textContent = BIZ.name;
+  initDashboard();
+  startOrderPoller();
+  requestNotifPermission();
+});
+
+function initDashboard() {
+  setGreeting();
+  renderStats();
+  renderPosts();
+  renderEvents();
+  renderMenu();
+  renderOrders();
+  renderHoursEditor();
+  renderProfile();
+  renderHomeOrdersPreview();
+  const url = `${location.origin}/business-menu.html?id=${getBizId()}`;
+  document.getElementById('menu-url-display').textContent = url;
+  document.getElementById('profile-menu-url').textContent = url;
+}
+
+// ════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ════════════════════════════════════════════════════════════
+function showTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.bb').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  const p = document.getElementById('tab-' + name);
+  if (p) { p.classList.add('active'); p.scrollTop = 0; }
+}
+function openSheet(id)  { document.getElementById(id).classList.add('open'); }
+function closeSheet(id) { document.getElementById(id).classList.remove('open'); }
+function toast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast ' + type + ' show'; setTimeout(() => t.className = 'toast', 2600); }
+function doLogout()     { localStorage.removeItem('biz_session'); window.location.href = 'business-login.html'; }
+function copyMenuLink() { const url = `${location.origin}/business-menu.html?id=${getBizId()}`; navigator.clipboard?.writeText(url); toast('🔗 Menu link copied!', 'ok'); }
+
+// ════════════════════════════════════════════════════════════
+//  GREETING
+// ════════════════════════════════════════════════════════════
+function setGreeting() {
+  const h = new Date().getHours();
+  const g = h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
+  document.getElementById('home-greeting').textContent = g + ', ' + BIZ.name + '!';
+  document.getElementById('home-date').textContent = new Date().toLocaleDateString('en-ZA', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+}
+
+// ════════════════════════════════════════════════════════════
+//  STATS
+// ════════════════════════════════════════════════════════════
+function renderStats() {
+  const posts   = load('posts', []);
+  const events  = load('events', []);
+  const orders  = load('orders', []);
+  const today   = new Date().toISOString().split('T')[0];
+  const todayRevenue = orders.filter(o => o.status !== 'cancelled' && o.created?.startsWith(today)).reduce((s, o) => s + (o.total || 0), 0);
+  const pending = orders.filter(o => o.status === 'pending').length;
+  document.getElementById('stats-row').innerHTML =
+    stat(posts.length, 'Posts') + stat(events.length, 'Events') +
+    stat(pending, 'Pending', 'var(--pk)') + stat('R' + todayRevenue, 'Revenue', 'var(--li)');
+}
+function stat(n, l, color = '') {
+  return `<div class="stat-card"><div class="stat-num" ${color ? 'style="color:' + color + '"' : ''}>${n}</div><div class="stat-lbl">${l}</div></div>`;
+}
+
+// ════════════════════════════════════════════════════════════
+//  POSTS — synced to shared business_posts for index.html
+// ════════════════════════════════════════════════════════════
+function renderPosts() {
+  const posts = load('posts', []);
+  const el = document.getElementById('posts-list');
+  if (!posts.length) { el.innerHTML = emptyState('📸', 'No posts yet', 'Create your first post to share updates with your followers on the Pulsify feed.'); return; }
+  el.innerHTML = posts.slice().reverse().map(p => `
+    <div class="post-card">
+      ${p.img ? `<img class="post-img" src="${xe(p.img)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : '<div class="post-img-placeholder">📷</div>'}
+      <div class="post-body"><div class="post-cap">${xe(p.cap)}</div><div class="post-meta">${fmtDate(p.created)} · ${xe(BIZ.name)}</div></div>
+      <div class="post-actions"><button class="btn-danger" onclick="deletePost('${p.id}')">🗑 Delete</button></div>
+    </div>`).join('');
+}
+
+function submitPost() {
+  const img = document.getElementById('post-img').value.trim();
+  const cap = document.getElementById('post-cap').value.trim();
+  if (!cap && !img) { toast('Add a caption or image URL', 'err'); return; }
+  const post = { id:'p_'+Date.now(), img, cap, created:new Date().toISOString(), bizId:getBizId(), bizName:BIZ.name, bizType:BIZ.type };
+  const posts = load('posts', []); posts.push(post); save('posts', posts);
+  syncToSharedPosts(post);
+  closeSheet('post-sheet');
+  document.getElementById('post-img').value = '';
+  document.getElementById('post-cap').value = '';
+  toast('Post published! ✅', 'ok');
+  renderPosts(); renderStats();
+}
+
+function deletePost(id) {
+  if (!confirm('Delete this post?')) return;
+  const posts = load('posts', []).filter(p => p.id !== id); save('posts', posts);
+  // Remove from shared feed
+  const shared = JSON.parse(localStorage.getItem('business_posts') || '[]');
+  localStorage.setItem('business_posts', JSON.stringify(shared.filter(p => p.id !== id)));
+  renderPosts(); renderStats(); toast('Post deleted');
+}
+
+function syncToSharedPosts(post) {
+  const shared = JSON.parse(localStorage.getItem('business_posts') || '[]');
+  if (!shared.find(p => p.id === post.id)) shared.unshift(post);
+  localStorage.setItem('business_posts', JSON.stringify(shared.slice(0, 200)));
+}
+
+// ════════════════════════════════════════════════════════════
+//  EVENTS — synced to shared business_events for index.html
+// ════════════════════════════════════════════════════════════
+function renderEvents() {
+  const evs = load('events', []);
+  const el  = document.getElementById('events-list');
+  if (!evs.length) { el.innerHTML = emptyState('🎉', 'No events yet', 'Create your first event. It will appear on the Pulsify home feed for all users to discover.'); return; }
+  el.innerHTML = evs.slice().reverse().map(ev => {
+    const emo = GENRE_EMOJI[(ev.genre || '').toLowerCase()] || '🎉';
+    return `<div class="ev-row">
+      <div class="ev-thumb">${ev.img ? `<img src="${xe(ev.img)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : ''}${emo}</div>
+      <div class="ev-info">
+        <div class="ev-name">${xe(ev.name)}</div>
+        <div class="ev-sub">${ev.date || 'Date TBD'} ${ev.time ? '· '+ev.time : ''} · ${xe(ev.venue || ev.city || 'Venue TBD')}</div>
+        <div class="ev-sub" style="color:var(--pu);margin-top:2px">${xe(ev.genre || '')}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
+        <span class="ev-price">${ev.price > 0 ? 'R' + ev.price : 'FREE'}</span>
+        <div style="display:flex;gap:5px">
+          <button class="btn-ghost" onclick="editEvent('${ev.id}')">Edit</button>
+          <button class="btn-danger" onclick="deleteEvent('${ev.id}')">🗑</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function submitEvent() {
+  const id   = document.getElementById('ev-edit-id').value;
+  const name = document.getElementById('ev-name').value.trim();
+  if (!name) { toast('Event name is required', 'err'); return; }
+  const price = parseFloat(document.getElementById('ev-price').value) || 0;
+  const lineupRaw = document.getElementById('ev-lineup').value.trim();
+  const ev = {
+    id: id || 'ev_' + Date.now(), name,
+    date: document.getElementById('ev-date').value,
+    time: document.getElementById('ev-time').value,
+    venue: document.getElementById('ev-venue').value.trim(),
+    city: document.getElementById('ev-city').value.trim(),
+    genre: document.getElementById('ev-genre').value.trim(),
+    price, isFree: price === 0,
+    hype: parseInt(document.getElementById('ev-hype').value) || 75,
+    desc: document.getElementById('ev-desc').value.trim(),
+    lineup: lineupRaw ? lineupRaw.split(',').map(s => s.trim()) : [],
+    img: document.getElementById('ev-img').value.trim(),
+    created: id ? undefined : new Date().toISOString(),
+    bizId: getBizId(), bizName: BIZ.name, bizType: BIZ.type,
+  };
+  const evs = load('events', []);
+  if (id) { const i = evs.findIndex(e => e.id === id); if (i >= 0) evs[i] = { ...evs[i], ...ev }; } else { evs.push(ev); }
+  save('events', evs);
+  syncToSharedEvents(ev);
+  closeSheet('event-sheet');
+  resetEventForm();
+  toast(id ? 'Event updated ✅' : 'Event published! ✅', 'ok');
+  renderEvents(); renderStats();
+}
+
+function editEvent(id) {
+  const ev = load('events', []).find(e => e.id === id); if (!ev) return;
+  document.getElementById('ev-edit-id').value = id;
+  document.getElementById('ev-sheet-title').textContent = 'Edit Event';
+  ['name','date','time','venue','city','genre','price','hype','desc','img'].forEach(f => {
+    const el = document.getElementById('ev-' + f); if (el) el.value = ev[f] || '';
+  });
+  document.getElementById('ev-lineup').value = (ev.lineup || []).join(', ');
+  openSheet('event-sheet');
+}
+
+function resetEventForm() {
+  document.getElementById('ev-edit-id').value = '';
+  document.getElementById('ev-sheet-title').textContent = 'New Event';
+  ['name','date','time','venue','city','genre','price','hype','desc','img','lineup'].forEach(f => { const el = document.getElementById('ev-' + f); if (el) el.value = ''; });
+}
+
+function deleteEvent(id) {
+  if (!confirm('Delete this event?')) return;
+  save('events', load('events', []).filter(e => e.id !== id));
+  const shared = JSON.parse(localStorage.getItem('business_events') || '[]');
+  localStorage.setItem('business_events', JSON.stringify(shared.filter(e => e.id !== id)));
+  renderEvents(); renderStats(); toast('Event deleted');
+}
+
+function syncToSharedEvents(ev) {
+  const shared = JSON.parse(localStorage.getItem('business_events') || '[]');
+  const i = shared.findIndex(e => e.id === ev.id);
+  if (i >= 0) shared[i] = { ...shared[i], ...ev }; else shared.unshift(ev);
+  localStorage.setItem('business_events', JSON.stringify(shared.slice(0, 200)));
+}
+
+// ════════════════════════════════════════════════════════════
+//  MENU ITEMS
+// ════════════════════════════════════════════════════════════
+function renderMenu() {
+  const items = load('menu', []);
+  const el    = document.getElementById('menu-list');
+  if (!items.length) { el.innerHTML = emptyState('🍽️', 'No menu items', 'Add items to your menu. Customers can order them for pickup via your public order page.'); return; }
+  const cats = [...new Set(items.map(i => i.cat || 'General'))];
+  el.innerHTML = cats.map(cat =>
+    `<div style="padding:10px 14px 0"><div class="section-label">${xe(cat)}</div></div>` +
+    items.filter(i => (i.cat || 'General') === cat).map(item => `
+      <div class="menu-item-card">
+        <div class="mi-img">${item.img ? `<img src="${xe(item.img)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : ''}${item.emoji || '🍽️'}</div>
+        <div class="mi-info">
+          <div class="mi-name" style="${item.available==='0'||item.available===false?'opacity:.5':''}"}>${xe(item.name)}</div>
+          <div class="mi-desc">${xe(item.desc || '')}</div>
+          <div class="mi-price">R${item.price}</div>
+        </div>
+        <div class="mi-actions">
+          <button class="btn-ghost" onclick="editMenuItem('${item.id}')">Edit</button>
+          <button class="btn-danger" onclick="deleteMenuItem('${item.id}')">🗑</button>
+        </div>
+      </div>`).join('')
+  ).join('');
+}
+
+function submitMenuItem() {
+  const id    = document.getElementById('mi-edit-id').value;
+  const name  = document.getElementById('mi-name').value.trim();
+  const price = parseFloat(document.getElementById('mi-price').value);
+  if (!name)             { toast('Item name is required', 'err'); return; }
+  if (isNaN(price)||price<0) { toast('Enter a valid price', 'err'); return; }
+  const item = { id: id || 'mi_' + Date.now(), name, desc: document.getElementById('mi-desc').value.trim(), price, emoji: document.getElementById('mi-emoji').value || '🍽️', cat: document.getElementById('mi-cat').value.trim() || 'General', img: document.getElementById('mi-img').value.trim(), available: document.getElementById('mi-avail').value, bizId: getBizId() };
+  const items = load('menu', []);
+  if (id) { const i = items.findIndex(m => m.id === id); if (i >= 0) items[i] = item; } else { items.push(item); }
+  save('menu', items);
+  closeSheet('menu-sheet'); resetMenuForm();
+  toast(id ? 'Item updated ✅' : 'Item added ✅', 'ok');
+  renderMenu();
+}
+
+function editMenuItem(id) {
+  const item = load('menu', []).find(m => m.id === id); if (!item) return;
+  document.getElementById('mi-edit-id').value    = id;
+  document.getElementById('mi-sheet-title').textContent = 'Edit Item';
+  document.getElementById('mi-name').value  = item.name || '';
+  document.getElementById('mi-desc').value  = item.desc || '';
+  document.getElementById('mi-price').value = item.price || '';
+  document.getElementById('mi-emoji').value = item.emoji || '';
+  document.getElementById('mi-cat').value   = item.cat || '';
+  document.getElementById('mi-img').value   = item.img || '';
+  document.getElementById('mi-avail').value = (item.available !== false && item.available !== '0') ? '1' : '0';
+  openSheet('menu-sheet');
+}
+
+function resetMenuForm() {
+  document.getElementById('mi-edit-id').value = '';
+  document.getElementById('mi-sheet-title').textContent = 'Add Menu Item';
+  ['mi-name','mi-desc','mi-price','mi-emoji','mi-cat','mi-img'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('mi-avail').value = '1';
+}
+
+function deleteMenuItem(id) {
+  if (!confirm('Remove this item?')) return;
+  save('menu', load('menu', []).filter(m => m.id !== id));
+  renderMenu(); toast('Item removed');
+}
+
+// ════════════════════════════════════════════════════════════
+//  PICKUP HOURS
+// ════════════════════════════════════════════════════════════
+function renderHoursEditor() {
+  const hours = load('hours', DAYS.map(d => ({ day:d, open:d!=='Sunday', from:'10:00', to:'18:00' })));
+  document.getElementById('hours-editor').innerHTML = hours.map((h, i) => `
+    <div class="hour-row">
+      <span class="hour-day">${h.day.slice(0,3)}</span>
+      <button class="hour-toggle ${h.open?'on':''}" id="htog-${i}" onclick="toggleDay(${i})"></button>
+      <div class="hour-times" id="htimes-${i}" style="display:${h.open?'flex':'none'}">
+        <input class="time-input" type="time" id="hfrom-${i}" value="${h.from}"/>
+        <span style="color:var(--mu);font-size:.72rem">–</span>
+        <input class="time-input" type="time" id="hto-${i}" value="${h.to}"/>
+      </div>
+      ${!h.open ? '<span style="font-size:.7rem;color:var(--mu)">Closed</span>' : ''}
+    </div>`).join('');
+}
+
+function toggleDay(i) {
+  const tog = document.getElementById('htog-' + i), times = document.getElementById('htimes-' + i);
+  const isOn = tog.classList.toggle('on'); times.style.display = isOn ? 'flex' : 'none';
+}
+
+function saveHours() {
+  const hours = DAYS.map((d, i) => ({ day:d, open:document.getElementById('htog-'+i).classList.contains('on'), from:document.getElementById('hfrom-'+i)?.value||'10:00', to:document.getElementById('hto-'+i)?.value||'18:00' }));
+  save('hours', hours); toast('Pickup hours saved ✅', 'ok');
+}
+
+// ════════════════════════════════════════════════════════════
+//  ORDERS — reads from BIZ_ID_orders (written by business-menu.html)
+// ════════════════════════════════════════════════════════════
+function renderOrders() {
+  const all      = load('orders', []);
+  const filtered = orderFilter === 'all' ? all : all.filter(o => o.status === orderFilter);
+  const today    = new Date().toISOString().split('T')[0];
+  const todayAll = all.filter(o => o.created?.startsWith(today));
+  const revenue  = todayAll.filter(o => o.status !== 'cancelled').reduce((s, o) => s + (o.total || 0), 0);
+  const pending  = all.filter(o => o.status === 'pending').length;
+
+  document.getElementById('order-stats-row').innerHTML =
+    stat(todayAll.length,'Today Orders') + stat(pending,'Pending','var(--pk)') + stat('R'+revenue,'Revenue','var(--li)');
+  document.getElementById('orders-sub').textContent = `${all.length} total · ${pending} pending`;
+
+  const badge = document.getElementById('orders-badge');
+  badge.textContent = pending; badge.classList.toggle('show', pending > 0);
+  document.getElementById('notif-dot').classList.toggle('show', pending > 0);
+
+  if (!filtered.length) {
+    document.getElementById('orders-tbody').innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--mu);padding:32px;font-size:.82rem">No orders found</td></tr>`;
+    return;
+  }
+  document.getElementById('orders-tbody').innerHTML = filtered.slice().reverse().map(o => `
+    <tr>
+      <td style="font-family:'Syne',sans-serif;font-weight:700;font-size:.72rem;color:var(--cy)">#${o.id.slice(-6).toUpperCase()}</td>
+      <td><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.78rem">${xe(o.customer)}</div><div style="font-size:.66rem;color:var(--mu)">${xe(o.phone||'')}</div></td>
+      <td style="max-width:140px"><div style="font-size:.74rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${xe((o.items||[]).map(i=>i.name+'×'+i.qty).join(', '))}</div></td>
+      <td style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--li)">R${o.total}</td>
+      <td style="font-size:.72rem;color:var(--mu2)">${xe(o.pickupTime||'—')}</td>
+      <td>
+        <select class="status-sel" onchange="updateOrderStatus('${o.id}',this.value)">
+          ${['pending','ready','completed','cancelled'].map(s=>`<option value="${s}"${o.status===s?' selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
+        </select>
+        ${o.phone ? `<br/><a href="https://wa.me/27${(o.phone||'').replace(/\D/g,'').slice(1)}?text=${encodeURIComponent('Hi '+o.customer+'! Your Pulsify order #'+o.id.slice(-6).toUpperCase()+' at '+BIZ.name+' is READY for pickup! 🎉')}" target="_blank" style="font-size:.62rem;color:var(--te);text-decoration:none">💬 Notify</a>` : ''}
+      </td>
+    </tr>`).join('');
+}
+
+function filterOrders(btn, f) {
+  document.querySelectorAll('#tab-orders .chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active'); orderFilter = f; renderOrders();
+}
+
+function updateOrderStatus(id, status) {
+  const orders = load('orders', []);
+  const i = orders.findIndex(o => o.id === id);
+  if (i >= 0) { orders[i].status = status; save('orders', orders); }
+  renderOrders(); renderStats(); renderHomeOrdersPreview();
+  if (status === 'ready') toast('Order marked Ready 🟢', 'ok');
+}
+
+function renderHomeOrdersPreview() {
+  const orders = load('orders', []).filter(o => o.status === 'pending').slice(-3).reverse();
+  const el     = document.getElementById('home-orders-preview');
+  if (!orders.length) { el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--mu);font-size:.8rem">No pending orders right now</div>'; return; }
+  el.innerHTML = orders.map(o => `
+    <div style="display:flex;align-items:center;gap:10px;background:var(--surf);border:1px solid rgba(255,92,0,.25);border-radius:14px;padding:12px 14px;margin-bottom:8px">
+      <div style="font-size:1.4rem">📦</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem">${xe(o.customer)} — R${o.total}</div>
+        <div style="font-size:.68rem;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${xe(o.pickupTime||'Time not set')} · ${xe((o.items||[]).map(i=>i.name).join(', '))}</div>
+      </div>
+      <span class="status-badge s-pending">Pending</span>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+//  PROFILE
+// ════════════════════════════════════════════════════════════
+function renderProfile() {
+  const pf = load('profile', { name:BIZ.name, type:BIZ.type, city:BIZ.city, province:BIZ.province||'', phone:BIZ.phone, logo:'', address:'', desc:'', website:'', wa:'' });
+  const typeEmoji = { club:'🌙', shisanyama:'🥩', restaurant:'🍽️', bar:'🍺', hotel:'🏨', venue:'🎪', food:'🍔', other:'📍' };
+  const emo = typeEmoji[pf.type || BIZ.type] || '🏪';
+  document.getElementById('profile-hero').innerHTML = `
+    <div class="profile-logo">${pf.logo ? `<img src="${xe(pf.logo)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : ''}${emo}</div>
+    <div>
+      <div class="pf-name">${xe(pf.name || BIZ.name)}</div>
+      <div class="pf-type">${pf.type || BIZ.type}</div>
+      <div class="pf-city">📍 ${xe((pf.city || BIZ.city) + (pf.province ? ', '+pf.province : ''))}</div>
+      ${pf.phone ? `<div style="font-size:.7rem;color:var(--mu);margin-top:2px">📞 ${xe(pf.phone)}</div>` : ''}
+    </div>`;
+  ['name','desc','address','phone','city','logo','website','wa'].forEach(f => {
+    const el = document.getElementById('pf-' + f); if (el) el.value = pf[f] || '';
+  });
+}
+
+function saveProfile() {
+  const pf = {
+    name:    document.getElementById('pf-name').value.trim()    || BIZ.name,
+    desc:    document.getElementById('pf-desc').value.trim(),
+    address: document.getElementById('pf-address').value.trim(),
+    phone:   document.getElementById('pf-phone').value.trim(),
+    city:    document.getElementById('pf-city').value.trim(),
+    logo:    document.getElementById('pf-logo').value.trim(),
+    website: document.getElementById('pf-website').value.trim(),
+    wa:      document.getElementById('pf-wa').value.trim(),
+    type:    BIZ.type, province: BIZ.province || '',
+  };
+  save('profile', pf);
+  BIZ = { ...BIZ, ...pf };
+  localStorage.setItem('biz_session', JSON.stringify(BIZ));
+  document.getElementById('tb-biz-name').textContent = BIZ.name;
+  renderProfile(); toast('Profile saved ✅', 'ok');
+}
+
+// ════════════════════════════════════════════════════════════
+//  NOTIFICATIONS (browser + WhatsApp fallback)
+// ════════════════════════════════════════════════════════════
+let lastOrderCount = 0;
+function startOrderPoller() {
+  setInterval(() => {
+    const orders = load('orders', []);
+    const pending = orders.filter(o => o.status === 'pending').length;
+    if (pending > lastOrderCount && lastOrderCount > 0) {
+      const n = pending - lastOrderCount;
+      sendBrowserNotif(`🔔 ${n} new order${n>1?'s':''} received!`);
+      toast(`📦 ${n} new order${n>1?'s':''}!`, 'ok');
+    }
+    lastOrderCount = pending;
+    const badge = document.getElementById('orders-badge');
+    badge.textContent = pending; badge.classList.toggle('show', pending > 0);
+    document.getElementById('notif-dot').classList.toggle('show', pending > 0);
+    renderHomeOrdersPreview(); renderStats();
+  }, 10000);
+  lastOrderCount = load('orders', []).filter(o => o.status === 'pending').length;
+}
+
+function requestNotifPermission() { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); }
+function sendBrowserNotif(msg) { if ('Notification' in window && Notification.permission === 'granted') new Notification('Pulsify Business', { body:msg }); }
+
+// ════════════════════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════════════════════
+function xe(s)          { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function emptyState(ico, title, sub) { return `<div class="empty-state"><div class="empty-ico">${ico}</div><div class="empty-title">${title}</div><div class="empty-sub">${sub}</div></div>`; }
+function fmtDate(d)     { if (!d) return ''; return new Date(d).toLocaleDateString('en-ZA', { day:'numeric', month:'short', year:'numeric' }); }
+</script>
+</body>
+</html>

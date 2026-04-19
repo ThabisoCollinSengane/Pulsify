@@ -217,39 +217,6 @@ async function resendVerification() {
 }
 
 document.addEventListener('keydown', e => { if (e.key === 'Enter') doSignIn(); });
-async function handleSignIn() {
-  hideErr();
-  const email = document.getElementById('email').value.trim();
-  const pw = document.getElementById('pw').value;
-  const btn = document.getElementById('signin-btn');
-  
-  if (!email) return showErr('Please enter your email address.');
-  if (!pw) return showErr('Please enter your password.');
-  
-  btn.textContent = 'Signing in…';
-  btn.style.opacity = '.7';
-  
-  const supabase = window.supabase?.createClient(
-    'https://cjzewfvtdayjgjdpdmln.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk'
-  );
-  
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: email,
-    password: pw
-  });
-  
-  if (error) {
-    btn.textContent = 'Sign In';
-    btn.style.opacity = '1';
-    return showErr(error.message);
-  }
-  
-  showToast('✅ Welcome back!', 'ok');
-  setTimeout(() => {
-    window.location.href = 'index.html';
-  }, 700);
-}
 </script>
 </body>
 </html>
