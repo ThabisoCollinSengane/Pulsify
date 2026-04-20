@@ -170,6 +170,7 @@ const GENRE_LABELS = {
 };
 
 async function loadUserData() {
+  console.log('loadUserData() called');
   const { data: { session } } = await sb.auth.getSession();
   if (!session) {
     window.location.href = 'signin.html';
@@ -185,10 +186,12 @@ async function loadUserData() {
     .single();
   
   currentProfile = profile || {};
+  console.log('Loaded profile:', currentProfile);
   
   document.getElementById('pname').textContent = currentProfile.display_name || currentUser.email?.split('@')[0] || 'Your Name';
   document.getElementById('phandle').textContent = '@' + (currentProfile.username || currentUser.email?.split('@')[0] || 'user');
   document.getElementById('pbio').textContent = currentProfile.bio || 'Welcome to Pulsify. Add your bio in settings.';
+  console.log('Bio set to:', document.getElementById('pbio').textContent);
   
   if (currentProfile.avatar_url) {
     const img = document.createElement('img');
