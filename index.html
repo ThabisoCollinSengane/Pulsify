@@ -717,7 +717,7 @@ function buildCard(ev, idx) {
     <div class="fh"><div class="fa" style="background:${bg}">${emo}</div>
       <div style="flex:1;min-width:0"><div class="fo">${x(ev.organiser_name || ev.venue_name || 'Pulsify')}</div>
       <div class="fl">📍 ${x(ev.venue_city)} · ${fdt(ev.date_local, ev.time_local)}</div></div>${badge}</div>
-    <div class="fb" style="background:${bg}">
+    <div class="fb" style="background:transparent">
       <img src="${x(ev.image_url || '')}" loading="lazy" onerror="this.style.display='none'"/>
       <div class="fg"><div class="ft2">${x(ev.name)}</div>
         <div class="fp ${iF ? 'fr' : ''}">${pr}${srcLabel ? '<span style="font-size:.6rem;opacity:.7;margin-left:6px">' + x(srcLabel) + '</span>' : ''}</div></div>
@@ -806,7 +806,7 @@ async function loadFrontline() {
 
 function buildBizCard(b) {
   return `<div class="bc ${b.is_frontline ? 'ft' : ''}" onclick="openBiz('${x(b.id)}')">
-    <div class="bt" style="background:${cg(b.category)}">
+    <div class="bt" style="background:transparent">
       ${b.cover_image_url ? `<img src="${x(b.cover_image_url)}" loading="lazy" onerror="this.style.display='none'"/>` : '<span>' + ce(b.category) + '</span>'}
       <div class="btg"></div>
       <span class="bb2">${x(b.category)}</span>
@@ -1663,6 +1663,56 @@ document.addEventListener('DOMContentLoaded', initSupabaseSession);
 
     // Also update the existing renderSquad function to show followed users or recommendations
     // Keep original MOCK_SQUAD for now, but we can later replace with real data
+    
+    // ── FRIEND SEARCH & FOLLOW ──
+    let searchTimeout = null;
+    async function searchUsers(query) {
+      clearTimeout(searchTimeout);
+      if (!query.trim() || query.length < 2) {
+        document.getElementById('search-results').innerHTML = '';
+        return;
+      }
+      searchTimeout = setTimeout(async () => {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, display_name, username, avatar_url')
+          .ilike('display_name', `%${query}%`)
+          .limit(10);
+        if (error) { console.error(error); return; }
+        const { data: { session } } = await supabase.auth.getSession();
+        const filtered = data.filter(p => p.id !== session?.user?.id);
+        renderSearchResults(filtered);
+      }, 300);
+    }
+    async function renderSearchResults(users) {
+      const container = document.getElementById('search-results');
+      if (!users.length) { container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--mu)">No users found</div>'; return; }
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data: followingData } = await supabase.from('follows').select('following_id').eq('follower_id', session.user.id);
+      const followingIds = followingData ? followingData.map(f => f.following_id) : [];
+      container.innerHTML = users.map(user => `
+        <div class="pc" style="margin:0 0 8px 0">
+          <div class="pav" style="background:linear-gradient(135deg,#B026FF,#FF5C00); overflow:hidden">${user.avatar_url ? `<img src="${user.avatar_url}" style="width:100%;height:100%;object-fit:cover">` : (user.display_name?.[0]?.toUpperCase() || '😊')}</div>
+          <div style="flex:1;min-width:0"><div class="pn">${escapeHtml(user.display_name || user.username)}</div><div class="ph">@${escapeHtml(user.username || 'user')}</div></div>
+          <button class="vb ${followingIds.includes(user.id) ? 'cd' : 'cn'}" onclick="toggleFollow('${user.id}', this)">${followingIds.includes(user.id) ? '✓ Following' : '+ Follow'}</button>
+        </div>
+      `).join('');
+    }
+    async function toggleFollow(targetId, btn) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { showToast('Please sign in first', 'err'); return; }
+      const isFollowing = btn.classList.contains('cd');
+      if (isFollowing) {
+        const { error } = await supabase.from('follows').delete().eq('follower_id', session.user.id).eq('following_id', targetId);
+        if (!error) { btn.classList.remove('cd'); btn.classList.add('cn'); btn.textContent = '+ Follow'; showToast('Unfollowed', 'ok'); const searchInput = document.getElementById('friend-search'); if (searchInput.value.trim()) searchUsers(searchInput.value); }
+        else showToast(error.message, 'err');
+      } else {
+        const { error } = await supabase.from('follows').insert({ follower_id: session.user.id, following_id: targetId });
+        if (!error) { btn.classList.remove('cn'); btn.classList.add('cd'); btn.textContent = '✓ Following'; showToast('Followed!', 'ok'); if (searchInput.value.trim()) searchUsers(searchInput.value); }
+        else showToast(error.message, 'err');
+      }
+    }
+    function escapeHtml(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
     </script>
 </body>
 </html>
