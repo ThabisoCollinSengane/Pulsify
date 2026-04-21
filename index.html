@@ -10,7 +10,25 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet"/>
+function showTab(tabName) {
+  document.querySelectorAll(".panel").forEach(panel => panel.classList.remove("active"));
+  document.getElementById("tab-" + tabName)?.classList.add("active");
+  document.querySelectorAll(".bb").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.tab === tabName);
+  });
+  const backBtn = document.getElementById("back-btn");
+  if (backBtn) backBtn.classList.toggle("show", tabName !== "home");
+}
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+function showTab(tabName) {
+  document.querySelectorAll(".panel").forEach(panel => panel.classList.remove("active"));
+  document.getElementById("tab-" + tabName)?.classList.add("active");
+  document.querySelectorAll(".bb").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.tab === tabName);
+  });
+  const backBtn = document.getElementById("back-btn");
+  if (backBtn) backBtn.classList.toggle("show", tabName !== "home");
+}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -1464,6 +1482,15 @@ function _renderBizPage() {
   } catch(e) {}
 })();
 
+function showTab(tabName) {
+  document.querySelectorAll(".panel").forEach(panel => panel.classList.remove("active"));
+  document.getElementById("tab-" + tabName)?.classList.add("active");
+  document.querySelectorAll(".bb").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.tab === tabName);
+  });
+  const backBtn = document.getElementById("back-btn");
+  if (backBtn) backBtn.classList.toggle("show", tabName !== "home");
+}
 </script>
 </body>
 </html>
