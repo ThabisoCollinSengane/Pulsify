@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#05080F"/>
+<meta name="description" content="Pulsify — Feel the Vibe 🇿🇦 South Africa's live event discovery platform"/>
+<title>Pulsify — Feel the Vibe 🇿🇦</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet"/>
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--te:#00D4AA;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0;--th:58px;--tk:30px;--bh:70px}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:2px}::-webkit-scrollbar-thumb{background:var(--or);border-radius:2px}
+.tb{position:fixed;top:0;left:0;right:0;height:var(--th);z-index:800;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:rgba(5,8,15,.95);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.06em;display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--tx);text-decoration:none}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--or);box-shadow:0 0 12px var(--or);animation:p 2s ease-in-out infinite}
+@keyframes p{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}
+.top-r{display:flex;align-items:center;gap:8px}
+.back{display:none;align-items:center;gap:6px;background:transparent;border:none;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;padding:6px 10px 6px 0}
+.back.show{display:flex}
+.ib{width:36px;height:36px;border-radius:50%;background:var(--surf);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer;position:relative}
+.nd{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--or);border:1.5px solid var(--bg)}
+.sb{background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:8px 18px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer}
+.tkr{position:fixed;top:var(--th);left:0;right:0;height:var(--tk);z-index:700;background:linear-gradient(90deg,#B026FF,#FF5C00,#FF2D78);overflow:hidden;display:flex;align-items:center}
+.tkt{display:flex;white-space:nowrap;animation:sc 75s linear infinite}
+.tkt:hover{animation-play-state:paused}
+.ti{display:inline-flex;align-items:center;gap:8px;padding:0 20px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.9)}
+.td{width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,.5)}
+@keyframes sc{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.panel{display:none;position:fixed;top:calc(var(--th) + var(--tk));left:0;right:0;bottom:var(--bh);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:var(--bg);z-index:10}
+.panel::-webkit-scrollbar{display:none}
+.panel.active{display:block;z-index:20}
+#tab-home.active{display:flex;flex-direction:column}
+.panel.dp{top:0;bottom:var(--bh);z-index:30}
+.panel.dp.active{display:block;z-index:40}
+.bn{position:fixed;bottom:0;left:0;right:0;height:var(--bh);z-index:800;background:rgba(5,8,15,.97);backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;align-items:stretch}
+.bb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:transparent;border:none;cursor:pointer;padding:8px 2px 10px;position:relative;-webkit-tap-highlight-color:transparent}
+.bb svg{width:22px;height:22px;stroke:var(--mu);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;transition:stroke .2s,transform .2s}
+.bb.active svg{stroke:var(--or);transform:scale(1.12)}
+.bl{font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);transition:color .2s}
+.bb.active .bl{color:var(--or)}
+.bb.active::after{content:'';position:absolute;top:0;left:20%;right:20%;height:2px;background:linear-gradient(90deg,#B026FF,#FF5C00);border-radius:0 0 4px 4px}
+.sw{padding:12px 14px 4px;position:relative}
+.si{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 16px 10px 40px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.86rem;outline:none;transition:border-color .2s}
+.si:focus{border-color:var(--or)}.si::placeholder{color:var(--mu)}
+.sic{position:absolute;left:26px;top:50%;transform:translateY(-50%);font-size:.95rem;color:var(--mu);pointer-events:none}
+.lb{display:flex;gap:6px;padding:4px 14px 6px;flex-wrap:wrap}
+.ls{background:transparent;border:1px solid var(--border);border-radius:50px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;padding:5px 24px 5px 10px;outline:none;cursor:pointer;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235A5870' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;transition:border-color .2s}
+.ls option{background:#0D1424}
+.cr{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:8px 14px 6px}
+.cr::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;padding:6px 14px;border-radius:50px;border:1px solid var(--border);background:rgba(255,255,255,.02);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu);cursor:pointer;transition:all .2s;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.chip.active{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.09)}
+.sl{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 8px;font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--mu)}
+.sl a{color:var(--or);font-size:.64rem;letter-spacing:.04em;cursor:pointer;text-decoration:none}
+.hs{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding:0 14px 8px}
+.hs::-webkit-scrollbar{display:none}
+.bc{flex-shrink:0;width:150px;background:var(--surf);border:1px solid var(--border);border-radius:18px;overflow:hidden;cursor:pointer;transition:transform .22s,border-color .22s;-webkit-tap-highlight-color:transparent}
+.bc:active{transform:scale(.97)}.bc.ft{border-color:rgba(255,92,0,.5);box-shadow:0 0 20px rgba(255,92,0,.1)}
+.bt{height:90px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:2rem}
+.bt img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.btg{position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.6))}
+.bb2{position:absolute;top:6px;left:6px;z-index:1;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:50px;color:var(--or)}
+.brk{position:absolute;bottom:6px;right:6px;z-index:1;background:linear-gradient(135deg,#B026FF,#FF5C00);font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;padding:2px 8px;border-radius:50px;color:#fff}
+.bi{padding:8px 10px 10px}
+.bn2{font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;margin-bottom:2px;line-height:1.25}
+.bm{font-size:.64rem;color:var(--mu);margin-bottom:5px}
+.bf{display:flex;align-items:center;justify-content:space-between}
+.brat{font-size:.64rem;color:var(--li);font-family:'Syne',sans-serif;font-weight:700}
+.bpr{font-size:.6rem;color:var(--mu)}
+.hi{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.hi::-webkit-scrollbar{display:none}
+.fc{margin:0 0 2px;border-bottom:1px solid var(--border);background:var(--surf);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:border-color .2s}
+.fc:active{border-color:rgba(255,92,0,.3)}
+.fh{display:flex;align-items:center;gap:10px;padding:12px 14px 10px}
+.fa{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;border:1.5px solid var(--border)}
+.fo{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;line-height:1.2}
+.fl{font-size:.66rem;color:var(--mu)}
+.fbg{flex-shrink:0;padding:4px 10px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.blv{background:var(--pk);color:#fff;display:flex;align-items:center;gap:4px}
+.bsn{background:rgba(255,92,0,.12);color:var(--or);border:1px solid rgba(255,92,0,.25)}
+.bfr{background:rgba(198,255,74,.1);color:var(--li);border:1px solid rgba(198,255,74,.22)}
+.bsp{background:rgba(0,212,170,.1);color:var(--te);border:1px solid rgba(0,212,170,.25)}
+.blink{width:5px;height:5px;border-radius:50%;background:#fff;animation:bl 1s ease-in-out infinite}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.1}}
+.fb{width:100%;height:210px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:3.5rem}
+.fb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.fg{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(5,8,15,.9));padding:28px 14px 12px;display:flex;align-items:flex-end;justify-content:space-between}
+.ft2{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.02em;line-height:1.1;color:#fff;text-shadow:0 2px 16px rgba(0,0,0,.8)}
+.fp{font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);padding:4px 12px;border-radius:50px;color:#fff;flex-shrink:0}
+.fp.fr{color:var(--li)}
+.fd{padding:10px 14px 4px}
+.fm{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:5px}
+.fct{font-size:.68rem;color:var(--or);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.fdt{width:3px;height:3px;border-radius:50%;background:var(--mu)}
+.fda{font-size:.68rem;color:var(--mu)}
+.fv{font-size:.73rem;color:var(--mu);margin-bottom:8px}
+.hr{display:flex;justify-content:space-between;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:4px}
+.hr span:last-child{color:var(--li)}
+.hb{height:2px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;margin-bottom:10px}
+.hf{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--or),var(--li))}
+.fac{display:flex;align-items:center;gap:8px;padding:4px 14px 14px}
+.ab{display:flex;align-items:center;gap:5px;background:transparent;border:none;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu);cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;transition:color .2s}
+.ab.lk{color:var(--pk)}.ai{font-size:1.05rem;line-height:1}
+.tb2{margin-left:auto;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:8px 18px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;box-shadow:0 0 20px rgba(176,38,255,.25);-webkit-tap-highlight-color:transparent}
+.tb2.fr{background:transparent;border:1px solid var(--li);color:var(--li);box-shadow:none}
+.pg{display:flex;gap:10px;padding:16px 14px 24px;justify-content:center;align-items:center}
+.pb{background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 22px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;color:var(--tx);cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.pb:active{border-color:var(--or);color:var(--or)}.pb:disabled{opacity:.3;cursor:default}
+.pi{font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu)}
+.dh{position:relative;height:290px;overflow:hidden;display:flex;align-items:flex-end}
+.dh img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.dg{position:absolute;inset:0;background:linear-gradient(transparent 15%,rgba(5,8,15,.96) 100%)}
+.dhb{position:relative;z-index:1;padding:20px 18px;width:100%}
+.dbg{display:inline-flex;align-items:center;gap:5px;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:4px 12px;border-radius:50px;margin-bottom:10px;background:var(--or);color:#fff}
+.dtt{font-family:'Bebas Neue',sans-serif;font-size:2.1rem;letter-spacing:.02em;line-height:1;margin-bottom:4px}
+.ds{font-size:.8rem;color:var(--mu2)}
+.rx{display:flex;border-bottom:1px solid var(--border);background:var(--bg2)}
+.rb{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px;background:transparent;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .18s}
+.rb:not(:last-child){border-right:1px solid var(--border)}
+.ri{font-size:1.1rem;line-height:1;transition:transform .18s}
+.rl{font-family:'Syne',sans-serif;font-size:.54rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--mu);transition:color .18s}
+.rb.act .ri{transform:scale(1.2)}.rb.act .rl{color:var(--or)}
+.db{padding:18px}
+.ig{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.ib2{background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px}
+.ib2.w{grid-column:1/-1}
+.il{font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:4px}
+.iv{font-family:'Syne',sans-serif;font-weight:700;font-size:.83rem;line-height:1.3}
+.tkb{background:var(--surf);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:18px}
+.tkt2{font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:12px}
+.tier{border:1.5px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.tier.sel{border-color:var(--or);background:rgba(255,92,0,.06)}
+.tn{font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;margin-bottom:2px}
+.tav{font-size:.64rem;color:var(--te);font-family:'Syne',sans-serif;font-weight:700}
+.tp{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--or)}.tp.fr{color:var(--li)}
+.paybtn{width:100%;background:linear-gradient(135deg,#00C89C,#0090E0);color:#fff;border:none;padding:15px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;box-shadow:0 4px 24px rgba(0,200,156,.2)}
+.psb{background:#fff;border-radius:4px;padding:2px 7px;font-size:.58rem;color:#00C89C;font-weight:800}
+.ff{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;margin-bottom:8px;transition:border-color .2s}
+.ff:focus{border-color:var(--or)!important}.ff::placeholder{color:var(--mu)}
+.bzh{position:relative;height:250px;overflow:hidden}
+.bzh img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.bzg{position:absolute;inset:0;background:linear-gradient(transparent 25%,rgba(5,8,15,.95))}
+.bzhb{position:absolute;bottom:0;left:0;right:0;padding:16px 18px;z-index:1}
+.bzcb{display:inline-block;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 10px;border-radius:50px;margin-bottom:8px}
+.bzn{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.03em;line-height:1;margin-bottom:4px}
+.bzm{font-size:.76rem;color:var(--mu2);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bzs{font-family:'Syne',sans-serif;font-weight:700;color:#F0C040}
+.cr2{display:flex;gap:10px;padding:12px 18px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;align-items:center}
+.cr2::-webkit-scrollbar{display:none}
+.cb{width:28px;height:28px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;text-decoration:none;-webkit-tap-highlight-color:transparent;transition:transform .18s}
+.cb:active{transform:scale(.88)}
+.cb.ph{background:#34C759}.cb.wa{background:#25D366}.cb.fb2{background:#1877F2}.cb.wb{background:var(--or)}.cb.dr{background:var(--surf2);border:1px solid var(--border)}
+.bztb{display:flex;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:10}
+.bzt{flex:1;padding:13px;text-align:center;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.bzt.active{color:var(--or);border-bottom-color:var(--or)}
+.bzp{display:none;padding:16px}.bzp.active{display:block}
+.hr2{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:.78rem}
+.hr2:last-child{border-bottom:none}
+.hrd{color:var(--mu);font-family:'Syne',sans-serif;font-weight:600;font-size:.74rem}
+.hrt{font-family:'Syne',sans-serif;font-weight:700;font-size:.74rem}
+.hrt.op{color:#4ADE80}.hrt.cl{color:var(--pk)}
+.tg{display:inline-block;background:rgba(255,92,0,.08);border:1px solid rgba(255,92,0,.2);color:var(--or);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;padding:4px 11px;border-radius:50px;margin:3px}
+.dg2{display:grid;grid-template-columns:1fr 1fr;gap:11px;padding:0 14px 20px}
+.de{background:var(--surf);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .2s;-webkit-tap-highlight-color:transparent}
+.de:active{transform:scale(.97)}
+.det{height:96px;position:relative;display:flex;align-items:center;justify-content:center;font-size:2rem;overflow:hidden}
+.det img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ddb{position:absolute;top:7px;left:7px;background:rgba(0,0,0,.7);backdrop-filter:blur(5px);font-family:'Syne',sans-serif;font-size:.55rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:50px;color:var(--tx)}
+.deb{padding:9px 10px 12px}
+.den{font-family:'Syne',sans-serif;font-size:.77rem;font-weight:700;line-height:1.25;margin-bottom:3px}
+.dec{font-size:.67rem;color:var(--mu);margin-bottom:6px}
+.def{display:flex;justify-content:space-between;align-items:center}
+.dep{font-family:'Syne',sans-serif;font-weight:700;font-size:.76rem;color:var(--or)}.dep.fr{color:var(--li)}
+.deh{font-size:.65rem;color:var(--mu)}
+.stbs{display:flex;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:10}
+.stb{flex:1;padding:13px;text-align:center;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.stb.active{color:var(--or);border-bottom-color:var(--or)}
+.sp{display:none;padding:16px}.sp.active{display:block}
+.es{padding:48px 24px;text-align:center}
+.ei{font-size:3rem;margin-bottom:14px}
+.et{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:8px}
+.em{font-size:.82rem;color:var(--mu);line-height:1.5;margin-bottom:20px}
+.eb{background:var(--or);color:#fff;border:none;padding:10px 24px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer}
+.vsr{display:flex;gap:10px;padding:16px}
+.vs{flex:1;background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px;text-align:center}
+.vn{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;color:var(--or);line-height:1}
+.vl{font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-top:2px}
+.pc{display:flex;align-items:center;gap:12px;background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin:0 16px 8px}
+.pav{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.pn{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;margin-bottom:2px}
+.ph{font-size:.68rem;color:var(--mu)}
+.vb{padding:7px 16px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;cursor:pointer;border:none;-webkit-tap-highlight-color:transparent}
+.vb.cn{background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff}
+.vb.cd{background:rgba(198,255,74,.12);color:var(--li);border:1px solid rgba(198,255,74,.3)}
+.co{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(10px);z-index:1200;display:none;align-items:flex-end;justify-content:center}
+.co.open{display:flex}
+.cs{width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;animation:su .25s ease;display:flex;flex-direction:column;max-height:72vh}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.ct{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.cc{width:30px;height:30px;border-radius:50%;background:var(--surf);border:none;color:var(--tx);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cl{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:12px}
+.cm{display:flex;gap:10px;align-items:flex-start}
+.cav{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.9rem;background:var(--surf2);border:1.5px solid var(--border)}
+.cna{font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;margin-bottom:2px}
+.ctx{font-size:.79rem;color:var(--mu2);line-height:1.5}
+.ctm{font-size:.62rem;color:var(--mu);margin-top:3px}
+.cir{display:flex;gap:8px;padding:10px 14px 16px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg2)}
+.ci{flex:1;background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:9px 16px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.84rem;outline:none;transition:border-color .2s}
+.ci:focus{border-color:var(--or)!important}
+.csnd{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(14px);z-index:1000;display:none;align-items:flex-end;justify-content:center}
+.ov.open{display:flex}
+.sh{width:100%;max-width:520px;background:var(--bg2);border-radius:26px 26px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;animation:su .28s ease;max-height:90vh;overflow-y:auto}
+.shh{width:38px;height:4px;border-radius:2px;background:var(--border);margin:14px auto 0}
+.shi{padding:20px 20px 32px}
+.sht{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:.03em;margin-bottom:4px}
+.shs{font-size:.8rem;color:var(--mu);margin-bottom:18px}
+.gb{width:100%;background:var(--surf);color:var(--tx);border:1px solid var(--border);padding:13px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.86rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px;transition:border-color .2s}
+.gb:active{border-color:var(--or)}
+.ad{text-align:center;color:var(--mu);font-size:.72rem;margin-bottom:14px}
+.fmb{width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;margin-top:4px}
+.asw{text-align:center;margin-top:14px;font-size:.78rem;color:var(--mu)}
+.asw span{color:var(--or);cursor:pointer;font-weight:700}
+.toast{position:fixed;bottom:calc(var(--bh) + 16px);left:50%;transform:translateX(-50%) translateY(12px);background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 20px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--tx);z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 24px rgba(0,0,0,.5)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{border-color:rgba(198,255,74,.4);color:var(--li)}
+.toast.err{border-color:rgba(255,45,120,.4);color:var(--pk)}
+.rv{opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}
+.rv.in{opacity:1;transform:translateY(0)}
+
+/* SKELETON LOADER */
+.skel{background:linear-gradient(90deg,var(--surf) 25%,rgba(255,255,255,.05) 50%,var(--surf) 75%);background-size:200% 100%;animation:shim 1.6s infinite;border-radius:8px}
+@keyframes shim{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel-card{margin:0 0 2px;border-bottom:1px solid var(--border);background:var(--surf);padding:14px}
+.no-results{padding:48px 24px;text-align:center}
+.no-results-ico{font-size:3rem;margin-bottom:12px}
+.no-results-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:8px}
+.no-results-sub{font-size:.82rem;color:var(--mu);line-height:1.5;margin-bottom:20px}
+.no-results-btn{background:var(--or);color:#fff;border:none;padding:10px 24px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer}
+.api-error{margin:12px 14px;background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);border-radius:12px;padding:10px 14px;font-size:.78rem;color:var(--pk);display:flex;align-items:center;gap:8px}
+
+/* ── Businesses Full Page ── */
+#biz-page-overlay{position:fixed;inset:0;background:var(--bg);z-index:900;display:none;flex-direction:column;overflow:hidden}
+#biz-page-overlay.open{display:flex}
+.bp-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0;padding-top:calc(14px + env(safe-area-inset-top))}
+.bp-title{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.03em}
+.bp-close{width:34px;height:34px;border-radius:50%;background:var(--surf);border:1px solid var(--border);color:var(--tx);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.bp-chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:10px 14px 8px;flex-shrink:0;border-bottom:1px solid var(--border)}
+.bp-chips::-webkit-scrollbar{display:none}
+.bp-chip{flex-shrink:0;padding:7px 16px;border-radius:50px;border:1px solid var(--border);background:rgba(255,255,255,.03);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu);cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.bp-chip.active{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.1)}
+.bp-grid{flex:1;overflow-y:auto;padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.bp-grid::-webkit-scrollbar{display:none}
+.bp-card{background:var(--surf);border:1px solid var(--border);border-radius:16px;overflow:hidden;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.bp-card:active{transform:scale(.97);border-color:rgba(255,92,0,.4)}
+.bp-img{height:90px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:2rem}
+.bp-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.bp-cat-badge{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.72);backdrop-filter:blur(5px);font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:50px;color:var(--or)}
+.bp-featured{position:absolute;bottom:6px;right:6px;background:linear-gradient(135deg,#B026FF,#FF5C00);font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;padding:2px 8px;border-radius:50px;color:#fff}
+.bp-info{padding:9px 11px 12px}
+.bp-name{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;margin-bottom:2px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bp-loc{font-size:.65rem;color:var(--mu);margin-bottom:6px}
+.bp-foot{display:flex;align-items:center;justify-content:space-between}
+.bp-rating{font-size:.66rem;color:var(--li);font-family:'Syne',sans-serif;font-weight:700}
+.bp-price{font-size:.62rem;color:var(--mu)}
+
+/* ── Map slide panel ── */
+#map-panel{position:absolute;bottom:0;left:0;right:0;z-index:200;background:rgba(5,8,15,.97);backdrop-filter:blur(28px);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.12);border-bottom:none;padding:18px 16px 20px;transform:translateY(110%);transition:transform .32s cubic-bezier(.4,0,.2,1);pointer-events:none;max-width:520px;margin:0 auto}
+#map-panel.open{transform:translateY(0);pointer-events:auto}
+.mp-handle{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.15);margin:0 auto 16px}
+.mp-type{font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--or);margin-bottom:6px}
+.mp-row{display:flex;gap:14px;align-items:flex-start;margin-bottom:12px}
+.mp-thumb{width:68px;height:68px;border-radius:14px;overflow:hidden;flex-shrink:0;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.8rem;border:1.5px solid rgba(255,255,255,.1)}
+.mp-thumb img{width:100%;height:100%;object-fit:cover}
+.mp-info{flex:1;min-width:0}
+.mp-name{font-family:'Syne',sans-serif;font-size:.92rem;font-weight:800;line-height:1.25;margin-bottom:4px}
+.mp-sub{font-size:.72rem;color:var(--mu2);line-height:1.5}
+.mp-price{font-family:'Syne',sans-serif;font-size:.86rem;font-weight:700;color:var(--or);margin-top:5px}
+.mp-close{position:absolute;top:14px;right:16px;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);border:none;color:var(--mu2);font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.mp-cta{width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:13px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:4px}
+.mp-cta:active{opacity:.85}
+.mp-divider{height:1px;background:var(--border);margin:10px 0}
+/* Legend toggle */
+#map-legend-toggle{cursor:pointer;-webkit-tap-highlight-color:transparent}
+#map-legend-body{transition:all .25s}
+/* Glowing marker */
+.mp-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;border:2px solid rgba(255,255,255,.7);cursor:pointer;position:relative;transition:transform .15s}
+.mp-dot:active{transform:scale(1.2)}
+.mp-ring{position:absolute;inset:-6px;border-radius:50%;border:2px solid currentColor;animation:gring 2s ease-in-out infinite;pointer-events:none;opacity:.55}
+@keyframes gring{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.45);opacity:0}}
+
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="tb">
+  <div class="logo" onclick="goHome()"><span class="dot"></span>PULSIFY</div>
+  <div class="top-r">
+    <button class="back" id="back-btn" onclick="goBack()">← Back</button>
+    <div class="ib" onclick="showTab('profile')">🔔<span class="nd"></span></div>
+    <button class="sb" id="auth-btn" onclick="window.location.href='signin.html'">Sign In</button>
+  </div>
+</header>
+
+<!-- TICKER -->
+<div class="tkr">
+  <div class="tkt" id="ticker-inner">
+    <span class="ti"><span class="td"></span>🔥 Eyadini Lounge — Umlazi's #1 Shisanyama</span>
+    <span class="ti"><span class="td"></span>🔊 Gqom Takeover — Eve's Lounge Mthwalume TONIGHT</span>
+    <span class="ti"><span class="td"></span>🌊 Ogabazin Lounge — South Coast Vibes · Mthwalume</span>
+    <span class="ti"><span class="td"></span>🏖 Margate Gqom Festival — Galaxy Nightclub FRIDAY</span>
+    <span class="ti"><span class="td"></span>🎷 The Joint Jazz Café — Live Jazz on the Promenade</span>
+    <span class="ti"><span class="td"></span>⚽ Dolphins vs Lions — Kingsmead Stadium SUNDAY</span>
+    <span class="ti"><span class="td"></span>✊ Solidarity March — KZN South Coast SATURDAY</span>
+    <span class="ti"><span class="td"></span>🍹 Joe Cools — Beachfront Vibes · Marine Parade</span>
+    <span class="ti"><span class="td"></span>🔥 Eyadini Lounge — Umlazi's #1 Shisanyama</span>
+    <span class="ti"><span class="td"></span>🔊 Gqom Takeover — Eve's Lounge Mthwalume TONIGHT</span>
+    <span class="ti"><span class="td"></span>🌊 Ogabazin Lounge — South Coast Vibes · Mthwalume</span>
+    <span class="ti"><span class="td"></span>🏖 Margate Gqom Festival — Galaxy Nightclub FRIDAY</span>
+    <span class="ti"><span class="td"></span>🎷 The Joint Jazz Café — Live Jazz on the Promenade</span>
+    <span class="ti"><span class="td"></span>⚽ Dolphins vs Lions — Kingsmead Stadium SUNDAY</span>
+    <span class="ti"><span class="td"></span>✊ Solidarity March — KZN South Coast SATURDAY</span>
+    <span class="ti"><span class="td"></span>🍹 Joe Cools — Beachfront Vibes · Marine Parade</span>
+  </div>
+</div>
+
+<!-- ══ HOME ══ -->
+<div class="panel active" id="tab-home">
+  <div class="hi">
+    <div class="sw"><span class="sic">🔍</span>
+      <input class="si" type="search" id="search-inp" placeholder="Search events, venues, artists…" autocomplete="off" oninput="handleSearch(this.value)"/>
+    </div>
+    <div class="lb">
+      <select class="ls" id="sel-province" onchange="onProvChange(this.value)">
+        <option value="">🗺 Province</option>
+        <option value="KZN">KwaZulu-Natal</option>
+        <option value="GP">Gauteng</option>
+        <option value="WC">Western Cape</option>
+        <option value="EC">Eastern Cape</option>
+        <option value="MP">Mpumalanga</option>
+        <option value="LP">Limpopo</option>
+        <option value="NW">North West</option>
+        <option value="FS">Free State</option>
+        <option value="NC">Northern Cape</option>
+      </select>
+      <select class="ls" id="sel-city" disabled onchange="onCityChange(this.value)"><option value="">🏙 City</option></select>
+      <select class="ls" id="sel-area" disabled><option value="">📍 Area</option></select>
+    </div>
+    <div class="cr">
+      <button class="chip active" onclick="setGenre(this,'all')">✦ All</button>
+      <button class="chip" onclick="setGenre(this,'gqom')">🔊 Gqom</button>
+      <button class="chip" onclick="setGenre(this,'amapiano')">🎶 Amapiano</button>
+      <button class="chip" onclick="setGenre(this,'nightlife')">🌙 Nightlife</button>
+      <button class="chip" onclick="setGenre(this,'sport')">⚽ Sport</button>
+      <button class="chip" onclick="setGenre(this,'march')">✊ March</button>
+      <button class="chip" onclick="setGenre(this,'free')">✅ Free</button>
+      <button class="chip" onclick="setGenre(this,'student')">🎓 Student</button>
+    </div>
+    <div class="sl"><span>🏆 Top Spots</span><a onclick="openBizPage();return false">See all →</a></div>
+    <div class="hs" id="frontline-row"><div class="skel" style="width:150px;height:120px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:150px;height:120px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:150px;height:120px;flex-shrink:0;border-radius:18px"></div></div>
+    <div class="sl"><span id="feed-lbl">🔥 Upcoming Events</span><a onclick="showTab('map');initMap();return false">View Map →</a></div>
+    <div id="events-feed"></div>
+    <div class="pg" id="feed-pg" style="display:none">
+      <button class="pb" id="pg-prev" onclick="changePage(-1)" disabled>← Prev</button>
+      <span class="pi" id="pg-info">1 / 1</span>
+      <button class="pb" id="pg-next" onclick="changePage(1)">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DISCOVER ══ -->
+<div class="panel" id="tab-discover">
+  <div class="sw"><span class="sic">🔍</span><input class="si" type="search" placeholder="Search places & events…" oninput="handleDiscSearch(this.value)"/></div>
+  <div class="cr">
+    <button class="chip active" onclick="setDiscCat(this,'all')">✦ All</button>
+    <button class="chip" onclick="setDiscCat(this,'shisanyama')">🔥 Shisanyama</button>
+    <button class="chip" onclick="setDiscCat(this,'restaurant')">🍽️ Restaurants</button>
+    <button class="chip" onclick="setDiscCat(this,'bar')">🍺 Bars</button>
+    <button class="chip" onclick="setDiscCat(this,'club')">💃 Clubs</button>
+    <button class="chip" onclick="setDiscCat(this,'hotel')">🏨 Hotels</button>
+    <button class="chip" onclick="setDiscCat(this,'bnb')">🏡 BnB</button>
+  </div>
+  <div class="sl"><span>📍 Places near you</span><a onclick="showTab('map');initMap();return false">View map →</a></div>
+  <div class="hs" id="disc-biz-row"></div>
+  <div class="sl"><span>🎉 Events</span></div>
+  <div class="dg2" id="disc-events"></div>
+</div>
+
+<!-- ══ EVENT DETAIL ══ -->
+<div class="panel dp" id="tab-event-detail"><div id="ev-detail"></div></div>
+
+<!-- ══ BIZ DETAIL ══ -->
+<div class="panel dp" id="tab-biz-detail"><div id="biz-detail"></div></div>
+
+<!-- ══ MAP ══ -->
+<div class="panel" id="tab-map" style="overflow:hidden">
+  <!-- Filter bar -->
+  <div style="position:absolute;top:calc(var(--th) + var(--tk));left:0;right:0;z-index:50;background:rgba(5,8,15,.94);backdrop-filter:blur(18px);padding:8px 12px 7px;border-bottom:1px solid var(--border2)">
+    <div style="display:flex;gap:6px">
+      <select id="map-cat" onchange="applyMapFilters()" style="flex:1;background:rgba(13,20,36,.9);border:1px solid var(--border2);border-radius:50px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;padding:7px 10px;outline:none;cursor:pointer;-webkit-appearance:none"><option value="all">✦ All Types</option><option value="event">🎟 Events</option><option value="shisanyama">🔥 Shisanyama</option><option value="bar">🍻 Bar</option><option value="club">💿 Club</option><option value="hotel">🏨 Hotel</option><option value="bnb">🛏 BnB</option></select>
+      <select id="map-genre" onchange="applyMapFilters()" style="flex:1;background:rgba(13,20,36,.9);border:1px solid var(--border2);border-radius:50px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;padding:7px 10px;outline:none;cursor:pointer;-webkit-appearance:none"><option value="all">🎵 All Genres</option><option value="gqom">🔊 Gqom</option><option value="amapiano">🎶 Amapiano</option><option value="sport">⚽ Sport</option><option value="march">✊ March</option><option value="jazz">🎷 Jazz</option></select>
+      <select id="map-radius" onchange="applyMapFilters()" style="flex:1;background:rgba(13,20,36,.9);border:1px solid var(--border2);border-radius:50px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;padding:7px 10px;outline:none;cursor:pointer;-webkit-appearance:none"><option value="0">📍 All Areas</option><option value="30">30 km</option><option value="50">50 km</option><option value="100">100 km</option></select>
+    </div>
+  </div>
+
+  <!-- Map canvas — fills from filter bar to bottom nav -->
+  <div id="mc" style="position:absolute;top:calc(var(--th) + var(--tk) + 48px);left:0;right:0;bottom:var(--bh);overflow:hidden;will-change:transform"></div>
+
+  <!-- Legend — collapsible, bottom-left -->
+  <div id="map-legend" style="position:absolute;bottom:calc(var(--bh) + 14px);left:12px;z-index:100;background:rgba(5,8,15,.93);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;pointer-events:auto">
+    <div id="map-legend-toggle" onclick="toggleLegend()" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;cursor:pointer">
+      <span style="font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--or)">Map Key</span>
+      <span id="legend-arrow" style="font-size:.6rem;color:var(--mu);margin-left:10px;transition:transform .25s">▾</span>
+    </div>
+    <div id="map-legend-body" style="padding:4px 12px 10px;display:none">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:18px;text-align:center">🔊</span>Gqom / Nightlife</div>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:18px;text-align:center">🎵</span>Amapiano</div>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:18px;text-align:center">⚽</span>Sport</div>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:18px;text-align:center">✊</span>March</div>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:18px;text-align:center">🔥</span>Shisanyama</div>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:18px;text-align:center">🍻</span>Bar / Club</div>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:18px;text-align:center">🏨</span>Hotel</div>
+      <div style="display:flex;align-items:center;gap:7px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:18px;text-align:center">🛏</span>BnB / Stay</div>
+    </div>
+  </div>
+
+  <!-- Slide-up info panel — appears on marker tap -->
+  <div id="map-panel">
+    <div class="mp-handle"></div>
+    <button class="mp-close" onclick="closeMapPanel()">✕</button>
+    <div id="mp-content"></div>
+  </div>
+</div>
+
+<!-- ══ BOOKINGS ══ -->
+<div class="panel" id="tab-tickets" style="padding:0">
+  <div style="padding:24px 16px 8px;font-family:'Bebas Neue',sans-serif;font-size:2.2rem;letter-spacing:.02em">🎟 My Pulsify</div>
+  <div class="stbs">
+    <div class="stb active" onclick="switchST(this,'sp-bk')">🎟 Bookings</div>
+    <div class="stb" onclick="switchST(this,'sp-sev')">🔖 Saved Events</div>
+    <div class="stb" onclick="switchST(this,'sp-sbiz')">🏠 Saved Places</div>
+  </div>
+  <div class="sp active" id="sp-bk"><div id="bookings-list"></div></div>
+  <div class="sp" id="sp-sev"><div id="sev-list"></div></div>
+  <div class="sp" id="sp-sbiz"><div id="sbiz-list"></div></div>
+</div>
+
+<!-- ══ SQUAD ══ -->
+<div class="panel" id="tab-squad">
+  <div style="padding:14px 16px 8px">
+    <div class="sw" style="padding:0; margin-bottom:12px">
+      <span class="sic">🔍</span>
+      <input class="si" type="search" id="friend-search" placeholder="Search by name or username..." autocomplete="off" oninput="searchUsers(this.value)"/>
+    </div>
+    <div id="search-results" style="margin-top:12px"></div>
+    <div style="margin-top:16px">
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">✨ People You May Know</div>
+      <div id="squad-content"></div>
+    </div>
+  </div>
+</div><!-- ══ BOTTOM NAV ══ -->
+<!-- BUSINESSES FULL PAGE OVERLAY -->
+<div id="biz-page-overlay">
+  <div class="bp-head">
+    <span class="bp-title">🏆 All Places</span>
+    <button class="bp-close" onclick="closeBizPage()">✕</button>
+  </div>
+  <div class="bp-chips">
+    <div class="bp-chip active" onclick="setBizCat(this,'all')">✦ All Places</div>
+    <div class="bp-chip" onclick="setBizCat(this,'food')">🍽️ Food</div>
+    <div class="bp-chip" onclick="setBizCat(this,'drinks')">🍸 Drinks</div>
+    <div class="bp-chip" onclick="setBizCat(this,'shisanyama')">🥩 Shisanyama</div>
+    <div class="bp-chip" onclick="setBizCat(this,'outdoor')">🌿 Outdoor</div>
+    <div class="bp-chip" onclick="setBizCat(this,'hotel')">🏨 Hotels</div>
+    <div class="bp-chip" onclick="setBizCat(this,'bnb')">🏡 BnB / Self-Catering</div>
+    <div class="bp-chip" onclick="setBizCat(this,'club')">💃 Clubs</div>
+  </div>
+  <div class="bp-grid" id="bp-grid"></div>
+</div>
+<nav class="bn">
+  <button class="bb active" data-tab="home" onclick="showTab('home')"><svg viewBox="0 0 24 24"><path d="M12 3C12 3 4 9.5 4 15a8 8 0 0016 0C20 9.5 12 3 12 3Z"/><path d="M12 10v5M9.5 13h5"/></svg><span class="bl">Home</span></button>
+  <button class="bb" data-tab="discover" onclick="showTab('discover')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"/></svg><span class="bl">Discover</span></button>
+  <button class="bb" data-tab="map" onclick="showTab('map');initMap()"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3M9 20V7m6 13l5.447-2.724A1 1 0 0021 16.382V5.618a1 1 0 00-1.447-.894L15 7m0 13V7M9 7l6-3"/></svg><span class="bl">Map</span></button>
+  <button class="bb" data-tab="tickets" onclick="showTab('tickets')"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M16 7v-.5a3.5 3.5 0 00-7 0V7M16 17v.5a3.5 3.5 0 01-7 0V17"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span class="bl">Bookings</span></button>
+  <button class="bb" data-tab="squad" onclick="showTab('squad')"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M18 20c0-2.2-1.3-4.1-3-5"/></svg><span class="bl">Friends</span></button>
+  <button class="bb" data-tab="profile" onclick="showTab('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg><span class="bl">Profile</span></button>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+
+/* ═══════════════════════════════════════════════════════════
+   PULSIFY — LIVE API FRONTEND
+   All data loaded from /api/* — no static arrays
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── CONFIG ── */
+const SUPABASE_URL  = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+const MAPBOX_TOKEN  = 'pk.eyJ1IjoidGhhY29sbGluMiIsImEiOiJjbW51Mm95cHEwYm8xMnJyMXEzaXgxMDBmIn0.nF80wBOn-jxhjpAIus9anw';
+const PAYSTACK_PK   = 'pk_test_ef8796acebf766e5dde7cc185b5135551779d78a';
+const API           = '/api';
+
+/* ── LIVE STATE ── */
+let curTab   = 'home';
+let prevTab  = 'home';
+let feedPage = 1;
+let feedTotalPages = 1;
+let feedGenre      = 'all';
+let feedCity       = 'all';
+let discCat        = 'all';
+let mapInited      = false;
+let mapObj         = null;
+let mapMarkers     = [];
+let selTier        = null;
+let selQty         = 1;
+let activeEvId     = null;
+let searchTimer    = null;
+let sbClient       = null;
+let currentUser    = null;
+let savedEv        = JSON.parse(localStorage.getItem('p_sev')   || '[]');
+let savedBz        = JSON.parse(localStorage.getItem('p_sbiz')  || '[]');
+let vibes          = JSON.parse(localStorage.getItem('p_vibes') || '[]');
+let miniMaps       = {};
+let activeComments = [];
+let eventsForMap   = [];
+let bizForMap      = [];
+
+const PROV_CITY = {
+  KZN: ['Durban','South Coast','Pietermaritzburg','Richards Bay','Ballito','Ladysmith'],
+  GP:  ['Johannesburg','Pretoria','Ekurhuleni','Soweto','Midrand','Sandton'],
+  WC:  ['Cape Town','Stellenbosch','Paarl','George','Knysna'],
+  EC:  ['Gqeberha','East London','Mthatha','Grahamstown'],
+  MP:  ['Mbombela','Witbank','Middelburg'],
+  LP:  ['Polokwane','Tzaneen','Louis Trichardt'],
+  NW:  ['Rustenburg','Mafikeng','Klerksdorp'],
+  FS:  ['Bloemfontein','Welkom','Bethlehem'],
+  NC:  ['Kimberley','Upington','Springbok'],
+};
+
+/* ── UTILS ── */
+function x(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fn(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n || 0); }
+function fdate(dt) {
+  if (!dt) return '';
+  const date = new Date(dt + 'T00:00:00'), now = new Date();
+  now.setHours(0,0,0,0);
+  const diff = Math.round((date - now) / 86400000);
+  if (diff === 0) return 'Tonight';
+  if (diff === 1) return 'Tomorrow';
+  return date.toLocaleDateString('en-ZA', { weekday:'short', day:'numeric', month:'short' });
+}
+function fdt(dt, t) {
+  const dp = fdate(dt);
+  if (!t) return dp;
+  const [h, m] = t.split(':');
+  const hr = parseInt(h);
+  return dp + ' · ' + (hr > 12 ? hr - 12 : hr || 12) + ':' + m + (hr >= 12 ? 'PM' : 'AM');
+}
+function ft(t) {
+  if (!t) return '';
+  const [h, m] = t.split(':');
+  const hr = parseInt(h);
+  return (hr > 12 ? hr - 12 : hr || 12) + ':' + m + (hr >= 12 ? 'PM' : 'AM');
+}
+function gg(g) {
+  const m = { amapiano:'linear-gradient(135deg,#1a0533,#4a0080)', gqom:'linear-gradient(135deg,#1a0015,#5a0035)', sport:'linear-gradient(135deg,#001a0a,#004d22)', sports:'linear-gradient(135deg,#001a0a,#004d22)', march:'linear-gradient(135deg,#0a1a00,#253a00)', nightlife:'linear-gradient(135deg,#1a000d,#3d0026)', jazz:'linear-gradient(135deg,#001a1a,#003535)', shisanyama:'linear-gradient(135deg,#1a0800,#4d1a00)', experience:'linear-gradient(135deg,#001a2a,#003550)', festival:'linear-gradient(135deg,#0a001a,#2a0050)', live:'linear-gradient(135deg,#001a2a,#003050)', comedy:'linear-gradient(135deg,#1a1a00,#4d4d00)', maskandi:'linear-gradient(135deg,#0a1a00,#204000)', afrobeats:'linear-gradient(135deg,#1a0010,#4a0030)', hip:'linear-gradient(135deg,#1a001a,#3a0040)' };
+  const k = Object.keys(m).find(k => (g ?? '').toLowerCase().includes(k));
+  return m[k] ?? 'linear-gradient(135deg,#0D1424,#121B30)';
+}
+function ge(g) {
+  const s = (g ?? '').toLowerCase();
+  if (s.includes('gqom'))    return '🔊';
+  if (s.includes('sport') || s.includes('soccer') || s.includes('cricket') || s.includes('rugby')) return '⚽';
+  if (s.includes('march'))   return '✊';
+  if (s.includes('jazz'))    return '🎷';
+  if (s.includes('amapiano'))return '🎶';
+  if (s.includes('night') || s.includes('club')) return '🌙';
+  if (s.includes('hip'))     return '🎤';
+  if (s.includes('food') || s.includes('shisa')) return '🥩';
+  if (s.includes('comedy'))  return '😂';
+  if (s.includes('experience') || s.includes('cruise')) return '🛥️';
+  if (s.includes('festival')) return '🎉';
+  if (s.includes('market'))  return '🛍️';
+  return '🎶';
+}
+function ce(c) { return { restaurant:'🍽️', bar:'🍸', club:'💃', shisanyama:'🥩', hotel:'🏨', bnb:'🏡', venue:'🎪' }[c] ?? '📍'; }
+function cg(c) { return { shisanyama:'linear-gradient(135deg,#1a0800,#4d1a00)', bar:'linear-gradient(135deg,#0d001a,#2a0050)', club:'linear-gradient(135deg,#1a000d,#4a0025)', restaurant:'linear-gradient(135deg,#1a0800,#4d1a00)', hotel:'linear-gradient(135deg,#1a0a2a,#380060)', bnb:'linear-gradient(135deg,#0a1a2a,#00284d)' }[c] ?? 'linear-gradient(135deg,#0D1424,#121B30)'; }
+function showToast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast ' + type + ' show'; setTimeout(() => t.classList.remove('show'), 3000); }
+function openModal(id) { document.getElementById(id)?.classList.add('open'); }
+function triggerRev() { const obs = new IntersectionObserver(entries => { entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); }); }, { threshold: .06 }); document.querySelectorAll('.rv:not(.in)').forEach(el => obs.observe(el)); }
+
+/* ── SUPABASE CLIENT ── */
+function getSB() {
+  if (!sbClient && window.supabase) {
+    sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  }
+  return sbClient;
+}
+
+/* ── NAVIGATION ── */
+function showTab(name) {
+  prevTab = curTab; curTab = name;
+  document.querySelectorAll('.panel').forEach(p => { p.classList.remove('active'); p.style.display = ''; });
+  document.querySelectorAll('.bb').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  const panel = document.getElementById('tab-' + name);
+  if (panel) { panel.classList.add('active'); panel.style.display = name === 'home' ? 'flex' : 'block'; panel.scrollTop = 0; }
+  document.getElementById('back-btn').classList.remove('show');
+  setTimeout(triggerRev, 80);
+  if (name === 'squad')   renderSquad();
+  if (name === 'tickets') renderBookings();
+  if (name === 'discover') loadDiscover();
+  if (name === 'profile') renderProfile();
+}
+function showDetailTab(name) {
+  prevTab = curTab; curTab = name;
+  document.querySelectorAll('.panel').forEach(p => { p.classList.remove('active'); p.style.display = ''; });
+  document.querySelectorAll('.bb').forEach(b => b.classList.remove('active'));
+  const panel = document.getElementById('tab-' + name);
+  if (panel) { panel.classList.add('active'); panel.style.display = 'block'; panel.scrollTop = 0; }
+  document.getElementById('back-btn').classList.add('show');
+}
+function goBack() { if (prevTab && prevTab !== curTab) showTab(prevTab); else showTab('home'); }
+function goHome() { showTab('home'); }
+
+/* ── SKELETON LOADERS ── */
+function feedSkeleton() {
+  return [1,2,3].map(() => `
+    <div class="skel-card">
+      <div style="display:flex;gap:10px;margin-bottom:10px">
+        <div class="skel" style="width:38px;height:38px;border-radius:50%;flex-shrink:0"></div>
+        <div style="flex:1"><div class="skel" style="height:13px;width:60%;margin-bottom:6px"></div><div class="skel" style="height:11px;width:40%"></div></div>
+      </div>
+      <div class="skel" style="height:200px;border-radius:0;margin:0 -14px"></div>
+      <div style="padding-top:10px"><div class="skel" style="height:11px;width:70%;margin-bottom:8px"></div><div class="skel" style="height:2px;width:100%"></div></div>
+    </div>
+  `).join('');
+}
+function bizSkeleton() {
+  return [1,2,3].map(() => `<div class="skel" style="width:150px;height:150px;flex-shrink:0;border-radius:18px"></div>`).join('');
+}
+
+/* ══════════════════════════════════════════════════
+   LIVE API — EVENTS
+══════════════════════════════════════════════════ */
+async function loadFeed(resetPage = false) {
+  if (resetPage) feedPage = 1;
+  document.getElementById('events-feed').innerHTML = feedSkeleton();
+  document.getElementById('feed-pg').style.display = 'none';
+
+  try {
+    const params = new URLSearchParams({ page: feedPage, limit: 10 });
+    if (feedCity  && feedCity  !== 'all') params.set('city',  feedCity);
+    if (feedGenre && feedGenre !== 'all') params.set('genre', feedGenre);
+
+    const res  = await fetch(API + '/events?' + params);
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || 'API error');
+
+    const events = data.events || [];
+    feedTotalPages = data.total_pages || 1;
+
+    document.getElementById('feed-lbl').textContent = '🔥 ' + (data.total || events.length) + ' Upcoming Events';
+
+    if (events.length === 0) {
+      document.getElementById('events-feed').innerHTML = `
+        <div class="no-results">
+          <div class="no-results-ico">🎟</div>
+          <div class="no-results-title">No events found</div>
+          <div class="no-results-sub">Try a different city or genre</div>
+          <button class="no-results-btn" onclick="feedCity='all';feedGenre='all';feedPage=1;document.querySelectorAll('.cr .chip').forEach(b=>b.classList.remove('active'));document.querySelector('.cr .chip').classList.add('active');loadFeed(true)">Show All Events</button>
+        </div>`;
+      return;
+    }
+
+    document.getElementById('events-feed').innerHTML = events.map((ev, i) => buildCard(ev, i)).join('');
+    updatePagination();
+    triggerRev();
+    document.querySelector('.hi')?.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Cache events for map
+    eventsForMap = [...(eventsForMap.filter(e => !events.find(n => n.id === e.id))), ...events];
+
+  } catch(err) {
+    console.error('[Feed]', err);
+    document.getElementById('events-feed').innerHTML = `<div class="api-error">⚠️ Could not load events. Check your connection.</div>`;
+  }
+}
+
+function buildCard(ev, idx) {
+  const isT = ev.date_local === new Date().toISOString().split('T')[0];
+  const iF  = ev.is_free;
+  const pr  = iF ? 'FREE' : (ev.price_min ? 'R' + ev.price_min : 'TBA');
+  const hp  = ev.hype_score ?? 70;
+  const bg  = gg(ev.genre);
+  const emo = ge(ev.genre);
+  const gl  = (ev.genre || '').toLowerCase();
+  let badge = '';
+  if (isT)                  badge = '<span class="fbg blv"><span class="blink"></span>TONIGHT</span>';
+  else if (gl.includes('march')) badge = '<span class="fbg" style="background:rgba(198,255,74,.1);color:var(--li);border:1px solid rgba(198,255,74,.22)">✊ ' + fdate(ev.date_local) + '</span>';
+  else if (gl.includes('sport')) badge = '<span class="fbg bsp">⚽ ' + fdate(ev.date_local) + '</span>';
+  else if (iF)              badge = '<span class="fbg bfr">FREE</span>';
+  else                      badge = '<span class="fbg bsn">' + fdate(ev.date_local) + '</span>';
+  const srcLabel = { eventbrite: 'Eventbrite', ticketmaster: 'Ticketmaster' }[ev.source] || '';
+  const btnLbl   = gl.includes('march') ? 'Join March' : (iF ? 'RSVP Free' : 'Get Tickets');
+  return `<div class="fc rv" onclick="openEv('${x(ev.id)}')">
+    <div class="fh"><div class="fa" style="background:${bg}">${emo}</div>
+      <div style="flex:1;min-width:0"><div class="fo">${x(ev.organiser_name || ev.venue_name || 'Pulsify')}</div>
+      <div class="fl">📍 ${x(ev.venue_city)} · ${fdt(ev.date_local, ev.time_local)}</div></div>${badge}</div>
+    <div class="fb" style="background:transparent">
+      <img src="${x(ev.image_url || '')}" loading="lazy" onerror="this.style.display='none'"/>
+      <div class="fg"><div class="ft2">${x(ev.name)}</div>
+        <div class="fp ${iF ? 'fr' : ''}">${pr}${srcLabel ? '<span style="font-size:.6rem;opacity:.7;margin-left:6px">' + x(srcLabel) + '</span>' : ''}</div></div>
+    </div>
+    <div class="fd">
+      <div class="fm"><span class="fct">📍 ${x(ev.venue_city)}</span><span class="fdt"></span><span class="fda">${fdt(ev.date_local, ev.time_local)}</span></div>
+      <div class="fv">${x(ev.venue_name || '')} · ${x(ev.genre || '')}</div>
+      <div class="hr"><span>Hype Meter</span><span>🔥 ${hp}%</span></div>
+      <div class="hb"><div class="hf" style="width:${hp}%"></div></div>
+    </div>
+    <div class="fac" onclick="event.stopPropagation()">
+      <button class="ab" onclick="toggleLike(this)"><span class="ai">🤍</span><span>${fn(ev.like_count)}</span></button>
+      <button class="ab" onclick="openComments('${x(ev.id)}','${x(ev.name)}')"><span class="ai">💬</span><span>${fn(ev.comment_count)}</span></button>
+      <button class="ab" onclick="shareIt('${x(ev.name)}')"><span class="ai">🔗</span></button>
+      <button class="ab" onclick="toggleSave('ev','${x(ev.id)}',this)"><span class="ai">${savedEv.includes(ev.id) ? '🔖' : '🏷'}</span></button>
+      <button class="tb2 ${iF ? 'fr' : ''}" onclick="openEv('${x(ev.id)}');event.stopPropagation()">${btnLbl}</button>
+    </div>
+  </div>`;
+}
+
+function updatePagination() {
+  const pg = document.getElementById('feed-pg');
+  if (feedTotalPages > 1) {
+    pg.style.display = 'flex';
+    document.getElementById('pg-info').textContent = feedPage + ' / ' + feedTotalPages;
+    document.getElementById('pg-prev').disabled = feedPage === 1;
+    document.getElementById('pg-next').disabled = feedPage >= feedTotalPages;
+  } else {
+    pg.style.display = 'none';
+  }
+}
+function changePage(delta) { feedPage += delta; loadFeed(); }
+function setGenre(btn, genre) {
+  document.querySelectorAll('.cr .chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  feedGenre = genre;
+  loadFeed(true);
+}
+function onProvChange(v) {
+  const el = document.getElementById('sel-city');
+  el.innerHTML = '<option value="">🏙 City</option>' + (PROV_CITY[v] || []).map(c => `<option value="${c}">${c}</option>`).join('');
+  el.disabled = !v;
+  document.getElementById('sel-area').disabled = true;
+  feedCity = 'all';
+  loadFeed(true);
+}
+function onCityChange(v) {
+  feedCity = v || 'all';
+  loadFeed(true);
+}
+function handleSearch(val) {
+  clearTimeout(searchTimer);
+  if (!val.trim()) return;
+  searchTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(API + '/events/search?q=' + encodeURIComponent(val));
+      const data = await res.json();
+      if (data.results?.length) {
+        document.getElementById('events-feed').innerHTML = data.results.map((ev, i) => buildCard(ev, i)).join('');
+        document.getElementById('feed-lbl').textContent = '🔍 ' + data.results.length + ' results';
+        triggerRev();
+      }
+    } catch(e) {}
+  }, 400);
+}
+
+/* ══════════════════════════════════════════════════
+   LIVE API — BUSINESSES
+══════════════════════════════════════════════════ */
+async function loadFrontline() {
+  document.getElementById('frontline-row').innerHTML = bizSkeleton();
+  try {
+    const res  = await fetch(API + '/businesses?limit=6' + (feedCity !== 'all' ? '&city=' + feedCity : ''));
+    const data = await res.json();
+    const bizs = data.businesses || [];
+    bizForMap  = bizs;
+    document.getElementById('frontline-row').innerHTML = bizs.map(b => buildBizCard(b)).join('') + `
+      <div class="bc" onclick="showTab('discover')" style="background:rgba(255,92,0,.06);border:1.5px dashed rgba(255,92,0,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-width:130px">
+        <span style="font-size:1.6rem">→</span>
+        <span style="font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--or);text-align:center;padding:0 8px">Show More</span>
+      </div>`;
+  } catch(e) {
+    document.getElementById('frontline-row').innerHTML = '<div style="padding:14px;color:var(--mu);font-size:.78rem">Could not load places.</div>';
+  }
+}
+
+function buildBizCard(b) {
+  return `<div class="bc ${b.is_frontline ? 'ft' : ''}" onclick="openBiz('${x(b.id)}')">
+    <div class="bt" style="background:transparent">
+      ${b.cover_image_url ? `<img src="${x(b.cover_image_url)}" loading="lazy" onerror="this.style.display='none'"/>` : '<span>' + ce(b.category) + '</span>'}
+      <div class="btg"></div>
+      <span class="bb2">${x(b.category)}</span>
+      ${b.is_frontline && b.frontline_rank ? `<span class="brk">⭐#${b.frontline_rank}</span>` : ''}
+    </div>
+    <div class="bi">
+      <div class="bn2">${x(b.name)}</div>
+      <div class="bm">${x(b.suburb || b.city || '')}</div>
+      <div class="bf"><span class="brat">${b.rating ? '★' + b.rating : 'New'}</span><span class="bpr">${b.price_range || ''}</span></div>
+    </div>
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════════
+   EVENT DETAIL — live API call
+══════════════════════════════════════════════════ */
+async function openEv(evId) {
+  activeEvId = evId;
+  document.getElementById('ev-detail').innerHTML = `<div style="padding:120px 24px;text-align:center"><div class="skel" style="height:290px;border-radius:0;margin:-24px -24px 20px"></div><div class="skel" style="height:13px;width:70%;margin:0 auto 10px"></div><div class="skel" style="height:11px;width:50%;margin:0 auto"></div></div>`;
+  showDetailTab('event-detail');
+
+  try {
+    const res = await fetch(API + '/events/' + evId);
+    const { event: ev, tiers = [], photos = [] } = await res.json();
+    if (!ev) throw new Error('Not found');
+
+    selTier = tiers[0] || null; selQty = 1;
+    const iF = ev.is_free, bg = gg(ev.genre), emo = ge(ev.genre), hp = ev.hype_score ?? 70;
+    const lc = ev.like_count || 0, cc = ev.comment_count || 0;
+    const lineup = Array.isArray(ev.lineup) ? ev.lineup : (ev.lineup ? JSON.parse(ev.lineup) : []);
+
+    let tkHTML = '';
+    if (tiers.length) {
+      tkHTML = `<div class="tkb"><div class="tkt2">🎟 Select Tickets</div>
+        ${tiers.map((t, i) => `<div class="tier ${i === 0 && !t.sold_out ? 'sel' : ''}" onclick="selT(this,'${x(ev.id)}',${i})" ${t.sold_out ? 'style="opacity:.5;cursor:not-allowed"' : ''}>
+          <div><div class="tn">${x(t.name)}${t.sold_out ? ' <span style="color:var(--pk);font-size:.64rem">(Sold Out)</span>' : ''}</div>
+          <div class="tav">${t.sold_out ? '❌ Sold out' : '✅ ' + ((t.capacity || 0) - (t.sold || 0)) + ' left'}</div></div>
+          <div class="tp ${t.price === 0 ? 'fr' : ''}">${t.price === 0 ? 'FREE' : 'R' + t.price}</div></div>`
+        ).join('')}
+        <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:11px 14px;margin:10px 0" id="qtyrow-${x(ev.id)}" ${iF ? 'style="display:none!important"' : ''}>
+          <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem">Quantity</span>
+          <div style="display:flex;align-items:center;gap:14px">
+            <button style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--border);background:var(--surf2);color:var(--tx);font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center" onclick="chgQ(-1)">−</button>
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;min-width:22px;text-align:center" id="qty-disp">1</span>
+            <button style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--border);background:var(--surf2);color:var(--tx);font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center" onclick="chgQ(1)">+</button>
+          </div>
+        </div>
+        <div style="background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:12px" id="order-summary">${buildOrder()}</div>
+        <input class="ff" id="buyer-name" placeholder="Full name *" style="margin-bottom:8px"/>
+        <input class="ff" id="buyer-email" type="email" placeholder="Email (ticket sent here) *" style="margin-bottom:12px"/>
+        <button class="paybtn" onclick="initPay('${x(ev.id)}')">
+          <span class="psb">PAYSTACK</span><span>${iF ? 'RSVP Free — Confirm Spot' : 'Pay Securely'}</span>
+        </button>
+        <div style="text-align:center;font-size:.66rem;color:var(--mu);margin-top:8px">🔒 Secured by Paystack · No card data stored</div>
+      </div>`;
+    } else if (ev.external_url) {
+      const srcLabel = { eventbrite:'Eventbrite', ticketmaster:'Ticketmaster' }[ev.source] || 'Ticket Partner';
+      tkHTML = `<div class="tkb"><div class="tkt2">🎟 Get Tickets</div>
+        <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:14px">
+          <div style="font-size:.78rem;color:var(--mu2);margin-bottom:6px">Listed on <strong style="color:var(--tx)">${srcLabel}</strong></div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--or)">${iF ? 'FREE' : ev.price_min ? 'From R' + ev.price_min : 'Check site'}</div>
+        </div>
+        <a class="paybtn" href="${x(ev.external_url)}" target="_blank" rel="noopener" style="text-decoration:none">${emo} Buy on ${srcLabel} →</a>
+      </div>`;
+    } else {
+      tkHTML = `<div class="tkb"><div class="tkt2">🎟 Tickets</div><div style="font-size:.84rem;color:var(--mu);padding:12px 0">${iF ? 'Free entry — just show up!' : 'Contact the organiser for tickets.'}</div></div>`;
+    }
+
+    const memHTML = photos.length ? photos.map(p => `<img class="skel" style="width:70px;height:70px;border-radius:10px;object-fit:cover;flex-shrink:0;border:1.5px solid var(--border)" src="${x(p.url)}" loading="lazy"/>`).join('') :
+      `<img style="width:70px;height:70px;border-radius:10px;object-fit:cover;flex-shrink:0;border:1.5px solid var(--border)" src="https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=200&q=80" loading="lazy"/>
+       <img style="width:70px;height:70px;border-radius:10px;object-fit:cover;flex-shrink:0;border:1.5px solid var(--border)" src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=200&q=80" loading="lazy"/>`;
+
+    document.getElementById('ev-detail').innerHTML = `
+      <div class="dh"><img src="${x(ev.image_url || '')}" alt="${x(ev.name)}" onerror="this.style.display='none'"/>
+        <div class="dg"></div>
+        <div class="dhb"><div class="dbg">${emo} ${ev.source === 'manual' ? 'Pulsify Tickets' : (ev.source || 'Event')}</div>
+          <div class="dtt">${x(ev.name)}</div>
+          <div class="ds">${x(ev.organiser_name || ev.venue_name || '')} · ${fdt(ev.date_local, ev.time_local)}</div>
+        </div>
+      </div>
+      <div class="rx">
+        <button class="rb" onclick="this.classList.toggle('act');this.querySelector('.ri').textContent=this.classList.contains('act')?'❤️':'🤍'"><span class="ri">🤍</span><span class="rl">${fn(lc)}</span></button>
+        <button class="rb" onclick="openComments('${x(ev.id)}','${x(ev.name)}')"><span class="ri">💬</span><span class="rl">${fn(cc)}</span></button>
+        <button class="rb" onclick="this.classList.toggle('act')"><span class="ri">🔥</span><span class="rl">${fn(Math.round(lc * .6))}</span></button>
+        <button class="rb" onclick="this.classList.toggle('act');showToast('RSVP confirmed! See you there 🎉','ok')"><span class="ri">${iF ? '✅' : '🎟'}</span><span class="rl">${fn(ev.attendance_count || 0)}</span></button>
+        <button class="rb" onclick="toggleSave('ev','${x(ev.id)}',this)"><span class="ri">${savedEv.includes(ev.id) ? '🔖' : '🏷'}</span><span class="rl">Save</span></button>
+        <button class="rb" onclick="shareIt('${x(ev.name)}')"><span class="ri">🔗</span><span class="rl">Share</span></button>
+      </div>
+      <div class="db">
+        <div class="ig">
+          <div class="ib2"><div class="il">Date</div><div class="iv">${fdate(ev.date_local)}</div></div>
+          <div class="ib2"><div class="il">Time</div><div class="iv">${ft(ev.time_local) || '-'}</div></div>
+          <div class="ib2 w"><div class="il">Venue</div><div class="iv">${x(ev.venue_name || '')}<br/><span style="font-size:.73rem;color:var(--mu)">${x(ev.venue_address || ev.venue_city || '')}</span></div></div>
+          ${lineup.length ? `<div class="ib2 w"><div class="il">Lineup</div><div class="iv" style="font-size:.8rem">${lineup.map(a => '<span style="display:inline-block;background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.25);border-radius:50px;padding:2px 10px;margin:2px;font-size:.72rem;color:var(--or)">' + x(a) + '</span>').join('')}</div></div>` : ''}
+          ${ev.dress_code ? `<div class="ib2"><div class="il">Dress Code</div><div class="iv" style="font-size:.78rem">${x(ev.dress_code)}</div></div>` : ''}
+          ${ev.age_restriction ? `<div class="ib2"><div class="il">Age</div><div class="iv" style="font-size:.78rem">${x(ev.age_restriction)}</div></div>` : ''}
+        </div>
+        <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:18px">
+          <div class="hr"><span>🔥 Hype Meter</span><span>${hp}%</span></div>
+          <div class="hb"><div class="hf" style="width:${hp}%"></div></div>
+          <div style="font-size:.76rem;color:var(--mu)">${fn(ev.attendance_count || 0)} people going</div>
+        </div>
+        ${ev.description ? `<div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:18px"><div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">About</div><div style="font-size:.82rem;line-height:1.65;color:var(--mu2)">${x(ev.description)}</div></div>` : ''}
+        ${tkHTML}
+        <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">📸 Memories</div>
+        <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:20px">
+          <div onclick="showToast('Sign in to post 📸')" style="width:70px;height:70px;border-radius:10px;flex-shrink:0;border:1.5px dashed rgba(0,229,255,.35);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--cy);font-size:1.3rem">📷</div>
+          ${memHTML}
+        </div>
+      </div>`;
+
+    triggerRev();
+  } catch(err) {
+    document.getElementById('ev-detail').innerHTML = `<div style="padding:40px;text-align:center;color:var(--mu)">Could not load event. <button onclick="goBack()" style="color:var(--or);background:none;border:none;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700">Go back</button></div>`;
+  }
+}
+
+function buildOrder() {
+  if (!selTier) return '';
+  if (selTier.price === 0) return '<div style="display:flex;justify-content:space-between;font-family:\'Syne\',sans-serif;font-weight:700;font-size:.88rem;padding:4px 0"><span style="color:var(--mu)">Total</span><span style="color:var(--li)">FREE</span></div>';
+  const sub = selTier.price * selQty, comm = +(sub * .08).toFixed(2), psf = +(sub * .015 + 1.5).toFixed(2), total = +(sub + comm + psf).toFixed(2);
+  return `<div style="font-size:.79rem">
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--mu)">${x(selTier.name)} × ${selQty}</span><span>R${sub.toFixed(2)}</span></div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--mu)">Pulsify fee (8%)</span><span style="color:var(--li)">R${comm.toFixed(2)}</span></div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--mu)">Paystack processing</span><span>R${psf.toFixed(2)}</span></div>
+    <div style="display:flex;justify-content:space-between;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;border-top:1px solid var(--border);padding-top:8px;margin-top:4px"><span style="color:var(--mu)">Total</span><span style="color:var(--or)">R${total.toFixed(2)}</span></div>
+  </div>`;
+}
+
+function selT(el, evId, idx) {
+  // tiers are in the DOM — read the price from data stored during render
+  // We'll use a global tiers cache
+  if (!window._tierCache || !window._tierCache[evId]) return;
+  const t = window._tierCache[evId][idx];
+  if (!t || t.sold_out) return showToast('Sold out', 'err');
+  selTier = t; selQty = 1;
+  el.closest('.tkb').querySelectorAll('.tier').forEach(t => t.classList.remove('sel'));
+  el.classList.add('sel');
+  const qe = document.getElementById('qty-disp'); if (qe) qe.textContent = '1';
+  const oe = document.getElementById('order-summary'); if (oe) oe.innerHTML = buildOrder();
+}
+function chgQ(delta) {
+  selQty = Math.max(1, Math.min(10, selQty + delta));
+  const qe = document.getElementById('qty-disp'); if (qe) qe.textContent = selQty;
+  const oe = document.getElementById('order-summary'); if (oe) oe.innerHTML = buildOrder();
+}
+async function initPay(evId) {
+  const name  = document.getElementById('buyer-name')?.value.trim();
+  const email = document.getElementById('buyer-email')?.value.trim();
+  if (!name)                    return showToast('Enter your full name', 'err');
+  if (!email || !email.includes('@')) return showToast('Enter a valid email', 'err');
+  if (!selTier || selTier.price === 0) { showToast('✅ RSVP confirmed! See you there 🎉', 'ok'); return; }
+
+  showToast('Processing…');
+  try {
+    const res  = await fetch(API + '/ticket/purchase', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_id: evId, tier_id: selTier.id, quantity: selQty, buyer_name: name, buyer_email: email }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    if (PAYSTACK_PK && !PAYSTACK_PK.includes('test')) {
+      const script = document.createElement('script');
+      script.src = 'https://js.paystack.co/v1/inline.js';
+      script.onload = () => {
+        PaystackPop.setup({
+          key: PAYSTACK_PK, email, amount: data.total_kobo, currency: 'ZAR', ref: data.booking_ref,
+          metadata: data.metadata,
+          callback: () => { showToast('🎟 Booking confirmed! Check your email', 'ok'); showTab('tickets'); },
+          onClose: () => showToast('Payment cancelled'),
+        }).openIframe();
+      };
+      document.head.appendChild(script);
+    } else {
+      showToast('🎟 Demo: Booking ref ' + data.booking_ref, 'ok');
+    }
+  } catch(err) {
+    showToast('Payment failed: ' + err.message, 'err');
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   BUSINESS DETAIL — live API call
+══════════════════════════════════════════════════ */
+async function openBiz(bizId) {
+  document.getElementById('biz-detail').innerHTML = `<div style="padding:40px;text-align:center"><div class="skel" style="height:250px;border-radius:0;margin-bottom:20px"></div></div>`;
+  showDetailTab('biz-detail');
+
+  try {
+    const res = await fetch(API + '/businesses/' + bizId);
+    const { business: b } = await res.json();
+    if (!b) throw new Error('Not found');
+
+    const emo  = ce(b.category);
+    const stars = '★'.repeat(Math.round(b.rating || 0)) + '☆'.repeat(5 - Math.round(b.rating || 0));
+    const hours   = typeof b.hours   === 'string' ? JSON.parse(b.hours   || '[]') : (b.hours   || []);
+    const tags    = typeof b.tags    === 'string' ? JSON.parse(b.tags    || '[]') : (b.tags    || []);
+    const gallery = typeof b.gallery_urls === 'string' ? JSON.parse(b.gallery_urls || '[]') : (b.gallery_urls || []);
+
+    document.getElementById('biz-detail').innerHTML = `
+      <div class="bzh"><img src="${x(b.cover_image_url || '')}" alt="${x(b.name)}" onerror="this.style.display='none'"/>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:5rem;opacity:.25">${emo}</div>
+        <div class="bzg"></div>
+        <div class="bzhb">
+          <div class="bzcb">${x(b.category)}${b.is_frontline ? ' ⭐ Featured' : ''}${b.is_verified ? ' ✓ Verified' : ''}</div>
+          <div class="bzn">${x(b.name)}</div>
+          <div class="bzm"><span style="font-family:'Syne',sans-serif;font-weight:700;color:#F0C040">${stars} ${b.rating || ''}</span><span>(${(b.review_count || 0).toLocaleString()} reviews)</span>${b.price_range ? `<span>${b.price_range}</span>` : ''}<span>${x(b.suburb || b.city || '')}</span></div>
+        </div>
+      </div>
+      <div class="cr2">
+        ${b.phone ? `<a class="cb ph" href="tel:${x(b.phone)}" title="Call"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.8 19.79 19.79 0 01.01 2.18 2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg></a>` : ''}
+        ${b.phone ? `<a class="cb wa" href="https://wa.me/${(b.phone || '').replace(/\D/g, '')}" target="_blank" title="WhatsApp"><svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.135.563 4.14 1.543 5.876L0 24l6.276-1.517A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.895 0-3.668-.518-5.19-1.42l-.37-.22-3.853.932.976-3.743-.242-.385A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg></a>` : ''}
+        ${b.website ? `<a class="cb wb" href="${x(b.website)}" target="_blank" title="Website"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg></a>` : ''}
+        <a class="cb fb2" href="https://www.facebook.com/search?q=${encodeURIComponent(b.name)}" target="_blank" title="Facebook"><svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
+        <button class="cb dr" onclick="window.open('https://maps.google.com/?q=${encodeURIComponent((b.address || b.name) + ', ' + (b.city || ''))}','_blank')" title="Directions"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--mu2)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></button>
+      </div>
+      <div class="rx">
+        <button class="rb" onclick="this.classList.toggle('act');const i=this.querySelector('.ri');i.textContent=i.textContent==='❤️'?'🤍':'❤️'"><span class="ri">🤍</span><span class="rl">${fn(Math.round((b.review_count || 0) * .8))}</span></button>
+        <button class="rb" onclick="openComments('${x(b.id)}','${x(b.name)}')"><span class="ri">💬</span><span class="rl">${fn(Math.round((b.review_count || 0) * .15))}</span></button>
+        <button class="rb" onclick="toggleSave('biz','${x(b.id)}',this)"><span class="ri">${savedBz.includes(b.id) ? '🔖' : '🏷'}</span><span class="rl">Save</span></button>
+        <button class="rb" onclick="shareIt('${x(b.name)}')"><span class="ri">🔗</span><span class="rl">Share</span></button>
+      </div>
+      <div class="bztb"><div class="bzt active" onclick="switchBT(this,'bp-info')">ℹ️ Info</div><div class="bzt" onclick="switchBT(this,'bp-gallery')">📸 Gallery</div></div>
+      <div class="bzp active" id="bp-info">
+        <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px">
+          <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">About</div>
+          ${b.tagline ? `<p style="font-size:.82rem;color:var(--mu2);font-style:italic;margin-bottom:6px">${x(b.tagline)}</p>` : ''}
+          <p style="font-size:.82rem;line-height:1.65;color:var(--mu2)">${x(b.description || '')}</p>
+        </div>
+        ${hours.length ? `<div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px"><div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Opening Hours</div>${hours.map(h => `<div class="hr2"><span class="hrd">${x(h.day)}</span><span class="hrt ${h.open ? 'op' : 'cl'}">${x(h.time)}</span></div>`).join('')}</div>` : ''}
+        ${tags.length ? `<div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px"><div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Tags</div><div style="display:flex;flex-wrap:wrap;gap:4px">${tags.map(t => `<span class="tg">${x(t)}</span>`).join('')}</div></div>` : ''}
+        <div style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.2);border-radius:12px;padding:12px">
+          <div style="font-size:.75rem;color:var(--mu2);line-height:1.5">🏪 <strong style="color:var(--cy)">Is this your business?</strong> Claim your Pulsify profile.</div>
+          <button onclick="showToast('Email: business@pulsify.co.za')" style="margin-top:8px;background:rgba(0,229,255,.12);border:1px solid rgba(0,229,255,.3);color:var(--cy);padding:7px 16px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer">Claim Profile →</button>
+        </div>
+      </div>
+      <div class="bzp" id="bp-gallery">
+        ${gallery.length ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">${gallery.map(u => `<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--surf2)"><img src="${x(u)}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.background='var(--surf2)'"/></div>`).join('')}</div>` : '<p style="color:var(--mu);font-size:.84rem;padding:8px 0">No photos yet.</p>'}
+      </div>`;
+
+    triggerRev();
+  } catch(err) {
+    document.getElementById('biz-detail').innerHTML = `<div style="padding:40px;text-align:center;color:var(--mu)">Could not load place. <button onclick="goBack()" style="color:var(--or);background:none;border:none;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700">Go back</button></div>`;
+  }
+}
+function switchBT(tab, paneId) { tab.closest('.bztb').querySelectorAll('.bzt').forEach(t => t.classList.remove('active')); tab.classList.add('active'); document.querySelectorAll('.bzp').forEach(p => p.classList.remove('active')); document.getElementById(paneId)?.classList.add('active'); }
+
+/* ══════════════════════════════════════════════════
+   DISCOVER TAB
+══════════════════════════════════════════════════ */
+let discLoaded = false;
+async function loadDiscover(cat) {
+  if (!cat) cat = discCat;
+  try {
+    const params = new URLSearchParams({ show_all: 'true', limit: '20' });
+    if (cat && cat !== 'all') params.set('category', cat);
+    if (feedCity && feedCity !== 'all') params.set('city', feedCity);
+    const [bizRes, evRes] = await Promise.all([
+      fetch(API + '/businesses?' + params),
+      fetch(API + '/events?limit=20'),
+    ]);
+    const bizData = await bizRes.json();
+    const evData  = await evRes.json();
+    const dr = document.getElementById('disc-biz-row');
+    if (dr) dr.innerHTML = (bizData.businesses || []).map(b => buildBizCard(b)).join('');
+    const de = document.getElementById('disc-events');
+    if (de) de.innerHTML = (evData.events || []).map(ev => `
+      <div class="de" onclick="openEv('${ev.id}')">
+        <div class="det" style="background:${gg(ev.genre)}">${ev.image_url ? `<img src="${ev.image_url}" loading="lazy" onerror="this.style.display='none'"/>` : ge(ev.genre)}<span class="ddb">${fdate(ev.date_local)}</span></div>
+        <div class="deb"><div class="den">${x(ev.name)}</div><div class="dec">${x(ev.venue_city)}</div>
+          <div class="def"><span class="dep ${ev.is_free ? 'fr' : ''}">${ev.is_free ? 'FREE' : ev.price_min ? 'R' + ev.price_min : 'TBA'}</span><span class="deh">🔥${ev.hype_score}%</span></div>
+        </div>
+      </div>`).join('');
+  } catch(e) {}
+}
+function setDiscCat(btn, cat) {
+  btn.closest('.cr').querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  discCat = cat;
+  loadDiscover(cat);
+}
+function handleDiscSearch(val) { /* future: search businesses */ }
+
+/* ══════════════════════════════════════════════════
+   MAP
+══════════════════════════════════════════════════ */
+function initMap() {
+  if (mapInited) return; mapInited = true;
+  if (!window.mapboxgl) {
+    document.getElementById('mc').innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Map unavailable</div>';
+    return;
+  }
+  mapboxgl.accessToken = MAPBOX_TOKEN;
+  mapObj = new mapboxgl.Map({
+    container: 'mc',
+    style: 'mapbox://styles/mapbox/navigation-night-v1',
+    center: [30.75, -29.85],
+    zoom: 7.5, minZoom: 4, maxZoom: 18,
+    dragRotate: false,
+    pitchWithRotate: false,
+    touchPitch: false,
+  });
+  mapObj.touchZoomRotate.disableRotation();
+  mapObj.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+  mapObj.on('load', () => { placeMapMarkers(); addHeatmap(); });
+  mapObj.on('click', () => closeMapPanel());
+}
+
+/* Icon and colour lookup */
+function _ms(item, type) {
+  if (type === 'event') {
+    const g = (item.genre || '').toLowerCase();
+    if (g.includes('gqom')   || g.includes('nightlife')) return {bg:'#FF2D78',sh:'255,45,120', ico:'🔊'};
+    if (g.includes('amapiano'))                           return {bg:'#B026FF',sh:'176,38,255', ico:'🎵'};
+    if (g.includes('sport')  || g.includes('soccer'))    return {bg:'#00D4AA',sh:'0,212,170',  ico:'⚽'};
+    if (g.includes('march')  || g.includes('solidar'))   return {bg:'#C6FF4A',sh:'198,255,74', ico:'✊',dark:true};
+    if (g.includes('jazz'))                               return {bg:'#FF9500',sh:'255,149,0',  ico:'🎷'};
+    if (g.includes('hip')    || g.includes('rap'))        return {bg:'#FF0080',sh:'255,0,128',  ico:'🎤'};
+    if (g.includes('gospel'))                             return {bg:'#FFB347',sh:'255,179,71', ico:'🙏',dark:true};
+    if (g.includes('shisa')  || g.includes('braai'))     return {bg:'#FF5C00',sh:'255,92,0',   ico:'🔥'};
+    if (g.includes('maskandi'))                           return {bg:'#8B4513',sh:'139,69,19',  ico:'🪗'};
+    if (g.includes('festival'))                           return {bg:'#00B4D8',sh:'0,180,216',  ico:'🎪'};
+    if (g.includes('night')  || g.includes('club'))      return {bg:'#7B2FFF',sh:'123,47,255', ico:'🌙'};
+    if (g.includes('student'))                            return {bg:'#0077B6',sh:'0,119,182',  ico:'🎓'};
+    return {bg:'#FF5C00',sh:'255,92,0',ico:'🎟'};
+  }
+  const c = (item.category||'').toLowerCase();
+  if (c==='shisanyama') return {bg:'#C0392B',sh:'192,57,43',   ico:'🔥'};
+  if (c==='restaurant') return {bg:'#E67E22',sh:'230,126,34',  ico:'🍴'};
+  if (c==='bar')        return {bg:'#6C3483',sh:'108,52,131',  ico:'🍻'};
+  if (c==='club')       return {bg:'#8E44AD',sh:'142,68,173',  ico:'💿'};
+  if (c==='hotel')      return {bg:'#2471A3',sh:'36,113,163',  ico:'🏨'};
+  if (c==='bnb')        return {bg:'#1A8A5A',sh:'26,138,90',   ico:'🛏'};
+  if (c==='venue')      return {bg:'#D35400',sh:'211,84,0',    ico:'🎪'};
+  return {bg:'#555',sh:'100,100,100',ico:'📍'};
+}
+
+function placeMapMarkers() {
+  if (!mapObj) return;
+  mapMarkers.forEach(m => { try { m.remove(); } catch(e){} });
+  mapMarkers = [];
+
+  const catF   = (document.getElementById('map-cat')?.value   || 'all').toLowerCase();
+  const genreF = (document.getElementById('map-genre')?.value  || 'all').toLowerCase();
+
+  let evs = eventsForMap.filter(e => e.venue_lat && e.venue_lon);
+  let bzs = bizForMap.filter(b => b.lat && b.lon);
+
+  if (catF === 'event')       bzs = [];
+  else if (catF !== 'all') { evs = []; bzs = bzs.filter(b => (b.category||'').toLowerCase() === catF); }
+  if (genreF !== 'all')       evs = evs.filter(e => (e.genre||'').toLowerCase().includes(genreF));
+
+  [...evs.map(e=>({item:e,type:'event'})), ...bzs.map(b=>({item:b,type:'biz'}))].forEach(({item,type}) => {
+    const lat = parseFloat(type==='event' ? item.venue_lat : item.lat);
+    const lon = parseFloat(type==='event' ? item.venue_lon : item.lon);
+    if (!lat||!lon||isNaN(lat)||isNaN(lon)) { console.warn("[Map] Invalid coords for", item.name); return; }
+    if (lat<-35||lat>-22||lon<16||lon>33) { console.warn("[Map] Outside SA:", item.name, lat, lon); return; }
+
+    const s    = _ms(item, type);
+    const isEv = type === 'event';
+
+    const el = document.createElement('div');
+    el.className = 'mp-dot';
+    el.style.cssText = `background:${s.bg};color:${s.dark?'#000':'#fff'};box-shadow:0 0 ${isEv?20:12}px rgba(${s.sh},.${isEv?7:4}),0 2px 8px rgba(0,0,0,.7);width:26px;height:26px`;
+    el.textContent = s.ico;
+    el.style.fontSize = '.7rem';
+
+    if (isEv) {
+      const ring = document.createElement('div');
+      ring.className = 'mp-ring';
+      ring.style.color = s.bg;
+      el.appendChild(ring);
+    }
+
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      showMapPanel(item, type, s);
+    });
+
+    mapMarkers.push(new mapboxgl.Marker({element:el,anchor:'center'}).setLngLat([lon,lat]).addTo(mapObj));
+  });
+}
+
+function showMapPanel(item, type, s) {
+  const panel = document.getElementById('map-panel');
+  const mp    = document.getElementById('mp-content');
+  if (!panel || !mp) return;
+
+  const isEv     = type === 'event';
+  const img      = item.image_url || item.cover_image_url || '';
+  const name     = x(item.name || '');
+  const cat      = isEv ? (item.genre || 'Event') : (item.category || 'Place');
+  const sub      = isEv
+    ? (typeof fdate==='function' ? fdate(item.date_local) : (item.date_local||''))
+      + (item.time_local ? ' · ' + item.time_local : '')
+      + (item.venue_name ? '<br>' + x(item.venue_name) : '')
+    : ((item.rating ? '⭐ ' + item.rating : '') + (item.suburb||item.city ? ' · ' + x(item.suburb||item.city) : ''))
+      + (item.phone ? '<br><a href="tel:' + x(item.phone) + '" onclick="event.stopPropagation()" style="color:var(--cy);text-decoration:none">' + x(item.phone) + '</a>' : '');
+
+  const price = isEv
+    ? (item.is_free ? '<span style="color:var(--li)">FREE</span>'
+       : item.price_min ? '<span style="color:var(--or)">From R' + item.price_min + '</span>' : '')
+    : (item.price_range ? '<span style="color:var(--mu)">' + x(item.price_range) + '</span>' : '');
+
+  mp.innerHTML = `
+    <div class="mp-type">${x(cat)}</div>
+    <div class="mp-row">
+      <div class="mp-thumb" style="background:${s.bg}">
+        ${img ? `<img src="${x(img)}" loading="lazy" onerror="this.parentElement.textContent='${s.ico}'"/>` : s.ico}
+      </div>
+      <div class="mp-info">
+        <div class="mp-name">${name}</div>
+        <div class="mp-sub">${sub}</div>
+        ${price ? `<div class="mp-price">${price}</div>` : ''}
+      </div>
+    </div>
+    ${price && isEv ? '' : ''}
+    <div class="mp-divider"></div>
+    <button class="mp-cta" onclick="${isEv ? `openEv('${x(item.id)}');closeMapPanel()` : `openBiz('${x(item.id)}');closeMapPanel()`}">
+      ${isEv ? '🎟 View Event & Buy Tickets →' : '📍 View Full Profile →'}
+    </button>`;
+
+  panel.classList.add('open');
+}
+
+function closeMapPanel() {
+  document.getElementById('map-panel')?.classList.remove('open');
+}
+
+function toggleLegend() {
+  const body  = document.getElementById('map-legend-body');
+  const arrow = document.getElementById('legend-arrow');
+  const open  = body.style.display !== 'none';
+  body.style.display  = open ? 'none' : 'block';
+  arrow.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+function addHeatmap() {
+  if (!mapObj) return;
+  const features = eventsForMap.filter(e=>e.venue_lat&&e.venue_lon).map(e=>({
+    type:'Feature',
+    geometry:{type:'Point',coordinates:[parseFloat(e.venue_lon),parseFloat(e.venue_lat)]},
+    properties:{weight:(e.hype_score||50)/100}
+  }));
+  if (!features.length) return;
+  try{mapObj.removeLayer('heat');mapObj.removeSource('heat');}catch(e){}
+  mapObj.addSource('heat',{type:'geojson',data:{type:'FeatureCollection',features}});
+  mapObj.addLayer({id:'heat',type:'heatmap',source:'heat',paint:{
+    'heatmap-weight':   ['get','weight'],
+    'heatmap-intensity': 1.2,
+    'heatmap-color':    ['interpolate',['linear'],['heatmap-density'],
+      0,   'rgba(0,0,0,0)',
+      .1,  'rgba(255,45,120,.25)',
+      .35, 'rgba(176,38,255,.45)',
+      .6,  'rgba(255,92,0,.7)',
+      .85, 'rgba(255,200,0,.85)',
+      1,   'rgba(198,255,74,1)'],
+    'heatmap-radius':  55,
+    'heatmap-opacity': .55
+  }});
+}
+
+function applyMapFilters() { if(mapInited&&mapObj) placeMapMarkers(); }
+
+/* ══════════════════════════════════════════════════
+   AUTH — Supabase
+══════════════════════════════════════════════════ */
+async function signInGoogle() {
+  const sb = getSB(); if (!sb) return showToast('Auth not available', 'err');
+  const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+  if (error) showToast(error.message, 'err');
+}
+async function handleAuth() {
+  const email = document.getElementById('auth-email')?.value.trim();
+  const pw    = document.getElementById('auth-pw')?.value.trim();
+  if (!email || !pw) return showToast('Enter email and password', 'err');
+  const sb = getSB(); if (!sb) return;
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+  if (error) return showToast(error.message, 'err');
+  currentUser = data.user;
+  document.getElementById('auth-modal')?.classList.remove('open');
+  showToast('✅ Signed in!', 'ok');
+  renderProfile();
+}
+async function handleSignUp() {
+  const email = document.getElementById('auth-email')?.value.trim();
+  const pw    = document.getElementById('auth-pw')?.value.trim();
+  if (!email || !pw) return showToast('Enter email and password', 'err');
+  const sb = getSB(); if (!sb) return;
+  const { error } = await sb.auth.signUp({ email, password: pw });
+  if (error) return showToast(error.message, 'err');
+  showToast('✅ Check your email to confirm!', 'ok');
+}
+function renderProfile() {
+  let sess = null, prof = null;
+  try { sess = JSON.parse(localStorage.getItem('p_user'));   } catch(e) {}
+  try { prof = JSON.parse(localStorage.getItem('p_profile')); } catch(e) {}
+  const loggedIn = !!(sess && sess.id);
+
+  const outEl = document.getElementById('prof-out');
+  const inEl  = document.getElementById('prof-in');
+  if (outEl) outEl.style.display = loggedIn ? 'none'  : 'block';
+  if (inEl)  inEl.style.display  = loggedIn ? 'block' : 'none';
+
+  if (!loggedIn) {
+    const ab = document.getElementById('auth-btn');
+    if (ab) { ab.textContent = 'Sign In'; ab.onclick = () => window.location.href = 'signin.html'; }
+    return;
+  }
+
+  const name   = prof?.display_name || sess?.display_name || sess?.email?.split('@')[0] || 'Pulsify User';
+  const handle = '@' + (prof?.username || sess?.email?.split('@')[0] || 'user');
+
+  const avEl  = document.getElementById('profile-av');
+  const nmEl  = document.getElementById('profile-name');
+  const subEl = document.getElementById('profile-sub');
+  if (avEl)  { if (prof?.avatar_url) { avEl.innerHTML = '<img src="'+prof.avatar_url+'" style="width:100%;height:100%;object-fit:cover"/>'; } else { avEl.textContent = name[0]?.toUpperCase() || '😊'; } }
+  if (nmEl)  nmEl.textContent  = name;
+  if (subEl) subEl.textContent = handle;
+
+  // Stats
+  try {
+    const saved    = JSON.parse(localStorage.getItem('p_sev') || '[]');
+    const allPosts = JSON.parse(localStorage.getItem('p_all_posts') || '[]');
+    const myPosts  = allPosts.filter(p => p.user_id === sess.id);
+    const s1 = document.getElementById('ps-saved');
+    const s2 = document.getElementById('ps-posts');
+    if (s1) s1.textContent = saved.length;
+    if (s2) s2.textContent = myPosts.length;
+  } catch(e) {}
+
+  // Sign out
+  const soBtn = document.getElementById('signout-btn');
+  if (soBtn) soBtn.onclick = () => {
+    localStorage.removeItem('p_user');
+    localStorage.removeItem('p_profile');
+    localStorage.removeItem('p_token');
+    currentUser = null;
+    renderProfile();
+    showToast('Signed out');
+  };
+
+  // Top-right button → Feed
+  const ab = document.getElementById('auth-btn');
+  if (ab) { ab.textContent = 'Feed'; ab.onclick = () => window.location.href = 'feeds.html'; }
+
+  currentUser = sess;
+}
+
+/* ══════════════════════════════════════════════════
+   BOOKINGS / SAVED
+══════════════════════════════════════════════════ */
+function renderBookings() {
+  const bl = document.getElementById('bookings-list');
+  if (bl) bl.innerHTML = `<div class="no-results"><div class="no-results-ico">🎟</div><div class="no-results-title">No bookings yet</div><div class="no-results-sub">Your tickets appear here with QR codes for entry.</div><button class="no-results-btn" onclick="showTab('home')">Browse Events</button></div>`;
+  renderSaved();
+}
+function renderSaved() {
+  const el = document.getElementById('sev-list');
+  if (el) el.innerHTML = savedEv.length ? '<div style="padding:8px 0;color:var(--mu);font-size:.82rem">' + savedEv.length + ' saved events — tap to view</div>' : `<div class="no-results"><div class="no-results-ico">🔖</div><div class="no-results-title">No saved events</div><div class="no-results-sub">Tap 🏷 on any event to save it here.</div><button class="no-results-btn" onclick="showTab('home')">Browse Events</button></div>`;
+  const bl = document.getElementById('sbiz-list');
+  if (bl) bl.innerHTML = savedBz.length ? '<div style="padding:8px 0;color:var(--mu);font-size:.82rem">' + savedBz.length + ' saved places — tap to view</div>' : `<div class="no-results"><div class="no-results-ico">🏠</div><div class="no-results-title">No saved places</div><div class="no-results-sub">Tap 🏷 on any business card to save it.</div><button class="no-results-btn" onclick="showTab('discover')">Browse Places</button></div>`;
+}
+function switchST(tab, paneId) { tab.closest('.stbs').querySelectorAll('.stb').forEach(t => t.classList.remove('active')); tab.classList.add('active'); document.querySelectorAll('.sp').forEach(p => p.classList.remove('active')); document.getElementById(paneId)?.classList.add('active'); renderSaved(); }
+
+/* ══════════════════════════════════════════════════
+   SQUAD
+══════════════════════════════════════════════════ */
+const MOCK_SQUAD = [
+  { id:'u1', name:'Sipho Dlamini',  handle:'@sipho_kzn',   city:'Umlazi · Durban',    emo:'🔊' },
+  { id:'u2', name:'Nandi Khoza',    handle:'@nandik',       city:'Sandton · Joburg',   emo:'💃' },
+  { id:'u3', name:'DJ Thabang',     handle:'@djthabang',    city:'Soweto · Joburg',    emo:'🎤' },
+  { id:'u4', name:'Zinhle D',       handle:'@zinhle_d',     city:'Durban North',        emo:'🌊' },
+  { id:'u5', name:'Lebo T',         handle:'@lebo_t',       city:'Cape Town CBD',       emo:'🎶' },
+];
+
+
+/* ══════════════════════════════════════════════════
+   COMMENTS
+══════════════════════════════════════════════════ */
+const SEED_COMMENTS = [
+  { av:'🔥', name:'Sipho M.', text:'This event is always fire 🔥 been going 3 years straight', time:'2h ago' },
+  { av:'💃', name:'Nandi K.', text:'Anyone going from Hillcrest? Looking for a squad 👀', time:'4h ago' },
+  { av:'🎶', name:'DJ Thabang', text:'The lineup this year is next level! See you on the floor 🎤', time:'5h ago' },
+];
+function openComments(id, name) { document.getElementById('comment-title').textContent = name; activeComments = [...SEED_COMMENTS]; renderComments(); document.getElementById('comments-overlay').classList.add('open'); setTimeout(() => document.getElementById('comment-input').focus(), 300); }
+function closeComments() { document.getElementById('comments-overlay').classList.remove('open'); }
+function renderComments() { document.getElementById('comments-list').innerHTML = activeComments.map(c => `<div class="cm"><div class="cav">${c.av}</div><div style="flex:1"><div class="cna">${x(c.name)}</div><div class="ctx">${x(c.text)}</div><div class="ctm">${c.time}</div></div></div>`).join(''); }
+function postComment() { const inp = document.getElementById('comment-input'); const val = inp.value.trim(); if (!val) return; activeComments.push({ av:'😊', name:'You', text: val, time:'just now' }); renderComments(); inp.value = ''; document.getElementById('comments-list').scrollTop = 9999; }
+
+/* ══════════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════════ */
+function toggleLike(btn) { const ico = btn.querySelector('.ai'), cnt = btn.querySelector('span:last-child'); const liked = btn.classList.toggle('lk'); ico.textContent = liked ? '❤️' : '🤍'; let n = parseInt(cnt.textContent.replace('k','')) * (cnt.textContent.includes('k') ? 1000 : 1); cnt.textContent = fn(liked ? n + 1 : Math.max(0, n - 1)); }
+function toggleSave(type, id, btn) { if (type === 'ev') { const i = savedEv.indexOf(id); if (i > -1) { savedEv.splice(i,1); showToast('Removed'); } else { savedEv.push(id); showToast('🔖 Saved!'); } localStorage.setItem('p_sev', JSON.stringify(savedEv)); } else { const i = savedBz.indexOf(id); if (i > -1) { savedBz.splice(i,1); showToast('Removed'); } else { savedBz.push(id); showToast('🔖 Saved!'); } localStorage.setItem('p_sbiz', JSON.stringify(savedBz)); } if (btn) btn.querySelector('.ri,.ai').textContent = (type === 'ev' ? savedEv : savedBz).includes(id) ? '🔖' : '🏷'; }
+function shareIt(name) { if (navigator.share) navigator.share({ title: name, text: 'Check out ' + name + ' on Pulsify!', url: location.href }); else { navigator.clipboard?.writeText(location.href); showToast('🔗 Link copied!'); } }
+
+
+/* ══════════════════════════════════════════════════
+   BOOT
+══════════════════════════════════════════════════ */
+
+/* ── Session restore ── */
+(function() {
+  try {
+    var s = JSON.parse(localStorage.getItem('p_user'));
+    if (s && s.id) {
+      var btn = document.getElementById('auth-btn');
+      if (btn) { btn.textContent = 'Feed'; btn.onclick = function(){ window.location.href='feeds.html'; }; }
+    }
+  } catch(e) {}
+})();
+window.addEventListener('DOMContentLoaded', () => {
+  // Load live data immediately
+  loadFeed(true);
+  loadFrontline();
+  triggerRev();
+
+  // Check auth state
+  const sb = getSB();
+  if (sb) {
+    sb.auth.getUser().then(({ data: { user } }) => {
+      if (user) { currentUser = user; renderProfile(); }
+    });
+  }
+});
+
+/* ── BUSINESSES FULL PAGE ── */
+let _bizPageData = [];
+let _bizPageCat  = 'all';
+const _BIZ_CATS  = {
+  all:[], food:['restaurant','shisanyama'], drinks:['bar','club'],
+  shisanyama:['shisanyama'], outdoor:['venue','bar','shisanyama'],
+  hotel:['hotel'], bnb:['bnb'], club:['club']
+};
+
+async function openBizPage() {
+  const ov = document.getElementById('biz-page-overlay');
+  if (!ov) return;
+  ov.classList.add('open');
+  _bizPageCat = 'all';
+  document.querySelectorAll('.bp-chip').forEach(c =>
+    c.classList.toggle('active', c.textContent.trim().startsWith('✦')));
+  const grid = document.getElementById('bp-grid');
+  if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--mu)">Loading…</div>';
+  try {
+    const res  = await fetch(API + '/businesses?show_all=true&limit=50');
+    const data = await res.json();
+    _bizPageData = data.businesses || [];
+    _renderBizPage();
+  } catch(e) {
+    if (grid) grid.innerHTML = '<div style="grid-column:1/-1;padding:30px;text-align:center;color:var(--mu)">Could not load. Check connection.</div>';
+  }
+}
+
+function closeBizPage() {
+  document.getElementById('biz-page-overlay')?.classList.remove('open');
+}
+
+function setBizCat(btn, cat) {
+  _bizPageCat = cat;
+  document.querySelectorAll('.bp-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  _renderBizPage();
+}
+
+function _renderBizPage() {
+  const grid = document.getElementById('bp-grid');
+  if (!grid) return;
+  const cats = _BIZ_CATS[_bizPageCat] || [];
+  const list = cats.length ? _bizPageData.filter(b => cats.includes(b.category)) : _bizPageData;
+  if (!list.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center"><div style="font-size:2.5rem;margin-bottom:12px">📭</div><div style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:.9rem;margin-bottom:8px">No places in this category</div><div style="font-size:.8rem;color:var(--mu)">More being added soon.</div></div>';
+    return;
+  }
+  grid.innerHTML = list.map(b => `
+    <div class="bp-card" onclick="closeBizPage();openBiz('${x(b.id)}')">
+      <div class="bp-img" style="background:${cg(b.category)}">
+        ${b.cover_image_url ? `<img src="${x(b.cover_image_url)}" loading="lazy" onerror="this.style.display='none'"/>` : `<span>${ce(b.category)}</span>`}
+        <span class="bp-cat-badge">${x(b.category)}</span>
+        ${b.is_frontline ? `<span class="bp-featured">⭐ #${b.frontline_rank}</span>` : ''}
+      </div>
+      <div class="bp-info">
+        <div class="bp-name">${x(b.name)}</div>
+        <div class="bp-loc">📍 ${x(b.suburb || b.city || '')}</div>
+        <div class="bp-foot">
+          <span class="bp-rating">${b.rating ? '★ ' + b.rating : 'New'}</span>
+          <span class="bp-price">${b.price_range || ''}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+</script>
+</body>
+</html>
