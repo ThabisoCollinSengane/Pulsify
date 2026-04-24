@@ -6,6 +6,7 @@
 <title>Pulsify Business Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--te:#00D4AA;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0;--th:58px;--bh:68px}
@@ -305,9 +306,13 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <div class="sheet-handle"></div>
     <div class="sheet-head"><div class="sheet-title">New Post</div><button class="sheet-close" onclick="closeSheet('post-sheet')">✕</button></div>
     <div class="sheet-body">
-      <div class="info-box">Posts appear on the shared Pulsify feed visible to all users.</div>
-      <label class="ff-label">Image URL (optional)</label>
-      <input class="ff" type="url" id="post-img" placeholder="https://…/image.jpg"/>
+      <div class="info-box">Posts appear on the Pulsify feed for all your followers.</div>
+      <label class="ff-label">Photo / Video (optional)</label>
+      <div id="biz-img-drop" onclick="document.getElementById('biz-img-file').click()" style="height:110px;background:rgba(255,255,255,.03);border:1.5px dashed rgba(0,229,255,.3);border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-bottom:10px;overflow:hidden;flex-direction:column;gap:6px">
+        <span style="font-size:1.5rem">📷</span>
+        <span id="biz-img-hint" style="font-size:.74rem;color:var(--mu)">Tap to upload a photo</span>
+      </div>
+      <input type="file" id="biz-img-file" accept="image/*,video/*" style="display:none" onchange="handleBizImg(this)"/>
       <label class="ff-label">Caption *</label>
       <textarea class="ff" id="post-cap" placeholder="What's happening? Share with your followers…" rows="4"></textarea>
       <button class="btn-primary" style="width:100%" onclick="submitPost()">Publish Post 🚀</button>
@@ -463,47 +468,125 @@ function stat(n, l, color = '') {
 }
 
 // ════════════════════════════════════════════════════════════
-//  POSTS — synced to shared business_posts for index.html
+//  SUPABASE HELPERS
 // ════════════════════════════════════════════════════════════
-function renderPosts() {
-  const posts = load('posts', []);
+const SUPA_URL  = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+let _sbC = null;
+function getSB() { if (!_sbC && window.supabase) _sbC = window.supabase.createClient(SUPA_URL, SUPA_ANON); return _sbC; }
+
+// ════════════════════════════════════════════════════════════
+//  POSTS — synced to Supabase posts table
+// ════════════════════════════════════════════════════════════
+let _bizImgFile = null;
+
+function handleBizImg(input) {
+  const file = input.files[0]; if (!file) return;
+  _bizImgFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const drop = document.getElementById('biz-img-drop');
+    if (drop) drop.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover"/>`;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function renderPosts() {
   const el = document.getElementById('posts-list');
+  el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu);font-size:.78rem">Loading…</div>';
+
+  // Load from Supabase if session exists
+  const sb = getSB();
+  let posts = [];
+  if (sb) {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      const { data } = await sb.from('posts').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(20);
+      posts = (data || []).map(p => ({ id: p.id, img: p.image_url, cap: p.caption, created: p.created_at, _supa: true }));
+    }
+  }
+
+  // Fallback to localStorage
+  if (!posts.length) posts = load('posts', []).slice().reverse().map(p => ({ ...p, _supa: false }));
+
   if (!posts.length) { el.innerHTML = emptyState('📸', 'No posts yet', 'Create your first post to share updates with your followers on the Pulsify feed.'); return; }
-  el.innerHTML = posts.slice().reverse().map(p => `
+  el.innerHTML = posts.map(p => `
     <div class="post-card">
       ${p.img ? `<img class="post-img" src="${xe(p.img)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : '<div class="post-img-placeholder">📷</div>'}
-      <div class="post-body"><div class="post-cap">${xe(p.cap)}</div><div class="post-meta">${fmtDate(p.created)} · ${xe(BIZ.name)}</div></div>
-      <div class="post-actions"><button class="btn-danger" onclick="deletePost('${p.id}')">🗑 Delete</button></div>
+      <div class="post-body"><div class="post-cap">${xe(p.cap||'')}</div><div class="post-meta">${fmtDate(p.created)} · ${xe(BIZ.name)}</div></div>
+      <div class="post-actions"><button class="btn-danger" onclick="deletePost('${p.id}', ${p._supa})">🗑 Delete</button></div>
     </div>`).join('');
 }
 
-function submitPost() {
-  const img = document.getElementById('post-img').value.trim();
+async function submitPost() {
   const cap = document.getElementById('post-cap').value.trim();
-  if (!cap && !img) { toast('Add a caption or image URL', 'err'); return; }
-  const post = { id:'p_'+Date.now(), img, cap, created:new Date().toISOString(), bizId:getBizId(), bizName:BIZ.name, bizType:BIZ.type };
-  const posts = load('posts', []); posts.push(post); save('posts', posts);
-  syncToSharedPosts(post);
-  closeSheet('post-sheet');
-  document.getElementById('post-img').value = '';
-  document.getElementById('post-cap').value = '';
-  toast('Post published! ✅', 'ok');
-  renderPosts(); renderStats();
+  if (!cap && !_bizImgFile) { toast('Add a caption or photo', 'err'); return; }
+
+  const btn = document.querySelector('#post-sheet .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Publishing…'; }
+
+  const sb = getSB();
+  let imageUrl = null;
+
+  try {
+    if (_bizImgFile && sb) {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        const ext  = _bizImgFile.name.split('.').pop() || 'jpg';
+        const path = `${session.user.id}/${Date.now()}.${ext}`;
+        const { data: up, error: upErr } = await sb.storage.from('post-images').upload(path, _bizImgFile);
+        if (!upErr) {
+          const { data: { publicUrl } } = sb.storage.from('post-images').getPublicUrl(path);
+          imageUrl = publicUrl;
+        }
+      }
+    }
+
+    // Post via API (triggers follower notifications)
+    if (sb) {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        const res = await fetch('/api/posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+          body: JSON.stringify({ caption: cap, image_url: imageUrl, post_type: 'business_update' }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        // Also save locally so stats reflect immediately
+        const posts = load('posts', []);
+        posts.push({ id: data.post.id, img: imageUrl, cap, created: data.post.created_at });
+        save('posts', posts);
+      } else {
+        throw new Error('Not signed in to Supabase');
+      }
+    } else {
+      // Offline fallback
+      const post = { id: 'p_'+Date.now(), img: imageUrl, cap, created: new Date().toISOString() };
+      const posts = load('posts', []); posts.push(post); save('posts', posts);
+    }
+
+    closeSheet('post-sheet');
+    document.getElementById('post-cap').value = '';
+    _bizImgFile = null;
+    const drop = document.getElementById('biz-img-drop');
+    if (drop) drop.innerHTML = '<span style="font-size:1.5rem">📷</span><span id="biz-img-hint" style="font-size:.74rem;color:var(--mu)">Tap to upload a photo</span>';
+    toast('Post published! ✅', 'ok');
+    renderPosts(); renderStats();
+  } catch(e) {
+    toast('Failed: ' + e.message, 'err');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = 'Publish Post 🚀'; }
 }
 
-function deletePost(id) {
+async function deletePost(id, isSupa) {
   if (!confirm('Delete this post?')) return;
+  if (isSupa) {
+    const sb = getSB();
+    if (sb) await sb.from('posts').delete().eq('id', id).catch(() => {});
+  }
   const posts = load('posts', []).filter(p => p.id !== id); save('posts', posts);
-  // Remove from shared feed
-  const shared = JSON.parse(localStorage.getItem('business_posts') || '[]');
-  localStorage.setItem('business_posts', JSON.stringify(shared.filter(p => p.id !== id)));
   renderPosts(); renderStats(); toast('Post deleted');
-}
-
-function syncToSharedPosts(post) {
-  const shared = JSON.parse(localStorage.getItem('business_posts') || '[]');
-  if (!shared.find(p => p.id === post.id)) shared.unshift(post);
-  localStorage.setItem('business_posts', JSON.stringify(shared.slice(0, 200)));
 }
 
 // ════════════════════════════════════════════════════════════
