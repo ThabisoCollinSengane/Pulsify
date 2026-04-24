@@ -9,13 +9,23 @@ const sb = () => createClient(
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+  'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type,Authorization',
 };
 
 function haverBox(lat, lon, km) {
   const R = 111, d = km / R, dl = km / (R * Math.cos(lat * Math.PI / 180));
   return { minLat: lat - d, maxLat: lat + d, minLon: lon - dl, maxLon: lon + dl };
+}
+
+async function verifyToken(token) {
+  if (!token) return null;
+  try {
+    const userSb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY,
+      { auth: { autoRefreshToken: false, persistSession: false } });
+    const { data: { user } } = await userSb.auth.getUser(token);
+    return user || null;
+  } catch { return null; }
 }
 
 module.exports = async (req, res) => {
@@ -160,6 +170,110 @@ module.exports = async (req, res) => {
       return res.status(200).json({ business: biz });
     }
 
+    /* ─── GET /posts ──────────────────────────────────────── */
+    if (url === '/posts' && req.method === 'GET') {
+      const page       = Math.max(1, parseInt(q.page || '1'));
+      const limit      = Math.min(20, parseInt(q.limit || '10'));
+      const offset     = (page - 1) * limit;
+      const filter     = q.filter || 'all';
+      const userId     = q.user_id || null;
+      const followerId = q.follower_id || null;
+
+      let query = sb().from('posts')
+        .select('*', { count: 'exact' })
+        .eq('visibility', 'public')
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (userId) query = query.eq('user_id', userId);
+      if (filter === 'organizers') query = query.in('post_type', ['organizer', 'business_update']);
+      if (filter === 'community')  query = query.eq('post_type', 'attended_photo');
+      if (filter === 'following' && followerId) {
+        const { data: fws } = await sb().from('follows').select('following_id').eq('follower_id', followerId);
+        const ids = (fws || []).map(f => f.following_id);
+        if (!ids.length) return res.status(200).json({ posts: [], total: 0, page, limit, has_next: false });
+        query = query.in('user_id', ids);
+      }
+
+      const { data: posts, error, count } = await query;
+      if (error) return res.status(400).json({ error: error.message });
+
+      const profileIds = [...new Set((posts || []).map(p => p.user_id).filter(Boolean))];
+      let profileMap = {};
+      if (profileIds.length) {
+        const { data: profiles } = await sb().from('profiles')
+          .select('id,username,display_name,avatar_url,role,is_verified')
+          .in('id', profileIds);
+        (profiles || []).forEach(p => { profileMap[p.id] = p; });
+      }
+
+      const result = (posts || []).map(p => ({ ...p, profile: profileMap[p.user_id] || null }));
+      return res.status(200).json({ posts: result, total: count || 0, page, limit, has_next: offset + limit < (count || 0) });
+    }
+
+    /* ─── POST /posts ─────────────────────────────────────── */
+    if (url === '/posts' && req.method === 'POST') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { caption, image_url, event_id, event_name, post_type } = req.body || {};
+      if (!caption && !image_url) return res.status(400).json({ error: 'caption or image_url required' });
+
+      const { data: post, error } = await sb().from('posts').insert({
+        user_id: user.id, caption: caption || null, image_url: image_url || null,
+        event_id: event_id || null, event_name: event_name || null,
+        post_type: post_type || 'attended_photo', visibility: 'public',
+      }).select().single();
+
+      if (error) return res.status(400).json({ error: error.message });
+
+      // Notify followers about new business/organizer post
+      if (['business_update', 'organizer'].includes(post_type)) {
+        const { data: followers } = await sb().from('follows').select('follower_id').eq('following_id', user.id);
+        if (followers && followers.length) {
+          const { data: prof } = await sb().from('profiles').select('display_name').eq('id', user.id).single();
+          const name = prof?.display_name || 'Someone';
+          const notifs = followers.map(f => ({
+            user_id: f.follower_id, type: 'business_post', from_user_id: user.id,
+            from_display_name: name, entity_id: post.id, entity_type: 'post',
+            message: `${name} posted an update`,
+          }));
+          await sb().from('notifications').insert(notifs);
+        }
+      }
+
+      return res.status(200).json({ post, success: true });
+    }
+
+    /* ─── GET /profiles/:id ───────────────────────────────── */
+    const profId = url.match(/^\/profiles\/([^/]+)$/)?.[1];
+    if (profId && req.method === 'GET') {
+      const [
+        { data: profile },
+        { count: postsCount },
+        { count: followersCount },
+        { count: followingCount },
+        { data: recentPosts },
+      ] = await Promise.all([
+        sb().from('profiles').select('id,username,display_name,bio,avatar_url,city,province,role,is_verified,genres').eq('id', profId).single(),
+        sb().from('posts').select('id', { count: 'exact', head: true }).eq('user_id', profId).eq('visibility', 'public'),
+        sb().from('follows').select('id', { count: 'exact', head: true }).eq('following_id', profId),
+        sb().from('follows').select('id', { count: 'exact', head: true }).eq('follower_id', profId),
+        sb().from('posts').select('id,caption,image_url,post_type,likes_count,comments_count,created_at').eq('user_id', profId).eq('visibility', 'public').order('created_at', { ascending: false }).limit(6),
+      ]);
+
+      if (!profile) return res.status(404).json({ error: 'Profile not found' });
+
+      return res.status(200).json({
+        profile,
+        posts_count:     postsCount    || 0,
+        followers_count: followersCount || 0,
+        following_count: followingCount || 0,
+        recent_posts:    recentPosts   || [],
+      });
+    }
+
     /* ─── POST /ticket/purchase ───────────────────────────── */
     if (url === '/ticket/purchase' && req.method === 'POST') {
       const body = req.body || {};
@@ -175,12 +289,12 @@ module.exports = async (req, res) => {
 
       if (!ev) return res.status(404).json({ error: 'Event not found' });
 
-      const qty        = Math.max(1, parseInt(quantity));
-      const unit_price = tier?.price || 0;
-      const subtotal   = unit_price * qty;
-      const commission = unit_price > 0 ? +(subtotal * 0.08).toFixed(2) : 0;
-      const psf        = unit_price > 0 ? +(subtotal * 0.015 + 1.5).toFixed(2) : 0;
-      const total_paid = +(subtotal + commission + psf).toFixed(2);
+      const qty         = Math.max(1, parseInt(quantity));
+      const unit_price  = tier?.price || 0;
+      const subtotal    = unit_price * qty;
+      const commission  = unit_price > 0 ? +(subtotal * 0.08).toFixed(2) : 0;
+      const psf         = unit_price > 0 ? +(subtotal * 0.015 + 1.5).toFixed(2) : 0;
+      const total_paid  = +(subtotal + commission + psf).toFixed(2);
       const booking_ref = `PKF-${Date.now()}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
 
       const { data: booking, error: bErr } = await sb().from('bookings').insert({
@@ -189,22 +303,23 @@ module.exports = async (req, res) => {
         buyer_name,  buyer_email,
         buyer_phone: buyer_phone || null,
         quantity:    qty, unit_price, commission, total_paid,
-        status:      unit_price === 0 ? 'confirmed' : 'pending',
+        status:      'confirmed', // Paystack disabled — auto-confirm all
         qr_data:     `PULSIFY:${booking_ref}:${event_id}:VALID`,
       }).select().single();
 
       if (bErr) return res.status(400).json({ error: bErr.message });
 
       return res.status(200).json({
-        success:      true,
+        success:     true,
         booking_ref,
-        total_kobo:   Math.round(total_paid * 100),
         total_paid,
         buyer_email,
-        is_free:      unit_price === 0,
-        qr_data:      booking.qr_data,
-        event_name:   ev.name,
-        metadata:     { booking_id: booking.id, event_id, type: 'ticket' },
+        buyer_name,
+        is_free:     unit_price === 0,
+        qr_data:     booking.qr_data,
+        event_name:  ev.name,
+        tier_name:   tier?.name || null,
+        quantity:    qty,
       });
     }
 
