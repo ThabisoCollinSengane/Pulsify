@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#05080F"/>
 <title>Feed — Pulsify</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 /* ══ Exact same CSS variables and base as index.html ══ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -221,16 +222,28 @@ textarea.ff-c{resize:none;height:80px;line-height:1.55}
 
 <div class="toast" id="toast"></div>
 
+<!-- PROFILE OVERLAY -->
+<div id="prof-overlay" style="display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.7);backdrop-filter:blur(12px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeProfOverlay()">
+  <div style="width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;max-height:85vh;display:flex;flex-direction:column;animation:su .25s ease">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--border2);margin:12px auto 0;flex-shrink:0"></div>
+    <button onclick="closeProfOverlay()" style="position:absolute;top:18px;right:18px;background:var(--surf);border:none;color:var(--mu2);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;z-index:1">✕</button>
+    <div id="prof-overlay-body" style="overflow-y:auto;padding:16px 18px 32px;flex:1;scrollbar-width:none;position:relative"></div>
+  </div>
+</div>
+
 <script>
-/* ══════════════════════════════════════════════════════════
-   PULSIFY FEEDS — storage.js not required here
-   All data functions are self-contained with clear
-   comments showing the Supabase equivalent.
-   ══════════════════════════════════════════════════════════ */
+const SUPABASE_URL  = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+let _sbClient = null;
+function getSB() {
+  if (!_sbClient && window.supabase) _sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  return _sbClient;
+}
 
 /* ── Session ─────────────────────────────────────────────── */
 let _session = null;
 let _profile  = null;
+let _sbUser   = null;
 try { _session = JSON.parse(localStorage.getItem('p_user'));   } catch(e) {}
 try { _profile = JSON.parse(localStorage.getItem('p_profile')); } catch(e) {}
 const _uid = _session?.id || null;
@@ -504,7 +517,7 @@ const MOCK_POSTS = [
       {id:'c37',user_id:'u4',username:'zinhle_d',display_name:'Zinhle D',text:'The fact that this is FREE every week is crazy. Durban is generous.',ts:dAgo(260)},
       {id:'c38',user_id:'u1',username:'sipho_kzn',display_name:'Sipho M',text:'Ami Faku acoustic hits completely different outdoors',ts:dAgo(262)}
     ], ts:dAgo(265) },
-]];
+];
 
 /* ── State ───────────────────────────────────────────────── */
 const PAGE_SIZE  = 8;
@@ -650,13 +663,13 @@ function buildCard(post) {
       <div class="fa ${isOrg?'org':''}">
         ${post.avatar_url ? `<img src="${x(post.avatar_url)}" loading="lazy" onerror="this.style.display='none'"/>` : (post.display_name?.[0]?.toUpperCase()||'😊')}
       </div>
-      <div style="flex:1;min-width:0">
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="openProfile('${x(post.user_id)}')">
         <div class="fo">
           ${x(post.display_name || post.username)}
           ${isOrg ? '<span class="org-pill">📢 Page</span>' : ''}
         </div>
         ${post.event_name ? `<div style="font-size:.64rem;color:var(--or);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.04em">🎟 ${x(post.event_name)}</div>` : ''}
-        <div class="fl">@${x(post.username)} · ${timeAgo(post.ts)}</div>
+        <div class="fl">@${x(post.username)} · ${timeAgo(post.ts || post.created_at)}</div>
       </div>
       ${!isOwn ? `<button class="follow-btn ${isFollowing?'on':''}" id="fbtn-${x(post.id)}" onclick="doFollow('${x(post.user_id)}','${x(post.id)}')">${isFollowing?'✓ Following':'+ Follow'}</button>` : ''}
     </div>
@@ -708,80 +721,120 @@ function expandCap(postId) {
   if (el) el.innerHTML = x(post.caption);
 }
 
-function doLike(postId) {
+async function doLike(postId) {
   if (!_uid) return showToast('Sign in to like posts');
-  const post  = MOCK_POSTS.find(p => p.id === postId);
-  if (!post) return;
-  const likes = getLikes(post);
-  const idx   = likes.indexOf(_uid);
-  if (idx > -1) likes.splice(idx, 1); else likes.push(_uid);
-  _setLikes(postId, likes);
-  const liked = likes.includes(_uid);
-  const btn   = document.getElementById('lb-'+postId);
-  const cnt   = document.getElementById('lc-'+postId);
-  if (btn) { btn.classList.toggle('lk', liked); btn.querySelector('.ai').textContent = liked?'❤️':'🤍'; }
-  if (cnt) cnt.textContent = fn(likes.length);
+  const isMock = postId.startsWith('p');
+  const likes  = _getLikes(postId) || (MOCK_POSTS.find(p=>p.id===postId)?.likes || []);
+  const liked  = likes.includes(_uid);
+  const newLikes = liked ? likes.filter(l=>l!==_uid) : [...likes, _uid];
+  _setLikes(postId, newLikes);
+  const btn = document.getElementById('lb-'+postId);
+  const cnt = document.getElementById('lc-'+postId);
+  if (btn) { btn.classList.toggle('lk', !liked); btn.querySelector('.ai').textContent = liked?'🤍':'❤️'; }
+  if (cnt) cnt.textContent = fn(newLikes.length);
+  if (!isMock && getSB() && _uid) {
+    const sb = getSB();
+    if (liked) {
+      await sb.from('post_likes').delete().eq('post_id', postId).eq('user_id', _uid).catch(()=>{});
+    } else {
+      await sb.from('post_likes').insert({post_id: postId, user_id: _uid}).catch(()=>{});
+      // Notify post owner
+      const post = MOCK_POSTS.find(p=>p.id===postId);
+      if (post && post.user_id !== _uid) {
+        const name = _profile?.display_name || _session?.display_name || 'Someone';
+        sb.from('notifications').insert({user_id: post.user_id, type:'like', from_user_id:_uid, from_display_name:name, entity_id:postId, entity_type:'post', message:`${name} liked your post`}).catch(()=>{});
+      }
+    }
+  }
 }
 
-function doRepost(postId) {
+async function doRepost(postId) {
   if (!_uid) return showToast('Sign in to repost');
-  const post    = MOCK_POSTS.find(p => p.id === postId);
-  if (!post) return;
-  const reposts = getReposts(post);
-  const idx     = reposts.indexOf(_uid);
-  if (idx > -1) reposts.splice(idx, 1); else reposts.push(_uid);
-  _setReposts(postId, reposts);
-  const rp  = reposts.includes(_uid);
+  const isMock  = postId.startsWith('p');
+  const reposts = _getReposts(postId) || (MOCK_POSTS.find(p=>p.id===postId)?.reposts || []);
+  const rp      = reposts.includes(_uid);
+  const newRp   = rp ? reposts.filter(r=>r!==_uid) : [...reposts, _uid];
+  _setReposts(postId, newRp);
   const btn = document.getElementById('rb-'+postId);
   const cnt = document.getElementById('rc-'+postId);
-  if (btn) btn.classList.toggle('rp', rp);
-  if (cnt) cnt.textContent = fn(reposts.length);
-  if (rp) showToast('🔁 Reposted!', 'ok');
+  if (btn) btn.classList.toggle('rp', !rp);
+  if (cnt) cnt.textContent = fn(newRp.length);
+  if (!rp) showToast('🔁 Reposted!', 'ok');
+  if (!isMock && getSB() && _uid) {
+    const sb = getSB();
+    if (rp) {
+      await sb.from('post_reposts').delete().eq('post_id', postId).eq('user_id', _uid).catch(()=>{});
+    } else {
+      await sb.from('post_reposts').insert({post_id: postId, user_id: _uid}).catch(()=>{});
+    }
+  }
 }
 
 function toggleCmt(postId) {
   const el = document.getElementById('cmt-'+postId);
-  if (el) { el.style.display = el.style.display === 'block' ? 'none' : 'block'; }
+  if (el) el.style.display = el.style.display === 'block' ? 'none' : 'block';
 }
 
-function doComment(postId) {
+async function doComment(postId) {
   if (!_uid) return showToast('Sign in to comment');
-  const inp = document.getElementById('cmti-'+postId);
-  const txt = inp?.value.trim(); if (!txt) return;
-  const post = MOCK_POSTS.find(p => p.id === postId);
-  if (!post) return;
-  const comments = getComments(post);
-  const name     = _profile?.display_name || _session?.display_name || 'You';
-  const uname    = _profile?.username || _session?.email?.split('@')[0] || 'you';
-  const comment  = { id:'c_'+Date.now(), user_id:_uid, username:uname, display_name:name, text:txt, ts:new Date().toISOString() };
-  comments.push(comment);
-  _setComments(postId, comments);
+  const inp  = document.getElementById('cmti-'+postId);
+  const txt  = inp?.value.trim(); if (!txt) return;
+  const name  = _profile?.display_name || _session?.display_name || 'You';
+  const uname = _profile?.username     || _session?.email?.split('@')[0] || 'you';
+  const cmt   = {id:'c_'+Date.now(), user_id:_uid, username:uname, display_name:name, text:txt, ts:new Date().toISOString()};
+
+  const isMock  = postId.startsWith('p');
+  const post    = MOCK_POSTS.find(p => p.id === postId);
+  const cmts    = getComments(post || {id:postId});
+  cmts.push(cmt);
+  _setComments(postId, cmts);
   inp.value = '';
   const lEl = document.getElementById('cmtl-'+postId);
-  if (lEl) lEl.innerHTML = buildCmts(comments);
+  if (lEl) lEl.innerHTML = buildCmts(cmts);
   const cEl = document.getElementById('cc-'+postId);
-  if (cEl) cEl.textContent = fn(comments.length);
+  if (cEl) cEl.textContent = fn(cmts.length);
+
+  if (!isMock && getSB() && _uid) {
+    const sb = getSB();
+    await sb.from('post_comments').insert({post_id: postId, user_id: _uid, text: txt}).catch(()=>{});
+    if (post && post.user_id !== _uid) {
+      sb.from('notifications').insert({user_id: post.user_id, type:'comment', from_user_id:_uid, from_display_name:name, entity_id:postId, entity_type:'post', message:`${name} commented: "${txt.slice(0,60)}"`}).catch(()=>{});
+    }
+  }
 }
 
-function doFollow(targetUserId, postId) {
+async function doFollow(targetUserId, postId) {
   if (!_uid) return showToast('Sign in to follow');
-  let following = [];
-  try { following = JSON.parse(localStorage.getItem('p_following') || '[]'); } catch(e) {}
-  const idx = following.indexOf(targetUserId);
-  if (idx > -1) following.splice(idx, 1); else following.push(targetUserId);
-  localStorage.setItem('p_following', JSON.stringify(following));
-  const fol = following.includes(targetUserId);
-  // Update all follow buttons for this user
+  const sb  = getSB();
+  let fol;
+
+  if (sb && _uid) {
+    const { data: existing } = await sb.from('follows').select('follower_id').eq('follower_id', _uid).eq('following_id', targetUserId).maybeSingle();
+    if (existing) {
+      await sb.from('follows').delete().eq('follower_id', _uid).eq('following_id', targetUserId);
+      fol = false;
+    } else {
+      await sb.from('follows').insert({follower_id: _uid, following_id: targetUserId});
+      fol = true;
+      const name = _profile?.display_name || _session?.display_name || 'Someone';
+      sb.from('notifications').insert({user_id: targetUserId, type:'follow', from_user_id:_uid, from_display_name:name, message:`${name} started following you`}).catch(()=>{});
+    }
+  } else {
+    // Fallback: localStorage
+    let following = [];
+    try { following = JSON.parse(localStorage.getItem('p_following') || '[]'); } catch(e) {}
+    const idx = following.indexOf(targetUserId);
+    if (idx > -1) { following.splice(idx, 1); fol = false; } else { following.push(targetUserId); fol = true; }
+    localStorage.setItem('p_following', JSON.stringify(following));
+  }
+
   document.querySelectorAll(`[id^="fbtn-"]`).forEach(btn => {
     const pid = btn.id.replace('fbtn-','');
     const p   = MOCK_POSTS.find(mp => mp.id === pid);
-    if (p && p.user_id === targetUserId) {
-      btn.classList.toggle('on', fol);
-      btn.textContent = fol ? '✓ Following' : '+ Follow';
-    }
+    if (p && p.user_id === targetUserId) { btn.classList.toggle('on', fol); btn.textContent = fol ? '✓ Following' : '+ Follow'; }
   });
   showToast(fol ? '✓ Following' : 'Unfollowed', fol ? 'ok' : '');
-  if (_filter === 'following') { _page=1; render(); }
+  if (_filter === 'following') { _page = 1; render(); }
 }
 
 function doShare(caption) {
@@ -789,22 +842,86 @@ function doShare(caption) {
   else { navigator.clipboard?.writeText(location.href); showToast('🔗 Link copied!'); }
 }
 
-/* ── Compose ─────────────────────────────────────────────── */
+/* ── Profile overlay ─────────────────────────────────────── */
+async function openProfile(userId) {
+  const ov   = document.getElementById('prof-overlay');
+  const body = document.getElementById('prof-overlay-body');
+  if (!ov || !body) return;
+  ov.style.display = 'flex';
+  body.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div>';
+  try {
+    const res = await fetch('/api/profiles/' + userId);
+    if (!res.ok) throw new Error('Profile not found');
+    const { profile, posts_count, followers_count, following_count, recent_posts } = await res.json();
+    const sb = getSB();
+    let isFollowing = false;
+    if (sb && _uid) {
+      const { data: fw } = await sb.from('follows').select('follower_id').eq('follower_id', _uid).eq('following_id', userId).maybeSingle();
+      isFollowing = !!fw;
+    }
+    const init  = (profile.display_name || profile.username || '?')[0].toUpperCase();
+    const isOrg = ['organizer','business','admin'].includes(profile.role);
+    const postsHtml = recent_posts.length ? recent_posts.map(p =>
+      `<div style="aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--surf)">
+        ${p.image_url ? `<img src="${x(p.image_url)}" style="width:100%;height:100%;object-fit:cover" loading="lazy"/>` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--mu);padding:8px;text-align:center">${x((p.caption||'').slice(0,60))}</div>`}
+      </div>`).join('') : '';
+
+    body.innerHTML = `
+      <div style="height:60px;background:linear-gradient(135deg,rgba(176,38,255,.3),rgba(255,92,0,.2));border-radius:12px;margin-bottom:-28px"></div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:12px">
+        <div style="width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:1.7rem;border:3px solid var(--bg2);overflow:hidden">
+          ${profile.avatar_url ? `<img src="${x(profile.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>` : init}
+        </div>
+        <div style="display:flex;gap:8px;padding-bottom:4px">
+          ${_uid && _uid !== userId ? `<button id="po-follow-btn" onclick="toggleFollowOverlay('${x(userId)}')" style="background:${isFollowing?'transparent':'linear-gradient(135deg,#B026FF,#FF5C00)'};border:${isFollowing?'1px solid var(--border2)':'none'};color:${isFollowing?'var(--mu2)':'#fff'};padding:8px 18px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;cursor:pointer">${isFollowing?'✓ Following':'+ Follow'}</button>` : ''}
+        </div>
+      </div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;line-height:1;margin-bottom:2px">${x(profile.display_name||profile.username)}</div>
+      <div style="font-size:.74rem;color:var(--mu);margin-bottom:${profile.bio?'8px':'12px'}">@${x(profile.username||'user')}${profile.city?' · '+x(profile.city):''}${isOrg?` · <span style="color:var(--or)">${profile.role}</span>`:''}</div>
+      ${profile.bio ? `<div style="font-size:.82rem;color:var(--mu2);line-height:1.55;margin-bottom:12px">${x(profile.bio)}</div>` : ''}
+      <div style="display:flex;gap:24px;margin-bottom:${recent_posts.length?'16px':'0'}">
+        <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--or)">${posts_count}</div><div style="font-size:.58rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Posts</div></div>
+        <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--or)">${followers_count}</div><div style="font-size:.58rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Followers</div></div>
+        <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--or)">${following_count}</div><div style="font-size:.58rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Following</div></div>
+      </div>
+      ${postsHtml ? `<div style="font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin:14px 0 8px">Posts</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">${postsHtml}</div>` : ''}`;
+  } catch(e) {
+    body.innerHTML = `<div style="padding:40px;text-align:center;color:var(--mu)">${x(e.message)}</div>`;
+  }
+}
+function closeProfOverlay() { document.getElementById('prof-overlay').style.display = 'none'; }
+
+async function toggleFollowOverlay(userId) {
+  const sb = getSB();
+  if (!sb || !_uid) { showToast('Sign in to follow'); return; }
+  const btn = document.getElementById('po-follow-btn');
+  const isF = btn && btn.textContent.includes('Following');
+  if (btn) btn.disabled = true;
+  try {
+    if (isF) {
+      await sb.from('follows').delete().eq('follower_id', _uid).eq('following_id', userId);
+      if (btn) { btn.textContent = '+ Follow'; btn.style.background = 'linear-gradient(135deg,#B026FF,#FF5C00)'; btn.style.border = 'none'; btn.style.color = '#fff'; }
+    } else {
+      await sb.from('follows').insert({follower_id: _uid, following_id: userId});
+      if (btn) { btn.textContent = '✓ Following'; btn.style.background = 'transparent'; btn.style.border = '1px solid var(--border2)'; btn.style.color = 'var(--mu2)'; }
+      const name = _profile?.display_name || _session?.display_name || 'Someone';
+      sb.from('notifications').insert({user_id: userId, type:'follow', from_user_id:_uid, from_display_name:name, message:`${name} started following you`}).catch(()=>{});
+    }
+  } catch(e) { showToast('Error: '+e.message); }
+  if (btn) btn.disabled = false;
+}
+
 let _cImg = null;
+let _cImgFile = null;
 function openCompose() {
   if (!_uid) { window.location.href='signin.html'; return; }
-
-  const isOrg = _session?.role === 'organizer' || _session?.role === 'admin';
-
-  // Show/hide sections based on role
-  const orgSection  = document.getElementById('organizer-text-section');
-  const userNote    = document.getElementById('user-posting-note');
-  const imgHint     = document.getElementById('img-drop-hint');
-
+  const isOrg = ['organizer','business','admin'].includes(_session?.role);
+  const orgSection = document.getElementById('organizer-text-section');
+  const userNote   = document.getElementById('user-posting-note');
+  const imgHint    = document.getElementById('img-drop-hint');
   if (orgSection) orgSection.style.display = isOrg ? 'block' : 'none';
   if (userNote)   userNote.style.display   = isOrg ? 'none'  : 'block';
   if (imgHint)    imgHint.textContent      = isOrg ? 'Tap to add a photo (optional)' : 'Tap to add a photo from the event *';
-
   document.getElementById('compose-modal').classList.add('open');
 }
 function closeCompose() {
@@ -814,77 +931,118 @@ function closeCompose() {
   const to = document.getElementById('post-text-only');
   if (to) to.value = '';
   document.getElementById('img-drop').innerHTML = '<span style="font-size:2rem">📷</span><span style="font-size:.8rem;color:var(--mu)" id="img-drop-hint">Tap to add a photo</span>';
-  _cImg = null;
+  _cImg = null; _cImgFile = null;
 }
 function handleImg(input) {
-  const file = input.files[0]; if(!file) return;
+  const file = input.files[0]; if (!file) return;
+  _cImgFile = file;
   const reader = new FileReader();
   reader.onload = e => {
     _cImg = e.target.result;
-    document.getElementById('img-drop').innerHTML = `<img src="${e.target.result}"/>`;
+    document.getElementById('img-drop').innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:12px"/>`;
   };
   reader.readAsDataURL(file);
 }
-function submitPost() {
-  const isOrg    = _session?.role === 'organizer' || _session?.role === 'admin';
+async function submitPost() {
+  const isOrg    = ['organizer','business','admin'].includes(_session?.role);
   const caption  = document.getElementById('post-caption').value.trim();
   const textOnly = (document.getElementById('post-text-only')?.value || '').trim();
   const evName   = document.getElementById('post-event-name').value.trim();
   const finalCap = caption || textOnly;
 
-  // Enforce rules
-  if (!isOrg && !_cImg) return showToast('Please upload a photo from the event 📸', 'err');
-  if (isOrg && !_cImg && !textOnly && !caption) return showToast('Add a photo or write something');
+  if (!isOrg && !_cImg) return showToast('Upload a photo from the event 📸', 'err');
+  if (isOrg && !_cImg && !finalCap) return showToast('Add a photo or write something');
   if (!isOrg && !finalCap) return showToast('Add a caption to your photo');
+
   const btn = document.getElementById('post-submit');
   btn.disabled = true; btn.textContent = 'Sharing…';
 
-  /* SUPABASE SWAP: replace with:
-     await supabase.from('posts').insert({
-       user_id: _uid, caption, event_name: evName||null,
-       image_url: _cImg, visibility: 'public',
-       created_at: new Date().toISOString()
-     })
-  */
   const name  = _profile?.display_name || _session?.display_name || 'You';
-  const uname = _profile?.username || _session?.email?.split('@')[0] || 'you';
-  const newPost = {
-    id: 'p_'+Date.now(), user_id: _uid, username: uname, display_name: name,
-    role: _session?.role||'user', avatar_url: _profile?.avatar_url||null,
-    event_name: evName||null, image_url: _cImg||null, caption,
-    likes:[], comments:[], reposts:[], ts: new Date().toISOString()
-  };
-  MOCK_POSTS.unshift(newPost);
-  closeCompose();
-  btn.disabled = false; btn.textContent = 'Share Post 🔥';
-  _page = 1; render();
-  showToast('🔥 Post shared!', 'ok');
+  const uname = _profile?.username     || _session?.email?.split('@')[0] || 'you';
+  const sb    = getSB();
+  let imageUrl = null;
+
+  try {
+    // Upload image to Supabase Storage if we have one (real file, not data URL from mock)
+    if (_cImg && _cImgFile && sb && _uid) {
+      const ext  = _cImgFile.name.split('.').pop() || 'jpg';
+      const path = `${_uid}/${Date.now()}.${ext}`;
+      const { data: up, error: upErr } = await sb.storage.from('post-images').upload(path, _cImgFile, { upsert: false });
+      if (!upErr) {
+        const { data: { publicUrl } } = sb.storage.from('post-images').getPublicUrl(path);
+        imageUrl = publicUrl;
+      }
+    } else if (_cImg && _cImg.startsWith('http')) {
+      imageUrl = _cImg;
+    }
+
+    const post_type = isOrg ? 'business_update' : 'attended_photo';
+
+    if (sb && _uid) {
+      // Real post via API (uses service key for notifications to followers)
+      const token = (await sb.auth.getSession())?.data?.session?.access_token;
+      const res = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token || ''}` },
+        body: JSON.stringify({ caption: finalCap, image_url: imageUrl, event_name: evName || null, post_type }),
+      });
+      const data = await res.json();
+      if (res.ok && data.post) {
+        MOCK_POSTS.unshift({ id: data.post.id, user_id: _uid, username: uname, display_name: name,
+          role: _session?.role||'user', avatar_url: _profile?.avatar_url||null,
+          event_name: evName||null, image_url: imageUrl, caption: finalCap,
+          likes:[], comments:[], reposts:[], ts: data.post.created_at });
+      }
+    } else {
+      // Offline fallback
+      MOCK_POSTS.unshift({ id: 'p_'+Date.now(), user_id: _uid||'anon', username: uname, display_name: name,
+        role: _session?.role||'user', avatar_url: _profile?.avatar_url||null,
+        event_name: evName||null, image_url: imageUrl || _cImg, caption: finalCap,
+        likes:[], comments:[], reposts:[], ts: new Date().toISOString() });
+    }
+
+    closeCompose();
+    _page = 1; render();
+    showToast('🔥 Post shared!', 'ok');
+  } catch(e) {
+    showToast('Failed to post: ' + e.message, 'err');
+  }
+  btn.disabled = false; btn.textContent = 'Share 🔥';
 }
 
 /* ── Boot ────────────────────────────────────────────────── */
-// Try real API first, fall back to mock
 async function initFeed() {
+  // Restore Supabase session so reactions work even on page refresh
+  const sb = getSB();
+  if (sb) {
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session) _sbUser = session.user;
+    });
+  }
+
   try {
-    const res = await fetch('/api/posts?page=1&limit=10&filter=all');
+    const followerId = _uid ? `&follower_id=${_uid}` : '';
+    const res = await fetch(`/api/posts?page=1&limit=20&filter=all${followerId}`);
     if (res.ok) {
       const data = await res.json();
       if (data.posts && data.posts.length > 0) {
-        // Map API response to MOCK_POSTS format and render
-        data.posts.forEach(p => {
-          if (!MOCK_POSTS.find(m => m.id === p.id)) {
-            MOCK_POSTS.unshift({
-              id: p.id, user_id: p.user_id,
-              username: p.profiles?.username || 'user',
-              display_name: p.profiles?.display_name || 'User',
-              role: p.profiles?.role || 'user',
-              post_type: p.post_type || 'organizer',
-              image_url: p.image_url || null,
-              caption: p.caption || '',
-              event_name: p.event_name || null,
-              likes:[], comments:[], reposts:[],
-              ts: p.created_at
-            });
-          }
+        // Prepend real posts (deduplicated), keeping mock as fallback below
+        const realPosts = data.posts.map(p => ({
+          id: p.id, user_id: p.user_id,
+          username:     (p.profile || p.profiles)?.username     || 'user',
+          display_name: (p.profile || p.profiles)?.display_name || 'User',
+          avatar_url:   (p.profile || p.profiles)?.avatar_url   || null,
+          role:         (p.profile || p.profiles)?.role         || 'user',
+          post_type: p.post_type || 'attended_photo',
+          image_url: p.image_url || null,
+          caption:   p.caption   || '',
+          event_name: p.event_name || null,
+          likes: [], comments: [], reposts: [],
+          ts: p.created_at,
+        }));
+        // Replace mock list with live data at the front
+        realPosts.forEach(rp => {
+          if (!MOCK_POSTS.find(m => m.id === rp.id)) MOCK_POSTS.unshift(rp);
         });
       }
     }
