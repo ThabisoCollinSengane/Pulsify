@@ -160,46 +160,34 @@ const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 let currentUser = null;
 let currentProfile = null;
 let currentUserId = null;
-let isOwnProfile = true;
 
 const GENRE_LABELS = {
   amapiano: '🎶 Amapiano', gqom: '🔊 Gqom', hiphop: '🎤 Hip Hop',
-  house: '🎧 House', afrobeats: '🥁 Afrobeats', rock: '🎸 Rock',
+  house: '🎧 House', afrobeats: '🥁 Afrobeats', rock: '�� Rock',
   gospel: '🙏 Gospel', jazz: '🎷 Jazz', sport: '⚽ Sport',
   maskandi: '🪗 Maskandi'
 };
 
 async function loadUserData() {
-  console.log('loadUserData() called');
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) {
-    window.location.href = 'signin.html';
-    return;
-  }
+  if (!session) { window.location.href = 'signin.html'; return; }
   currentUser = session.user;
   currentUserId = currentUser.id;
-  
-  const { data: profile } = await sb
-    .from('profiles')
-    .select('*')
-    .eq('id', currentUserId)
-    .single();
-  
+
+  const { data: profile } = await sb.from('profiles').select('*').eq('id', currentUserId).single();
   currentProfile = profile || {};
-  console.log('Loaded profile:', currentProfile);
-  
+
   document.getElementById('pname').textContent = currentProfile.display_name || currentUser.email?.split('@')[0] || 'Your Name';
   document.getElementById('phandle').textContent = '@' + (currentProfile.username || currentUser.email?.split('@')[0] || 'user');
   document.getElementById('pbio').textContent = currentProfile.bio || 'Welcome to Pulsify. Add your bio in settings.';
-  console.log('Bio set to:', document.getElementById('pbio').textContent);
-  
+
   if (currentProfile.avatar_url) {
     const img = document.createElement('img');
     img.src = currentProfile.avatar_url;
     document.getElementById('avatar-el').appendChild(img);
     document.getElementById('avatar-emoji').style.display = 'none';
   }
-  
+
   const genres = currentProfile.genres || [];
   const gr = document.getElementById('genres-row');
   gr.innerHTML = '';
@@ -213,91 +201,57 @@ async function loadUserData() {
   } else {
     gr.style.display = 'none';
   }
-  
-  const { count: followersCount } = await sb
-    .from('follows')
-    .select('*', { count: 'exact', head: true })
-    .eq('following_id', currentUserId);
-  
-  const { count: followingCount } = await sb
-    .from('follows')
-    .select('*', { count: 'exact', head: true })
-    .eq('follower_id', currentUserId);
-  
+
+  const { count: followersCount } = await sb.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', currentUserId);
+  const { count: followingCount } = await sb.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', currentUserId);
   document.getElementById('followers-count').textContent = followersCount || 0;
   document.getElementById('following-count').textContent = followingCount || 0;
-  
-  const posts = getLocalPosts();
-  const attended = getLocalAttended();
-  const saved = getLocalSaved();
-  document.getElementById('stat-posts').textContent = posts.length;
-  document.getElementById('stat-events').textContent = attended.length;
-  document.getElementById('stat-saved').textContent = saved.length;
-  
-  renderPosts();
-  renderAttended();
+
+  await renderPosts();
+  await renderAttended();
 }
 
-function getLocalPosts() {
-  try {
-    const allPosts = JSON.parse(localStorage.getItem('p_all_posts') || '[]');
-    return allPosts.filter(p => p.user_id === currentUserId);
-  } catch { return []; }
-}
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-function getLocalAttended() {
-  try {
-    return JSON.parse(localStorage.getItem('p_attended') || '[]');
-  } catch { return []; }
-}
-
-function getLocalSaved() {
-  try {
-    return JSON.parse(localStorage.getItem('p_sev') || '[]');
-  } catch { return []; }
-}
-
-function renderPosts() {
-  const list = getLocalPosts();
+async function renderPosts() {
   const el = document.getElementById('posts-list');
-  if (!list.length) {
-    el.innerHTML = `<div class="empty"><div class="empty-ico">📸</div><div class="empty-title">No memories yet</div><div class="empty-sub">Go to an event, take a photo and share your first memory here.</div><button class="empty-btn" onclick="openPostModal()">Share a Memory</button></div>`;
-    return;
+  el.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Loading…</div></div>';
+  try {
+    const { data: posts, error, count } = await sb.from('posts').select('id,caption,image_url,event_name,created_at,post_type', { count: 'exact' }).eq('user_id', currentUserId).order('created_at', { ascending: false }).limit(30);
+    if (error) throw error;
+    document.getElementById('stat-posts').textContent = count || posts?.length || 0;
+    if (!posts?.length) {
+      el.innerHTML = '<div class="empty"><div class="empty-ico">📸</div><div class="empty-title">No memories yet</div><div class="empty-sub">Go to an event, take a photo and share your first memory here.</div><button class="empty-btn" onclick="openPostModal()">Share a Memory</button></div>';
+      return;
+    }
+    el.innerHTML = posts.map(p => '<div class="post" id="post-'+escHtml(p.id)+'">'+(p.image_url ? '<img class="post-img" src="'+escHtml(p.image_url)+'" loading="lazy" onerror="this.style.display=\u0027none\u0027"/>' : '<div class="post-img-placeholder">📸</div>')+'<div class="post-body">'+(p.event_name ? '<div class="post-ev">🎟 '+escHtml(p.event_name)+'</div>' : '')+(p.caption ? '<div class="post-cap">'+escHtml(p.caption)+'</div>' : '')+'<div class="post-foot"><span class="post-date">'+new Date(p.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})+'</span><div class="post-actions"><button class="pa" onclick="deletePost(\u0027'+escHtml(p.id)+'\u0027)">🗑 Delete</button></div></div></div></div>').join('');
+  } catch(e) {
+    el.innerHTML = '<div class="empty"><div class="empty-ico">📸</div><div class="empty-title">Could not load posts</div></div>';
   }
-  el.innerHTML = list.map(p => `
-    <div class="post">
-      ${p.image_url ? `<img class="post-img" src="${p.image_url}" loading="lazy" onerror="this.style.display='none'"/>` : `<div class="post-img-placeholder">${p.emoji || '📸'}</div>`}
-      <div class="post-body">
-        ${p.event_name ? `<div class="post-ev">🎟 ${escapeHtml(p.event_name)}</div>` : ''}
-        ${p.caption ? `<div class="post-cap">${escapeHtml(p.caption)}</div>` : ''}
-        <div class="post-foot">
-          <span class="post-date">${new Date(p.created_at).toLocaleDateString('en-ZA', {day:'numeric',month:'short',year:'numeric'})}</span>
-          <div class="post-actions">
-            <button class="pa" onclick="deletePost('${p.id}')">🗑 Delete</button>
-          </div>
-        </div>
-      </div>
-    </div>`).join('');
 }
 
-function renderAttended() {
-  const list = getLocalAttended();
+async function renderAttended() {
   const el = document.getElementById('events-list');
-  if (!list.length) {
-    el.innerHTML = `<div class="empty"><div class="empty-ico">🎟</div><div class="empty-title">No events attended yet</div><div class="empty-sub">When you buy tickets or RSVP, your events appear here.</div><button class="empty-btn" onclick="window.location.href='index.html'">Browse Events</button></div>`;
-    return;
+  el.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Loading…</div></div>';
+  try {
+    const { data: attended, count } = await sb.from('event_attendances').select('event_id, events(id,name,venue_name,city,date_local,image_url)', { count: 'exact' }).eq('user_id', currentUserId).order('created_at', { ascending: false }).limit(20);
+    document.getElementById('stat-events').textContent = count || attended?.length || 0;
+    if (!attended?.length) {
+      el.innerHTML = '<div class="empty"><div class="empty-ico">🎟</div><div class="empty-title">No events attended yet</div><div class="empty-sub">When you buy tickets or RSVP, your events appear here.</div><button class="empty-btn" onclick="window.location.href=\u0027index.html\u0027">Browse Events</button></div>';
+      return;
+    }
+    el.innerHTML = attended.map(a => {
+      const ev = a.events || {};
+      return '<div class="ev-card" onclick="window.location.href=\u0027index.html\u0027"><div class="ev-thumb">'+(ev.image_url ? '<img src="'+escHtml(ev.image_url)+'" loading="lazy"/>' : '🎶')+'</div><div class="ev-info"><div class="ev-name">'+escHtml(ev.name || 'Event')+'</div><div class="ev-meta">📍 '+escHtml(ev.city || ev.venue_name || '')+(ev.date_local ? ' · ' + new Date(ev.date_local).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'}) : '')+'</div><span class="ev-badge">✅ Attended</span></div></div>';
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="empty"><div class="empty-ico">🎟</div><div class="empty-title">Could not load events</div></div>';
   }
-  el.innerHTML = list.map(ev => `
-    <div class="ev-card" onclick="window.location.href='index.html'">
-      <div class="ev-thumb">
-        ${ev.image_url ? `<img src="${ev.image_url}" loading="lazy" onerror="this.parentElement.textContent='🎶'"/>` : '🎶'}
-      </div>
-      <div class="ev-info">
-        <div class="ev-name">${escapeHtml(ev.name || 'Event')}</div>
-        <div class="ev-meta">📍 ${escapeHtml(ev.venue_city || '')} · ${ev.date_local ? new Date(ev.date_local + 'T00:00:00').toLocaleDateString('en-ZA', {day:'numeric',month:'short',year:'numeric'}) : ''}</div>
-        <span class="ev-badge">✅ Attended</span>
-      </div>
-    </div>`).join('');
+
+  try {
+    const { count: savedCount } = await sb.from('saved_items').select('*', { count: 'exact', head: true }).eq('user_id', currentUserId);
+    document.getElementById('stat-saved').textContent = savedCount || 0;
+  } catch(e) {}
 }
 
 function switchTab(tab, paneId) {
@@ -307,13 +261,15 @@ function switchTab(tab, paneId) {
   document.getElementById(paneId)?.classList.add('active');
 }
 
-function deletePost(id) {
+async function deletePost(id) {
   if (!confirm('Delete this memory?')) return;
-  const allPosts = JSON.parse(localStorage.getItem('p_all_posts') || '[]');
-  const filtered = allPosts.filter(p => p.id !== id);
-  localStorage.setItem('p_all_posts', JSON.stringify(filtered));
-  document.getElementById('stat-posts').textContent = filtered.filter(p => p.user_id === currentUserId).length;
-  renderPosts();
+  const { error } = await sb.from('posts').delete().eq('id', id).eq('user_id', currentUserId);
+  if (error) { showToast('Delete failed'); return; }
+  const el = document.getElementById('post-' + id);
+  if (el) el.remove();
+  const n = parseInt(document.getElementById('stat-posts').textContent||0) - 1;
+  document.getElementById('stat-posts').textContent = Math.max(0, n);
+  showToast('Memory deleted');
 }
 
 function openPostModal() { document.getElementById('post-modal').classList.add('open'); }
@@ -326,40 +282,56 @@ function closePostModal() {
 }
 
 let _postImageUrl = null;
+let _postImageFile = null;
 function previewPost(input) {
   const file = input.files[0];
   if (!file) return;
+  _postImageFile = file;
   const reader = new FileReader();
   reader.onload = e => {
     _postImageUrl = e.target.result;
     const prev = document.getElementById('post-preview');
-    prev.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:10px"/>`;
+    prev.innerHTML = '<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover;border-radius:10px"/>';
   };
   reader.readAsDataURL(file);
 }
 
-function submitPost() {
+async function submitPost() {
   const caption = document.getElementById('post-caption').value.trim();
-  const evName = document.getElementById('post-event').value.trim();
-  if (!_postImageUrl && !caption) { showToast('Add a photo or caption'); return; }
-  
-  const allPosts = JSON.parse(localStorage.getItem('p_all_posts') || '[]');
-  const newPost = {
-    id: 'p_' + Date.now(),
-    user_id: currentUserId,
-    image_url: _postImageUrl,
-    caption: caption,
-    event_name: evName,
-    emoji: '📸',
-    created_at: new Date().toISOString()
-  };
-  allPosts.unshift(newPost);
-  localStorage.setItem('p_all_posts', JSON.stringify(allPosts));
-  
-  closePostModal();
-  document.getElementById('stat-posts').textContent = allPosts.filter(p => p.user_id === currentUserId).length;
-  renderPosts();
-  showToast('🔥 Memory shared!', 'ok');
+  const evName  = document.getElementById('post-event').value.trim();
+  if (!_postImageFile && !caption) { showToast('Add a photo or caption'); return; }
+
+  const btn = document.querySelector('.modal-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sharing…'; }
+
+  try {
+    let imageUrl = null;
+    if (_postImageFile) {
+      const ext  = _postImageFile.name.split('.').pop() || 'jpg';
+      const path = currentUserId + '/' + Date.now() + '.' + ext;
+      const { error: upErr } = await sb.storage.from('post-images').upload(path, _postImageFile, { upsert: false });
+      if (!upErr) {
+        const { data: { publicUrl } } = sb.storage.from('post-images').getPublicUrl(path);
+        imageUrl = publicUrl;
+      }
+    }
+
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session?.access_token || '';
+    const res = await fetch('/api/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ caption, image_url: imageUrl, event_name: evName || null, post_type: 'attended_photo' })
+    });
+    if (!res.ok) throw new Error('Post failed');
+
+    closePostModal();
+    showToast('🔥 Memory shared!', 'ok');
+    await renderPosts();
+  } catch(e) {
+    showToast('Failed: ' + e.message);
+  }
+  if (btn) { btn.disabled = false; btn.textContent = 'Share Memory 🔥'; }
 }
 
 function showToast(msg, type = '') {
@@ -367,10 +339,6 @@ function showToast(msg, type = '') {
   t.textContent = msg;
   t.className = 'toast ' + type + ' show';
   setTimeout(() => t.classList.remove('show'), 3000);
-}
-
-function escapeHtml(s) {
-  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 loadUserData();
