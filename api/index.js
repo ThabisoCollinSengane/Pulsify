@@ -366,15 +366,36 @@ module.exports = async (req, res) => {
       const { data: { user } } = await userSb.auth.getUser(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
+      const pData = req.body?.profile || {};
+
       const { data: existing } = await sb().from('profiles').select('*').eq('id', user.id).single();
-      if (existing) return res.status(200).json({ profile: existing });
+      if (existing) {
+        const updates = {};
+        if (pData.role && pData.role !== 'user' && pData.role !== existing.role) updates.role = pData.role;
+        if (pData.is_page === true && !existing.is_page) updates.is_page = true;
+        if (Object.keys(updates).length) {
+          const { data: updated } = await sb().from('profiles').update(updates).eq('id', user.id).select().single();
+          return res.status(200).json({ profile: updated || existing });
+        }
+        return res.status(200).json({ profile: existing });
+      }
+
+      let username = pData.username || `user_${user.id.slice(0, 8)}`;
+      const { data: uCheck } = await sb().from('profiles').select('id').eq('username', username).maybeSingle();
+      if (uCheck) username = `user_${user.id.slice(0, 8)}`;
 
       const { data: created } = await sb().from('profiles').insert({
         id:           user.id,
-        username:     `user_${user.id.slice(0, 8)}`,
-        display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Pulsify User',
-        avatar_url:   user.user_metadata?.avatar_url || null,
-        city:         'Durban',
+        username,
+        display_name: pData.display_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Pulsify User',
+        avatar_url:   pData.avatar_url || user.user_metadata?.avatar_url || null,
+        email:        user.email,
+        role:         pData.role || 'user',
+        is_page:      pData.is_page || false,
+        city:         pData.city || null,
+        province:     pData.province || null,
+        bio:          pData.bio || '',
+        phone:        pData.phone || null,
       }).select().single();
 
       return res.status(200).json({ profile: created, created: true });
