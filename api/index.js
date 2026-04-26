@@ -370,12 +370,12 @@ module.exports = async (req, res) => {
 
       const { data: existing } = await sb().from('profiles').select('*').eq('id', user.id).single();
       if (existing) {
-        const updates = {};
-        if (pData.role && pData.role !== 'user' && pData.role !== existing.role) updates.role = pData.role;
-        if (pData.is_page === true && !existing.is_page) updates.is_page = true;
-        if (Object.keys(updates).length) {
-          const { data: updated } = await sb().from('profiles').update(updates).eq('id', user.id).select().single();
-          return res.status(200).json({ profile: updated || existing });
+        const u = {};
+        if (pData.role && pData.role !== 'user' && pData.role !== existing.role) u.role = pData.role;
+        if (pData.is_page && !existing.is_page) u.is_page = true;
+        if (Object.keys(u).length) {
+          const { data: upd } = await sb().from('profiles').update(u).eq('id', user.id).select().single();
+          return res.status(200).json({ profile: upd || existing });
         }
         return res.status(200).json({ profile: existing });
       }

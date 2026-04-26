@@ -468,6 +468,7 @@ async function doFollow(targetUserId, postId) {
     const p   = _posts.find(mp => mp.id === pid);
     if (p && p.user_id === targetUserId) { btn.classList.toggle('on', fol); btn.textContent = fol ? '✓ Following' : '+ Follow'; }
   });
+  let _fw=[]; try{_fw=JSON.parse(localStorage.getItem('p_following')||'[]');}catch(e){} if(fol){if(!_fw.includes(targetUserId))_fw.push(targetUserId);}else{_fw=_fw.filter(i=>i!==targetUserId);} localStorage.setItem('p_following',JSON.stringify(_fw));
   showToast(fol ? '✓ Following' : 'Unfollowed', fol ? 'ok' : '');
   if (_filter === 'following') { _page = 1; render(); }
 }
@@ -614,7 +615,10 @@ async function initFeed() {
   const sb = getSB();
   if (sb) {
     const { data: { session } } = await sb.auth.getSession();
-    if (session && !_uid) _uid = session.user.id;
+    if (session && !_uid) {
+      _uid = session.user.id;
+      const{data:_fws}=await sb.from('follows').select('following_id').eq('follower_id',_uid);if(_fws&&_fws.length)localStorage.setItem('p_following',JSON.stringify(_fws.map(f=>f.following_id)));
+    }
   }
   await render();
 }
