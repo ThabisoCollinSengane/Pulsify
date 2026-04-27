@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+git add create-account.html<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -156,7 +156,7 @@ select.inp option{background:#0D1424}
       <div class="chip" onclick="togChip(this,'afrobeats')">🥁 Afrobeats</div>
       <div class="chip" onclick="togChip(this,'rock')">🎸 Rock</div>
       <div class="chip" onclick="togChip(this,'gospel')">🙏 Gospel</div>
-      <div class="chip" onclick="togChip(this,'jazz')">�� Jazz</div>
+      <div class="chip" onclick="togChip(this,'jazz')"> Jazz</div>
       <div class="chip" onclick="togChip(this,'sport')">⚽ Sport</div>
       <div class="chip" onclick="togChip(this,'maskandi')">🪗 Maskandi</div>
       <div class="chip" onclick="togChip(this,'comedy')">😂 Comedy</div>
@@ -211,7 +211,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'SIGNED_IN' && session) {
     let pending = {};
     try { pending = JSON.parse(localStorage.getItem('p_pending_profile') || '{}'); } catch(e) {}
-    await saveSessionAndProfile(session, pending);
+    if (role !== 'user') { try { await sb.from('profiles').update({ role, is_page: isOrg }).eq('id', user.id); const p = JSON.parse(localStorage.getItem('p_user')||'{}'); p.role = role; localStorage.setItem('p_user', JSON.stringify(p)); } catch(e) { console.error('Role update failed:', e); } }
     localStorage.removeItem('p_pending_profile');
     const role = pending.role || 'user';
     const dest = role === 'organizer' ? 'organizer-dashboard.html'
@@ -387,7 +387,7 @@ async function doCreate() {
   };
 
   if (session) {
-    await saveSessionAndProfile(session, profileData);
+    if (role !== 'user') { try { await sb.from('profiles').update({ role, is_page: isOrg }).eq('id', user.id); const p = JSON.parse(localStorage.getItem('p_user')||'{}'); p.role = role; localStorage.setItem('p_user', JSON.stringify(p)); } catch(e) { console.error('Role update failed:', e); } }
     const destLabel = role === 'organizer' ? '🎪 Organizer account created! Setting up your dashboard…'
       : role === 'business' ? '🏪 Business account created! Setting up your dashboard…'
       : '🎉 Welcome to Pulsify!';
