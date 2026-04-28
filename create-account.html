@@ -1,4 +1,4 @@
-git add create-account.html<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -163,17 +163,13 @@ select.inp option{background:#0D1424}
     </div>
 
     <div class="sec-div">Account Type</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px" id="acc-type-grid">
-      <div class="tgl-row" id="at-user" onclick="setAccType('user')" style="cursor:pointer;border-color:var(--or);background:rgba(255,92,0,.05);flex-direction:column;align-items:flex-start;gap:4px">
-        <div style="font-size:1.4rem">🎉</div>
-        <div class="tgl-title">Fan / User</div>
-        <div class="tgl-sub">Discover events, buy tickets, follow friends</div>
-      </div>
-      <div class="tgl-row" id="at-organizer" onclick="setAccType('organizer')" style="cursor:pointer;flex-direction:column;align-items:flex-start;gap:4px">
-        <div style="font-size:1.4rem">🎪</div>
-        <div class="tgl-title">Organizer</div>
-        <div class="tgl-sub">Post events, manage tickets, grow your audience</div>
-      </div>
+    <div class="tgl-row" id="at-user" onclick="setAccType('user')" style="cursor:pointer;border-color:var(--or);background:rgba(255,92,0,.08);margin-bottom:8px">
+      <span style="font-size:1.8rem;flex-shrink:0">🎉</span>
+      <div style="flex:1;margin:0 12px"><div class="tgl-title">Fan / User</div><div class="tgl-sub">Discover events, buy tickets, follow friends</div></div>
+    </div>
+    <div class="tgl-row" id="at-organizer" onclick="setAccType('organizer')" style="cursor:pointer;margin-bottom:8px">
+      <span style="font-size:1.8rem;flex-shrink:0">🎪</span>
+      <div style="flex:1;margin:0 12px"><div class="tgl-title">Organizer</div><div class="tgl-sub">Post events, manage tickets, grow your audience</div></div>
     </div>
     <div class="tgl-row" id="at-business" onclick="setAccType('business')" style="cursor:pointer;border-color:rgba(176,38,255,.35);background:rgba(176,38,255,.04);margin-bottom:14px">
       <div>
@@ -211,13 +207,18 @@ sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'SIGNED_IN' && session) {
     let pending = {};
     try { pending = JSON.parse(localStorage.getItem('p_pending_profile') || '{}'); } catch(e) {}
-    if (role !== 'user') { try { await sb.from('profiles').update({ role, is_page: isOrg }).eq('id', user.id); const p = JSON.parse(localStorage.getItem('p_user')||'{}'); p.role = role; localStorage.setItem('p_user', JSON.stringify(p)); } catch(e) { console.error('Role update failed:', e); } }
-    localStorage.removeItem('p_pending_profile');
+    
     const role = pending.role || 'user';
     const dest = role === 'organizer' ? 'organizer-dashboard.html'
       : role === 'business' ? 'business-dashboard.html'
       : 'index.html';
+
+    // The user has just signed in. Redirect them immediately.
     window.location.href = dest;
+
+    // After starting the redirect, do the cleanup and save in the background.
+    await saveSessionAndProfile(session, pending);
+    localStorage.removeItem('p_pending_profile');
   }
 });
 
@@ -387,7 +388,10 @@ async function doCreate() {
   };
 
   if (session) {
-    if (role !== 'user') { try { await sb.from('profiles').update({ role, is_page: isOrg }).eq('id', user.id); const p = JSON.parse(localStorage.getItem('p_user')||'{}'); p.role = role; localStorage.setItem('p_user', JSON.stringify(p)); } catch(e) { console.error('Role update failed:', e); } }
+    await saveSessionAndProfile(session, profileData);
+    if (role !== 'user') {
+      try { await sb.from('profiles').update({ role, is_page: isOrg }).eq('id', user.id); } catch(e) {}
+    }
     const destLabel = role === 'organizer' ? '🎪 Organizer account created! Setting up your dashboard…'
       : role === 'business' ? '🏪 Business account created! Setting up your dashboard…'
       : '🎉 Welcome to Pulsify!';
@@ -398,7 +402,7 @@ async function doCreate() {
     setTimeout(()=>window.location.href=dest, 1200);
   } else {
     btn.innerHTML='Create My Account 🔥'; btn.disabled=false;
-    showOk('<div style="font-size:1.4rem;margin-bottom:8px">📧</div><strong>Check your inbox!</strong><br/>We sent a confirmation link to <strong>' + em + '</strong>.<br/>Click the link in that email to activate your account.<br/><span style="font-size:.74rem;color:var(--mu)">Didn\u0027t get it? Check spam or <a href="#" onclick="resendEmail(\u0027' + em + '\u0027)" style="color:var(--li)">resend →</a></span>');
+    showOk('<div style="font-size:1.4rem;margin-bottom:8px">📧</div><strong>Check your inbox!</strong><br/>We sent a confirmation link to <strong>' + em + '</strong>.<br/>Click the link in that email to activate your account.<br/><span style="font-size:.74rem;color:var(--mu)">Didn\'t get it? Check spam or <a href="#" onclick="resendEmail(\'' + em + '\')" style="color:var(--li)">resend →</a></span>');
     localStorage.setItem('p_pending_profile', JSON.stringify(profileData));
   }
 }
