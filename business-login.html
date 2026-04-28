@@ -6,6 +6,7 @@
 <title>Pulsify Business — Sign In</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--te:#00D4AA;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0}
@@ -132,7 +133,24 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 </div>
 
 <script>
-if (localStorage.getItem('biz_session')) window.location.href = 'business-dashboard.html';
+const SUPA_URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+function redirectByRole() {
+    let role = null;
+    try { role = JSON.parse(localStorage.getItem('p_user') || '{}').role; } catch(e) {}
+    if (!role) return; 
+
+    const currentPage = window.location.pathname.split('/').pop();
+
+    if (role === 'organizer') {
+        if (currentPage !== 'organizer-dashboard.html') window.location.href = 'organizer-dashboard.html';
+    } else if (role === 'business' || role === 'admin') {
+        if (currentPage !== 'business-dashboard.html') window.location.href = 'business-dashboard.html';
+    }
+}
+redirectByRole();
 
 function switchTab(tab) {
   document.querySelectorAll('.t-btn').forEach((b,i) => b.classList.toggle('active', tab==='login'?i===0:i===1));
@@ -154,7 +172,7 @@ function togglePw(id, btn) {
   btn.textContent = show ? '🙈' : '👁';
 }
 
-/* ── LOGIN ── */
+
 async function doLogin() {
   const email = document.getElementById('l-email').value.trim();
   const pw    = document.getElementById('l-pw').value;
@@ -163,74 +181,43 @@ async function doLogin() {
   const btn = document.getElementById('login-btn');
   btn.textContent = 'Signing in…'; btn.disabled = true;
 
-  // Try Supabase first
   try {
-    const SUPA = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
-    const KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
-    const r = await fetch(`${SUPA}/auth/v1/token?grant_type=password`,{
-      method:'POST', headers:{'Content-Type':'application/json','apikey':KEY},
-      body: JSON.stringify({email, password:pw})
-    });
-    const d = await r.json();
-    if (d.access_token) {
-      localStorage.setItem('p_token', d.access_token);
-      const pRes = await fetch('/api/auth/profile',{
-        method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+d.access_token},
-        body:JSON.stringify({})
-      });
-      const pData = await pRes.json().catch(()=>({}));
-      const profile = pData.profile || {};
-      if (!['business','organizer','admin'].includes(profile.role)) {
-        btn.textContent='Sign In to Dashboard'; btn.disabled=false;
-        showMsg('login-msg','This is not a business account. Use the regular sign in page.','err');
-        return;
-      }
-      const session = {id:d.user.id, email, name:profile.display_name||email.split('@')[0],
-        type:profile.category||'business', city:profile.city||'', role:profile.role};
-      localStorage.setItem('biz_session', JSON.stringify(session));
-      localStorage.setItem('p_user', JSON.stringify({id:d.user.id,email,display_name:session.name,role:session.role}));
-      localStorage.setItem('p_profile', JSON.stringify(profile));
-      showMsg('login-msg','Welcome back! Redirecting…','ok');
-      setTimeout(()=>window.location.href='business-dashboard.html', 800);
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+    if (error) throw error;
+
+    const { data: profile, error: pError } = await sb.from('profiles').select('*').eq('id', data.user.id).single();
+    if (pError) throw pError;
+
+    if (!['business','organizer','admin'].includes(profile.role)) {
+      btn.textContent='Sign In to Dashboard'; btn.disabled=false;
+      showMsg('login-msg','This is not a business or organizer account. Use the main sign in page.','err');
       return;
     }
-  } catch(e) { console.warn('Supabase login failed, trying local:', e.message); }
 
-  // LocalStorage fallback
-  const accounts = JSON.parse(localStorage.getItem('biz_accounts') || '[]');
-  const acc = accounts.find(a => a.email===email && a.password===pw);
-  if (!acc) {
-    btn.textContent='Sign In to Dashboard'; btn.disabled=false;
-    showMsg('login-msg','Incorrect email or password. If new, please register.','err');
-    return;
-  }
-  const session = {id:acc.id, email:acc.email, name:acc.name, type:acc.type,
-    city:acc.city, province:acc.province||'', phone:acc.phone, logo:acc.logo||'', role:'business'};
-  localStorage.setItem('biz_session', JSON.stringify(session));
-  showMsg('login-msg','Welcome back! Redirecting…','ok');
-  setTimeout(()=>window.location.href='business-dashboard.html', 800);
-}
-
-/* ── REGISTER ── */
-/* ── Geocoding helper (Nominatim) ── */
-async function geocodeAddress(address, city, province) {
-  const query = [address, city, province, 'South Africa'].filter(Boolean).join(', ');
-  try {
-    const r = await fetch(
-      'https://nominatim.openstreetmap.org/search?' + new URLSearchParams({q:query,format:'json',limit:1,countrycodes:'za'}),
-      { headers: { 'User-Agent': 'Pulsify/2.0' } }
-    );
-    const results = await r.json();
-    if (!results.length) return null;
-    const lat = parseFloat(results[0].lat);
-    const lon = parseFloat(results[0].lon);
-    // Validate SA bounds
-    if (lat < -35 || lat > -22 || lon < 16 || lon > 33) {
-      console.warn('[Geocode] Outside SA bounds:', lat, lon);
-      return null;
+    const userPayload = {id: data.user.id, email, display_name: profile.display_name || email.split('@')[0], role: profile.role};
+    localStorage.setItem('p_user', JSON.stringify(userPayload));
+    localStorage.setItem('p_profile', JSON.stringify(profile));
+    localStorage.setItem('p_token', data.session.access_token);
+    
+    // Legacy biz_session for dashboard compatibility
+    if (profile.role === 'business') {
+      const session = {id:data.user.id, email, name:profile.display_name||email.split('@')[0],
+        type:profile.category||'business', city:profile.city||'', role:profile.role};
+      localStorage.setItem('biz_session', JSON.stringify(session));
     }
-    return { lat, lon };
-  } catch(e) { console.warn('[Geocode] Failed:', e.message); return null; }
+
+    showMsg('login-msg','Welcome back! Redirecting…','ok');
+    
+    if (profile.role === 'organizer') {
+      setTimeout(()=>window.location.href='organizer-dashboard.html', 800);
+    } else { // business or admin
+      setTimeout(()=>window.location.href='business-dashboard.html', 800);
+    }
+
+  } catch(e) {
+    btn.textContent='Sign In to Dashboard'; btn.disabled=false;
+    showMsg('login-msg', e.message.includes('Invalid login') ? 'Incorrect email or password.' : e.message, 'err');
+  }
 }
 
 async function doRegister() {
@@ -238,77 +225,43 @@ async function doRegister() {
   const type     = document.getElementById('r-type').value;
   const email    = document.getElementById('r-email').value.trim();
   const phone    = document.getElementById('r-phone').value.trim();
-  const address  = document.getElementById('r-address')?.value.trim() || '';
   const city     = document.getElementById('r-city').value.trim();
   const province = document.getElementById('r-province')?.value || '';
   const pw       = document.getElementById('r-pw').value;
-  const pw2      = document.getElementById('r-pw2').value;
 
   if (!name||!type||!email||!city||!pw) { showMsg('reg-msg','Please fill in all required fields','err'); return; }
-  if (!address) { showMsg('reg-msg','Please enter your physical address so we can place you on the map','err'); return; }
-  if (pw.length < 8) { showMsg('reg-msg','Password must be at least 8 characters','err'); return; }
-  if (pw !== pw2)    { showMsg('reg-msg','Passwords do not match','err'); return; }
+  if (pw.length < 6) { showMsg('reg-msg','Password must be at least 6 characters','err'); return; }
 
   const btn = document.getElementById('reg-btn');
   btn.textContent = 'Creating account…'; btn.disabled = true;
 
-  // Geocode address before saving
-  showMsg('reg-msg', 'Finding your location on the map…', 'ok');
-  const coords = await geocodeAddress(address, city, province);
-  if (!coords) {
-    showMsg('reg-msg', 'Could not find location on map. Check your address and try again.', 'err');
-    btn.textContent = 'Create Business Account'; btn.disabled = false;
-    return;
-  }
-
-  showMsg('reg-msg', `✅ Location found (${coords.lat.toFixed(3)}, ${coords.lon.toFixed(3)}). Creating account…`, 'ok');
-
-  // Try Supabase Auth
   try {
-    const SUPA = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
-    const KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
-    const r = await fetch(`${SUPA}/auth/v1/signup`, {
-      method:'POST', headers:{'Content-Type':'application/json','apikey':KEY},
-      body: JSON.stringify({email, password:pw, data:{full_name:name}})
+    const r = await fetch(`/api/auth/register-business`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name, type, email, phone, city, province, password: pw, address: '' })
     });
     const d = await r.json();
-    const token = d.access_token || d.session?.access_token;
-    if (token) {
-      localStorage.setItem('p_token', token);
-      await fetch('/api/auth/profile', {
-        method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-        body: JSON.stringify({profile:{
-          display_name:name,
-          username: name.toLowerCase().replace(/\s+/g,'_').slice(0,20),
-          role:'business', city, province, phone, address,
-          category: type, lat: coords.lat, lon: coords.lon
-        }})
-      }).catch(()=>{});
+    if (!r.ok) {
+      throw new Error(d.error || 'Registration failed');
     }
-  } catch(e) { console.warn('Supabase register failed, using local:', e.message); }
 
-  // Save locally with geocoded coords
-  const accounts = JSON.parse(localStorage.getItem('biz_accounts') || '[]');
-  if (accounts.find(a => a.email===email)) {
-    btn.textContent='Create Business Account'; btn.disabled=false;
-    showMsg('reg-msg','An account with this email already exists. Please sign in.','err');
-    return;
+    const token = d.session?.access_token;
+    if (token) {
+        localStorage.setItem('p_token', token);
+        const userPayload = {id:d.user.id, email, display_name:name, role:'business'};
+        localStorage.setItem('p_user', JSON.stringify(userPayload));
+        const session = {id:d.user.id, email, name, type, city, province, phone, role:'business'};
+        localStorage.setItem('biz_session', JSON.stringify(session));
+
+        showMsg('reg-msg','✅ Account created! Redirecting…','ok');
+        setTimeout(()=>window.location.href='business-dashboard.html', 800);
+    } else {
+        throw new Error('No session token returned.');
+    }
+  } catch(e) {
+      btn.textContent='Create Business Account'; btn.disabled=false;
+      showMsg('reg-msg', e.message ,'err');
   }
-  const newAcc = {
-    id:'biz_'+Date.now(), name, type, email, phone, city, province,
-    address, password:pw, logo:'',
-    lat: coords.lat, lon: coords.lon,
-    created: Date.now()
-  };
-  accounts.push(newAcc);
-  localStorage.setItem('biz_accounts', JSON.stringify(accounts));
-
-  const session = {id:newAcc.id, email, name, type, city, province, phone, logo:'', role:'business', lat:coords.lat, lon:coords.lon};
-  localStorage.setItem('biz_session', JSON.stringify(session));
-  localStorage.setItem('p_user', JSON.stringify({id:newAcc.id, email, display_name:name, role:'business'}));
-
-  showMsg('reg-msg','✅ Account created with map location! Redirecting…','ok');
-  setTimeout(()=>window.location.href='business-dashboard.html', 800);
 }
 
 document.addEventListener('keydown', e => {

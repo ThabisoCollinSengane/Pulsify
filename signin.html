@@ -6,7 +6,6 @@
 <meta name="theme-color" content="#05080F"/>
 <title>Sign In — Pulsify</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
-<!-- Supabase JS SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -153,28 +152,36 @@ sb.auth.onAuthStateChange(async (event, session) => {
 });
 
 function redirectByRole() {
-  let role = 'user';
-  try { role = JSON.parse(localStorage.getItem('p_user') || '{}').role || 'user'; } catch(e) {}
-  if (role === 'organizer') {
-    window.location.href = 'organizer-dashboard.html';
-  } else if (role === 'business') {
-    window.location.href = 'business-dashboard.html';
-  } else {
-    window.location.href = 'index.html';
-  }
+    let role = 'user';
+    try { role = JSON.parse(localStorage.getItem('p_user') || '{}').role || 'user'; } catch(e) {}
+    
+    const currentPage = window.location.pathname.split('/').pop();
+    
+    if (role === 'organizer') {
+        // Only redirect if NOT on the signin page, to allow role selection
+        if (currentPage !== 'signin.html' && currentPage !== 'organizer-dashboard.html') {
+            window.location.href = 'organizer-dashboard.html';
+        }
+    } else if (role === 'business') {
+        if (currentPage !== 'business-dashboard.html' && currentPage !== 'business-login.html' && currentPage !== 'signin.html') {
+            window.location.href = 'business-dashboard.html';
+        }
+    } else { // 'user' role
+        // Only redirect from admin/biz pages if you are a regular user.
+        if (currentPage === 'organizer-dashboard.html' || currentPage === 'business-dashboard.html' || currentPage === 'business-login.html') {
+             window.location.href = 'index.html';
+        }
+    }
 }
 
 async function saveSession(session) {
   const user = session.user;
   localStorage.setItem('p_token', session.access_token);
+  let profile = {};
   try {
-    const r = await fetch('/api/auth/profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-      body: JSON.stringify({})
-    });
-    const d = await r.json().catch(() => ({}));
-    const profile = d.profile || {};
+    const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
+    if (error) throw error;
+    profile = data || {};
     localStorage.setItem('p_user', JSON.stringify({
       id: user.id, email: user.email,
       display_name: profile.display_name || user.user_metadata?.full_name || user.email?.split('@')[0],
@@ -184,12 +191,13 @@ async function saveSession(session) {
     }));
     localStorage.setItem('p_profile', JSON.stringify(profile));
   } catch(e) {
-    localStorage.setItem('p_user', JSON.stringify({
+     localStorage.setItem('p_user', JSON.stringify({
       id: user.id, email: user.email,
       display_name: user.user_metadata?.full_name || user.email?.split('@')[0],
       role: 'user', last_login: new Date().toISOString()
     }));
   }
+  return profile;
 }
 
 function togPw() { const i=document.getElementById('pw'); const s=i.type==='password'; i.type=s?'text':'password'; document.querySelector('.pw-eye').textContent=s?'Hide':'Show'; }
@@ -197,7 +205,7 @@ function showErr(m) { const e=document.getElementById('err'); e.innerHTML=m; e.c
 function showOk(m)  { const e=document.getElementById('ok-banner'); e.innerHTML=m; e.classList.add('show'); document.getElementById('err').classList.remove('show'); }
 function hideMsg()  { document.getElementById('err').classList.remove('show'); document.getElementById('ok-banner').classList.remove('show'); }
 function toast(m,t) { const el=document.getElementById('t'); el.textContent=m; el.className='toast '+(t||'')+' show'; setTimeout(()=>el.classList.remove('show'),3500); }
-function setLoading(btn, yes, label='Sign In') { btn.disabled=yes; btn.innerHTML=yes?'<span class="spinner"></span>Signing in…':label; }
+function setLoading(btn, yes, label='Sign In') { btn.disabled=yes; btn.innerHTML=yes?`<span class="spinner"></span>${_accType === 'organizer' ? 'Signing in...' : 'Signing in...'}`:label; }
 
 async function signInWithGoogle() {
   hideMsg();
@@ -235,7 +243,19 @@ async function doSignIn() {
     return;
   }
 
-  await saveSession(data.session);
+  const profile = await saveSession(data.session);
+
+  // Check if role matches selected type
+  const userRole = profile.role || 'user';
+  if (_accType === 'organizer' && userRole !== 'organizer') {
+      setLoading(btn, false);
+      return showErr('This is not an organizer account. Please select the Fan/User type to sign in.');
+  }
+  if (_accType === 'user' && userRole === 'organizer') {
+       setLoading(btn, false);
+      return showErr('This is an organizer account. Please select the Organizer type to sign in.');
+  }
+
   toast('✅ Welcome back!', 'ok');
   setTimeout(() => redirectByRole(), 800);
 }
@@ -257,7 +277,7 @@ async function resendVerification() {
   showOk('✅ Verification email resent to ' + em);
 }
 
-document.addEventListener('keydown', e => { if (e.key === 'Enter') doSignIn(); });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && !document.getElementById('btn').disabled) doSignIn(); });
 </script>
 </body>
 </html>
