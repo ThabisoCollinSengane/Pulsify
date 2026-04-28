@@ -1568,6 +1568,8 @@ async function toggleFollow(targetId, btn) {
       if (error) throw error;
       _squadFollowing.add(targetId);
       btn.className='vb cd'; btn.textContent='✓ Following'; showToast('🔥 Following!');
+      const { data: tp } = await sb.from('profiles').select('display_name').eq('id', currentUser.id).single();
+      createNotification(targetId, 'follow', `${tp?.display_name || 'Someone'} started following you`);
     }
   } catch(e) { showToast('Error: '+e.message); console.error(e); }
   btn.disabled = false;
