@@ -62,6 +62,52 @@ async function apiFetch(path, opts={}, fallback=null) {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   USER PREFERENCES — LocalStorage with API potential
+   ═══════════════════════════════════════════════════════════ */
+
+function getNotifPrefs() {
+  try {
+    return JSON.parse(localStorage.getItem('p_notif_prefs') || '{}');
+  } catch {
+    return {
+      email_event_reminder: true,
+      email_booking_conf: true,
+      email_new_follower: true,
+      sms_event_reminder: false,
+      sms_booking_conf: false,
+      push_squad_message: true,
+      push_new_follower: true,
+    };
+  }
+}
+
+function saveNotifPrefs(prefs) {
+  localStorage.setItem('p_notif_prefs', JSON.stringify(prefs));
+  // In future, could also sync with API:
+  // apiFetch('/user/prefs/notifications', { method: 'POST', body: prefs });
+}
+
+function getPrivacy() {
+  try {
+    return JSON.parse(localStorage.getItem('p_privacy_prefs') || '{}');
+  } catch {
+    return {
+      profile_public: true,
+      who_can_comment: 'everyone',
+      show_email: false,
+      show_attended: true,
+    };
+  }
+}
+
+function savePrivacy(prefs) {
+  localStorage.setItem('p_privacy_prefs', JSON.stringify(prefs));
+  // In future, could also sync with API:
+  // apiFetch('/user/prefs/privacy', { method: 'POST', body: prefs });
+}
+
+
+/* ═══════════════════════════════════════════════════════════
    AUTH — Supabase via API
    ═══════════════════════════════════════════════════════════ */
 
