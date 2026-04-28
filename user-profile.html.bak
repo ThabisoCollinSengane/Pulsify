@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
-<title>User Profile — Pulsify</title>
+<title>My Profile — Pulsify</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
@@ -86,20 +85,21 @@ body{padding-bottom:32px}
 <body>
 <div class="tb">
   <button class="back" onclick="history.back()">← Back</button>
-  <span id="nav-title" style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700">Profile</span>
-  <div id="settings-btn-wrapper"></div>
+  <span style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700">My Profile</span>
+  <div class="settings-btn" onclick="window.location.href='profile-settings.html'">⚙️</div>
 </div>
+
 <div class="hero">
   <div class="hero-bg"><div class="hero-bg-blur">🎶</div></div>
   <div class="hero-body">
     <div class="hero-row">
-      <div class="avatar" id="avatar-el">
+      <div class="avatar" id="avatar-el" onclick="window.location.href='profile-settings.html'">
         <span id="avatar-emoji">😊</span>
       </div>
-      <div id="profile-action-btn"></div>
+      <button class="edit-btn" onclick="window.location.href='profile-settings.html'">Edit Profile</button>
     </div>
-    <div class="pname" id="pname">User</div>
-    <div class="phandle" id="phandle">@user</div>
+    <div class="pname" id="pname">Your Name</div>
+    <div class="phandle" id="phandle">@handle</div>
     <div class="pbio" id="pbio"></div>
     <div class="follow-row">
       <div class="follow-stat" id="followers-stat">
@@ -119,17 +119,22 @@ body{padding-bottom:32px}
     <div class="genres-row" id="genres-row"></div>
   </div>
 </div>
+
 <div class="tabs">
-  <div class="tab active" id="posts-tab" onclick="switchTab(this,'pane-posts')">📸 Posts</div>
-  <div class="tab" id="events-tab" onclick="switchTab(this,'pane-events')">🎟 Events</div>
+  <div class="tab active" onclick="switchTab(this,'pane-posts')">📸 My Posts</div>
+  <div class="tab" onclick="switchTab(this,'pane-events')">🎟 Events Attended</div>
 </div>
+
 <div class="pane active" id="pane-posts">
   <div id="posts-list"></div>
 </div>
+
 <div class="pane" id="pane-events">
   <div id="events-list"></div>
 </div>
-<div id="fab-wrapper"></div>
+
+<button class="fab" onclick="openPostModal()" title="Add memory">📷</button>
+
 <div class="modal-ov" id="post-modal" onclick="if(event.target===this)closePostModal()">
   <div class="modal-sheet">
     <div class="modal-title">📸 Share a Memory</div>
@@ -138,12 +143,13 @@ body{padding-bottom:32px}
       <span style="font-size:2rem">📷</span>
       <span>Tap to choose photo</span>
     </div>
-    <input class="modal-inp" id="post-caption" placeholder="Write a caption…"/>
+    <input class="modal-inp" id="post-caption" placeholder="Write a caption…" maxlength="200"/>
     <input class="modal-inp" id="post-event" placeholder="Event name (optional)"/>
     <button class="modal-btn" onclick="submitPost()">Share Memory 🔥</button>
     <button class="modal-cancel" onclick="closePostModal()">Cancel</button>
   </div>
 </div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -152,80 +158,37 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 let currentUser = null;
-let profileId = null;
-let isFollowing = false;
+let currentProfile = null;
+let currentUserId = null;
 
 const GENRE_LABELS = {
   amapiano: '🎶 Amapiano', gqom: '🔊 Gqom', hiphop: '🎤 Hip Hop',
-  house: '🎧 House', afrobeats: '🥁 Afrobeats', rock: '🎸 Rock',
+  house: '🎧 House', afrobeats: '🥁 Afrobeats', rock: '�� Rock',
   gospel: '🙏 Gospel', jazz: '🎷 Jazz', sport: '⚽ Sport',
   maskandi: '🪗 Maskandi'
 };
 
 async function loadUserData() {
-  const urlParams = new URLSearchParams(window.location.search);
-  profileId = urlParams.get('id');
-
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) { 
-    if (!profileId) { window.location.href = 'signin.html'; return; }
-  } else {
-    currentUser = session.user;
-  }
-  
-  if (!profileId && currentUser) {
-    profileId = currentUser.id;
-  }
+  if (!session) { window.location.href = 'signin.html'; return; }
+  currentUser = session.user;
+  currentUserId = currentUser.id;
 
-  if (!profileId) {
-    showToast('Could not find user profile.', 'error');
-    document.getElementById('pname').textContent = "User not found";
-    return;
-  }
+  const { data: profile } = await sb.from('profiles').select('*').eq('id', currentUserId).single();
+  currentProfile = profile || {};
 
-  const { data: profile, error } = await sb.from('profiles').select('*').eq('id', profileId).single();
-  if (error || !profile) {
-    showToast('User profile not found.', 'error');
-    document.getElementById('pname').textContent = "User not found";
-    return;
-  }
-  
-  const isOwnProfile = currentUser ? profile.id === currentUser.id : false;
+  document.getElementById('pname').textContent = currentProfile.display_name || currentUser.email?.split('@')[0] || 'Your Name';
+  document.getElementById('phandle').textContent = '@' + (currentProfile.username || currentUser.email?.split('@')[0] || 'user');
+  document.getElementById('pbio').textContent = currentProfile.bio || 'Welcome to Pulsify. Add your bio in settings.';
 
-  document.title = (profile.display_name || 'User') + ' — Pulsify';
-  document.getElementById('nav-title').textContent = isOwnProfile ? 'My Profile' : profile.display_name;
-  
-  if (isOwnProfile) {
-    document.getElementById('settings-btn-wrapper').innerHTML = `<div class="settings-btn" onclick="window.location.href='profile-settings.html'">⚙️</div>`;
-    document.getElementById('profile-action-btn').innerHTML = `<button class="edit-btn" onclick="window.location.href='profile-settings.html'">Edit Profile</button>`;
-    document.getElementById('avatar-el').style.cursor = 'pointer';
-    document.getElementById('avatar-el').onclick = () => window.location.href='profile-settings.html';
-    document.getElementById('posts-tab').textContent = '📸 My Posts';
-    document.getElementById('events-tab').textContent = '🎟 My Events';
-    document.getElementById('fab-wrapper').innerHTML = `<button class="fab" onclick="openPostModal()" title="Add memory">📷</button>`;
-  } else {
-    // Follow button logic
-    const followBtn = document.createElement('button');
-    followBtn.id = 'follow-btn';
-    followBtn.className = 'follow-btn';
-    followBtn.textContent = 'Follow';
-    followBtn.onclick = () => toggleFollow(profile.id);
-    document.getElementById('profile-action-btn').appendChild(followBtn);
-    if(currentUser) await checkFollowing(profile.id);
+  if (currentProfile.avatar_url) {
+    const img = document.createElement('img');
+    img.src = currentProfile.avatar_url;
+    document.getElementById('avatar-el').appendChild(img);
+    document.getElementById('avatar-emoji').style.display = 'none';
   }
 
-  document.getElementById('pname').textContent = profile.display_name || 'User';
-  document.getElementById('phandle').textContent = '@' + (profile.username || 'user');
-  document.getElementById('pbio').textContent = profile.bio || '';
-
-  if (profile.avatar_url) {
-    const avatarEl = document.getElementById('avatar-el');
-    avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="avatar">`;
-  } else {
-    document.getElementById('avatar-emoji').style.display = 'block';
-  }
-
-  const genres = profile.genres || [];
+  const genres = currentProfile.genres || [];
   const gr = document.getElementById('genres-row');
   gr.innerHTML = '';
   if (genres.length) {
@@ -235,141 +198,58 @@ async function loadUserData() {
       tag.textContent = GENRE_LABELS[g] || g;
       gr.appendChild(tag);
     });
-    gr.style.display = 'flex';
   } else {
     gr.style.display = 'none';
   }
 
-  const { count: followersCount } = await sb.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', profile.id);
-  const { count: followingCount } = await sb.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', profile.id);
+  const { count: followersCount } = await sb.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', currentUserId);
+  const { count: followingCount } = await sb.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', currentUserId);
   document.getElementById('followers-count').textContent = followersCount || 0;
   document.getElementById('following-count').textContent = followingCount || 0;
 
-  renderPosts(profile.id);
-  renderAttended(profile.id, isOwnProfile);
+  await renderPosts();
+  await renderAttended();
 }
 
-async function checkFollowing(userId) {
-  const followBtn = document.getElementById('follow-btn');
-  if (!currentUser) {
-    followBtn.style.display = 'none';
-    return;
-  }
-  const { data, error } = await sb.from('follows').select('*').eq('follower_id', currentUser.id).eq('following_id', userId);
-  if (data && data.length > 0) {
-    isFollowing = true;
-    followBtn.textContent = 'Following';
-    followBtn.classList.add('following');
-  } else {
-    isFollowing = false;
-    followBtn.textContent = 'Follow';
-    followBtn.classList.remove('following');
-  }
-}
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-async function toggleFollow(userId) {
-  if (!currentUser) {
-    window.location.href = 'signin.html';
-    return;
-  }
-  
-  const followBtn = document.getElementById('follow-btn');
-  followBtn.disabled = true;
-
-  if (isFollowing) {
-    // Unfollow
-    const { error } = await sb.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', userId);
-    if (!error) {
-      isFollowing = false;
-      followBtn.textContent = 'Follow';
-      followBtn.classList.remove('following');
-      updateFollowerCount(-1);
-    } else {
-      showToast('Could not unfollow.', 'error');
-    }
-  } else {
-    // Follow
-    const { error } = await sb.from('follows').insert({ follower_id: currentUser.id, following_id: userId });
-    if (!error) {
-      isFollowing = true;
-      followBtn.textContent = 'Following';
-      followBtn.classList.add('following');
-      updateFollowerCount(1);
-    } else {
-      showToast('Could not follow.', 'error');
-    }
-  }
-  followBtn.disabled = false;
-}
-
-function updateFollowerCount(change) {
-  const followersCountEl = document.getElementById('followers-count');
-  let currentCount = parseInt(followersCountEl.textContent, 10);
-  followersCountEl.textContent = currentCount + change;
-}
-
-function escHtml(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-
-async function renderPosts(userId) {
+async function renderPosts() {
   const el = document.getElementById('posts-list');
   el.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Loading…</div></div>';
   try {
-    const { data: posts, error, count } = await sb.from('posts').select('id,caption,image_url,event_name,created_at', { count: 'exact' }).eq('user_id', userId).order('created_at', { ascending: false }).limit(30);
+    const { data: posts, error, count } = await sb.from('posts').select('id,caption,image_url,event_name,created_at,post_type', { count: 'exact' }).eq('user_id', currentUserId).order('created_at', { ascending: false }).limit(30);
     if (error) throw error;
-    document.getElementById('stat-posts').textContent = count || 0;
+    document.getElementById('stat-posts').textContent = count || posts?.length || 0;
     if (!posts?.length) {
-      el.innerHTML = '<div class="empty"><div class="empty-ico">📸</div><div class="empty-title">No posts yet</div></div>';
+      el.innerHTML = '<div class="empty"><div class="empty-ico">📸</div><div class="empty-title">No memories yet</div><div class="empty-sub">Go to an event, take a photo and share your first memory here.</div><button class="empty-btn" onclick="openPostModal()">Share a Memory</button></div>';
       return;
     }
-    el.innerHTML = posts.map(p => `
-      <div class="post" id="post-${escHtml(p.id)}">
-        ${p.image_url ? `<img class="post-img" src="${escHtml(p.image_url)}" loading="lazy" onerror="this.style.display='none'"/>` : '<div class="post-img-placeholder">📸</div>'}
-        <div class="post-body">
-          ${p.event_name ? `<div class="post-ev">🎟 ${escHtml(p.event_name)}</div>` : ''}
-          ${p.caption ? `<div class="post-cap">${escHtml(p.caption)}</div>` : ''}
-          <div class="post-foot">
-            <span class="post-date">${new Date(p.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})}</span>
-          </div>
-        </div>
-      </div>
-    `).join('');
+    el.innerHTML = posts.map(p => '<div class="post" id="post-'+escHtml(p.id)+'">'+(p.image_url ? '<img class="post-img" src="'+escHtml(p.image_url)+'" loading="lazy" onerror="this.style.display=\u0027none\u0027"/>' : '<div class="post-img-placeholder">📸</div>')+'<div class="post-body">'+(p.event_name ? '<div class="post-ev">🎟 '+escHtml(p.event_name)+'</div>' : '')+(p.caption ? '<div class="post-cap">'+escHtml(p.caption)+'</div>' : '')+'<div class="post-foot"><span class="post-date">'+new Date(p.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})+'</span><div class="post-actions"><button class="pa" onclick="deletePost(\u0027'+escHtml(p.id)+'\u0027)">🗑 Delete</button></div></div></div></div>').join('');
   } catch(e) {
     el.innerHTML = '<div class="empty"><div class="empty-ico">📸</div><div class="empty-title">Could not load posts</div></div>';
   }
 }
 
-async function renderAttended(userId, isOwnProfile) {
+async function renderAttended() {
   const el = document.getElementById('events-list');
   el.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Loading…</div></div>';
   try {
-    const { data: attended, count } = await sb.from('event_attendances').select('event_id, events(id,name,venue_name,city,date_local,image_url)', { count: 'exact' }).eq('user_id', userId).order('created_at', { ascending: false }).limit(20);
-    document.getElementById('stat-events').textContent = count || 0;
+    const { data: attended, count } = await sb.from('event_attendances').select('event_id, events(id,name,venue_name,city,date_local,image_url)', { count: 'exact' }).eq('user_id', currentUserId).order('created_at', { ascending: false }).limit(20);
+    document.getElementById('stat-events').textContent = count || attended?.length || 0;
     if (!attended?.length) {
-      if(isOwnProfile) {
-        el.innerHTML = `<div class="empty"><div class="empty-ico">🎟</div><div class="empty-title">No events attended yet</div><div class="empty-sub">When you buy tickets or RSVP, your events appear here.</div><button class="empty-btn" onclick="window.location.href='index.html'">Browse Events</button></div>`;
-      } else {
-        el.innerHTML = '<div class="empty"><div class="empty-ico">🎟</div><div class="empty-title">No events attended yet</div></div>';
-      }
+      el.innerHTML = '<div class="empty"><div class="empty-ico">🎟</div><div class="empty-title">No events attended yet</div><div class="empty-sub">When you buy tickets or RSVP, your events appear here.</div><button class="empty-btn" onclick="window.location.href=\u0027index.html\u0027">Browse Events</button></div>';
       return;
     }
     el.innerHTML = attended.map(a => {
       const ev = a.events || {};
-      return `
-        <div class="ev-card" onclick="window.location.href='index.html?event=${ev.id}'">
-          <div class="ev-thumb">${ev.image_url ? `<img src="${escHtml(ev.image_url)}" loading="lazy"/>` : '🎶'}</div>
-          <div class="ev-info">
-            <div class="ev-name">${escHtml(ev.name || 'Event')}</div>
-            <div class="ev-meta">📍 ${escHtml(ev.city || ev.venue_name || '')}${ev.date_local ? ' · ' + new Date(ev.date_local).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'}) : ''}</div>
-            <span class="ev-badge">✅ Attended</span>
-          </div>
-        </div>`;
+      return '<div class="ev-card" onclick="window.location.href=\u0027index.html\u0027"><div class="ev-thumb">'+(ev.image_url ? '<img src="'+escHtml(ev.image_url)+'" loading="lazy"/>' : '🎶')+'</div><div class="ev-info"><div class="ev-name">'+escHtml(ev.name || 'Event')+'</div><div class="ev-meta">📍 '+escHtml(ev.city || ev.venue_name || '')+(ev.date_local ? ' · ' + new Date(ev.date_local).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'}) : '')+'</div><span class="ev-badge">✅ Attended</span></div></div>';
     }).join('');
   } catch(e) {
     el.innerHTML = '<div class="empty"><div class="empty-ico">🎟</div><div class="empty-title">Could not load events</div></div>';
   }
 
   try {
-    const { count: savedCount } = await sb.from('saved_items').select('*', { count: 'exact', head: true }).eq('user_id', userId);
+    const { count: savedCount } = await sb.from('saved_items').select('*', { count: 'exact', head: true }).eq('user_id', currentUserId);
     document.getElementById('stat-saved').textContent = savedCount || 0;
   } catch(e) {}
 }
@@ -381,6 +261,79 @@ function switchTab(tab, paneId) {
   document.getElementById(paneId)?.classList.add('active');
 }
 
+async function deletePost(id) {
+  if (!confirm('Delete this memory?')) return;
+  const { error } = await sb.from('posts').delete().eq('id', id).eq('user_id', currentUserId);
+  if (error) { showToast('Delete failed'); return; }
+  const el = document.getElementById('post-' + id);
+  if (el) el.remove();
+  const n = parseInt(document.getElementById('stat-posts').textContent||0) - 1;
+  document.getElementById('stat-posts').textContent = Math.max(0, n);
+  showToast('Memory deleted');
+}
+
+function openPostModal() { document.getElementById('post-modal').classList.add('open'); }
+function closePostModal() {
+  document.getElementById('post-modal').classList.remove('open');
+  document.getElementById('post-caption').value = '';
+  document.getElementById('post-event').value = '';
+  document.getElementById('post-preview').innerHTML = '<span style="font-size:2rem">📷</span><span>Tap to choose photo</span>';
+  _postImageUrl = null;
+}
+
+let _postImageUrl = null;
+let _postImageFile = null;
+function previewPost(input) {
+  const file = input.files[0];
+  if (!file) return;
+  _postImageFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _postImageUrl = e.target.result;
+    const prev = document.getElementById('post-preview');
+    prev.innerHTML = '<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover;border-radius:10px"/>';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function submitPost() {
+  const caption = document.getElementById('post-caption').value.trim();
+  const evName  = document.getElementById('post-event').value.trim();
+  if (!_postImageFile && !caption) { showToast('Add a photo or caption'); return; }
+
+  const btn = document.querySelector('.modal-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sharing…'; }
+
+  try {
+    let imageUrl = null;
+    if (_postImageFile) {
+      const ext  = _postImageFile.name.split('.').pop() || 'jpg';
+      const path = currentUserId + '/' + Date.now() + '.' + ext;
+      const { error: upErr } = await sb.storage.from('post-images').upload(path, _postImageFile, { upsert: false });
+      if (!upErr) {
+        const { data: { publicUrl } } = sb.storage.from('post-images').getPublicUrl(path);
+        imageUrl = publicUrl;
+      }
+    }
+
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session?.access_token || '';
+    const res = await fetch('/api/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ caption, image_url: imageUrl, event_name: evName || null, post_type: 'attended_photo' })
+    });
+    if (!res.ok) throw new Error('Post failed');
+
+    closePostModal();
+    showToast('🔥 Memory shared!', 'ok');
+    await renderPosts();
+  } catch(e) {
+    showToast('Failed: ' + e.message);
+  }
+  if (btn) { btn.disabled = false; btn.textContent = 'Share Memory 🔥'; }
+}
+
 function showToast(msg, type = '') {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -388,16 +341,7 @@ function showToast(msg, type = '') {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// Functions for posting (only for own profile)
-function openPostModal() { if(profileId === currentUser?.id) document.getElementById('post-modal').classList.add('open'); }
-function closePostModal() { document.getElementById('post-modal').classList.remove('open'); /* reset form */ }
-
-let _postImageFile = null;
-function previewPost(input) { /* ... implementation unchanged ... */ }
-async function submitPost() { /* ... implementation largely unchanged, but ensure it uses currentUser.id ... */ }
-
-
-document.addEventListener('DOMContentLoaded', loadUserData);
+loadUserData();
 </script>
 </body>
 </html>

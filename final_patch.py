@@ -183,7 +183,7 @@ async function postComment() {
 }
 
 # --- Replacement for feeds.html ---
-feeds_script_replacement = {
+feeds_replacements = {
     "script": (
         """const SUPABASE_URL  = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
@@ -620,11 +620,7 @@ async function initFeed() {
   }
   await render();
 }
-initFeed();""",
-        """/*
-Full script replacement for feeds.html - this is the new live version.
-*/
-""" # The original content is the whole script block, which is too long to include here.
+initFeed();"""
     )
 }
 
