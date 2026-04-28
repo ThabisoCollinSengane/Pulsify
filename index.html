@@ -836,8 +836,8 @@ function buildCard(ev, idx) {
       <div class="hb"><div class="hf" style="width:${hp}%"></div></div>
     </div>
     <div class="fac" onclick="event.stopPropagation()">
-      <button class="ab" onclick="toggleLike(this)"><span class="ai">🤍</span><span>${fn(ev.like_count)}</span></button>
-      <button class="ab" onclick="openComments('${x(ev.id)}','${x(ev.name)}')"><span class="ai">💬</span><span>${fn(ev.comment_count)}</span></button>
+      <button class="ab" onclick="toggleLike(this, '${x(ev.id)}', 'events')"><span class="ai">🤍</span><span>${fn(ev.like_count)}</span></button>
+      <button class="ab" onclick="openComments('${x(ev.id)}', '${x(ev.name)}', 'events')"><span class="ai">💬</span><span>${fn(ev.comment_count)}</span></button>
       <button class="ab" onclick="shareIt('${x(ev.name)}')"><span class="ai">🔗</span></button>
       <button class="ab" onclick="toggleSave('ev','${x(ev.id)}',this)"><span class="ai">${savedEv.includes(ev.id) ? '🔖' : '🏷'}</span></button>
       <button class="tb2 ${iF ? 'fr' : ''}" onclick="openEv('${x(ev.id)}');event.stopPropagation()">${btnLbl}</button>
@@ -1486,20 +1486,150 @@ function switchST(tab, paneId) { tab.closest('.stbs').querySelectorAll('.stb').f
 /* ══════════════════════════════════════════════════
    COMMENTS
 ══════════════════════════════════════════════════ */
-const SEED_COMMENTS = [
-  { av:'🔥', name:'Sipho M.', text:'This event is always fire 🔥 been going 3 years straight', time:'2h ago' },
-  { av:'💃', name:'Nandi K.', text:'Anyone going from Hillcrest? Looking for a squad 👀', time:'4h ago' },
-  { av:'🎶', name:'DJ Thabang', text:'The lineup this year is next level! See you on the floor 🎤', time:'5h ago' },
-];
-function openComments(id, name) { document.getElementById('comment-title').textContent = name; activeComments = [...SEED_COMMENTS]; renderComments(); document.getElementById('comments-overlay').classList.add('open'); setTimeout(() => document.getElementById('comment-input').focus(), 300); }
-function closeComments() { document.getElementById('comments-overlay').classList.remove('open'); }
-function renderComments() { document.getElementById('comments-list').innerHTML = activeComments.map(c => `<div class="cm"><div class="cav">${c.av}</div><div style="flex:1"><div class="cna">${x(c.name)}</div><div class="ctx">${x(c.text)}</div><div class="ctm">${c.time}</div></div></div>`).join(''); }
-function postComment() { const inp = document.getElementById('comment-input'); const val = inp.value.trim(); if (!val) return; activeComments.push({ av:'😊', name:'You', text: val, time:'just now' }); renderComments(); inp.value = ''; document.getElementById('comments-list').scrollTop = 9999; }
+let activeEntityId = null;
+let activeEntityType = 'event';
+
+async function openComments(entityId, name, type = 'event') {
+  const sb = getSB();
+  if (!sb) return showToast('You must be signed in to view comments.', 'err');
+  
+  activeEntityId = entityId;
+  activeEntityType = type;
+  
+  const overlay = document.getElementById('comments-overlay');
+  const titleEl = document.getElementById('comment-title');
+  const listEl = document.getElementById('comments-list');
+  
+  if (titleEl) titleEl.textContent = 'Comments on ' + name;
+  if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu)">Loading comments...</div>';
+  
+  overlay.classList.add('open');
+  
+  try {
+    const { data, error } = await sb.from('comments')
+      .select('*, profiles(username, avatar_url, display_name)')
+      .eq('entity_id', entityId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    activeComments = data || [];
+    renderComments();
+  } catch (e) {
+    if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--pk)">Error loading comments.</div>';
+    console.error('Comment load error:', e);
+  }
+}
+
+function closeComments() {
+  document.getElementById('comments-overlay').classList.remove('open');
+  activeEntityId = null;
+}
+
+function renderComments() {
+  const listEl = document.getElementById('comments-list');
+  if (!listEl) return;
+
+  if (activeComments.length === 0) {
+    listEl.innerHTML = '<div style="padding:30px 20px;text-align:center;color:var(--mu);font-size:.8rem">Be the first to comment!</div>';
+    return;
+  }
+
+  listEl.innerHTML = activeComments.map(c => {
+    const p = c.profiles;
+    const av = p?.avatar_url ? `<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover">` : (p?.display_name || '?')[0];
+    const name = p?.display_name || 'A user';
+    return `<div class="cm">
+        <div class="cav" style="background:linear-gradient(135deg,#1a0533,#4a0080); overflow:hidden;">${av}</div>
+        <div style="flex:1">
+            <div class="cna">${x(name)}</div>
+            <div class="ctx">${x(c.content)}</div>
+            <div class="ctm">${timeAgoShort(c.created_at)}</div>
+        </div>
+    </div>`;
+  }).join('');
+  listEl.scrollTop = listEl.scrollHeight;
+}
+
+async function postComment() {
+  const inp = document.getElementById('comment-input');
+  const val = inp.value.trim();
+  if (!val || !activeEntityId) return;
+
+  const sb = getSB();
+  if (!currentUser || !sb) {
+    return showToast('Please sign in to comment.', 'err');
+  }
+
+  inp.disabled = true;
+  try {
+    const { data: comment, error } = await sb.from('comments').insert({
+      user_id: currentUser.id,
+      entity_id: activeEntityId,
+      entity_type: activeEntityType,
+      content: val
+    }).select('*, profiles(username, avatar_url, display_name)').single();
+
+    if (error) throw error;
+    
+    activeComments.push(comment);
+    renderComments();
+    inp.value = '';
+    
+    // Find the author of the post/event to notify them
+    const { data: entity } = await sb.from(activeEntityType === 'event' ? 'events' : 'posts')
+        .select('user_id')
+        .eq('id', activeEntityId)
+        .single();
+        
+    if (entity && entity.user_id !== currentUser.id) {
+        createNotification(
+            entity.user_id,
+            'comment',
+            `${currentUser.display_name || 'Someone'} commented on your post.`
+        );
+    }
+
+  } catch(e) {
+    showToast('Failed to post comment: ' + e.message, 'err');
+    console.error('Comment post error:', e);
+  } finally {
+    inp.disabled = false;
+    inp.focus();
+  }
+}
 
 /* ══════════════════════════════════════════════════
    HELPERS
 ══════════════════════════════════════════════════ */
-function toggleLike(btn) { const ico = btn.querySelector('.ai'), cnt = btn.querySelector('span:last-child'); const liked = btn.classList.toggle('lk'); ico.textContent = liked ? '❤️' : '🤍'; let n = parseInt(cnt.textContent.replace('k','')) * (cnt.textContent.includes('k') ? 1000 : 1); cnt.textContent = fn(liked ? n + 1 : Math.max(0, n - 1)); }
+async function toggleLike(btn, entityId, entityType = 'event') {
+  if (!currentUser) return showToast('Sign in to like posts', 'err');
+  const sb = getSB();
+  const liked = btn.classList.toggle('lk');
+  const ico = btn.querySelector('.ai');
+  const cntEl = btn.querySelector('span:last-child');
+  const currentNum = parseInt(cntEl.textContent.replace('k','')) * (cntEl.textContent.includes('k') ? 1000 : 1);
+  
+  ico.textContent = liked ? '❤️' : '🤍';
+  cntEl.textContent = fn(liked ? currentNum + 1 : Math.max(0, currentNum - 1));
+
+  try {
+    if (liked) {
+      await sb.from('reactions').insert({ entity_id: entityId, user_id: currentUser.id, entity_type: entityType });
+      const { data: entity } = await sb.from(entityType).select('user_id, name').eq('id', entityId).single();
+      if (entity && entity.user_id !== currentUser.id) {
+        createNotification(entity.user_id, 'like', `${currentUser.display_name || 'Someone'} liked your post.`, entityId, entityType);
+      }
+    } else {
+      await sb.from('reactions').delete().eq('entity_id', entityId).eq('user_id', currentUser.id);
+    }
+  } catch(e) {
+    console.error('Like error:', e);
+    btn.classList.toggle('lk');
+    ico.textContent = liked ? '🤍' : '❤️';
+    cntEl.textContent = fn(currentNum);
+    showToast('Error saving like', 'err');
+  }
+}
 function toggleSave(type, id, btn) { if (type === 'ev') { const i = savedEv.indexOf(id); if (i > -1) { savedEv.splice(i,1); showToast('Removed'); } else { savedEv.push(id); showToast('🔖 Saved!'); } localStorage.setItem('p_sev', JSON.stringify(savedEv)); } else { const i = savedBz.indexOf(id); if (i > -1) { savedBz.splice(i,1); showToast('Removed'); } else { savedBz.push(id); showToast('🔖 Saved!'); } localStorage.setItem('p_sbiz', JSON.stringify(savedBz)); } if (btn) btn.querySelector('.ri,.ai').textContent = (type === 'ev' ? savedEv : savedBz).includes(id) ? '🔖' : '🏷'; }
 function shareIt(name) { if (navigator.share) navigator.share({ title: name, text: 'Check out ' + name + ' on Pulsify!', url: location.href }); else { navigator.clipboard?.writeText(location.href); showToast('🔗 Link copied!'); } }
 
