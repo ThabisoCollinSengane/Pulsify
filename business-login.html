@@ -34,6 +34,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .btn-main{width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;margin-top:6px;box-shadow:0 4px 24px rgba(176,38,255,.28);transition:opacity .18s,transform .18s;-webkit-tap-highlight-color:transparent}
 .btn-main:active{opacity:.85;transform:scale(.98)}
 .btn-main:disabled{opacity:.45;cursor:not-allowed}
+.gbtn{width:100%;background:var(--surf2);color:var(--tx);border:1.5px solid var(--border2);padding:13px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:border-color .2s}
+.gbtn:active{border-color:var(--or)}
 .or-divider{display:flex;align-items:center;gap:10px;margin:18px 0;color:var(--mu);font-size:.72rem}
 .or-divider::before,.or-divider::after{content:'';flex:1;height:1px;background:var(--border)}
 .msg{padding:10px 14px;border-radius:10px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;margin-bottom:14px;display:none}
@@ -58,6 +60,16 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <!-- LOGIN -->
     <div class="form-view active" id="login-view">
       <div class="msg" id="login-msg"></div>
+       <button class="gbtn" onclick="signInWithGoogle()">
+        <svg style="width:18px;height:18px" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Sign In with Google
+      </button>
+      <div class="or-divider">or</div>
       <div class="field-wrap">
         <label class="field-label">Email Address</label>
         <input class="ff" type="email" id="l-email" placeholder="your@business.co.za" autocomplete="email"/>
@@ -70,8 +82,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         </div>
       </div>
       <button class="btn-main" id="login-btn" onclick="doLogin()">Sign In to Dashboard</button>
-      <div class="or-divider">or</div>
-      <p style="text-align:center;font-size:.76rem;color:var(--mu2)">No account? <a href="#" onclick="switchTab('register');return false" style="color:var(--or);font-weight:700">Register your business →</a></p>
+       <p style="text-align:center;font-size:.76rem;color:var(--mu2);margin-top:18px">No account? <a href="#" onclick="switchTab('register');return false" style="color:var(--or);font-weight:700">Register your business →</a></p>
     </div>
 
     <!-- REGISTER -->
@@ -137,6 +148,23 @@ const SUPA_URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
+// Run redirect check on page load
+redirectByRole();
+
+// Add auth listener to handle OAuth redirects
+sb.auth.onAuthStateChange(async (event, session) => {
+  if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+    const profile = await saveSession(session);
+    // After saving, check their role and redirect
+    if (profile.role && ['business', 'admin', 'organizer'].includes(profile.role)) {
+       redirectByRole();
+    } else {
+        showMsg('login-msg', 'This is not a business or organizer account. Please use the main sign-in page.', 'err');
+        setTimeout(() => sb.auth.signOut(), 2000);
+    }
+  }
+});
+
 function redirectByRole() {
     let role = null;
     try { role = JSON.parse(localStorage.getItem('p_user') || '{}').role; } catch(e) {}
@@ -150,7 +178,49 @@ function redirectByRole() {
         if (currentPage !== 'business-dashboard.html') window.location.href = 'business-dashboard.html';
     }
 }
-redirectByRole();
+
+async function saveSession(session) {
+  const user = session.user;
+  localStorage.setItem('p_token', session.access_token);
+  let profile = {};
+  try {
+    const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
+    if (error && error.code !== 'PGRST116') throw error; // Allow empty result
+    profile = data || {};
+    
+    // Create profile if it doesn't exist (e.g. first Google sign in)
+    if (!data) {
+        const { data: newProfile, error: createError } = await sb.from('profiles').insert({
+            id: user.id,
+            email: user.email,
+            display_name: user.user_metadata?.full_name || user.email.split('@')[0],
+            avatar_url: user.user_metadata?.avatar_url,
+            role: 'business' // Default to business role on this page
+        }).select().single();
+        if (createError) throw createError;
+        profile = newProfile;
+    } else if (!['business', 'admin', 'organizer'].includes(profile.role)) {
+        // If profile exists but is a 'user', update to 'business'
+        const { data: updatedProfile, error: updateError } = await sb.from('profiles')
+            .update({ role: 'business' }).eq('id', user.id).select().single();
+        if (updateError) throw updateError;
+        profile = updatedProfile;
+    }
+
+    const userPayload = {id: user.id, email:user.email, display_name: profile.display_name, role: profile.role};
+    localStorage.setItem('p_user', JSON.stringify(userPayload));
+    localStorage.setItem('p_profile', JSON.stringify(profile));
+     if (profile.role === 'business') {
+      const sessionData = {id:user.id, email:user.email, name:profile.display_name,
+        type:profile.category||'business', city:profile.city||'', role:profile.role};
+      localStorage.setItem('biz_session', JSON.stringify(sessionData));
+    }
+  } catch(e) {
+      console.error('Session save error:', e);
+      showMsg('login-msg', 'Error setting up your account: ' + e.message, 'err');
+  }
+  return profile;
+}
 
 function switchTab(tab) {
   document.querySelectorAll('.t-btn').forEach((b,i) => b.classList.toggle('active', tab==='login'?i===0:i===1));
@@ -161,8 +231,7 @@ function switchTab(tab) {
 function showMsg(id, txt, type) {
   const el = document.getElementById(id);
   el.textContent = txt;
-  el.className = 'msg ' + type + ' show';
-  setTimeout(() => el.classList.remove('show'), 4000);
+  el.className = 'msg ' + type + (txt ? ' show' : '');
 }
 
 function togglePw(id, btn) {
@@ -172,6 +241,17 @@ function togglePw(id, btn) {
   btn.textContent = show ? '🙈' : '👁';
 }
 
+async function signInWithGoogle() {
+  showMsg('login-msg','','');
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.href, // Redirect back here to trigger auth listener
+      queryParams: { access_type: 'offline', prompt: 'consent' }
+    }
+  });
+  if (error) showMsg('login-msg', 'Google sign-in failed: ' + error.message, 'err');
+}
 
 async function doLogin() {
   const email = document.getElementById('l-email').value.trim();
@@ -185,35 +265,12 @@ async function doLogin() {
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
     if (error) throw error;
 
-    const { data: profile, error: pError } = await sb.from('profiles').select('*').eq('id', data.user.id).single();
-    if (pError) throw pError;
-
+    const profile = await saveSession(data.session);
     if (!['business','organizer','admin'].includes(profile.role)) {
-      btn.textContent='Sign In to Dashboard'; btn.disabled=false;
-      showMsg('login-msg','This is not a business or organizer account. Use the main sign in page.','err');
-      return;
+      throw new Error('This is not a business or organizer account. Use the main sign in page.');
     }
-
-    const userPayload = {id: data.user.id, email, display_name: profile.display_name || email.split('@')[0], role: profile.role};
-    localStorage.setItem('p_user', JSON.stringify(userPayload));
-    localStorage.setItem('p_profile', JSON.stringify(profile));
-    localStorage.setItem('p_token', data.session.access_token);
-    
-    // Legacy biz_session for dashboard compatibility
-    if (profile.role === 'business') {
-      const session = {id:data.user.id, email, name:profile.display_name||email.split('@')[0],
-        type:profile.category||'business', city:profile.city||'', role:profile.role};
-      localStorage.setItem('biz_session', JSON.stringify(session));
-    }
-
     showMsg('login-msg','Welcome back! Redirecting…','ok');
-    
-    if (profile.role === 'organizer') {
-      setTimeout(()=>window.location.href='organizer-dashboard.html', 800);
-    } else { // business or admin
-      setTimeout(()=>window.location.href='business-dashboard.html', 800);
-    }
-
+    setTimeout(redirectByRole, 800);
   } catch(e) {
     btn.textContent='Sign In to Dashboard'; btn.disabled=false;
     showMsg('login-msg', e.message.includes('Invalid login') ? 'Incorrect email or password.' : e.message, 'err');
@@ -260,7 +317,7 @@ async function doRegister() {
     }
   } catch(e) {
       btn.textContent='Create Business Account'; btn.disabled=false;
-      showMsg('reg-msg', e.message ,'err');
+      showMsg('reg-msg', e.message , 'err');
   }
 }
 
