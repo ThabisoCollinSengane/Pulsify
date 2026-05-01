@@ -401,6 +401,39 @@ module.exports = async (req, res) => {
       return res.status(200).json({ profile: created, created: true });
     }
 
+    /* ─── POST /auth/ensure-business-profile ────────────────── */
+    if (url === '/auth/ensure-business-profile' && req.method === 'POST') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const user = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const supabase = sb();
+      let { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      
+      if (profileError && profileError.code !== 'PGRST116') throw profileError;
+
+      if (!profile) {
+        const { data: newProfile, error: createError } = await supabase.from('profiles').insert({
+          id: user.id, email: user.email,
+          display_name: user.user_metadata?.full_name || user.email.split('@')[0],
+          avatar_url: user.user_metadata?.avatar_url,
+          role: 'business'
+        }).select().single();
+        if (createError) throw createError;
+        profile = newProfile;
+        
+        const { data: bizCheck } = await supabase.from('businesses').select('id').eq('id', profile.id).maybeSingle();
+        if (!bizCheck) {
+          await supabase.from('businesses').insert({ id: profile.id, owner_id: profile.id, name: profile.display_name, category: 'other', is_active: true });
+        }
+      } else if (!['business', 'admin', 'organizer'].includes(profile.role)) {
+        const { data: updatedProfile, error: updateError } = await supabase.from('profiles').update({ role: 'business' }).eq('id', user.id).select().single();
+        if (updateError) throw updateError;
+        profile = updatedProfile;
+      }
+      return res.status(200).json({ profile });
+    }
+
     /* ─── GET /health ─────────────────────────────────────── */
     if (url === '/health' && req.method === 'GET') {
       return res.status(200).json({ status: 'ok', ts: new Date().toISOString() });

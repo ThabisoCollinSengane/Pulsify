@@ -148,84 +148,64 @@ const SUPA_URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
-// Run redirect check on page load
-redirectByRole();
+// On page load, check if user is already logged in and redirect if necessary
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    redirectByRole();
+  }
+})();
 
-// Add auth listener to handle OAuth redirects
+// Listen for auth events (e.g., redirect from Google)
 sb.auth.onAuthStateChange(async (event, session) => {
   if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
-    const profile = await saveSession(session);
-    // After saving, check their role and redirect
-    if (profile.role && ['business', 'admin', 'organizer'].includes(profile.role)) {
-       redirectByRole();
-    } else {
-        showMsg('login-msg', 'This is not a business or organizer account. Please use the main sign-in page.', 'err');
-        setTimeout(() => sb.auth.signOut(), 2000);
+    try {
+      const res = await fetch('/api/auth/ensure-business-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      });
+      const { profile, error } = await res.json();
+      if (!res.ok) throw new Error(error || 'Failed to sync business profile.');
+      
+      await saveConfirmedProfile(session, profile);
+      redirectByRole();
+    } catch (e) {
+      showMsg('login-msg', 'Error syncing your account: ' + e.message, 'err');
+      setTimeout(() => sb.auth.signOut(), 3000);
     }
   }
 });
 
 function redirectByRole() {
-    let role = null;
-    try { role = JSON.parse(localStorage.getItem('p_user') || '{}').role; } catch(e) {}
-    if (!role) return; 
+  let role = null;
+  try { role = JSON.parse(localStorage.getItem('p_user') || '{}').role; } catch (e) {}
+  if (!role) return;
 
-    const currentPage = window.location.pathname.split('/').pop();
+  const currentPage = window.location.pathname.split('/').pop();
 
-    if (role === 'organizer') {
-        if (currentPage !== 'organizer-dashboard.html') window.location.href = 'organizer-dashboard.html';
-    } else if (role === 'business' || role === 'admin') {
-        if (currentPage !== 'business-dashboard.html') window.location.href = 'business-dashboard.html';
-    }
+  if (role === 'organizer') {
+    if (currentPage !== 'organizer-dashboard.html') window.location.href = 'organizer-dashboard.html';
+  } else if (role === 'business' || role === 'admin') {
+    if (currentPage !== 'business-dashboard.html') window.location.href = 'business-dashboard.html';
+  }
 }
 
-async function saveSession(session) {
+async function saveConfirmedProfile(session, profile) {
   const user = session.user;
   localStorage.setItem('p_token', session.access_token);
-  let profile = {};
-  try {
-    const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
-    if (error && error.code !== 'PGRST116') throw error; // Allow empty result
-    profile = data || {};
-    
-    // Create profile if it doesn't exist (e.g. first Google sign in)
-    if (!data) {
-        const { data: newProfile, error: createError } = await sb.from('profiles').insert({
-            id: user.id,
-            email: user.email,
-            display_name: user.user_metadata?.full_name || user.email.split('@')[0],
-            avatar_url: user.user_metadata?.avatar_url,
-            role: 'business' // Default to business role on this page
-        }).select().single();
-        if (createError) throw createError;
-        profile = newProfile;
-    } else if (!['business', 'admin', 'organizer'].includes(profile.role)) {
-        // If profile exists but is a 'user', update to 'business'
-        const { data: updatedProfile, error: updateError } = await sb.from('profiles')
-            .update({ role: 'business' }).eq('id', user.id).select().single();
-        if (updateError) throw updateError;
-        profile = updatedProfile;
-    }
-
-    const userPayload = {id: user.id, email:user.email, display_name: profile.display_name, role: profile.role};
-    localStorage.setItem('p_user', JSON.stringify(userPayload));
-    localStorage.setItem('p_profile', JSON.stringify(profile));
-     if (profile.role === 'business') {
-      const sessionData = {id:user.id, email:user.email, name:profile.display_name,
-        type:profile.category||'business', city:profile.city||'', role:profile.role};
-      localStorage.setItem('biz_session', JSON.stringify(sessionData));
-    }
-  } catch(e) {
-      console.error('Session save error:', e);
-      showMsg('login-msg', 'Error setting up your account: ' + e.message, 'err');
+  const userPayload = { id: user.id, email: user.email, display_name: profile.display_name, role: profile.role };
+  localStorage.setItem('p_user', JSON.stringify(userPayload));
+  localStorage.setItem('p_profile', JSON.stringify(profile));
+  if (profile.role === 'business') {
+    const sessionData = { id: user.id, email: user.email, name: profile.display_name, type: profile.category || 'business', city: profile.city || '', role: profile.role };
+    localStorage.setItem('biz_session', JSON.stringify(sessionData));
   }
-  return profile;
 }
 
 function switchTab(tab) {
-  document.querySelectorAll('.t-btn').forEach((b,i) => b.classList.toggle('active', tab==='login'?i===0:i===1));
-  document.getElementById('login-view').classList.toggle('active', tab==='login');
-  document.getElementById('register-view').classList.toggle('active', tab!=='login');
+  document.querySelectorAll('.t-btn').forEach((b, i) => b.classList.toggle('active', tab === 'login' ? i === 0 : i === 1));
+  document.getElementById('login-view').classList.toggle('active', tab === 'login');
+  document.getElementById('register-view').classList.toggle('active', tab !== 'login');
 }
 
 function showMsg(id, txt, type) {
@@ -242,7 +222,7 @@ function togglePw(id, btn) {
 }
 
 async function signInWithGoogle() {
-  showMsg('login-msg','','');
+  showMsg('login-msg', '', '');
   const { error } = await sb.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -255,76 +235,89 @@ async function signInWithGoogle() {
 
 async function doLogin() {
   const email = document.getElementById('l-email').value.trim();
-  const pw    = document.getElementById('l-pw').value;
-  if (!email || !pw) { showMsg('login-msg','Please fill in all fields','err'); return; }
+  const pw = document.getElementById('l-pw').value;
+  if (!email || !pw) { showMsg('login-msg', 'Please fill in all fields', 'err'); return; }
 
   const btn = document.getElementById('login-btn');
-  btn.textContent = 'Signing in…'; btn.disabled = true;
+  btn.textContent = 'Signing in…';
+  btn.disabled = true;
 
   try {
-    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
-    if (error) throw error;
+    const { data: sessionData, error: signInError } = await sb.auth.signInWithPassword({ email, password: pw });
+    if (signInError) throw signInError;
 
-    const profile = await saveSession(data.session);
-    if (!['business','organizer','admin'].includes(profile.role)) {
+    const res = await fetch('/api/auth/ensure-business-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sessionData.session.access_token },
+    });
+    const { profile, error: apiError } = await res.json();
+    if (!res.ok) throw new Error(apiError || 'Failed to sync business profile.');
+
+    if (!['business', 'organizer', 'admin'].includes(profile.role)) {
       throw new Error('This is not a business or organizer account. Use the main sign in page.');
     }
-    showMsg('login-msg','Welcome back! Redirecting…','ok');
+
+    await saveConfirmedProfile(sessionData.session, profile);
+    showMsg('login-msg', 'Welcome back! Redirecting…', 'ok');
     setTimeout(redirectByRole, 800);
-  } catch(e) {
-    btn.textContent='Sign In to Dashboard'; btn.disabled=false;
+  } catch (e) {
+    btn.textContent = 'Sign In to Dashboard';
+    btn.disabled = false;
     showMsg('login-msg', e.message.includes('Invalid login') ? 'Incorrect email or password.' : e.message, 'err');
+    if (!e.message.includes('Invalid login')) {
+      sb.auth.signOut();
+    }
   }
 }
 
 async function doRegister() {
-  const name     = document.getElementById('r-name').value.trim();
-  const type     = document.getElementById('r-type').value;
-  const email    = document.getElementById('r-email').value.trim();
-  const phone    = document.getElementById('r-phone').value.trim();
-  const city     = document.getElementById('r-city').value.trim();
+  const name = document.getElementById('r-name').value.trim();
+  const type = document.getElementById('r-type').value;
+  const email = document.getElementById('r-email').value.trim();
+  const phone = document.getElementById('r-phone').value.trim();
+  const city = document.getElementById('r-city').value.trim();
   const province = document.getElementById('r-province')?.value || '';
-  const pw       = document.getElementById('r-pw').value;
+  const pw = document.getElementById('r-pw').value;
 
-  if (!name||!type||!email||!city||!pw) { showMsg('reg-msg','Please fill in all required fields','err'); return; }
-  if (pw.length < 6) { showMsg('reg-msg','Password must be at least 6 characters','err'); return; }
+  if (!name || !type || !email || !city || !pw) { showMsg('reg-msg', 'Please fill in all required fields', 'err'); return; }
+  if (pw.length < 6) { showMsg('reg-msg', 'Password must be at least 6 characters', 'err'); return; }
 
   const btn = document.getElementById('reg-btn');
-  btn.textContent = 'Creating account…'; btn.disabled = true;
+  btn.textContent = 'Creating account…';
+  btn.disabled = true;
 
   try {
     const r = await fetch(`/api/auth/register-business`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, type, email, phone, city, province, password: pw, address: '' })
     });
     const d = await r.json();
     if (!r.ok) {
       throw new Error(d.error || 'Registration failed');
     }
-
     const token = d.session?.access_token;
     if (token) {
-        localStorage.setItem('p_token', token);
-        const userPayload = {id:d.user.id, email, display_name:name, role:'business'};
-        localStorage.setItem('p_user', JSON.stringify(userPayload));
-        const session = {id:d.user.id, email, name, type, city, province, phone, role:'business'};
-        localStorage.setItem('biz_session', JSON.stringify(session));
-
-        showMsg('reg-msg','✅ Account created! Redirecting…','ok');
-        setTimeout(()=>window.location.href='business-dashboard.html', 800);
+      localStorage.setItem('p_token', token);
+      const userPayload = { id: d.user.id, email, display_name: name, role: 'business' };
+      localStorage.setItem('p_user', JSON.stringify(userPayload));
+      const session = { id: d.user.id, email, name, type, city, province, phone, role: 'business' };
+      localStorage.setItem('biz_session', JSON.stringify(session));
+      showMsg('reg-msg', '✅ Account created! Redirecting…', 'ok');
+      setTimeout(() => window.location.href = 'business-dashboard.html', 800);
     } else {
-        throw new Error('No session token returned.');
+      throw new Error('No session token returned.');
     }
-  } catch(e) {
-      btn.textContent='Create Business Account'; btn.disabled=false;
-      showMsg('reg-msg', e.message , 'err');
+  } catch (e) {
+    btn.textContent = 'Create Business Account';
+    btn.disabled = false;
+    showMsg('reg-msg', e.message, 'err');
   }
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key==='Enter') {
-    if (document.getElementById('login-view').classList.contains('active')) doLogin();
-    else doRegister();
+  if (e.key === 'Enter' && document.getElementById('login-view').classList.contains('active')) {
+    doLogin();
   }
 });
 </script>
