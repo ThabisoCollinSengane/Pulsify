@@ -1671,7 +1671,7 @@ async function searchUsers(query) {
         const init  = (u.display_name||u.username||'?')[0].toUpperCase();
         return '<div class="pc" style="padding:10px 14px">' +
           '<div class="pav" style="background:' + (isOrg?'linear-gradient(135deg,#FF5C00,#FF2D78)':'linear-gradient(135deg,#0064DC,#B026FF)') + ';font-size:.9rem;font-weight:700">' + (u.avatar_url?'<img src="'+x(u.avatar_url)+'" style="width:100%;height:100%;object-fit:cover">':init) + '</div>' +
-          '<div style="flex:1;min-width:0"><div class="pn">' + x(u.display_name||u.username) + '</div>' +
+          '<div style="flex:1;min-width:0;cursor:pointer" onclick="openProfile('" + u.id + "')"><div class="pn">' + x(u.display_name||u.username) + '</div>' +
           '<div class="ph">@' + x(u.username||'user') + (u.city?' · '+x(u.city):'') + '</div></div>' +
           '<button class="vb ' + (isF?'cd':'cn') + '" onclick="toggleFollow(\'' + u.id + '\',this)">' + (isF?'✓ Following':'+ Follow') + '</button>' +
         '</div>';
@@ -1739,7 +1739,7 @@ async function renderSquad() {
       const init = (p.display_name||p.username||'?')[0].toUpperCase();
       return '<div class="pc" style="padding:10px 14px">' +
         '<div class="pav" style="background:linear-gradient(135deg,#B026FF,#FF5C00);font-size:.9rem;font-weight:700">' + init + '</div>' +
-        '<div style="flex:1;min-width:0"><div class="pn">' + x(p.display_name||p.username||'User') + '</div>' +
+        '<div style="flex:1;min-width:0;cursor:pointer" onclick="openProfile('" + p.id + "')"><div class="pn">' + x(p.display_name||p.username||'User') + '</div>' +
         '<div class="ph">@' + x(p.username||'user') + (p.city?' · '+x(p.city):'') + '</div></div>' +
         '<button class="vb cd" onclick="toggleFollow(\'' + p.id + '\',this)">✓ Following</button>' +
       '</div>';

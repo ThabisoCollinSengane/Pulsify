@@ -481,6 +481,7 @@ function doShare(caption) {
 function closeProfOverlay() { document.getElementById('prof-overlay').style.display = 'none'; }
 
 async function openProfile(userId) {
+  if (!userId) return;
   const ov   = document.getElementById('prof-overlay');
   const body = document.getElementById('prof-overlay-body');
   if (!ov || !body) return;
@@ -492,29 +493,40 @@ async function openProfile(userId) {
     const { profile, posts_count, followers_count, following_count, recent_posts } = await res.json();
     const init  = (profile.display_name || profile.username || '?')[0].toUpperCase();
     const isOrg = ['organizer','business','admin'].includes(profile.role);
-    const postsHtml = recent_posts.length ? recent_posts.map(p => '<div style="aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--surf)">'+(p.image_url ? '<img src="'+x(p.image_url)+'" style="width:100%;height:100%;object-fit:cover" loading="lazy"/>' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--mu);padding:8px;text-align:center">'+x((p.caption||'').slice(0,60))+'</div>')+'</div>').join('') : '';
-
-    body.innerHTML =
     const sb2 = getSB();
     let isFollowing = false;
     if (sb2 && _uid && _uid !== userId) {
       const { data: fw } = await sb2.from('follows').select('follower_id').eq('follower_id', _uid).eq('following_id', userId).maybeSingle();
       isFollowing = !!fw;
     }
+    const postsHtml = recent_posts.length ? recent_posts.map(p => '<div style="aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--surf)">'+(p.image_url ? '<img src="'+x(p.image_url)+'" style="width:100%;height:100%;object-fit:cover" loading="lazy"/>' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--mu);padding:8px;text-align:center">'+x((p.caption||'').slice(0,60))+'</div>')+'</div>').join('') : '';
     const genresHtml = Array.isArray(profile.genres) && profile.genres.length
       ? '<div style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:5px">'+profile.genres.map(g=>'<span style="background:rgba(176,38,255,.15);border:1px solid rgba(176,38,255,.3);color:var(--or);padding:3px 9px;border-radius:20px;font-size:.64rem;font-weight:700">🎵 '+x(g)+'</span>').join('')+'</div>'
       : '';
+
+    body.innerHTML =
       '<div style="height:60px;background:linear-gradient(135deg,rgba(176,38,255,.3),rgba(255,92,0,.2));border-radius:12px;margin-bottom:-28px"></div>' +
       '<div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:12px">' +
         '<div style="width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:1.7rem;border:3px solid var(--bg2);overflow:hidden">' +
           (profile.avatar_url ? '<img src="'+x(profile.avatar_url)+'" style="width:100%;height:100%;object-fit:cover"/>' : init) +
         '</div>' +
+        (_uid && _uid !== userId ? '<button id="po-follow-btn" onclick="doFollowOverlay(\u0027'+x(userId)+'\u0027)" style="background:'+(isFollowing?'transparent':'linear-gradient(135deg,#B026FF,#FF5C00)')+';border:'+(isFollowing?'1px solid var(--border2)':'none')+';color:'+(isFollowing?'var(--mu2)':'#fff')+';padding:8px 18px;border-radius:50px;font-family:\u0027Syne\u0027,sans-serif;font-size:.74rem;font-weight:700;cursor:pointer;align-self:flex-end;margin-bottom:4px">'+(isFollowing?'\u2713 Following':'+ Follow')+'</button>' : '') +
       '</div>' +
       '<div style="font-family:\u0027Bebas Neue\u0027,sans-serif;font-size:1.5rem;line-height:1;margin-bottom:2px">'+x(profile.display_name||profile.username)+'</div>' +
-      '<div style="font-size:.74rem;color:var(--mu);margin-bottom:'+(profile.bio?'8px':'12px')+'">@'+x(profile.username||'user')+(profile.city?' · '+x(profile.city):'')+(isOrg?' · <span style="color:var(--or)">'+profile.role+'</span>':'')+'</div>' +
-      (profile.bio ? '<div style="font-size:.82rem;color:var(--mu2);line-height:1.55;margin-bottom:12px">'+x(profile.bio)+'</div>' : '') +
+      '<div style="font-size:.74rem;color:var(--mu);margin-bottom:'+(profile.bio?'8px':'10px')+'">@'+x(profile.username||'user')+(profile.city?' · '+x(profile.city):'')+(isOrg?' · <span style="color:var(--or)">'+profile.role+'</span>':'')+'</div>' +
+      (profile.bio ? '<div style="font-size:.82rem;color:var(--mu2);line-height:1.55;margin-bottom:10px">'+x(profile.bio)+'</div>' : '') +
+      genresHtml +
       '<div style="display:flex;gap:24px;margin-bottom:'+(recent_posts.length?'16px':'0')+'">' +
         '<div style="text-align:center"><div style="font-family:\u0027Bebas Neue\u0027,sans-serif;font-size:1.3rem;color:var(--or)">'+posts_count+'</div><div style="font-size:.58rem;color:var(--mu);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Posts</div></div>' +
+        '<div style="text-align:center"><div style="font-family:\u0027Bebas Neue\u0027,sans-serif;font-size:1.3rem;color:var(--or)">'+followers_count+'</div><div style="font-size:.58rem;color:var(--mu);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Followers</div></div>' +
+        '<div style="text-align:center"><div style="font-family:\u0027Bebas Neue\u0027,sans-serif;font-size:1.3rem;color:var(--or)">'+following_count+'</div><div style="font-size:.58rem;color:var(--mu);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Following</div></div>' +
+      '</div>' +
+      (postsHtml ? '<div style="font-family:\u0027Syne\u0027,sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin:14px 0 8px">Places Attended</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">'+postsHtml+'</div>' : '');
+  } catch(e) {
+    body.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">'+x(e.message)+'</div>';
+  }
+}
+
 async function doFollowOverlay(targetId) {
   if (!_uid) { showToast('Sign in to follow'); return; }
   const sb = getSB();
@@ -538,15 +550,6 @@ async function doFollowOverlay(targetId) {
     localStorage.setItem('p_following',JSON.stringify(fw));
   } catch(e) { showToast('Error: '+e.message); }
   if (btn) btn.disabled = false;
-}
-
-        '<div style="text-align:center"><div style="font-family:\u0027Bebas Neue\u0027,sans-serif;font-size:1.3rem;color:var(--or)">'+followers_count+'</div><div style="font-size:.58rem;color:var(--mu);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Followers</div></div>' +
-        '<div style="text-align:center"><div style="font-family:\u0027Bebas Neue\u0027,sans-serif;font-size:1.3rem;color:var(--or)">'+following_count+'</div><div style="font-size:.58rem;color:var(--mu);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Following</div></div>' +
-      '</div>' +
-      (postsHtml ? '<div style="font-family:\u0027Syne\u0027,sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin:14px 0 8px">Posts</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">'+postsHtml+'</div>' : '');
-  } catch(e) {
-    body.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">'+x(e.message)+'</div>';
-  }
 }
 
 let _cImg = null;
