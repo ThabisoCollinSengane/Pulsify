@@ -351,7 +351,7 @@ function buildCard(post) {
 
 function buildCmts(comments) {
   if (!comments.length) return '<div style="padding:10px 14px;font-size:.76rem;color:var(--mu)">No comments yet. Be first 💬</div>';
-  return comments.slice(-10).map(c => '<div class="cmt-item"><div class="cmt-av">'+(c.display_name||c.username||'?')[0].toUpperCase()+'</div><div style="flex:1;min-width:0"><div class="cmt-name">'+x(c.display_name||c.username)+'</div><div class="cmt-text">'+x(c.text)+'</div><div class="cmt-time">'+timeAgo(c.ts||c.timestamp)+'</div></div></div>').join('');
+  return comments.slice(-10).map(c => '<div class="cmt-item"><div class="cmt-av">'+(c.display_name||c.username||'?')[0].toUpperCase()+'</div><div style="flex:1;min-width:0"><div class="cmt-name" style="cursor:pointer" onclick="openProfile(\''+x(c.user_id||'')+'\')" >'+x(c.display_name||c.username)+'</div><div class="cmt-text">'+x(c.text)+'</div><div class="cmt-time">'+timeAgo(c.ts||c.timestamp)+'</div></div></div>').join('');
 }
 
 function expandCap(postId) {
@@ -495,6 +495,15 @@ async function openProfile(userId) {
     const postsHtml = recent_posts.length ? recent_posts.map(p => '<div style="aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--surf)">'+(p.image_url ? '<img src="'+x(p.image_url)+'" style="width:100%;height:100%;object-fit:cover" loading="lazy"/>' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--mu);padding:8px;text-align:center">'+x((p.caption||'').slice(0,60))+'</div>')+'</div>').join('') : '';
 
     body.innerHTML =
+    const sb2 = getSB();
+    let isFollowing = false;
+    if (sb2 && _uid && _uid !== userId) {
+      const { data: fw } = await sb2.from('follows').select('follower_id').eq('follower_id', _uid).eq('following_id', userId).maybeSingle();
+      isFollowing = !!fw;
+    }
+    const genresHtml = Array.isArray(profile.genres) && profile.genres.length
+      ? '<div style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:5px">'+profile.genres.map(g=>'<span style="background:rgba(176,38,255,.15);border:1px solid rgba(176,38,255,.3);color:var(--or);padding:3px 9px;border-radius:20px;font-size:.64rem;font-weight:700">🎵 '+x(g)+'</span>').join('')+'</div>'
+      : '';
       '<div style="height:60px;background:linear-gradient(135deg,rgba(176,38,255,.3),rgba(255,92,0,.2));border-radius:12px;margin-bottom:-28px"></div>' +
       '<div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:12px">' +
         '<div style="width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:1.7rem;border:3px solid var(--bg2);overflow:hidden">' +
@@ -506,6 +515,31 @@ async function openProfile(userId) {
       (profile.bio ? '<div style="font-size:.82rem;color:var(--mu2);line-height:1.55;margin-bottom:12px">'+x(profile.bio)+'</div>' : '') +
       '<div style="display:flex;gap:24px;margin-bottom:'+(recent_posts.length?'16px':'0')+'">' +
         '<div style="text-align:center"><div style="font-family:\u0027Bebas Neue\u0027,sans-serif;font-size:1.3rem;color:var(--or)">'+posts_count+'</div><div style="font-size:.58rem;color:var(--mu);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Posts</div></div>' +
+async function doFollowOverlay(targetId) {
+  if (!_uid) { showToast('Sign in to follow'); return; }
+  const sb = getSB();
+  const btn = document.getElementById('po-follow-btn');
+  const isF = btn && btn.textContent.includes('Following');
+  if (btn) btn.disabled = true;
+  try {
+    if (isF) {
+      await sb.from('follows').delete().eq('follower_id', _uid).eq('following_id', targetId);
+      if (btn) { btn.textContent = '+ Follow'; btn.style.background = 'linear-gradient(135deg,#B026FF,#FF5C00)'; btn.style.border = 'none'; btn.style.color = '#fff'; }
+      showToast('Unfollowed');
+    } else {
+      await sb.from('follows').insert({ follower_id: _uid, following_id: targetId });
+      if (btn) { btn.textContent = '\u2713 Following'; btn.style.background = 'transparent'; btn.style.border = '1px solid var(--border2)'; btn.style.color = 'var(--mu2)'; }
+      showToast('Following!');
+      const name = _profile?.display_name || _session?.display_name || 'Someone';
+      sb.from('notifications').insert({user_id:targetId,type:'follow',from_user_id:_uid,from_display_name:name,message:name+' started following you'}).catch(()=>{});
+    }
+    let fw=[]; try{fw=JSON.parse(localStorage.getItem('p_following')||'[]');}catch(e){}
+    if(isF){fw=fw.filter(i=>i!==targetId);}else{if(!fw.includes(targetId))fw.push(targetId);}
+    localStorage.setItem('p_following',JSON.stringify(fw));
+  } catch(e) { showToast('Error: '+e.message); }
+  if (btn) btn.disabled = false;
+}
+
         '<div style="text-align:center"><div style="font-family:\u0027Bebas Neue\u0027,sans-serif;font-size:1.3rem;color:var(--or)">'+followers_count+'</div><div style="font-size:.58rem;color:var(--mu);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Followers</div></div>' +
         '<div style="text-align:center"><div style="font-family:\u0027Bebas Neue\u0027,sans-serif;font-size:1.3rem;color:var(--or)">'+following_count+'</div><div style="font-size:.58rem;color:var(--mu);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Following</div></div>' +
       '</div>' +

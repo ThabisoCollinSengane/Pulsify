@@ -1870,7 +1870,7 @@ async function openProfile(userId) {
         <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--or)">${followers_count}</div><div style="font-size:.6rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Followers</div></div>
         <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--or)">${following_count}</div><div style="font-size:.6rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Following</div></div>
       </div>
-      ${recent_posts.length ? `<div style="font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Recent Posts</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">${postsHtml}</div>` : ''}`;
+      ${recent_posts.length ? `<div style="font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Places Attended</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">${postsHtml}</div>` : ''}`;
   } catch(e) {
     body.innerHTML = `<div style="padding:40px;text-align:center;color:var(--mu)">${x(e.message)}</div>`;
   }
@@ -1935,6 +1935,17 @@ async function initSupabaseSession() {
     currentUser = session.user;
     renderProfile();
   } catch(e) { console.warn('initSupabaseSession:', e.message); }
+
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      try {
+        const { data: prof } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
+        const role = prof?.role || 'user';
+        if (role === 'organizer') { window.location.href = 'organizer-dashboard.html'; return; }
+        if (role === 'business')  { window.location.href = 'business-dashboard.html';  return; }
+      } catch(e) {}
+    }
+  });
 }
 document.addEventListener('DOMContentLoaded', initSupabaseSession);
 
@@ -2042,3 +2053,4 @@ function _renderBizPage() {
 </script>
 </body>
 </html>ss
+</html>
