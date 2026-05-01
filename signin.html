@@ -67,7 +67,7 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 
 <div class="card">
   <div class="card-title">Welcome Back</div>
-  <div class="card-sub">Choose your account type to sign in</div>
+  <div class="card-sub" id="card-sub">Choose your account type to sign in</div>
 
   <div class="acc-type-grid" id="acc-type-grid">
     <div class="acc-type-btn sel" id="at-user" onclick="selectType('user')">
@@ -125,58 +125,64 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 let _accType = 'user';
+let _sessionHandled = false;
+
 function selectType(t) {
   _accType = t;
   ['user','organizer','business'].forEach(id => {
     const el = document.getElementById('at-'+id);
     if (el) el.classList.toggle('sel', id === t);
   });
-  if (t === 'business') {
-    window.location.href = 'business-login.html';
-  }
+  if (t === 'business') { window.location.href = 'business-login.html'; return; }
+  const sub = document.getElementById('card-sub');
+  const btn = document.getElementById('btn');
+  if (sub) sub.textContent = t === 'organizer' ? 'Sign in to your organizer dashboard' : 'Sign in to your Pulsify account';
+  if (btn) btn.textContent = t === 'organizer' ? 'Sign In as Organizer' : 'Sign In';
+  hideMsg();
+}
+
+function getRoleMismatchError(actualRole, selectedType) {
+  if (selectedType === 'user' && actualRole === 'user')           return null;
+  if (selectedType === 'organizer' && actualRole === 'organizer') return null;
+  if (selectedType === 'user' && actualRole === 'organizer')
+    return 'This is an <strong>Organizer</strong> account. Select the Organizer tab to sign in.';
+  if (selectedType === 'user' && actualRole === 'business')
+    return 'This is a <strong>Business</strong> account. Use the <a href="business-login.html" style="color:var(--or)">Business sign-in \u2192</a>';
+  if (selectedType === 'organizer' && actualRole === 'user')
+    return 'No organizer account found for this email. <a href="create-account.html" style="color:var(--or)">Sign up as an organizer \u2192</a>';
+  if (selectedType === 'organizer' && actualRole === 'business')
+    return 'This is a <strong>Business</strong> account. Use the <a href="business-login.html" style="color:var(--or)">Business sign-in \u2192</a>';
+  return null;
 }
 
 (async () => {
+  const savedType = sessionStorage.getItem('p_acc_type');
+  if (savedType) { selectType(savedType); sessionStorage.removeItem('p_acc_type'); }
   const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    await saveSession(session);
-    redirectByRole();
-  }
+  if (!session) return;
+  const profile = await saveSession(session);
+  const mismatch = getRoleMismatchError(profile.role || 'user', _accType);
+  if (mismatch) { await sb.auth.signOut(); showErr(mismatch); return; }
+  _sessionHandled = true;
+  redirectByRole();
 })();
 
 sb.auth.onAuthStateChange(async (event, session) => {
-  if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
-    await saveSession(session);
+  if (event === 'SIGNED_IN' && session && !_sessionHandled) {
+    _sessionHandled = true;
+    const profile = await saveSession(session);
+    const mismatch = getRoleMismatchError(profile.role || 'user', _accType);
+    if (mismatch) { await sb.auth.signOut(); _sessionHandled = false; showErr(mismatch); return; }
     redirectByRole();
   }
 });
 
 function redirectByRole() {
-    let role = 'user';
-    try {
-        role = JSON.parse(localStorage.getItem('p_user') || '{}').role || 'user';
-    } catch (e) {
-        // If localStorage is corrupt, just go home.
-        window.location.href = 'index.html';
-        return;
-    }
-
-    const currentPage = window.location.pathname.split('/').pop();
-
-    if (role === 'organizer') {
-        if (currentPage !== 'organizer-dashboard.html') {
-            window.location.href = 'organizer-dashboard.html';
-        }
-    } else if (role === 'business') {
-        if (currentPage !== 'business-dashboard.html') {
-            window.location.href = 'business-dashboard.html';
-        }
-    } else { // 'user' role
-        const restrictedPages = ['organizer-dashboard.html', 'business-dashboard.html', 'business-login.html'];
-        if (restrictedPages.includes(currentPage)) {
-            window.location.href = 'index.html';
-        }
-    }
+  let role = 'user';
+  try { role = JSON.parse(localStorage.getItem('p_user') || '{}').role || 'user'; } catch(e) { window.location.href = 'index.html'; return; }
+  if (role === 'organizer') { window.location.href = 'organizer-dashboard.html'; }
+  else if (role === 'business') { window.location.href = 'business-dashboard.html'; }
+  else { window.location.href = 'index.html'; }
 }
 
 async function saveSession(session) {
@@ -187,20 +193,10 @@ async function saveSession(session) {
     const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
     if (error) throw error;
     profile = data || {};
-    localStorage.setItem('p_user', JSON.stringify({
-      id: user.id, email: user.email,
-      display_name: profile.display_name || user.user_metadata?.full_name || user.email?.split('@')[0],
-      role: profile.role || 'user',
-      email_verified: !!user.email_confirmed_at,
-      last_login: new Date().toISOString()
-    }));
+    localStorage.setItem('p_user', JSON.stringify({ id: user.id, email: user.email, display_name: profile.display_name || user.user_metadata?.full_name || user.email?.split('@')[0], role: profile.role || 'user', email_verified: !!user.email_confirmed_at, last_login: new Date().toISOString() }));
     localStorage.setItem('p_profile', JSON.stringify(profile));
   } catch(e) {
-     localStorage.setItem('p_user', JSON.stringify({
-      id: user.id, email: user.email,
-      display_name: user.user_metadata?.full_name || user.email?.split('@')[0],
-      role: 'user', last_login: new Date().toISOString()
-    }));
+    localStorage.setItem('p_user', JSON.stringify({ id: user.id, email: user.email, display_name: user.user_metadata?.full_name || user.email?.split('@')[0], role: 'user', last_login: new Date().toISOString() }));
   }
   return profile;
 }
@@ -210,76 +206,62 @@ function showErr(m) { const e=document.getElementById('err'); e.innerHTML=m; e.c
 function showOk(m)  { const e=document.getElementById('ok-banner'); e.innerHTML=m; e.classList.add('show'); document.getElementById('err').classList.remove('show'); }
 function hideMsg()  { document.getElementById('err').classList.remove('show'); document.getElementById('ok-banner').classList.remove('show'); }
 function toast(m,t) { const el=document.getElementById('t'); el.textContent=m; el.className='toast '+(t||'')+' show'; setTimeout(()=>el.classList.remove('show'),3500); }
-function setLoading(btn, yes, label='Sign In') { btn.disabled=yes; btn.innerHTML=yes?`<span class="spinner"></span>${_accType === 'organizer' ? 'Signing in...' : 'Signing in...'}`:label; }
+function setLoading(on) { const btn=document.getElementById('btn'); btn.disabled=on; btn.innerHTML=on?'<span class="spinner"></span>Signing in\u2026':(_accType==='organizer'?'Sign In as Organizer':'Sign In'); }
 
 async function signInWithGoogle() {
   hideMsg();
+  sessionStorage.setItem('p_acc_type', _accType);
   const { error } = await sb.auth.signInWithOAuth({
     provider: 'google',
-    options: {
-      redirectTo: window.location.origin + '/index.html',
-      queryParams: { access_type: 'offline', prompt: 'consent' }
-    }
+    options: { redirectTo: window.location.origin + '/signin.html', queryParams: { access_type: 'offline', prompt: 'consent' } }
   });
-  if (error) showErr('Google sign-in failed: ' + error.message);
+  if (error) { sessionStorage.removeItem('p_acc_type'); showErr('Google sign-in failed. Please try again.'); }
 }
 
 async function doSignIn() {
   hideMsg();
   const em  = document.getElementById('em').value.trim();
   const pw  = document.getElementById('pw').value;
-  const btn = document.getElementById('btn');
-  if (!em)  return showErr('Please enter your email address.');
-  if (!pw)  return showErr('Please enter your password.');
-
-  setLoading(btn, true);
-
+  if (!em) return showErr('Please enter your email address.');
+  if (!pw) return showErr('Please enter your password.');
+  setLoading(true);
   const { data, error } = await sb.auth.signInWithPassword({ email: em, password: pw });
-
   if (error) {
-    setLoading(btn, false);
-    if (error.message.includes('Email not confirmed')) {
-      showErr('Please verify your email before signing in. <br><a href="#" onclick="resendVerification()" style="color:var(--or)">Resend verification email →</a>');
-    } else if (error.message.includes('Invalid login')) {
-      showErr('Incorrect email or password. <a href="create-account.html" style="color:var(--or)">Need an account? →</a>');
-    } else {
-      showErr(error.message);
-    }
-    return;
+    setLoading(false);
+    const msg = error.message || '';
+    if (msg.includes('Email not confirmed') || msg.includes('not confirmed'))
+      return showErr('Please verify your email before signing in. <br><a href="#" onclick="resendVerification()" style="color:var(--or)">Resend verification email \u2192</a>');
+    if (msg.includes('Invalid login') || msg.includes('invalid_credentials') || msg.includes('Invalid credentials'))
+      return showErr('Incorrect email or password. <a href="create-account.html" style="color:var(--or)">Need an account? \u2192</a>');
+    if (msg.includes('rate') || msg.includes('too many') || error.status === 429)
+      return showErr('Too many attempts. Please wait a few minutes and try again.');
+    if (msg.includes('network') || msg.includes('fetch') || msg.includes('Failed to fetch'))
+      return showErr('Connection error. Check your internet and try again.');
+    if (msg.includes('User not found') || msg.includes('No user found'))
+      return showErr('No account found with that email. <a href="create-account.html" style="color:var(--or)">Sign up free \u2192</a>');
+    return showErr('Sign-in failed: ' + msg);
   }
-
   const profile = await saveSession(data.session);
-
-  // Check if role matches selected type
-  const userRole = profile.role || 'user';
-  if (_accType === 'organizer' && userRole !== 'organizer') {
-      setLoading(btn, false);
-      return showErr('This is not an organizer account. Please select the Fan/User type to sign in.');
-  }
-  if (_accType === 'user' && userRole === 'organizer') {
-       setLoading(btn, false);
-      return showErr('This is an organizer account. Please select the Organizer type to sign in.');
-  }
-
-  toast('✅ Welcome back!', 'ok');
+  const mismatch = getRoleMismatchError(profile.role || 'user', _accType);
+  if (mismatch) { setLoading(false); await sb.auth.signOut(); return showErr(mismatch); }
+  toast('\u2705 Welcome back!', 'ok');
   setTimeout(() => redirectByRole(), 800);
 }
 
 async function handleForgot() {
   const em = document.getElementById('em').value.trim();
   if (!em) return showErr('Enter your email address first, then tap Forgot password.');
-  const { error } = await sb.auth.resetPasswordForEmail(em, {
-    redirectTo: window.location.origin + '/signin.html'
-  });
-  if (error) return showErr(error.message);
-  showOk('✅ Password reset link sent to <strong>' + em + '</strong>. Check your inbox.');
+  const { error } = await sb.auth.resetPasswordForEmail(em, { redirectTo: window.location.origin + '/signin.html' });
+  if (error) return showErr('Could not send reset email: ' + error.message);
+  showOk('\u2705 Password reset link sent to <strong>' + em + '</strong>. Check your inbox (and spam folder).');
 }
 
 async function resendVerification() {
   const em = document.getElementById('em').value.trim();
-  if (!em) return;
-  await sb.auth.resend({ type: 'signup', email: em });
-  showOk('✅ Verification email resent to ' + em);
+  if (!em) return showErr('Enter your email address first.');
+  const { error } = await sb.auth.resend({ type: 'signup', email: em });
+  if (error) return showErr('Could not resend: ' + error.message);
+  showOk('\u2705 Verification email resent to <strong>' + em + '</strong>.');
 }
 
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && !document.getElementById('btn').disabled) doSignIn(); });
