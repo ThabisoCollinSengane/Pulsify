@@ -211,6 +211,7 @@ async function fetchPosts() {
   const sb = getSB();
   const token = sb ? (await sb.auth.getSession())?.data?.session?.access_token : null;
   const params = new URLSearchParams({ page: _page, limit: 10, filter: _filter });
+  if (_uid) params.set('follower_id', _uid);
   const headers = token ? { Authorization: 'Bearer ' + token } : {};
   const res = await fetch('/api/posts?' + params, { headers });
   if (!res.ok) throw new Error('Failed to load posts');
