@@ -125,6 +125,7 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 let _accType = 'user';
+let _signingIn = false;
 let _sessionHandled = false;
 
 function selectType(t) {
