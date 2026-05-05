@@ -81,3 +81,26 @@ For multi-step tasks, state a brief plan:
 ### Deploy command
 export VT=$(grep VERCEL_TOKEN /workspaces/Pulsify/.env | cut -d= -f2)
 npx vercel --prod --yes --token=$VT
+
+---
+
+## 6. Workflow with Claude (MCP ↔ Codespaces)
+
+The user works in **GitHub Codespaces** (mobile, browser).
+Claude works in an **MCP environment** with the repo mounted but cannot reach the user's Codespaces directly. Sync happens through Git.
+
+### How edits flow
+1. Claude edits files directly in the MCP repo using Read/Edit/Write — no inline `python3 -c` or `sed` scripts that the user has to paste.
+2. Claude commits + pushes to the assigned branch (e.g. `claude/fix-...`).
+3. User runs **one** command in Codespaces:
+   ```
+   git pull origin <branch>
+   ```
+4. User deploys with the Deploy command above when ready.
+
+### Rules for this workflow
+- **Prefer file edits over scripts.** Don't send the user multi-line Python/sed snippets to run manually — they're fragile on mobile and break on quoting. Edit the file, push, let them pull.
+- **One command at a time** when the user is on mobile. Number commands (Command 1, Command 2) and wait for output before sending the next.
+- **No broad regex replacements** on `index.html` (Hard rule #6 above).
+- **Always read before editing.** Check the actual file state — past sessions may have left partial changes.
+- If git push fails from MCP, fall back to: write the change, then send the user the exact `git pull` command — never ask them to recreate the edit by hand.
