@@ -11,6 +11,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet"/>
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+<script>
+function openAvatarLightbox() {
+  const av = document.getElementById('profile-av');
+  const img = av ? av.querySelector('img') : null;
+  if (!img) return;
+  const lb = document.getElementById('av-lb');
+  if (!lb) return;
+  document.getElementById('av-lb-img').src = img.src;
+  lb.style.display = 'flex';
+}
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -247,7 +258,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .no-results-btn{background:var(--or);color:#fff;border:none;padding:10px 24px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer}
 .api-error{margin:12px 14px;background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);border-radius:12px;padding:10px 14px;font-size:.78rem;color:var(--pk);display:flex;align-items:center;gap:8px}
 
-
 /* ── Businesses Full Page ── */
 #biz-page-overlay{position:fixed;inset:0;background:var(--bg);z-index:900;display:none;flex-direction:column;overflow:hidden}
 #biz-page-overlay.open{display:flex}
@@ -273,7 +283,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .bp-rating{font-size:.66rem;color:var(--li);font-family:'Syne',sans-serif;font-weight:700}
 .bp-price{font-size:.62rem;color:var(--mu)}
 
-
 /* ── Map slide panel ── */
 #map-panel{position:absolute;bottom:0;left:0;right:0;z-index:200;background:rgba(5,8,15,.97);backdrop-filter:blur(28px);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.12);border-bottom:none;padding:18px 16px 20px;transform:translateY(110%);transition:transform .32s cubic-bezier(.4,0,.2,1);pointer-events:none;max-width:520px;margin:0 auto}
 #map-panel.open{transform:translateY(0);pointer-events:auto}
@@ -294,7 +303,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 #map-legend-toggle{cursor:pointer;-webkit-tap-highlight-color:transparent}
 #map-legend-body{transition:all .25s}
 /* Glowing marker */
-.mp-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;border:2px solid rgba(255,255,255,.7);cursor:pointer;position:relative;transition:transform .15s}
+.mp-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;border:2px solid rgba(255,255,255,.7);cursor:pointer;position:relative;transition:transform .15s;will-change:transform}
 .mp-dot:active{transform:scale(1.2)}
 .mp-ring{position:absolute;inset:-6px;border-radius:50%;border:2px solid currentColor;animation:gring 2s ease-in-out infinite;pointer-events:none;opacity:.55}
 @keyframes gring{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(1.45);opacity:0}}
@@ -308,7 +317,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   <div class="logo" onclick="goHome()"><span class="dot"></span>PULSIFY</div>
   <div class="top-r">
     <button class="back" id="back-btn" onclick="goBack()">← Back</button>
-    <div class="ib" onclick="showTab('profile')">🔔<span class="nd"></span></div>
+    <div class="ib" id="notif-btn" onclick="openNotifPanel()">🔔<span class="nd" id="notif-dot"></span></div>
     <button class="sb" id="auth-btn" onclick="window.location.href='signin.html'">Sign In</button>
   </div>
 </header>
@@ -458,106 +467,18 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 
 <!-- ══ SQUAD ══ -->
 <div class="panel" id="tab-squad">
-  <div style="padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between">
-    <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu)">👥 Friends Feed</div>
-    <a href="feeds.html" style="font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--or);text-decoration:none">See all →</a>
-  </div>
-  <div id="squad-content"></div>
-  <div style="padding:12px 14px">
-    <button onclick="window.location.href='feeds.html'" style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:13px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer">📰 Open Full Social Feed →</button>
-  </div>
-</div>
-
-<!-- ══ PROFILE ══ -->
-<div class="panel" id="tab-profile" style="padding:0 0 20px">
-
-  <!-- LOGGED OUT -->
-  <div id="prof-out" style="padding:40px 20px;text-align:center">
-    <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 16px;border:3px solid rgba(255,255,255,.1)">😊</div>
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;margin-bottom:6px">Sign In to Pulsify</div>
-    <div style="font-size:.82rem;color:var(--mu);margin-bottom:24px">Access your tickets, saves &amp; squad</div>
-    <button class="fmb" onclick="window.location.href='signin.html'" style="border-radius:50px;padding:13px;letter-spacing:.05em;margin-bottom:10px">Sign In</button>
-    <div style="font-size:.78rem;color:var(--mu)">No account? <a href="create-account.html" style="color:var(--or);font-weight:700;text-decoration:none">Sign up free →</a></div>
-  </div>
-
-  <!-- LOGGED IN -->
-  <div id="prof-in" style="display:none">
-    <!-- Banner -->
-    <div style="height:90px;background:linear-gradient(135deg,rgba(176,38,255,.3),rgba(255,92,0,.2));position:relative"></div>
-    <!-- Avatar + actions row -->
-    <div style="padding:0 16px;margin-top:-40px;margin-bottom:12px;display:flex;align-items:flex-end;justify-content:space-between">
-      <div id="profile-av" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:2rem;border:3px solid var(--bg);overflow:hidden;flex-shrink:0">😊</div>
-      <div style="display:flex;gap:8px;padding-bottom:6px">
-        <button onclick="window.location.href='profile-settings.html'" style="background:var(--surf);border:1px solid var(--border2);border-radius:50px;padding:7px 14px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu2);cursor:pointer">⚙️ Settings</button>
-      </div>
+  <div style="padding:14px 16px 8px">
+    <div class="sw" style="padding:0; margin-bottom:12px">
+      <span class="sic">🔍</span>
+      <input class="si" type="search" id="friend-search" placeholder="Search friend, business or event organizer" autocomplete="off" oninput="searchUsers(this.value)"/>
     </div>
-    <!-- Name -->
-    <div style="padding:0 16px 6px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.7rem;line-height:1;margin-bottom:2px" id="profile-name">Your Name</div>
-      <div style="font-size:.76rem;color:var(--mu);margin-bottom:12px" id="profile-sub">@handle</div>
-    </div>
-    <!-- Stats -->
-    <div class="vsr" style="margin:0 0 4px">
-      <div class="vs"><div class="vn" id="ps-saved">0</div><div class="vl">Saved</div></div>
-      <div class="vs"><div class="vn" id="ps-tickets">0</div><div class="vl">Tickets</div></div>
-      <div class="vs"><div class="vn" id="ps-posts">0</div><div class="vl">Posts</div></div>
-    </div>
-    <!-- Quick links -->
-    <div style="padding:8px 14px">
-      <button onclick="window.location.href='feeds.html'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;-webkit-tap-highlight-color:transparent">
-        <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">📰</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Social Feed</div><div style="font-size:.68rem;color:var(--mu)">Posts from people you follow</div></div></div>
-        <span style="color:var(--or);font-size:.8rem">→</span>
-      </button>
-      <button onclick="window.location.href='user-profile.html'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;-webkit-tap-highlight-color:transparent">
-        <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">👤</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">My Profile & Posts</div><div style="font-size:.68rem;color:var(--mu)">Your memories and events attended</div></div></div>
-        <span style="color:var(--or);font-size:.8rem">→</span>
-      </button>
-      <button onclick="showTab('tickets')" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;-webkit-tap-highlight-color:transparent">
-        <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">🎟</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">My Bookings</div><div style="font-size:.68rem;color:var(--mu)">Tickets and QR codes</div></div></div>
-        <span style="color:var(--or);font-size:.8rem">→</span>
-      </button>
-      <button onclick="window.location.href='business-login.html'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;-webkit-tap-highlight-color:transparent">
-        <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">🏪</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Business Dashboard</div><div style="font-size:.68rem;color:var(--mu)">Manage your venue or event page</div></div></div>
-        <span style="color:var(--or);font-size:.8rem">→</span>
-      </button>
-    </div>
-    <!-- Sign out -->
-    <div style="padding:0 14px 20px">
-      <button id="signout-btn" style="width:100%;background:rgba(255,45,120,.07);border:1px solid rgba(255,45,120,.2);color:var(--pk);border-radius:14px;padding:13px;font-family:'Syne',sans-serif;font-size:.86rem;font-weight:700;cursor:pointer">Sign Out</button>
+    <div id="search-results" style="margin-top:12px"></div>
+    <div style="margin-top:16px">
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">✨ People You May Know</div>
+      <div id="squad-content"></div>
     </div>
   </div>
-
-</div>
-
-<!-- ══ COMMENTS DRAWER ══ -->
-<div class="co" id="comments-overlay" onclick="if(event.target===this)closeComments()">
-  <div class="cs">
-    <div class="ch"><span class="ct">💬 <span id="comment-title">Comments</span></span><button class="cc" onclick="closeComments()">✕</button></div>
-    <div class="cl" id="comments-list"></div>
-    <div class="cir"><input class="ci" id="comment-input" placeholder="Add a comment…" maxlength="200"/><button class="csnd" onclick="postComment()">➤</button></div>
-  </div>
-</div>
-
-<!-- ══ AUTH MODAL ══ -->
-<div class="ov" id="auth-modal" onclick="if(event.target===this)this.classList.remove('open')">
-  <div class="sh"><div class="shh"></div>
-    <div class="shi">
-      <div class="sht">Welcome to Pulsify 🔥</div>
-      <div class="shs">Sign in to buy tickets, post memories &amp; join squads.</div>
-      <button class="gb" onclick="signInGoogle()">
-        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-        Continue with Google
-      </button>
-      <div class="ad">or</div>
-      <input class="ff" id="auth-email" type="email" placeholder="Email address"/>
-      <input class="ff" id="auth-pw" type="password" placeholder="Password"/>
-      <button class="fmb" onclick="handleAuth()">Sign In</button>
-      <div class="asw">No account? <span onclick="handleSignUp()">Sign Up free</span></div>
-    </div>
-  </div>
-</div>
-
-<!-- ══ BOTTOM NAV ══ -->
+</div><!-- ══ BOTTOM NAV ══ -->
 <!-- BUSINESSES FULL PAGE OVERLAY -->
 <div id="biz-page-overlay">
   <div class="bp-head">
@@ -576,6 +497,57 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   </div>
   <div class="bp-grid" id="bp-grid"></div>
 </div>
+
+<!-- PROFILE TAB -->
+<div class="panel" id="tab-profile" style="padding:0 0 20px">
+  <div id="prof-out" style="padding:40px 20px;text-align:center">
+    <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 16px;border:3px solid rgba(255,255,255,.1)">😊</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;margin-bottom:6px">Sign In to Pulsify</div>
+    <div style="font-size:.82rem;color:var(--mu);margin-bottom:24px">Access your tickets, saves &amp; squad</div>
+    <button class="fmb" onclick="window.location.href='signin.html'" style="border-radius:50px;padding:13px;letter-spacing:.05em;margin-bottom:10px">Sign In</button>
+    <div style="font-size:.78rem;color:var(--mu)">No account? <a href="create-account.html" style="color:var(--or);font-weight:700;text-decoration:none">Sign up free →</a></div>
+  </div>
+  <div id="prof-in" style="display:none">
+    <div style="height:90px;background:linear-gradient(135deg,rgba(176,38,255,.3),rgba(255,92,0,.2));position:relative"></div>
+    <div style="padding:0 16px;margin-top:-40px;margin-bottom:12px;display:flex;align-items:flex-end;justify-content:space-between">
+      <div id="profile-av" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:2rem;border:3px solid var(--bg);overflow:hidden;flex-shrink:0">😊</div>
+      <div style="display:flex;gap:8px;padding-bottom:6px">
+        <button onclick="window.location.href='profile-settings.html'" style="background:var(--surf);border:1px solid var(--border2);border-radius:50px;padding:7px 14px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu2);cursor:pointer">⚙️ Settings</button>
+      </div>
+    </div>
+    <div style="padding:0 16px 6px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.7rem;line-height:1;margin-bottom:2px" id="profile-name">Your Name</div>
+      <div style="font-size:.76rem;color:var(--mu);margin-bottom:12px" id="profile-sub">@handle</div>
+    </div>
+    <div class="vsr" style="margin:0 0 4px">
+      <div class="vs"><div class="vn" id="ps-saved">0</div><div class="vl">Saved</div></div>
+      <div class="vs"><div class="vn" id="ps-tickets">0</div><div class="vl">Tickets</div></div>
+      <div class="vs"><div class="vn" id="ps-posts">0</div><div class="vl">Posts</div></div>
+    </div>
+    <div style="padding:8px 14px">
+      <button onclick="window.location.href='feeds.html'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">📰</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Social Feed</div><div style="font-size:.68rem;color:var(--mu)">Posts from people you follow</div></div></div>
+        <span style="color:var(--or);font-size:.8rem">→</span>
+      </button>
+      <button onclick="window.location.href='user-profile.html'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">👤</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">My Profile &amp; Posts</div><div style="font-size:.68rem;color:var(--mu)">Your memories and events attended</div></div></div>
+        <span style="color:var(--or);font-size:.8rem">→</span>
+      </button>
+      <button onclick="showTab('tickets')" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">🎟</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">My Bookings</div><div style="font-size:.68rem;color:var(--mu)">Tickets and QR codes</div></div></div>
+        <span style="color:var(--or);font-size:.8rem">→</span>
+      </button>
+      <button onclick="window.location.href='business-login.html'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">🏪</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Business Dashboard</div><div style="font-size:.68rem;color:var(--mu)">Manage your venue or event page</div></div></div>
+        <span style="color:var(--or);font-size:.8rem">→</span>
+      </button>
+    </div>
+    <div style="padding:0 14px 20px">
+      <button id="signout-btn" style="width:100%;background:rgba(255,45,120,.07);border:1px solid rgba(255,45,120,.2);color:var(--pk);border-radius:14px;padding:13px;font-family:'Syne',sans-serif;font-size:.86rem;font-weight:700;cursor:pointer">Sign Out</button>
+    </div>
+  </div>
+</div>
+
 <nav class="bn">
   <button class="bb active" data-tab="home" onclick="showTab('home')"><svg viewBox="0 0 24 24"><path d="M12 3C12 3 4 9.5 4 15a8 8 0 0016 0C20 9.5 12 3 12 3Z"/><path d="M12 10v5M9.5 13h5"/></svg><span class="bl">Home</span></button>
   <button class="bb" data-tab="discover" onclick="showTab('discover')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"/></svg><span class="bl">Discover</span></button>
@@ -585,6 +557,66 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   <button class="bb" data-tab="profile" onclick="showTab('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg><span class="bl">Profile</span></button>
 </nav>
 <div class="toast" id="toast"></div>
+
+<!-- NOTIFICATIONS PANEL -->
+<div id="notif-overlay" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.6);backdrop-filter:blur(8px)" onclick="if(event.target===this)closeNotifPanel()">
+  <div id="notif-panel" style="position:absolute;top:58px;right:12px;width:min(340px,calc(100vw - 24px));background:var(--bg2);border:1px solid var(--border2);border-radius:18px;overflow:hidden;animation:npIn .22s ease">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--border)">
+      <span style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase">Notifications</span>
+      <button onclick="markAllNotifsRead()" style="font-size:.64rem;color:var(--or);background:none;border:none;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700">Mark all read</button>
+    </div>
+    <div id="notif-list" style="max-height:360px;overflow-y:auto;scrollbar-width:none"></div>
+  </div>
+</div>
+<style>@keyframes npIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}</style>
+
+<!-- PROFILE OVERLAY -->
+<div id="prof-overlay" style="display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.7);backdrop-filter:blur(12px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeProfOverlay()">
+  <div style="width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;max-height:85vh;display:flex;flex-direction:column;animation:su .25s ease">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--border2);margin:12px auto 0;flex-shrink:0"></div>
+    <button onclick="closeProfOverlay()" style="position:absolute;top:18px;right:18px;background:var(--surf);border:none;color:var(--mu2);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center">✕</button>
+    <div id="prof-overlay-body" style="overflow-y:auto;padding:16px 18px 32px;flex:1;scrollbar-width:none"></div>
+  </div>
+</div>
+
+<!-- COMMENTS OVERLAY -->
+<div id="comments-overlay" onclick="if(event.target===this)closeComments()" style="display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center">
+  <div style="width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;max-height:80vh">
+    <div style="padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.08)">
+      <span id="comment-title" style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px"></span>
+      <button onclick="closeComments()" style="background:none;border:none;color:var(--tx);font-size:18px;cursor:pointer;padding:4px 8px">&#x2715;</button>
+    </div>
+    <div id="comments-list" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px"></div>
+    <div style="padding:10px 14px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px">
+      <input id="comment-input" style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:8px 14px;color:var(--tx);font-size:14px;outline:none" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')postComment()"/>
+      <button onclick="postComment()" style="background:var(--or);border:none;border-radius:50%;width:36px;height:36px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#x27A4;</button>
+    </div>
+  </div>
+</div>
+
+<!-- TICKET CONFIRMATION MODAL -->
+<div id="ticket-confirm-modal" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.85);backdrop-filter:blur(14px);align-items:center;justify-content:center;padding:20px">
+  <div style="width:100%;max-width:360px;background:var(--bg2);border-radius:22px;border:1px solid rgba(255,255,255,.12);overflow:hidden;animation:su .3s ease">
+    <div style="background:linear-gradient(135deg,#B026FF,#FF5C00);padding:20px;text-align:center">
+      <div style="font-size:2.5rem;margin-bottom:8px">🎟</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.04em;color:#fff">Booking Confirmed!</div>
+      <div id="tc-event" style="font-size:.8rem;color:rgba(255,255,255,.85);margin-top:4px"></div>
+    </div>
+    <div style="padding:20px">
+      <div style="text-align:center;margin-bottom:16px">
+        <img id="tc-qr" style="width:160px;height:160px;border-radius:12px;border:2px solid var(--border2)" src="" alt="QR Code"/>
+      </div>
+      <div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:.78rem;line-height:1.8">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--mu)">Booking Ref</span><span id="tc-ref" style="font-family:'Syne',sans-serif;font-weight:700;color:var(--or)"></span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--mu)">Name</span><span id="tc-name"></span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--mu)">Qty</span><span id="tc-qty"></span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--mu)">Total</span><span id="tc-total" style="color:var(--li);font-weight:700"></span></div>
+      </div>
+      <div style="font-size:.72rem;color:var(--mu);text-align:center;margin-bottom:14px">Show this QR at the door. Confirmation sent to your email.</div>
+      <button onclick="closeTicketConfirm()" style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer">Done</button>
+    </div>
+  </div>
+</div>
 
 <script>
 
@@ -807,7 +839,7 @@ function buildCard(ev, idx) {
     <div class="fh"><div class="fa" style="background:${bg}">${emo}</div>
       <div style="flex:1;min-width:0"><div class="fo">${x(ev.organiser_name || ev.venue_name || 'Pulsify')}</div>
       <div class="fl">📍 ${x(ev.venue_city)} · ${fdt(ev.date_local, ev.time_local)}</div></div>${badge}</div>
-    <div class="fb" style="background:${bg}">
+    <div class="fb" style="background:transparent">
       <img src="${x(ev.image_url || '')}" loading="lazy" onerror="this.style.display='none'"/>
       <div class="fg"><div class="ft2">${x(ev.name)}</div>
         <div class="fp ${iF ? 'fr' : ''}">${pr}${srcLabel ? '<span style="font-size:.6rem;opacity:.7;margin-left:6px">' + x(srcLabel) + '</span>' : ''}</div></div>
@@ -819,8 +851,8 @@ function buildCard(ev, idx) {
       <div class="hb"><div class="hf" style="width:${hp}%"></div></div>
     </div>
     <div class="fac" onclick="event.stopPropagation()">
-      <button class="ab" onclick="toggleLike(this)"><span class="ai">🤍</span><span>${fn(ev.like_count)}</span></button>
-      <button class="ab" onclick="openComments('${x(ev.id)}','${x(ev.name)}')"><span class="ai">💬</span><span>${fn(ev.comment_count)}</span></button>
+      <button class="ab" onclick="toggleLike(this, '${x(ev.id)}', 'events')"><span class="ai">🤍</span><span>${fn(ev.like_count)}</span></button>
+      <button class="ab" onclick="openComments('${x(ev.id)}', '${x(ev.name)}', 'events')"><span class="ai">💬</span><span>${fn(ev.comment_count)}</span></button>
       <button class="ab" onclick="shareIt('${x(ev.name)}')"><span class="ai">🔗</span></button>
       <button class="ab" onclick="toggleSave('ev','${x(ev.id)}',this)"><span class="ai">${savedEv.includes(ev.id) ? '🔖' : '🏷'}</span></button>
       <button class="tb2 ${iF ? 'fr' : ''}" onclick="openEv('${x(ev.id)}');event.stopPropagation()">${btnLbl}</button>
@@ -896,7 +928,7 @@ async function loadFrontline() {
 
 function buildBizCard(b) {
   return `<div class="bc ${b.is_frontline ? 'ft' : ''}" onclick="openBiz('${x(b.id)}')">
-    <div class="bt" style="background:${cg(b.category)}">
+    <div class="bt" style="background:transparent">
       ${b.cover_image_url ? `<img src="${x(b.cover_image_url)}" loading="lazy" onerror="this.style.display='none'"/>` : '<span>' + ce(b.category) + '</span>'}
       <div class="btg"></div>
       <span class="bb2">${x(b.category)}</span>
@@ -1048,35 +1080,32 @@ async function initPay(evId) {
   const email = document.getElementById('buyer-email')?.value.trim();
   if (!name)                    return showToast('Enter your full name', 'err');
   if (!email || !email.includes('@')) return showToast('Enter a valid email', 'err');
-  if (!selTier || selTier.price === 0) { showToast('✅ RSVP confirmed! See you there 🎉', 'ok'); return; }
-
   showToast('Processing…');
   try {
     const res  = await fetch(API + '/ticket/purchase', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event_id: evId, tier_id: selTier.id, quantity: selQty, buyer_name: name, buyer_email: email }),
+      body: JSON.stringify({ event_id: evId, tier_id: selTier?.id || null, quantity: selQty, buyer_name: name, buyer_email: email }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
 
-    if (PAYSTACK_PK && !PAYSTACK_PK.includes('test')) {
-      const script = document.createElement('script');
-      script.src = 'https://js.paystack.co/v1/inline.js';
-      script.onload = () => {
-        PaystackPop.setup({
-          key: PAYSTACK_PK, email, amount: data.total_kobo, currency: 'ZAR', ref: data.booking_ref,
-          metadata: data.metadata,
-          callback: () => { showToast('🎟 Booking confirmed! Check your email', 'ok'); showTab('tickets'); },
-          onClose: () => showToast('Payment cancelled'),
-        }).openIframe();
-      };
-      document.head.appendChild(script);
-    } else {
-      showToast('🎟 Demo: Booking ref ' + data.booking_ref, 'ok');
+    // Paystack disabled — show confirmation with QR directly
+    showTicketConfirm({ ...data, quantity: selQty });
+
+    // Create notification for the user
+    if (currentUser) {
+      const sb = getSB();
+      if (sb) {
+        await sb.from('notifications').insert({
+          user_id: currentUser.id, type: 'ticket', entity_id: data.booking_ref, entity_type: 'booking',
+          message: `Your ticket for ${data.event_name} is confirmed! Ref: ${data.booking_ref}`,
+        }).catch(() => {});
+      }
     }
+    renderBookings();
   } catch(err) {
-    showToast('Payment failed: ' + err.message, 'err');
+    showToast('Booking failed: ' + err.message, 'err');
   }
 }
 
@@ -1467,40 +1496,473 @@ function switchST(tab, paneId) { tab.closest('.stbs').querySelectorAll('.stb').f
 /* ══════════════════════════════════════════════════
    SQUAD
 ══════════════════════════════════════════════════ */
-const MOCK_SQUAD = [
-  { id:'u1', name:'Sipho Dlamini',  handle:'@sipho_kzn',   city:'Umlazi · Durban',    emo:'🔊' },
-  { id:'u2', name:'Nandi Khoza',    handle:'@nandik',       city:'Sandton · Joburg',   emo:'💃' },
-  { id:'u3', name:'DJ Thabang',     handle:'@djthabang',    city:'Soweto · Joburg',    emo:'🎤' },
-  { id:'u4', name:'Zinhle D',       handle:'@zinhle_d',     city:'Durban North',        emo:'🌊' },
-  { id:'u5', name:'Lebo T',         handle:'@lebo_t',       city:'Cape Town CBD',       emo:'🎶' },
-];
-function renderSquad() {
-  document.getElementById('squad-content').innerHTML = `
-    <div class="vsr"><div class="vs"><div class="vn">${vibes.length}</div><div class="vl">Vibing</div></div><div class="vs"><div class="vn">48</div><div class="vl">Vibes</div></div><div class="vs"><div class="vn">12</div><div class="vl">Events</div></div></div>
-    <div style="padding:0 16px 12px;font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu)">✨ People You May Know</div>
-    ${MOCK_SQUAD.map(u => `<div class="pc"><div class="pav" style="background:linear-gradient(135deg,hsl(${(u.id.charCodeAt(1)*47)%360},60%,30%),hsl(${(u.id.charCodeAt(1)*47+120)%360},60%,20%))">${u.emo}</div><div style="flex:1;min-width:0"><div class="pn">${x(u.name)}</div><div class="ph">${x(u.handle)} · ${x(u.city)}</div></div><button class="vb ${vibes.includes(u.id)?'cd':'cn'}" onclick="toggleVibe('${u.id}',this)">${vibes.includes(u.id)?'✓ Vibing':'+ Vibe'}</button></div>`).join('')}`;
-}
-function toggleVibe(id, btn) { const i = vibes.indexOf(id); if (i > -1) { vibes.splice(i, 1); btn.className = 'vb cn'; btn.textContent = '+ Vibe'; } else { vibes.push(id); btn.className = 'vb cd'; btn.textContent = '✓ Vibing'; showToast('🔥 Vibe sent!'); } localStorage.setItem('p_vibes', JSON.stringify(vibes)); }
+
 
 /* ══════════════════════════════════════════════════
    COMMENTS
 ══════════════════════════════════════════════════ */
-const SEED_COMMENTS = [
-  { av:'🔥', name:'Sipho M.', text:'This event is always fire 🔥 been going 3 years straight', time:'2h ago' },
-  { av:'💃', name:'Nandi K.', text:'Anyone going from Hillcrest? Looking for a squad 👀', time:'4h ago' },
-  { av:'🎶', name:'DJ Thabang', text:'The lineup this year is next level! See you on the floor 🎤', time:'5h ago' },
-];
-function openComments(id, name) { document.getElementById('comment-title').textContent = name; activeComments = [...SEED_COMMENTS]; renderComments(); document.getElementById('comments-overlay').classList.add('open'); setTimeout(() => document.getElementById('comment-input').focus(), 300); }
-function closeComments() { document.getElementById('comments-overlay').classList.remove('open'); }
-function renderComments() { document.getElementById('comments-list').innerHTML = activeComments.map(c => `<div class="cm"><div class="cav">${c.av}</div><div style="flex:1"><div class="cna">${x(c.name)}</div><div class="ctx">${x(c.text)}</div><div class="ctm">${c.time}</div></div></div>`).join(''); }
-function postComment() { const inp = document.getElementById('comment-input'); const val = inp.value.trim(); if (!val) return; activeComments.push({ av:'😊', name:'You', text: val, time:'just now' }); renderComments(); inp.value = ''; document.getElementById('comments-list').scrollTop = 9999; }
+let activeEntityId = null;
+let activeEntityType = 'event';
+
+async function openComments(entityId, name, type = 'event') {
+  const sb = getSB();
+  if (!sb) return showToast('You must be signed in to view comments.', 'err');
+  
+  activeEntityId = entityId;
+  activeEntityType = type;
+  
+  const overlay = document.getElementById('comments-overlay');
+  const titleEl = document.getElementById('comment-title');
+  const listEl = document.getElementById('comments-list');
+  
+  if (titleEl) titleEl.textContent = 'Comments on ' + name;
+  if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu)">Loading comments...</div>';
+  
+  overlay.style.display = 'flex';
+  
+  try {
+    const { data, error } = await sb.from('comments')
+      .select('*, profiles(username, avatar_url, display_name)')
+      .eq('entity_id', entityId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    activeComments = data || [];
+    renderComments();
+  } catch (e) {
+    if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--pk)">Error loading comments.</div>';
+    console.error('Comment load error:', e);
+  }
+}
+
+function closeComments() {
+  document.getElementById('comments-overlay').style.display = 'none';
+  activeEntityId = null;
+}
+
+function renderComments() {
+  const listEl = document.getElementById('comments-list');
+  if (!listEl) return;
+
+  if (activeComments.length === 0) {
+    listEl.innerHTML = '<div style="padding:30px 20px;text-align:center;color:var(--mu);font-size:.8rem">Be the first to comment!</div>';
+    return;
+  }
+
+  listEl.innerHTML = activeComments.map(c => {
+    const p = c.profiles;
+    const av = p?.avatar_url ? `<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover">` : (p?.display_name || '?')[0];
+    const name = p?.display_name || 'A user';
+    return `<div class="cm">
+        <div class="cav" style="background:linear-gradient(135deg,#1a0533,#4a0080); overflow:hidden;">${av}</div>
+        <div style="flex:1">
+            <div class="cna">${x(name)}</div>
+            <div class="ctx">${x(c.text || c.content || '')}</div>
+            <div class="ctm">${timeAgoShort(c.created_at)}</div>
+        </div>
+    </div>`;
+  }).join('');
+  listEl.scrollTop = listEl.scrollHeight;
+}
+
+async function postComment() {
+  const inp = document.getElementById('comment-input');
+  const val = inp.value.trim();
+  if (!val || !activeEntityId) return;
+
+  const sb = getSB();
+  if (!currentUser || !sb) {
+    return showToast('Please sign in to comment.', 'err');
+  }
+
+  inp.disabled = true;
+  try {
+    const { data: comment, error } = await sb.from('comments').insert({
+      user_id: currentUser.id,
+      entity_id: activeEntityId,
+      entity_type: activeEntityType,
+      text: val
+    }).select('*, profiles(username, avatar_url, display_name)').single();
+
+    if (error) throw error;
+    
+    activeComments.push(comment);
+    renderComments();
+    inp.value = '';
+    
+    // Find the author of the post/event to notify them
+    const { data: entity } = await sb.from(activeEntityType === 'event' ? 'events' : 'posts')
+        .select('user_id')
+        .eq('id', activeEntityId)
+        .single();
+        
+    if (entity && entity.user_id !== currentUser.id) {
+        createNotification(
+            entity.user_id,
+            'comment',
+            `${currentUser.display_name || 'Someone'} commented on your post.`
+        );
+    }
+
+  } catch(e) {
+    showToast('Failed to post comment: ' + e.message, 'err');
+    console.error('Comment post error:', e);
+  } finally {
+    inp.disabled = false;
+    inp.focus();
+  }
+}
 
 /* ══════════════════════════════════════════════════
    HELPERS
 ══════════════════════════════════════════════════ */
-function toggleLike(btn) { const ico = btn.querySelector('.ai'), cnt = btn.querySelector('span:last-child'); const liked = btn.classList.toggle('lk'); ico.textContent = liked ? '❤️' : '🤍'; let n = parseInt(cnt.textContent.replace('k','')) * (cnt.textContent.includes('k') ? 1000 : 1); cnt.textContent = fn(liked ? n + 1 : Math.max(0, n - 1)); }
+async function toggleLike(btn, entityId, entityType = 'event') {
+  if (!currentUser) return showToast('Sign in to like posts', 'err');
+  const sb = getSB();
+  const liked = btn.classList.toggle('lk');
+  const ico = btn.querySelector('.ai');
+  const cntEl = btn.querySelector('span:last-child');
+  const currentNum = parseInt(cntEl.textContent.replace('k','')) * (cntEl.textContent.includes('k') ? 1000 : 1);
+  
+  ico.textContent = liked ? '❤️' : '🤍';
+  cntEl.textContent = fn(liked ? currentNum + 1 : Math.max(0, currentNum - 1));
+
+  try {
+    if (liked) {
+      await sb.from('reactions').insert({ entity_id: entityId, user_id: currentUser.id, entity_type: entityType });
+      const { data: entity } = await sb.from(entityType).select('user_id, name').eq('id', entityId).single();
+      if (entity && entity.user_id !== currentUser.id) {
+        createNotification(entity.user_id, 'like', `${currentUser.display_name || 'Someone'} liked your post.`, entityId, entityType);
+      }
+    } else {
+      await sb.from('reactions').delete().eq('entity_id', entityId).eq('user_id', currentUser.id);
+    }
+  } catch(e) {
+    console.error('Like error:', e);
+    btn.classList.toggle('lk');
+    ico.textContent = liked ? '🤍' : '❤️';
+    cntEl.textContent = fn(currentNum);
+    showToast('Error saving like', 'err');
+  }
+}
 function toggleSave(type, id, btn) { if (type === 'ev') { const i = savedEv.indexOf(id); if (i > -1) { savedEv.splice(i,1); showToast('Removed'); } else { savedEv.push(id); showToast('🔖 Saved!'); } localStorage.setItem('p_sev', JSON.stringify(savedEv)); } else { const i = savedBz.indexOf(id); if (i > -1) { savedBz.splice(i,1); showToast('Removed'); } else { savedBz.push(id); showToast('🔖 Saved!'); } localStorage.setItem('p_sbiz', JSON.stringify(savedBz)); } if (btn) btn.querySelector('.ri,.ai').textContent = (type === 'ev' ? savedEv : savedBz).includes(id) ? '🔖' : '🏷'; }
 function shareIt(name) { if (navigator.share) navigator.share({ title: name, text: 'Check out ' + name + ' on Pulsify!', url: location.href }); else { navigator.clipboard?.writeText(location.href); showToast('🔗 Link copied!'); } }
+
+
+/* ── Friend search & follow ── */
+let searchTimeout = null;
+let _squadFollowing = new Set();
+
+async function searchUsers(query) {
+  const el = document.getElementById('search-results');
+  if (!el) return;
+  clearTimeout(searchTimeout);
+  if (!query || query.trim().length < 2) { el.innerHTML = ''; return; }
+  const sb = getSB();
+  if (!sb) {
+    el.innerHTML = '<div style="padding:12px 16px;font-size:.78rem;color:var(--mu)">Sign in to search. <a href="signin.html" style="color:var(--or)">Sign in →</a></div>';
+    return;
+  }
+  el.innerHTML = '<div style="padding:10px 16px;font-size:.75rem;color:var(--mu)">Searching…</div>';
+  searchTimeout = setTimeout(async () => {
+    const term = query.replace('@','').trim();
+    try {
+      const { data, error } = await sb
+        .from('profiles')
+        .select('id,display_name,username,avatar_url,city,role')
+        .or('display_name.ilike.%' + term + '%,username.ilike.%' + term + '%')
+        .neq('id', currentUser?.id || '00000000-0000-0000-0000-000000000000')
+        .limit(10);
+      if (error) throw error;
+      if (!data || !data.length) {
+        el.innerHTML = '<div style="padding:10px 16px;font-size:.75rem;color:var(--mu)">No users found for "' + x(query) + '"</div>';
+        return;
+      }
+      const { data: fData } = await sb.from('follows').select('following_id').eq('follower_id', currentUser?.id || '');
+      const fIds = new Set((fData||[]).map(f => f.following_id));
+      el.innerHTML = data.map(u => {
+        const isOrg = ['organizer','business'].includes(u.role);
+        const isF   = fIds.has(u.id);
+        const init  = (u.display_name||u.username||'?')[0].toUpperCase();
+        return '<div class="pc" style="padding:10px 14px">' +
+          '<div class="pav" style="background:' + (isOrg?'linear-gradient(135deg,#FF5C00,#FF2D78)':'linear-gradient(135deg,#0064DC,#B026FF)') + ';font-size:.9rem;font-weight:700">' + (u.avatar_url?'<img src="'+x(u.avatar_url)+'" style="width:100%;height:100%;object-fit:cover">':init) + '</div>' +
+          '<div style="flex:1;min-width:0"><div class="pn">' + x(u.display_name||u.username) + '</div>' +
+          '<div class="ph">@' + x(u.username||'user') + (u.city?' · '+x(u.city):'') + '</div></div>' +
+          '<button class="vb ' + (isF?'cd':'cn') + '" onclick="toggleFollow(\'' + u.id + '\',this)">' + (isF?'✓ Following':'+ Follow') + '</button>' +
+        '</div>';
+      }).join('');
+    } catch(e) {
+      el.innerHTML = '<div style="padding:10px 16px;font-size:.75rem;color:var(--pk)">Error: ' + x(e.message) + '</div>';
+    }
+  }, 350);
+}
+
+async function toggleFollow(targetId, btn) {
+  const sb = getSB();
+  if (!sb || !currentUser) { showToast('Sign in to follow'); window.location.href='signin.html'; return; }
+  const isF = btn.classList.contains('cd');
+  btn.disabled = true;
+  try {
+    if (isF) {
+      const { error } = await sb.from('follows').delete().eq('follower_id',currentUser.id).eq('following_id',targetId);
+      if (error) throw error;
+      _squadFollowing.delete(targetId);
+      btn.className='vb cn'; btn.textContent='+ Follow'; showToast('Unfollowed');
+    } else {
+      const { error } = await sb.from('follows').insert({follower_id:currentUser.id,following_id:targetId});
+      if (error) throw error;
+      _squadFollowing.add(targetId);
+      btn.className='vb cd'; btn.textContent='✓ Following'; showToast('🔥 Following!');
+      const { data: tp } = await sb.from('profiles').select('display_name').eq('id', currentUser.id).single();
+      createNotification(targetId, 'follow', `${tp?.display_name || 'Someone'} started following you`);
+    }
+  } catch(e) { showToast('Error: '+e.message); console.error(e); }
+  btn.disabled = false;
+}
+
+async function renderSquad() {
+  const el = document.getElementById('squad-content');
+  const sb = getSB();
+  if (!el) return;
+  if (!currentUser || !sb) {
+    el.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Sign in to see your friends.</div>';
+    return;
+  }
+  el.innerHTML = '<div style="padding:12px 16px;font-size:.78rem;color:var(--mu)">Loading…</div>';
+  try {
+    const { data: follows, error } = await sb
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', currentUser.id);
+    if (error) throw error;
+    _squadFollowing = new Set((follows||[]).map(f=>f.following_id));
+    if (!follows || !follows.length) {
+      el.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Not following anyone yet. Search above ↑</div>';
+      return;
+    }
+    const ids = follows.map(f => f.following_id);
+    const { data: profs, error: pErr } = await sb
+      .from('profiles')
+      .select('id,username,display_name,avatar_url,city,role')
+      .in('id', ids);
+    if (pErr) throw pErr;
+    if (!profs || !profs.length) {
+      el.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Not following anyone yet. Search above ↑</div>';
+      return;
+    }
+    el.innerHTML = profs.map(p => {
+      const init = (p.display_name||p.username||'?')[0].toUpperCase();
+      return '<div class="pc" style="padding:10px 14px">' +
+        '<div class="pav" style="background:linear-gradient(135deg,#B026FF,#FF5C00);font-size:.9rem;font-weight:700">' + init + '</div>' +
+        '<div style="flex:1;min-width:0"><div class="pn">' + x(p.display_name||p.username||'User') + '</div>' +
+        '<div class="ph">@' + x(p.username||'user') + (p.city?' · '+x(p.city):'') + '</div></div>' +
+        '<button class="vb cd" onclick="toggleFollow(\'' + p.id + '\',this)">✓ Following</button>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Could not load friends: ' + x(e.message) + '</div>';
+    console.error('renderSquad error:', e);
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   NOTIFICATIONS
+══════════════════════════════════════════════════ */
+async function openNotifPanel() {
+  document.getElementById('notif-overlay').style.display = 'block';
+  await loadNotifications();
+}
+function closeNotifPanel() { document.getElementById('notif-overlay').style.display = 'none'; }
+
+async function loadNotifications() {
+  const sb = getSB(); const el = document.getElementById('notif-list');
+  if (!el) return;
+  if (!currentUser || !sb) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;font-size:.78rem;color:var(--mu)">Sign in to see notifications</div>';
+    return;
+  }
+  el.innerHTML = '<div style="padding:16px;font-size:.75rem;color:var(--mu)">Loading…</div>';
+  try {
+    const { data, error } = await sb.from('notifications')
+      .select('*').eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false }).limit(30);
+    if (error) throw error;
+    const notifs = data || [];
+    const unread = notifs.filter(n => !n.read).length;
+    const dot = document.getElementById('notif-dot');
+    if (dot) dot.style.display = unread ? 'block' : 'none';
+    if (!notifs.length) {
+      el.innerHTML = '<div style="padding:30px;text-align:center;font-size:.78rem;color:var(--mu)">No notifications yet</div>';
+      return;
+    }
+    const ico = {follow:'👤',like:'❤️',repost:'🔁',comment:'💬',ticket:'🎟',business_post:'📢',account:'⚙️'};
+    el.innerHTML = notifs.map(n => `
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);background:${n.read?'transparent':'rgba(176,38,255,.06)'}">
+        <div style="font-size:1.2rem;flex-shrink:0;margin-top:2px">${ico[n.type]||'🔔'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.78rem;color:var(--tx);line-height:1.45">${x(n.message)}</div>
+          <div style="font-size:.62rem;color:var(--mu);margin-top:3px">${timeAgoShort(n.created_at)}</div>
+        </div>
+        ${!n.read?'<div style="width:7px;height:7px;border-radius:50%;background:var(--or);flex-shrink:0;margin-top:5px"></div>':''}
+      </div>`).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="padding:16px;font-size:.75rem;color:var(--mu)">Could not load notifications</div>';
+  }
+}
+
+async function markAllNotifsRead() {
+  const sb = getSB();
+  if (!sb || !currentUser) return;
+  await sb.from('notifications').update({ read: true }).eq('user_id', currentUser.id).eq('read', false);
+  const dot = document.getElementById('notif-dot');
+  if (dot) dot.style.display = 'none';
+  loadNotifications();
+}
+
+async function createNotification(userId, type, message, entityId, entityType) {
+  const sb = getSB();
+  if (!sb || !currentUser || userId === currentUser.id) return;
+  try {
+    await sb.from('notifications').insert({
+      user_id: userId, type, from_user_id: currentUser.id,
+      from_display_name: currentUser.display_name || '',
+      entity_id: entityId || null, entity_type: entityType || null, message,
+    });
+  } catch(e) { console.warn('notif error:', e.message); }
+}
+
+function timeAgoShort(iso) {
+  if (!iso) return '';
+  const d = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (d < 60) return 'just now';
+  if (d < 3600) return Math.floor(d/60)+'m ago';
+  if (d < 86400) return Math.floor(d/3600)+'h ago';
+  return Math.floor(d/86400)+'d ago';
+}
+
+/* ══════════════════════════════════════════════════
+   PROFILE OVERLAY (click any username)
+══════════════════════════════════════════════════ */
+async function openProfile(userId) {
+  const ov = document.getElementById('prof-overlay');
+  const body = document.getElementById('prof-overlay-body');
+  if (!ov || !body) return;
+  ov.style.display = 'flex';
+  body.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div>';
+  try {
+    const res = await fetch('/api/profiles/' + userId);
+    if (!res.ok) throw new Error('Profile not found');
+    const { profile, posts_count, followers_count, following_count, recent_posts } = await res.json();
+    const sb = getSB();
+    let isFollowing = false;
+    if (sb && currentUser) {
+      const { data: fw } = await sb.from('follows').select('follower_id').eq('follower_id', currentUser.id).eq('following_id', userId).maybeSingle();
+      isFollowing = !!fw;
+    }
+    const init = (profile.display_name || profile.username || '?')[0].toUpperCase();
+    const isOrg = ['organizer','business','admin'].includes(profile.role);
+    const postsHtml = recent_posts.length ? recent_posts.map(p =>
+      `<div style="aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--surf);cursor:pointer;position:relative">
+        ${p.image_url ? `<img src="${x(p.image_url)}" style="width:100%;height:100%;object-fit:cover" loading="lazy"/>` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:.72rem;color:var(--mu);padding:8px;text-align:center">${x((p.caption||'').slice(0,60))}</div>`}
+      </div>`).join('') : '<div style="grid-column:1/-1;padding:20px;text-align:center;font-size:.78rem;color:var(--mu)">No posts yet</div>';
+
+    body.innerHTML = `
+      <div style="height:70px;background:linear-gradient(135deg,rgba(176,38,255,.3),rgba(255,92,0,.2));border-radius:12px;margin-bottom:-30px"></div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:12px">
+        <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:1.8rem;border:3px solid var(--bg2);overflow:hidden;flex-shrink:0">
+          ${profile.avatar_url ? `<img src="${x(profile.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>` : init}
+        </div>
+        <div style="display:flex;gap:8px;padding-bottom:4px">
+          ${currentUser && currentUser.id !== userId ? `<button id="po-follow-btn" onclick="toggleFollowOverlay('${x(userId)}')" style="background:${isFollowing?'transparent':'linear-gradient(135deg,#B026FF,#FF5C00)'};border:${isFollowing?'1px solid var(--border2)':'none'};color:${isFollowing?'var(--mu2)':'#fff'};padding:8px 18px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;cursor:pointer">${isFollowing?'✓ Following':'+ Follow'}</button>` : ''}
+          ${isOrg ? `<button onclick="closeProfOverlay();window.location.href='feeds.html'" style="background:var(--surf);border:1px solid var(--border2);color:var(--mu2);padding:8px 14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">View Feed</button>` : ''}
+        </div>
+      </div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;line-height:1;margin-bottom:2px">${x(profile.display_name||profile.username)}</div>
+      <div style="font-size:.74rem;color:var(--mu);margin-bottom:${profile.bio?'8px':'12px'}">@${x(profile.username||'user')}${profile.city?' · '+x(profile.city):''}${isOrg?' · <span style="color:var(--or)">'+profile.role+'</span>':''}</div>
+      ${profile.bio ? `<div style="font-size:.82rem;color:var(--mu2);line-height:1.55;margin-bottom:12px">${x(profile.bio)}</div>` : ''}
+      <div style="display:flex;gap:24px;margin-bottom:16px">
+        <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--or)">${posts_count}</div><div style="font-size:.6rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Posts</div></div>
+        <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--or)">${followers_count}</div><div style="font-size:.6rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Followers</div></div>
+        <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--or)">${following_count}</div><div style="font-size:.6rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Following</div></div>
+      </div>
+      ${recent_posts.length ? `<div style="font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Places Attended</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">${postsHtml}</div>` : ''}`;
+  } catch(e) {
+    body.innerHTML = `<div style="padding:40px;text-align:center;color:var(--mu)">${x(e.message)}</div>`;
+  }
+}
+
+function closeProfOverlay() { document.getElementById('prof-overlay').style.display = 'none'; }
+
+async function toggleFollowOverlay(targetId) {
+  const sb = getSB();
+  if (!sb || !currentUser) { showToast('Sign in to follow'); return; }
+  const btn = document.getElementById('po-follow-btn');
+  const isF = btn && btn.textContent.includes('Following');
+  if (btn) { btn.disabled = true; }
+  try {
+    if (isF) {
+      await sb.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', targetId);
+      if (btn) { btn.textContent = '+ Follow'; btn.style.background = 'linear-gradient(135deg,#B026FF,#FF5C00)'; btn.style.border = 'none'; btn.style.color = '#fff'; }
+      showToast('Unfollowed');
+    } else {
+      await sb.from('follows').insert({ follower_id: currentUser.id, following_id: targetId });
+      if (btn) { btn.textContent = '✓ Following'; btn.style.background = 'transparent'; btn.style.border = '1px solid var(--border2)'; btn.style.color = 'var(--mu2)'; }
+      showToast('Following!');
+      const { data: tp } = await sb.from('profiles').select('display_name').eq('id', currentUser.id).single();
+      createNotification(targetId, 'follow', `${tp?.display_name||'Someone'} started following you`);
+    }
+  } catch(e) { showToast('Error: ' + e.message); }
+  if (btn) btn.disabled = false;
+}
+
+/* ══════════════════════════════════════════════════
+   TICKET CONFIRMATION MODAL
+══════════════════════════════════════════════════ */
+function showTicketConfirm(booking) {
+  document.getElementById('tc-event').textContent = booking.event_name || '';
+  document.getElementById('tc-ref').textContent   = booking.booking_ref || '';
+  document.getElementById('tc-name').textContent  = booking.buyer_name  || '';
+  document.getElementById('tc-qty').textContent   = booking.quantity    || 1;
+  document.getElementById('tc-total').textContent = booking.is_free ? 'FREE' : 'R' + (booking.total_paid || 0).toFixed(2);
+  const qrData = encodeURIComponent(booking.qr_data || booking.booking_ref || 'PULSIFY');
+  document.getElementById('tc-qr').src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${qrData}&bgcolor=090D1A&color=FF5C00&margin=2`;
+  document.getElementById('ticket-confirm-modal').style.display = 'flex';
+}
+function closeTicketConfirm() { document.getElementById('ticket-confirm-modal').style.display = 'none'; }
+
+/* ── Supabase session sync on load ── */
+async function initSupabaseSession() {
+  const sb = getSB();
+  if (!sb) return;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return;
+    const { data: profile } = await sb.from('profiles')
+      .select('id,username,display_name,bio,avatar_url,genres,city,province,role,is_verified')
+      .eq('id', session.user.id).single();
+    if (profile) {
+      localStorage.setItem('p_user', JSON.stringify({id:session.user.id,email:session.user.email,display_name:profile.display_name||session.user.email?.split('@')[0],role:profile.role||'user'}));
+      localStorage.setItem('p_profile', JSON.stringify(profile));
+      localStorage.setItem('p_token', session.access_token);
+    }
+    const btn = document.getElementById('auth-btn');
+    if (btn) { btn.textContent='Feed'; btn.onclick=()=>window.location.href='feeds.html'; }
+    currentUser = session.user;
+    renderProfile();
+  } catch(e) { console.warn('initSupabaseSession:', e.message); }
+
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      try {
+        const { data: prof } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
+        const role = prof?.role || 'user';
+        if (role === 'organizer') { window.location.href = 'organizer-dashboard.html'; return; }
+        if (role === 'business')  { window.location.href = 'business-dashboard.html';  return; }
+      } catch(e) {}
+    }
+  });
+}
+document.addEventListener('DOMContentLoaded', initSupabaseSession);
 
 /* ══════════════════════════════════════════════════
    BOOT
@@ -1522,15 +1984,20 @@ window.addEventListener('DOMContentLoaded', () => {
   loadFrontline();
   triggerRev();
 
-  // Check auth state
+  // Check auth state + notification dot
   const sb = getSB();
   if (sb) {
-    sb.auth.getUser().then(({ data: { user } }) => {
-      if (user) { currentUser = user; renderProfile(); }
+    sb.auth.getUser().then(async ({ data: { user } }) => {
+      if (user) {
+        currentUser = user; renderProfile();
+        // Show notification dot if unread notifications exist
+        const { count } = await sb.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('read', false);
+        const dot = document.getElementById('notif-dot');
+        if (dot && count > 0) dot.style.display = 'block';
+      }
     });
   }
 });
-
 
 /* ── BUSINESSES FULL PAGE ── */
 let _bizPageData = [];
@@ -1598,63 +2065,6 @@ function _renderBizPage() {
     </div>`).join('');
 }
 
-
-/* ── Pulsify session restore ── */
-(function() {
-  try {
-    const s = JSON.parse(localStorage.getItem('p_user'));
-    if (s && s.id) {
-      // User is logged in — change top-right button to "Feed"
-      document.addEventListener('DOMContentLoaded', function() {
-        const btn = document.getElementById('auth-btn');
-        if (btn) {
-          btn.textContent = 'Feed';
-          btn.onclick = function() { window.location.href = 'feeds.html'; };
-        }
-      });
-    }
-  } catch(e) {}
-})();
-/* ── Pulsify session restore with Supabase ── */
-async function initSupabaseSession() {
-  const supabase = window.supabase?.createClient(
-    'https://cjzewfvtdayjgjdpdmln.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk'
-  );
-  
-  const { data: { session } } = await supabase.auth.getSession();
-  
-  if (session) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single();
-    
-    if (profile) {
-      localStorage.setItem('p_user', JSON.stringify(session.user));
-      localStorage.setItem('p_profile', JSON.stringify(profile));
-      
-      const btn = document.getElementById('auth-btn');
-      if (btn) {
-        btn.textContent = profile.display_name?.split(' ')[0] || 'Profile';
-        btn.onclick = function() { window.location.href = 'user-profile.html'; };
-      }
-    }
-  } else {
-    localStorage.removeItem('p_user');
-    localStorage.removeItem('p_profile');
-    
-    const btn = document.getElementById('auth-btn');
-    if (btn) {
-      btn.textContent = 'Sign In';
-      btn.onclick = function() { window.location.href = 'signin.html'; };
-    }
-  }
-}
-
-// Run on page load
-document.addEventListener('DOMContentLoaded', initSupabaseSession);
 </script>
 </body>
 </html>

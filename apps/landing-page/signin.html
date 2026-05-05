@@ -169,7 +169,7 @@ function getRoleMismatchError(actualRole, selectedType) {
 })();
 
 sb.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'SIGNED_IN' && session && !_sessionHandled) {
+  if (event === 'SIGNED_IN' && session && !_sessionHandled && !_signingIn) {
     _sessionHandled = true;
     const profile = await saveSession(session);
     const mismatch = getRoleMismatchError(profile.role || 'user', _accType);
@@ -226,8 +226,10 @@ async function doSignIn() {
   if (!em) return showErr('Please enter your email address.');
   if (!pw) return showErr('Please enter your password.');
   setLoading(true);
+  _signingIn = true;
   const { data, error } = await sb.auth.signInWithPassword({ email: em, password: pw });
   if (error) {
+    _signingIn = false;
     setLoading(false);
     const msg = error.message || '';
     if (msg.includes('Email not confirmed') || msg.includes('not confirmed'))

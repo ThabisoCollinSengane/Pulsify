@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#05080F"/>
+<title>Lead Management — Pulsify</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--te:#00D4AA;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0}
+html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+body{padding:20px;padding-top:80px}
+.tb{position:fixed;top:0;left:0;right:0;height:58px;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:rgba(5,8,15,.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:.06em;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--tx)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--or);box-shadow:0 0 10px var(--or);animation:p 2s ease-in-out infinite}
+@keyframes p{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}
+.back{display:flex;align-items:center;gap:5px;background:transparent;border:none;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer}
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;cursor:pointer}
+.stat-card{background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:16px 12px;text-align:center;transition:border-color .2s,transform .1s}
+.stat-card:hover{border-color:var(--or);transform:scale(1.02)}
+.stat-card.active{border-color:var(--or);background:rgba(255,92,0,.05)}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--or);line-height:1}
+.stat-label{font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-top:4px}
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center}
+.filter-group{display:flex;align-items:center;gap:8px;background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:5px 12px}
+.filter-group label{font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu2)}
+.filter-select,.filter-input{background:transparent;border:none;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.8rem;outline:none;padding:6px 0}
+.search-input{flex:1;min-width:200px;background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:8px 16px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.8rem;outline:none}
+.search-input:focus{border-color:var(--or)}
+.btn-primary{background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:8px 20px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer}
+.btn-sec{background:transparent;border:1px solid var(--border2);color:var(--mu2);padding:8px 20px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer}
+.btn-sec:active{border-color:var(--or);color:var(--or)}
+.leads-table{width:100%;border-collapse:collapse;background:var(--surf);border-radius:16px;overflow:hidden}
+.leads-table th{text-align:left;padding:14px 12px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);border-bottom:1px solid var(--border)}
+.leads-table td{padding:12px;border-bottom:1px solid var(--border);font-size:.8rem;vertical-align:middle}
+.leads-table tr:last-child td{border-bottom:none}
+.leads-table tr:hover{background:rgba(255,255,255,.02)}
+.status-badge{display:inline-block;padding:4px 10px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700}
+.status-new{background:rgba(0,229,255,.1);color:var(--cy);border:1px solid rgba(0,229,255,.25)}
+.status-contacted{background:rgba(255,92,0,.1);color:var(--or);border:1px solid rgba(255,92,0,.25)}
+.status-converted{background:rgba(198,255,74,.08);color:var(--li);border:1px solid rgba(198,255,74,.2)}
+.status-ignored{background:rgba(255,45,120,.08);color:var(--pk);border:1px solid rgba(255,45,120,.2)}
+.category-badge{display:inline-block;padding:2px 8px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700}
+.category-business{background:rgba(255,92,0,.12);color:var(--or);border:1px solid rgba(255,92,0,.25)}
+.category-organizer{background:rgba(176,38,255,.12);color:var(--pu);border:1px solid rgba(176,38,255,.25)}
+.source-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700}
+.source-fb{background:#1877F2;color:#fff}
+.source-ig{background:#E4405F;color:#fff}
+.source-tt{background:#000;color:#fff;border:1px solid #333}
+.source-link{text-decoration:none}
+.contact-icons{display:flex;gap:8px;flex-wrap:wrap}
+.contact-icon{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--surf2);border:1px solid var(--border2);color:var(--mu);text-decoration:none;font-size:.9rem;transition:all .2s}
+.contact-icon.active{background:rgba(255,92,0,.15);border-color:var(--or);color:var(--or)}
+.contact-icon.active:hover{transform:scale(1.1);background:var(--or);color:#fff}
+.contact-icon.inactive{opacity:.35;cursor:default}
+.action-buttons{display:flex;gap:6px}
+.action-btn{background:transparent;border:none;color:var(--mu);cursor:pointer;font-size:1rem;padding:4px;transition:color .2s}
+.action-btn:hover{color:var(--or)}
+.pagination{display:flex;justify-content:center;gap:10px;margin-top:24px;padding:16px}
+.pagination button{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer}
+.pagination button:disabled{opacity:.3;cursor:not-allowed}
+.pagination .active{background:var(--or);border-color:var(--or)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(14px);z-index:1000;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:20px;width:90%;max-width:700px;max-height:85vh;overflow-y:auto}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border)}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem}
+.modal-close{background:transparent;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer}
+.modal-body{padding:20px}
+.detail-row{margin-bottom:16px}
+.detail-label{font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:4px}
+.detail-value{font-size:.9rem;color:var(--tx);word-break:break-word}
+.detail-value a{color:var(--or);text-decoration:none}
+.notes-section{margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+.notes-list{max-height:200px;overflow-y:auto;margin-bottom:12px}
+.note-item{background:var(--surf);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.note-text{font-size:.8rem;margin-bottom:4px}
+.note-meta{font-size:.65rem;color:var(--mu)}
+.note-input{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:10px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.8rem;resize:vertical;margin-bottom:10px}
+.status-select{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.8rem;margin-right:10px}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;padding:16px 20px;border-top:1px solid var(--border)}
+.template-buttons{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.template-btn{background:var(--surf2);border:1px solid var(--border);border-radius:50px;padding:6px 14px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu2);cursor:pointer;transition:all .2s}
+.template-btn.active{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.1)}
+.email-subject{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.8rem;margin-bottom:10px}
+.email-body{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.8rem;min-height:180px;resize:vertical}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 22px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--tx);z-index:1100;opacity:0;transition:all .3s;pointer-events:none}
+.toast.show{opacity:1}
+.toast.ok{border-color:rgba(198,255,74,.4);color:var(--li)}
+.loading{text-align:center;padding:40px;color:var(--mu)}
+</style>
+</head>
+<body>
+
+<div class="tb">
+  <a href="/" class="logo"><span class="dot"></span>PULSIFY</a>
+  <button class="back" onclick="window.location.href='index.html'">← Back to Dashboard</button>
+</div>
+
+<div style="max-width:1400px;margin:0 auto">
+  <h1 style="font-family:'Bebas Neue',sans-serif;font-size:2.2rem;margin-bottom:8px">📋 Lead Management</h1>
+  <p style="color:var(--mu2);margin-bottom:24px">Manage event organisers and businesses discovered through web scraping. Track outreach and conversions.</p>
+
+  <!-- Stats Cards (clickable) -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-card" data-status="all" onclick="filterByStatus('all')"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Total Leads</div></div>
+    <div class="stat-card" data-status="new" onclick="filterByStatus('new')"><div class="stat-num" id="stat-new">0</div><div class="stat-label">New</div></div>
+    <div class="stat-card" data-status="contacted" onclick="filterByStatus('contacted')"><div class="stat-num" id="stat-contacted">0</div><div class="stat-label">Contacted</div></div>
+    <div class="stat-card" data-status="converted" onclick="filterByStatus('converted')"><div class="stat-num" id="stat-converted">0</div><div class="stat-label">Converted</div></div>
+    <div class="stat-card" data-status="ignored" onclick="filterByStatus('ignored')"><div class="stat-num" id="stat-ignored">0</div><div class="stat-label">Ignored</div></div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <div class="filter-group">
+      <label>Province</label>
+      <select id="filter-province" class="filter-select" onchange="applyFiltersAndReload()">
+        <option value="all">All</option>
+        <option value="KZN">KwaZulu-Natal</option>
+        <option value="GP">Gauteng</option>
+        <option value="WC">Western Cape</option>
+        <option value="EC">Eastern Cape</option>
+        <option value="MP">Mpumalanga</option>
+        <option value="LP">Limpopo</option>
+        <option value="NW">North West</option>
+        <option value="FS">Free State</option>
+        <option value="NC">Northern Cape</option>
+        <option value="other">Other / Unknown</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Category</label>
+      <select id="filter-category" class="filter-select" onchange="applyFiltersAndReload()">
+        <option value="all">All</option>
+        <option value="business">Business</option>
+        <option value="organizer">Event Organizer</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Source</label>
+      <select id="filter-source" class="filter-select" onchange="applyFiltersAndReload()">
+        <option value="all">All</option>
+        <option value="facebook">Facebook</option>
+        <option value="instagram">Instagram</option>
+        <option value="tiktok">TikTok</option>
+        <option value="manual">Manual</option>
+      </select>
+    </div>
+    <input type="text" id="search-input" class="search-input" placeholder="🔍 Search by organiser, event, or location..." onkeyup="handleSearch()"/>
+    <button class="btn-primary" onclick="exportToCSV()">📎 Export CSV</button>
+  </div>
+
+  <!-- Leads Table -->
+  <div id="leads-container">
+    <div class="loading">Loading leads...</div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" id="pagination"></div>
+</div>
+
+<!-- Lead Detail Modal (with email templates) -->
+<div class="modal-overlay" id="lead-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">Lead Details</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn-sec" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Email Composition Modal -->
+<div class="modal-overlay" id="email-modal" onclick="if(event.target===this)closeEmailModal()">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <span class="modal-title">📧 Send Email</span>
+      <button class="modal-close" onclick="closeEmailModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-label">Recipient</div>
+      <div class="detail-value" id="email-recipient" style="margin-bottom:12px"></div>
+      
+      <div class="detail-label">Template</div>
+      <div class="template-buttons" id="template-buttons"></div>
+      
+      <div class="detail-label">Subject</div>
+      <input type="text" id="email-subject" class="email-subject" placeholder="Subject line"/>
+      
+      <div class="detail-label">Message</div>
+      <textarea id="email-body" class="email-body" placeholder="Write your message here..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sec" onclick="closeEmailModal()">Cancel</button>
+      <button class="btn-primary" onclick="sendEmailFromModal()">Send Email ✉️</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ... (full script content as in your paste, including all functions up to loadLeads())
+loadLeads();
+</script>
+</body>
+</html>
