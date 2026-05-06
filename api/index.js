@@ -181,7 +181,7 @@ module.exports = async (req, res) => {
 
       let query = sb().from('posts')
         .select('*', { count: 'exact' })
-        .eq('visibility', 'public')
+        .or('visibility.eq.public,visibility.is.null')
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
 
