@@ -366,72 +366,18 @@ module.exports = async (req, res) => {
       const { data: { user } } = await userSb.auth.getUser(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
-      const pData = req.body?.profile || {};
-
       const { data: existing } = await sb().from('profiles').select('*').eq('id', user.id).single();
-      if (existing) {
-        const u = {};
-        if (pData.role && pData.role !== 'user' && pData.role !== existing.role) u.role = pData.role;
-        if (pData.is_page && !existing.is_page) u.is_page = true;
-        if (Object.keys(u).length) {
-          const { data: upd } = await sb().from('profiles').update(u).eq('id', user.id).select().single();
-          return res.status(200).json({ profile: upd || existing });
-        }
-        return res.status(200).json({ profile: existing });
-      }
-
-      let username = pData.username || `user_${user.id.slice(0, 8)}`;
-      const { data: uCheck } = await sb().from('profiles').select('id').eq('username', username).maybeSingle();
-      if (uCheck) username = `user_${user.id.slice(0, 8)}`;
+      if (existing) return res.status(200).json({ profile: existing });
 
       const { data: created } = await sb().from('profiles').insert({
         id:           user.id,
-        username,
-        display_name: pData.display_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Pulsify User',
-        avatar_url:   pData.avatar_url || user.user_metadata?.avatar_url || null,
-        email:        user.email,
-        role:         pData.role || 'user',
-        is_page:      pData.is_page || false,
-        city:         pData.city || null,
-        province:     pData.province || null,
-        bio:          pData.bio || '',
-        phone:        pData.phone || null,
+        username:     `user_${user.id.slice(0, 8)}`,
+        display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Pulsify User',
+        avatar_url:   user.user_metadata?.avatar_url || null,
+        city:         'Durban',
       }).select().single();
 
       return res.status(200).json({ profile: created, created: true });
-    }
-
-    /* ─── POST /auth/ensure-business-profile ────────────────── */
-    if (url === '/auth/ensure-business-profile' && req.method === 'POST') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
-      const user = await verifyToken(token);
-      if (!user) return res.status(401).json({ error: 'Unauthorized' });
-
-      const supabase = sb();
-      let { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-      
-      if (profileError && profileError.code !== 'PGRST116') throw profileError;
-
-      if (!profile) {
-        const { data: newProfile, error: createError } = await supabase.from('profiles').insert({
-          id: user.id, email: user.email,
-          display_name: user.user_metadata?.full_name || user.email.split('@')[0],
-          avatar_url: user.user_metadata?.avatar_url,
-          role: 'business'
-        }).select().single();
-        if (createError) throw createError;
-        profile = newProfile;
-        
-        const { data: bizCheck } = await supabase.from('businesses').select('id').eq('id', profile.id).maybeSingle();
-        if (!bizCheck) {
-          await supabase.from('businesses').insert({ id: profile.id, owner_id: profile.id, name: profile.display_name, category: 'other', is_active: true });
-        }
-      } else if (!['business', 'admin', 'organizer'].includes(profile.role)) {
-        const { data: updatedProfile, error: updateError } = await supabase.from('profiles').update({ role: 'business' }).eq('id', user.id).select().single();
-        if (updateError) throw updateError;
-        profile = updatedProfile;
-      }
-      return res.status(200).json({ profile });
     }
 
     /* ─── GET /health ─────────────────────────────────────── */
