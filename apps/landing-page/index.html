@@ -1712,6 +1712,13 @@ async function renderSquad() {
   const el = document.getElementById('squad-content');
   const sb = getSB();
   if (!el) return;
+
+  // currentUser may not be set yet if auth is still resolving — fetch from session
+  if (!currentUser && sb) {
+    const { data: { user } } = await sb.auth.getUser();
+    if (user) currentUser = user;
+  }
+
   if (!currentUser || !sb) {
     el.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Sign in to see your friends.</div>';
     return;

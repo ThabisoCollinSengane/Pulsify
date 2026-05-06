@@ -105,12 +105,25 @@ textarea.ff-c{resize:none;height:80px;line-height:1.55}
 <body>
 
 <header class="tb">
-  <button class="back-btn" onclick="window.location.href='index.html'">← Back</button>
+  <button class="back-btn" onclick="window.location.href='/'">← Back</button>
   <a class="logo" href="feeds.html"><span class="dot"></span>
     <span style="font-size:1.4rem">Feed</span>
   </a>
-  <button class="tb2-btn" onclick="openCompose()">+ Post</button>
+  <div style="display:flex;align-items:center;gap:8px">
+    <div id="notif-btn" onclick="openNotifPanel()" style="position:relative;width:36px;height:36px;border-radius:50%;background:var(--surf);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.95rem">🔔<span id="notif-dot" style="position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--or);border:1.5px solid var(--bg);display:none"></span></div>
+    <button class="tb2-btn" onclick="openCompose()">+ Post</button>
+  </div>
 </header>
+
+<div id="notif-overlay" onclick="if(event.target===this)closeNotifPanel()" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.6);backdrop-filter:blur(8px)">
+  <div style="position:absolute;top:62px;right:12px;width:min(340px,calc(100vw - 24px));background:var(--bg2);border:1px solid var(--border2);border-radius:18px;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border)">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:.03em">Notifications</div>
+      <button onclick="markAllNotifsRead()" style="font-size:.64rem;color:var(--or);background:none;border:none;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700">Mark all read</button>
+    </div>
+    <div id="notif-list" style="max-height:380px;overflow-y:auto;scrollbar-width:none"></div>
+  </div>
+</div>
 
 <div class="cr">
   <button class="chip active" onclick="setFilter(this,'all')">✦ All</button>
@@ -372,19 +385,11 @@ async function doLike(postId) {
   const cnt = document.getElementById('lc-'+postId);
   if (btn) { btn.classList.toggle('lk', !liked); btn.querySelector('.ai').textContent = liked?'🤍':'❤️'; }
   if (cnt) cnt.textContent = fn(newLikes.length);
-  const sb = getSB();
-  if (sb && _uid) {
-    if (liked) {
-      await sb.from('reactions').delete().eq('entity_id', postId).eq('user_id', _uid).eq('entity_type','post').catch(()=>{});
-    } else {
-      await sb.from('reactions').insert({entity_id: postId, user_id: _uid, entity_type:'post'}).catch(()=>{});
-      const post = _posts.find(p=>p.id===postId);
-      if (post && post.user_id !== _uid) {
-        const name = _profile?.display_name || _session?.display_name || 'Someone';
-        sb.from('notifications').insert({user_id: post.user_id, type:'like', from_user_id:_uid, from_display_name:name, entity_id:postId, entity_type:'post', message:name+' liked your post'}).catch(()=>{});
-      }
-    }
-  }
+  fetch('/api/reactions', {
+    method: liked ? 'DELETE' : 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
+    body: JSON.stringify({ entity_type: 'post', entity_id: postId, type: 'like' }),
+  }).catch(()=>{});
 }
 
 async function doRepost(postId) {
@@ -431,13 +436,11 @@ async function doComment(postId) {
   const cEl = document.getElementById('cc-'+postId);
   if (cEl) cEl.textContent = fn(cmts.length);
 
-  const sb = getSB();
-  if (sb && _uid) {
-    await sb.from('comments').insert({entity_id: postId, entity_type:'post', user_id: _uid, text: txt}).catch(()=>{});
-    if (post && post.user_id !== _uid) {
-      sb.from('notifications').insert({user_id: post.user_id, type:'comment', from_user_id:_uid, from_display_name:name, entity_id:postId, entity_type:'post', message:name+' commented: "'+txt.slice(0,60)+'"'}).catch(()=>{});
-    }
-  }
+  fetch('/api/comments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
+    body: JSON.stringify({ entity_id: postId, entity_type: 'post', content: txt }),
+  }).catch(()=>{});
 }
 
 async function doFollow(targetUserId, postId) {
@@ -445,17 +448,14 @@ async function doFollow(targetUserId, postId) {
   const sb  = getSB();
   let fol;
 
-  if (sb && _uid) {
-    const { data: existing } = await sb.from('follows').select('follower_id').eq('follower_id', _uid).eq('following_id', targetUserId).maybeSingle();
-    if (existing) {
-      await sb.from('follows').delete().eq('follower_id', _uid).eq('following_id', targetUserId);
-      fol = false;
-    } else {
-      await sb.from('follows').insert({follower_id: _uid, following_id: targetUserId});
-      fol = true;
-      const name = _profile?.display_name || _session?.display_name || 'Someone';
-      sb.from('notifications').insert({user_id: targetUserId, type:'follow', from_user_id:_uid, from_display_name:name, message:name+' started following you'}).catch(()=>{});
-    }
+  if (_uid) {
+    const res = await fetch('/api/follows', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
+      body: JSON.stringify({ following_id: targetUserId }),
+    }).catch(()=>({ok:false,json:()=>({})}) );
+    const json = await res.json().catch(()=>({}));
+    fol = json.following !== false;
   } else {
     let following = [];
     try { following = JSON.parse(localStorage.getItem('p_following') || '[]'); } catch(e) {}
@@ -540,16 +540,18 @@ async function doFollowOverlay(targetId) {
   const isF = btn && btn.textContent.includes('Following');
   if (btn) btn.disabled = true;
   try {
+    const res = await fetch('/api/follows', {
+      method: isF ? 'DELETE' : 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
+      body: JSON.stringify({ following_id: targetId }),
+    });
+    if (!res.ok) throw new Error((await res.json()).error || 'Failed');
     if (isF) {
-      await sb.from('follows').delete().eq('follower_id', _uid).eq('following_id', targetId);
       if (btn) { btn.textContent = '+ Follow'; btn.style.background = 'linear-gradient(135deg,#B026FF,#FF5C00)'; btn.style.border = 'none'; btn.style.color = '#fff'; }
       showToast('Unfollowed');
     } else {
-      await sb.from('follows').insert({ follower_id: _uid, following_id: targetId });
       if (btn) { btn.textContent = '\u2713 Following'; btn.style.background = 'transparent'; btn.style.border = '1px solid var(--border2)'; btn.style.color = 'var(--mu2)'; }
       showToast('Following!');
-      const name = _profile?.display_name || _session?.display_name || 'Someone';
-      sb.from('notifications').insert({user_id:targetId,type:'follow',from_user_id:_uid,from_display_name:name,message:name+' started following you'}).catch(()=>{});
     }
     let fw=[]; try{fw=JSON.parse(localStorage.getItem('p_following')||'[]');}catch(e){}
     if(isF){fw=fw.filter(i=>i!==targetId);}else{if(!fw.includes(targetId))fw.push(targetId);}
@@ -660,13 +662,85 @@ async function initFeed() {
     const { data: { session } } = await sb.auth.getSession();
     if (session) {
       _uid = session.user.id;
-      // Always refresh follows from DB so isFollowing reflects current state
+      _token = session.access_token;
+      localStorage.setItem('p_token', _token);
       const { data: _fws } = await sb.from('follows').select('following_id').eq('follower_id', _uid);
       localStorage.setItem('p_following', JSON.stringify((_fws || []).map(f => f.following_id)));
+      initNotifBell(_uid, sb);
     }
   }
   await render();
 }
+
+/* ── Notification bell ── */
+function openNotifPanel()  { document.getElementById('notif-overlay').style.display = 'block'; loadNotifList(); }
+function closeNotifPanel() { document.getElementById('notif-overlay').style.display = 'none'; }
+
+async function initNotifBell(uid, sb) {
+  const token = localStorage.getItem('p_token') || '';
+  try {
+    const r = await fetch('/api/notifications/count', { headers: { 'Authorization': `Bearer ${token}` } });
+    const { count } = await r.json();
+    const dot = document.getElementById('notif-dot');
+    if (dot) dot.style.display = count > 0 ? 'block' : 'none';
+  } catch(e) {}
+  sb.channel(`notifs_${uid}`)
+    .on('postgres_changes', { event:'INSERT', schema:'public', table:'notifications', filter:`user_id=eq.${uid}` }, () => {
+      const dot = document.getElementById('notif-dot');
+      if (dot) dot.style.display = 'block';
+    }).subscribe();
+}
+
+async function loadNotifList() {
+  const el = document.getElementById('notif-list');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:16px;font-size:.75rem;color:var(--mu)">Loading…</div>';
+  const token = localStorage.getItem('p_token') || '';
+  try {
+    const r = await fetch('/api/notifications?limit=30', { headers: { 'Authorization': `Bearer ${token}` } });
+    const { notifications: notifs } = await r.json();
+    if (!notifs?.length) { el.innerHTML = '<div style="padding:30px;text-align:center;font-size:.78rem;color:var(--mu)">No notifications yet 🔔</div>'; return; }
+    const sb = getSB();
+    const fromIds = [...new Set(notifs.map(n => n.from_user_id).filter(Boolean))];
+    let avMap = {};
+    if (fromIds.length && sb) {
+      const { data: profs } = await sb.from('profiles').select('id,avatar_url').in('id', fromIds);
+      (profs||[]).forEach(p => { avMap[p.id] = p.avatar_url; });
+    }
+    const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const ico = {follow:'👤',like:'❤️',comment:'💬',repost:'🔁',business_post:'📢'};
+    const tAgo = iso => { if(!iso) return ''; const d=Math.floor((Date.now()-new Date(iso))/1000); if(d<60) return 'just now'; if(d<3600) return Math.floor(d/60)+'m ago'; if(d<86400) return Math.floor(d/3600)+'h ago'; return Math.floor(d/86400)+'d ago'; };
+    el.innerHTML = notifs.map(n => {
+      const av = n.from_user_id ? avMap[n.from_user_id] : null;
+      const avEl = av ? `<img src="${esc(av)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid var(--border2)">`
+        : `<div style="width:40px;height:40px;border-radius:50%;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">${ico[n.type]||'🔔'}</div>`;
+      const name = n.from_display_name || '';
+      const msg  = esc(n.message || '');
+      const boldMsg = name ? msg.replace(esc(name), `<b style="color:var(--tx)">${esc(name)}</b>`) : msg;
+      return `<div onclick="markNRead('${n.id}')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);background:${n.read?'transparent':'rgba(176,38,255,.07)'};cursor:pointer">
+        <div style="position:relative;flex-shrink:0">${avEl}<div style="position:absolute;bottom:-1px;right:-1px;width:18px;height:18px;border-radius:50%;background:var(--surf);display:flex;align-items:center;justify-content:center;font-size:.7rem;border:1.5px solid var(--bg2)">${ico[n.type]||'🔔'}</div></div>
+        <div style="flex:1;min-width:0"><div style="font-size:.79rem;color:var(--mu2);line-height:1.45">${boldMsg}</div><div style="font-size:.63rem;color:var(--mu);margin-top:3px">${tAgo(n.created_at)}</div></div>
+        ${!n.read?'<div style="width:8px;height:8px;border-radius:50%;background:var(--or)"></div>':''}
+      </div>`;
+    }).join('');
+    const unread = notifs.filter(n=>!n.read).length;
+    const dot = document.getElementById('notif-dot');
+    if (dot) dot.style.display = unread ? 'block' : 'none';
+  } catch(e) { el.innerHTML = '<div style="padding:16px;font-size:.75rem;color:var(--mu)">Could not load</div>'; }
+}
+
+async function markNRead(id) {
+  const token = localStorage.getItem('p_token') || '';
+  await fetch(`/api/notifications/${id}/read`, { method:'PATCH', headers:{'Authorization':`Bearer ${token}`} }).catch(()=>{});
+}
+async function markAllNotifsRead() {
+  const token = localStorage.getItem('p_token') || '';
+  await fetch('/api/notifications/mark-all-read', { method:'POST', headers:{'Authorization':`Bearer ${token}`} }).catch(()=>{});
+  const dot = document.getElementById('notif-dot');
+  if (dot) dot.style.display = 'none';
+  loadNotifList();
+}
+
 initFeed();
 </script>
 </body>
