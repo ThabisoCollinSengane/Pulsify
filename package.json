@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "echo 'Static site - no build needed'",
-    "dev": "vercel dev"
+    "build": "echo 'Build completed' && date > build-timestamp.txt",
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.43.0"
