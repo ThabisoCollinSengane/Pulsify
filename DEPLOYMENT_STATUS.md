@@ -177,6 +177,19 @@ Latest commits pushed to origin/main:
 - Map now validates coordinates to prevent ocean placement
 - Notifications sync in real-time across all devices
 - Admin panel requires admin role in database
+- FAQ section added with help resources and contact info
+
+## 🆕 Latest Updates (May 7, 2026)
+
+### FAQ & Help Section
+- **Location**: Discover tab and Profile settings
+- **Features**:
+  - Comprehensive FAQ for users, businesses, and event organizers
+  - Contact email: help@pulsify.co.za
+  - Social media links (Facebook, Instagram, Twitter, WhatsApp)
+  - Collapsible Q&A format for easy navigation
+  - Categories: General, Business, Event Organizers, Technical Support
+- **Access**: Click "❓ Help & FAQ" button in Discover or Profile tabs
 
 ## 🆘 Troubleshooting
 
