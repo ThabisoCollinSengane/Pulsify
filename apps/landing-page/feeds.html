@@ -491,7 +491,12 @@ async function openProfile(userId) {
   try {
     const res = await fetch('/api/profiles/' + userId);
     if (!res.ok) throw new Error('Profile not found');
-    const { profile, posts_count, followers_count, following_count, recent_posts } = await res.json();
+    const data = await res.json();
+    const profile = data.profile || {};
+    const posts_count = data.posts_count || 0;
+    const followers_count = data.followers_count || 0;
+    const following_count = data.following_count || 0;
+    const recent_posts = data.recent_posts || [];
     const init  = (profile.display_name || profile.username || '?')[0].toUpperCase();
     const isOrg = ['organizer','business','admin'].includes(profile.role);
     const sb2 = getSB();
@@ -653,9 +658,11 @@ async function initFeed() {
   const sb = getSB();
   if (sb) {
     const { data: { session } } = await sb.auth.getSession();
-    if (session && !_uid) {
+    if (session) {
       _uid = session.user.id;
-      const{data:_fws}=await sb.from('follows').select('following_id').eq('follower_id',_uid);if(_fws&&_fws.length)localStorage.setItem('p_following',JSON.stringify(_fws.map(f=>f.following_id)));
+      // Always refresh follows from DB so isFollowing reflects current state
+      const { data: _fws } = await sb.from('follows').select('following_id').eq('follower_id', _uid);
+      localStorage.setItem('p_following', JSON.stringify((_fws || []).map(f => f.following_id)));
     }
   }
   await render();
