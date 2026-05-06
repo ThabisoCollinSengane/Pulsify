@@ -616,6 +616,43 @@ module.exports = async (req, res) => {
       return res.status(200).json({ comment, success: true });
     }
 
+    /* ─── POST /leads/ingest ────────────────────────────── */
+    if (url === '/leads/ingest' && req.method === 'POST') {
+      const key = req.headers['x-ingest-key'];
+      if (!key || key !== process.env.INGEST_SECRET)
+        return res.status(401).json({ error: 'Unauthorized' });
+
+      const leads = req.body?.leads || [];
+      if (!leads.length) return res.status(400).json({ error: 'No leads provided' });
+
+      let inserted = 0, skipped = 0;
+      for (const lead of leads) {
+        if (!lead.name) continue;
+        const { count } = await sb().from('scraped_leads')
+          .select('id', { count: 'exact', head: true })
+          .eq('name', lead.name).eq('source', lead.source || 'manual');
+        if (count > 0) { skipped++; continue; }
+        await sb().from('scraped_leads').insert({
+          name:           lead.name,
+          category:       lead.category       || 'organizer',
+          province:       lead.province       || null,
+          city:           lead.city           || null,
+          email:          lead.email          || null,
+          phone:          lead.phone          || null,
+          website:        lead.website        || null,
+          instagram:      lead.instagram      || null,
+          facebook:       lead.facebook       || null,
+          tiktok:         lead.tiktok         || null,
+          source:         lead.source         || 'manual',
+          description:    lead.description    || null,
+          follower_count: lead.follower_count || null,
+          status:         'new',
+        });
+        inserted++;
+      }
+      return res.status(200).json({ inserted, skipped });
+    }
+
     /* ─── GET /leads ─────────────────────────────────────── */
     if (url === '/leads' && req.method === 'GET') {
       const token = (req.headers.authorization || '').replace('Bearer ', '');
