@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<title>Pulsify Diagnostic</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+body{font-family:monospace;background:#000;color:#0f0;padding:20px;font-size:13px}
+h2{color:#ff0;margin-top:20px}
+.ok{color:#0f0}.err{color:#f44}.warn{color:#ff0}.info{color:#0cf}
+pre{background:#111;padding:10px;border:1px solid #333;overflow-x:auto;white-space:pre-wrap;word-break:break-all}
+</style>
+</head>
+<body>
+<h1>🔬 Pulsify Diagnostic</h1>
+<div id="out">Running tests…</div>
+<script>
+const URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+const out = document.getElementById('out');
+function log(html) { out.innerHTML += html + '<br>'; }
+function section(t) { log(`<h2>${t}</h2>`); }
+
+(async () => {
+  out.innerHTML = '';
+  section('1. SDK loaded');
+  log(window.supabase ? '<span class="ok">✓ Supabase SDK loaded</span>' : '<span class="err">✗ SDK NOT loaded</span>');
+
+  section('2. Direct REST query (no SDK)');
+  try {
+    const r = await fetch(`${URL}/rest/v1/events?select=id,name&limit=1`, {
+      headers: { 'apikey': KEY, 'Authorization': `Bearer ${KEY}` }
+    });
+    const txt = await r.text();
+    log(`<span class="info">HTTP ${r.status}</span>`);
+    log(`<pre>${txt}</pre>`);
+  } catch (e) {
+    log(`<span class="err">Network error: ${e.message}</span>`);
+  }
+
+  section('3. SDK query: events');
+  try {
+    const sb = window.supabase.createClient(URL, KEY);
+    const { data, error, count } = await sb.from('events').select('id,name', { count: 'exact' }).limit(3);
+    if (error) log(`<span class="err">✗ ${error.message}</span><pre>${JSON.stringify(error,null,2)}</pre>`);
+    else log(`<span class="ok">✓ Got ${data.length} rows (total ${count})</span><pre>${JSON.stringify(data,null,2)}</pre>`);
+  } catch (e) { log(`<span class="err">Crash: ${e.message}</span>`); }
+
+  section('4. SDK query: businesses');
+  try {
+    const sb = window.supabase.createClient(URL, KEY);
+    const { data, error, count } = await sb.from('businesses').select('id,name', { count: 'exact' }).limit(3);
+    if (error) log(`<span class="err">✗ ${error.message}</span><pre>${JSON.stringify(error,null,2)}</pre>`);
+    else log(`<span class="ok">✓ Got ${data.length} rows (total ${count})</span><pre>${JSON.stringify(data,null,2)}</pre>`);
+  } catch (e) { log(`<span class="err">Crash: ${e.message}</span>`); }
+
+  section('5. SDK query: posts');
+  try {
+    const sb = window.supabase.createClient(URL, KEY);
+    const { data, error } = await sb.from('posts').select('id').limit(1);
+    if (error) log(`<span class="err">✗ ${error.message}</span>`);
+    else log(`<span class="ok">✓ posts accessible (${data.length} rows)</span>`);
+  } catch (e) { log(`<span class="err">Crash: ${e.message}</span>`); }
+
+  section('6. SDK query: profiles');
+  try {
+    const sb = window.supabase.createClient(URL, KEY);
+    const { data, error } = await sb.from('profiles').select('id').limit(1);
+    if (error) log(`<span class="err">✗ ${error.message}</span>`);
+    else log(`<span class="ok">✓ profiles accessible (${data.length} rows)</span>`);
+  } catch (e) { log(`<span class="err">Crash: ${e.message}</span>`); }
+
+  section('7. Deployment freshness check');
+  log(`<span class="info">Page loaded at: ${new Date().toISOString()}</span>`);
+  log(`<span class="info">User agent: ${navigator.userAgent}</span>`);
+  log(`<span class="info">Origin: ${window.location.origin}</span>`);
+})();
+</script>
+</body>
+</html>
