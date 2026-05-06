@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#05080F"/>
 <title>Lead Management — Pulsify</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--te:#00D4AA;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0}
@@ -89,6 +90,24 @@ body{padding:20px;padding-top:80px}
 .toast.show{opacity:1}
 .toast.ok{border-color:rgba(198,255,74,.4);color:var(--li)}
 .loading{text-align:center;padding:40px;color:var(--mu)}
+/* ── auth gate ── */
+.auth-gate{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center;padding:24px}
+.auth-card{width:100%;max-width:380px;background:var(--bg2);border:1px solid var(--border2);border-radius:22px;padding:28px 24px 32px}
+.auth-logo{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.06em;display:flex;align-items:center;gap:8px;margin-bottom:4px;color:var(--tx)}
+.auth-sub{font-size:.78rem;color:var(--mu);margin-bottom:24px}
+.auth-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;margin-bottom:4px}
+.auth-desc{font-size:.78rem;color:var(--mu2);margin-bottom:20px}
+.auth-lbl{font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu2);margin-bottom:5px;display:block}
+.auth-inp{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;margin-bottom:14px;transition:border-color .2s}
+.auth-inp:focus{border-color:var(--or)}
+.auth-inp::placeholder{color:var(--mu)}
+.pw-wrap{position:relative;margin-bottom:14px}
+.pw-wrap .auth-inp{margin-bottom:0;padding-right:48px}
+.pw-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--mu);cursor:pointer;font-size:.78rem;font-family:'Syne',sans-serif;font-weight:700}
+.auth-btn{width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:4px}
+.auth-btn:active{opacity:.85}.auth-btn:disabled{opacity:.4;cursor:not-allowed}
+.auth-err{background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.3);border-radius:10px;padding:10px 14px;font-size:.78rem;color:var(--pk);margin-bottom:14px;display:none}
+.auth-err.show{display:block}
 </style>
 </head>
 <body>
@@ -201,18 +220,85 @@ body{padding:20px;padding-top:80px}
   </div>
 </div>
 
+<!-- Auth Gate -->
+<div class="auth-gate" id="auth-gate">
+  <div class="auth-card">
+    <div class="auth-logo"><span class="dot"></span>PULSIFY</div>
+    <div class="auth-sub">Admin Access</div>
+    <div class="auth-title">Sign In</div>
+    <div class="auth-desc">Lead Management is restricted to authorised team members.</div>
+    <div class="auth-err" id="auth-err"></div>
+    <label class="auth-lbl">Email</label>
+    <input id="auth-email" class="auth-inp" type="email" placeholder="you@example.com" autocomplete="email"/>
+    <label class="auth-lbl">Password</label>
+    <div class="pw-wrap">
+      <input id="auth-pw" class="auth-inp" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doSignIn()"/>
+      <button class="pw-eye" type="button" onclick="togglePw()">SHOW</button>
+    </div>
+    <button class="auth-btn" id="auth-btn" onclick="doSignIn()">Sign In →</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 const API = '/api';
+const SUPA_URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+const sbAuth = supabase.createClient(SUPA_URL, SUPA_KEY);
+
 let currentPage = 1;
 let currentStatus = 'all';
 let searchTimer = null;
 let activeLead = null;
 
 function getToken() {
-  return localStorage.getItem('sb_token') || sessionStorage.getItem('sb_token') || '';
+  return localStorage.getItem('p_token') || sessionStorage.getItem('p_token') || '';
 }
+
+// ── Auth gate ────────────────────────────────────────────────────────────────
+function togglePw() {
+  const inp = document.getElementById('auth-pw');
+  const btn = document.querySelector('.pw-eye');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? 'SHOW' : 'HIDE';
+}
+
+async function doSignIn() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pw    = document.getElementById('auth-pw').value;
+  const errEl = document.getElementById('auth-err');
+  const btn   = document.getElementById('auth-btn');
+  errEl.className = 'auth-err';
+  if (!email || !pw) { errEl.textContent = 'Email and password required.'; errEl.className = 'auth-err show'; return; }
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try {
+    const { data, error } = await sbAuth.auth.signInWithPassword({ email, password: pw });
+    if (error || !data.session) {
+      errEl.textContent = error?.message || 'Sign in failed.';
+      errEl.className = 'auth-err show';
+      btn.disabled = false; btn.textContent = 'Sign In →';
+      return;
+    }
+    localStorage.setItem('p_token', data.session.access_token);
+    document.getElementById('auth-gate').style.display = 'none';
+    loadLeads();
+  } catch(e) {
+    errEl.textContent = 'Network error. Try again.';
+    errEl.className = 'auth-err show';
+    btn.disabled = false; btn.textContent = 'Sign In →';
+  }
+}
+
+function checkAuth() {
+  const token = getToken();
+  if (token) {
+    document.getElementById('auth-gate').style.display = 'none';
+    loadLeads();
+  }
+  // else gate stays visible
+}
+checkAuth();
 
 function authHeaders() {
   const t = getToken();
@@ -456,8 +542,6 @@ function exportToCSV() {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   a.download = `pulsify-leads-${new Date().toISOString().split('T')[0]}.csv`; a.click();
 }
-
-loadLeads();
 </script>
 </body>
 </html>
