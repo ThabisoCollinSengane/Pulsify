@@ -418,7 +418,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 <!-- ══ MAP ══ -->
 <div class="panel" id="tab-map" style="overflow:hidden">
   <!-- Filter bar -->
-  <div style="position:absolute;top:calc(var(--th) + var(--tk));left:0;right:0;z-index:50;background:rgba(5,8,15,.94);backdrop-filter:blur(18px);padding:8px 12px 7px;border-bottom:1px solid var(--border2)">
+  <div style="position:absolute;top:0;left:0;right:0;z-index:50;background:rgba(5,8,15,.94);backdrop-filter:blur(18px);padding:8px 12px 7px;border-bottom:1px solid var(--border2)">
     <div style="display:flex;gap:6px">
       <select id="map-cat" onchange="applyMapFilters()" style="flex:1;background:rgba(13,20,36,.9);border:1px solid var(--border2);border-radius:50px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;padding:7px 10px;outline:none;cursor:pointer;-webkit-appearance:none"><option value="all">✦ All Types</option><option value="event">🎟 Events</option><option value="shisanyama">🔥 Shisanyama</option><option value="bar">🍻 Bar</option><option value="club">💿 Club</option><option value="hotel">🏨 Hotel</option><option value="bnb">🛏 BnB</option></select>
       <select id="map-genre" onchange="applyMapFilters()" style="flex:1;background:rgba(13,20,36,.9);border:1px solid var(--border2);border-radius:50px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;padding:7px 10px;outline:none;cursor:pointer;-webkit-appearance:none"><option value="all">🎵 All Genres</option><option value="gqom">🔊 Gqom</option><option value="amapiano">🎶 Amapiano</option><option value="sport">⚽ Sport</option><option value="march">✊ March</option><option value="jazz">🎷 Jazz</option></select>
@@ -427,10 +427,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   </div>
 
   <!-- Map canvas — fills from filter bar to bottom nav -->
-  <div id="mc" style="position:absolute;top:calc(var(--th) + var(--tk) + 48px);left:0;right:0;bottom:var(--bh);overflow:hidden;will-change:transform"></div>
+  <div id="mc" style="position:absolute;top:48px;left:0;right:0;bottom:0;overflow:hidden;will-change:transform"></div>
 
   <!-- Legend — collapsible, bottom-left -->
-  <div id="map-legend" style="position:absolute;bottom:calc(var(--bh) + 14px);left:12px;z-index:100;background:rgba(5,8,15,.93);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;pointer-events:auto">
+  <div id="map-legend" style="position:absolute;bottom:14px;left:12px;z-index:100;background:rgba(5,8,15,.93);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;pointer-events:auto">
     <div id="map-legend-toggle" onclick="toggleLegend()" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;cursor:pointer">
       <span style="font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--or)">Map Key</span>
       <span id="legend-arrow" style="font-size:.6rem;color:var(--mu);margin-left:10px;transition:transform .25s">▾</span>
@@ -745,6 +745,7 @@ function showTab(name) {
   if (name === 'tickets') renderBookings();
   if (name === 'discover') loadDiscover();
   if (name === 'profile') renderProfile();
+  if (name === 'map' && mapInited && mapObj) setTimeout(() => mapObj.resize(), 50);
 }
 function showDetailTab(name) {
   prevTab = curTab; curTab = name;
@@ -1235,7 +1236,7 @@ function initMap() {
   });
   mapObj.touchZoomRotate.disableRotation();
   mapObj.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
-  mapObj.on('load', () => { placeMapMarkers(); addHeatmap(); });
+  mapObj.on('load', () => { mapObj.resize(); placeMapMarkers(); addHeatmap(); });
   mapObj.on('click', () => closeMapPanel());
 }
 
