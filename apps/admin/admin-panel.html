@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+    }
+    
+    .header {
+      background: white;
+      padding: 20px 40px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .header h1 {
+      color: #333;
+      font-size: 24px;
+    }
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    .logout-btn {
+      padding: 8px 16px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .logout-btn:hover {
+      background: #c82333;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .card h2 {
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 20px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: 500;
+    }
+    
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    .btn:hover {
+      background: #5568d3;
+    }
+    
+    .btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .google-btn {
+      width: 100%;
+      padding: 12px 24px;
+      background: white;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      transition: all 0.3s ease;
+      margin-bottom: 20px;
+    }
+    
+    .google-btn:hover {
+      border-color: #4285f4;
+      background: #f8f9fa;
+    }
+    
+    .google-icon {
+      width: 20px;
+      height: 20px;
+    }
+    
+    .message {
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    
+    .message.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .message.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    .auth-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .auth-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 40px;
+      max-width: 400px;
+      width: 100%;
+    }
+    
+    .admin-list {
+      margin-top: 20px;
+    }
+    
+    .admin-item {
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .admin-item .info {
+      flex: 1;
+    }
+    
+    .admin-item .email {
+      font-weight: 500;
+      color: #333;
+    }
+    
+    .admin-item .role {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Auth Screen -->
+  <div id="authScreen" class="auth-screen">
+    <div class="auth-card">
+      <h1 style="margin-bottom: 10px;">Admin Panel</h1>
+      <p style="color: #666; margin-bottom: 30px; font-size: 14px;">Sign in to access admin features</p>
+      
+      <div id="authError" class="message error hidden"></div>
+      
+      <button id="googleSignIn" class="google-btn">
+        <svg class="google-icon" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Sign in with Google
+      </button>
+    </div>
+  </div>
+
+  <!-- Admin Panel -->
+  <div id="adminPanel" class="hidden">
+    <div class="header">
+      <h1>Admin Panel</h1>
+      <div class="user-info">
+        <span id="userEmail"></span>
+        <button id="logoutBtn" class="logout-btn">Logout</button>
+      </div>
+    </div>
+    
+    <div class="container">
+      <!-- Create Admin Account -->
+      <div class="card">
+        <h2>Create Admin Account</h2>
+        
+        <div id="createMessage" class="message hidden"></div>
+        
+        <form id="createAdminForm">
+          <div class="form-group">
+            <label for="adminEmail">Email Address</label>
+            <input type="email" id="adminEmail" required placeholder="admin@example.com">
+          </div>
+          
+          <div class="form-group">
+            <label for="adminPassword">Password</label>
+            <input type="password" id="adminPassword" required placeholder="Minimum 6 characters" minlength="6">
+          </div>
+          
+          <div class="form-group">
+            <label for="adminFullName">Full Name (Optional)</label>
+            <input type="text" id="adminFullName" placeholder="John Doe">
+          </div>
+          
+          <button type="submit" class="btn" id="createAdminBtn">Create Admin Account</button>
+        </form>
+      </div>
+      
+      <!-- List of Admins -->
+      <div class="card">
+        <h2>Admin Accounts</h2>
+        <div id="adminList" class="admin-list">
+          <p style="color: #666;">Loading...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'YOUR_SUPABASE_URL'; // Replace with your Supabase URL
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Replace with your Supabase anon key
+    
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    let currentUser = null;
+    let authToken = null;
+    
+    const authScreen = document.getElementById('authScreen');
+    const adminPanel = document.getElementById('adminPanel');
+    const authError = document.getElementById('authError');
+    const googleSignIn = document.getElementById('googleSignIn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const userEmail = document.getElementById('userEmail');
+    const createAdminForm = document.getElementById('createAdminForm');
+    const createMessage = document.getElementById('createMessage');
+    const adminList = document.getElementById('adminList');
+    
+    function showMessage(element, message, type) {
+      element.textContent = message;
+      element.className = `message ${type}`;
+      element.classList.remove('hidden');
+      setTimeout(() => element.classList.add('hidden'), 5000);
+    }
+    
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        authToken = session.access_token;
+        currentUser = session.user;
+        
+        // Check if user is admin
+        const response = await fetch('/api/admin/users', {
+          headers: {
+            'Authorization': `Bearer ${authToken}`
+          }
+        });
+        
+        if (response.ok) {
+          // User is admin
+          authScreen.classList.add('hidden');
+          adminPanel.classList.remove('hidden');
+          userEmail.textContent = currentUser.email;
+          loadAdmins();
+        } else {
+          showMessage(authError, 'Access denied. Admin privileges required.', 'error');
+          await supabase.auth.signOut();
+        }
+      }
+    }
+    
+    async function loadAdmins() {
+      try {
+        const response = await fetch('/api/admin/users', {
+          headers: {
+            'Authorization': `Bearer ${authToken}`
+          }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load admins');
+        
+        const { users } = await response.json();
+        const admins = users.filter(u => u.role === 'admin');
+        
+        if (admins.length === 0) {
+          adminList.innerHTML = '<p style="color: #666;">No admin accounts found.</p>';
+          return;
+        }
+        
+        adminList.innerHTML = admins.map(admin => `
+          <div class="admin-item">
+            <div class="info">
+              <div class="email">${admin.email}</div>
+              <div class="role">Admin • Created ${new Date(admin.created_at).toLocaleDateString()}</div>
+            </div>
+          </div>
+        `).join('');
+        
+      } catch (error) {
+        console.error('Load admins error:', error);
+        adminList.innerHTML = '<p style="color: #c33;">Failed to load admin accounts.</p>';
+      }
+    }
+    
+    googleSignIn.addEventListener('click', async () => {
+      try {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: window.location.href
+          }
+        });
+        
+        if (error) throw error;
+        
+      } catch (error) {
+        console.error('Sign in error:', error);
+        showMessage(authError, error.message || 'Failed to sign in with Google', 'error');
+      }
+    });
+    
+    logoutBtn.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.reload();
+    });
+    
+    createAdminForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = document.getElementById('adminEmail').value;
+      const password = document.getElementById('adminPassword').value;
+      const fullName = document.getElementById('adminFullName').value;
+      
+      const createAdminBtn = document.getElementById('createAdminBtn');
+      createAdminBtn.disabled = true;
+      createAdminBtn.textContent = 'Creating...';
+      
+      try {
+        const response = await fetch('/api/admin/create-admin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ email, password, full_name: fullName })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to create admin account');
+        }
+        
+        showMessage(createMessage, `Admin account created successfully for ${email}`, 'success');
+        createAdminForm.reset();
+        loadAdmins();
+        
+      } catch (error) {
+        console.error('Create admin error:', error);
+        showMessage(createMessage, error.message, 'error');
+      } finally {
+        createAdminBtn.disabled = false;
+        createAdminBtn.textContent = 'Create Admin Account';
+      }
+    });
+    
+    // Check auth on load
+    checkAuth();
+    
+    // Handle OAuth callback
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        checkAuth();
+      }
+    });
+  </script>
+</body>
+</html>

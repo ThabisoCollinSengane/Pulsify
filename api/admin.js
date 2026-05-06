@@ -111,4 +111,59 @@ module.exports = function(app) {
     }
   });
   
+  // POST /api/admin/create-admin - Create a new admin account
+  app.post('/api/admin/create-admin', requireAdmin, async (req, res) => {
+    try {
+      const { email, password, full_name } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required' });
+      }
+      
+      if (password.length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters' });
+      }
+      
+      // Create user with admin service role
+      const { data: authData, error: authError } = await adminSb.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: full_name || ''
+        }
+      });
+      
+      if (authError) throw authError;
+      
+      // Update profile to set admin role
+      const { data: profileData, error: profileError } = await adminSb
+        .from('profiles')
+        .upsert({
+          id: authData.user.id,
+          email: email,
+          role: 'admin',
+          full_name: full_name || '',
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+      
+      if (profileError) throw profileError;
+      
+      res.json({ 
+        success: true, 
+        user: {
+          id: authData.user.id,
+          email: authData.user.email,
+          role: 'admin',
+          full_name: full_name || ''
+        }
+      });
+    } catch(e) {
+      console.error('Admin account creation error:', e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+  
 };
