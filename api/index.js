@@ -1,9 +1,11 @@
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 
-const sb = () => createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
+const SUPA_URL  = process.env.SUPABASE_URL  || 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+const SUPA_ANON = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+const SUPA_SVC  = process.env.SUPABASE_SERVICE_KEY || SUPA_ANON;
+
+const sb = () => createClient(SUPA_URL, SUPA_SVC,
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
@@ -21,7 +23,7 @@ function haverBox(lat, lon, km) {
 async function verifyToken(token) {
   if (!token) return null;
   try {
-    const userSb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY,
+    const userSb = createClient(SUPA_URL, SUPA_ANON,
       { auth: { autoRefreshToken: false, persistSession: false } });
     const { data: { user } } = await userSb.auth.getUser(token);
     return user || null;
@@ -32,7 +34,7 @@ async function authUser(req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
   if (!token) return null;
   try {
-    const userSb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY,
+    const userSb = createClient(SUPA_URL, SUPA_ANON,
       { auth: { autoRefreshToken: false, persistSession: false } });
     const { data: { user }, error } = await userSb.auth.getUser(token);
     if (error || !user) return null;
@@ -376,8 +378,7 @@ module.exports = async (req, res) => {
       const token = (req.headers.authorization || '').replace('Bearer ', '');
       if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
-      const { createClient: make } = require('@supabase/supabase-js');
-      const userSb = make(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+      const userSb = createClient(SUPA_URL, SUPA_ANON);
       const { data: { user } } = await userSb.auth.getUser(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -853,6 +854,11 @@ module.exports = async (req, res) => {
         profile = updatedProfile;
       }
       return res.status(200).json({ profile });
+    }
+
+    /* ─── GET /health ────────────────────────────────────── */
+    if (url === '/health' && req.method === 'GET') {
+      return res.status(200).json({ ok: true, ts: Date.now(), url: SUPA_URL });
     }
 
     return res.status(404).json({ error: `Route not found: ${req.method} ${url}` });
