@@ -1065,7 +1065,7 @@ function handleSearch(val) {
       const today = new Date().toISOString().split('T')[0];
       const { data: results } = await sb.from('events')
         .select('id,name,date_local,time_local,venue_name,venue_city,price_min,is_free,image_url,genre,hype_score,like_count,comment_count,is_frontline,frontline_rank,source,organiser_name')
-        .gte('date_local', today).eq('is_active', true)
+        .gte('date_local', today)
         .or(`name.ilike.%${val}%,venue_city.ilike.%${val}%,genre.ilike.%${val}%,venue_name.ilike.%${val}%`)
         .order('hype_score', { ascending: false, nullsFirst: false }).limit(20);
       if (results?.length) {
@@ -1369,13 +1369,13 @@ async function loadDiscover(cat) {
     const today = new Date().toISOString().split('T')[0];
     let bq = sb.from('businesses')
       .select('id,name,category,suburb,city,lat,lon,rating,review_count,price_range,cover_image_url,is_frontline,frontline_rank,tagline')
-      .eq('is_active', true).order('is_frontline', { ascending: false })
+      .order('is_frontline', { ascending: false })
       .order('rating', { ascending: false, nullsFirst: false }).limit(20);
     if (cat && cat !== 'all') bq = bq.eq('category', cat);
     if (feedCity && feedCity !== 'all') bq = bq.ilike('city', `%${feedCity}%`);
     let eq = sb.from('events')
       .select('id,name,date_local,image_url,genre,is_free,price_min,hype_score,venue_city')
-      .gte('date_local', today).eq('is_active', true)
+      .gte('date_local', today)
       .order('hype_score', { ascending: false, nullsFirst: false }).limit(20);
     const [{ data: bizList }, { data: evList }] = await Promise.all([bq, eq]);
     const dr = document.getElementById('disc-biz-row');
@@ -2445,7 +2445,7 @@ async function openBizPage() {
     const sb = getSB();
     const { data: bizAll } = await sb.from('businesses')
       .select('id,name,category,suburb,city,lat,lon,rating,review_count,price_range,cover_image_url,is_frontline,frontline_rank,tagline,description,phone,website,is_verified')
-      .eq('is_active', true).order('is_frontline', { ascending: false })
+      .order('is_frontline', { ascending: false })
       .order('rating', { ascending: false, nullsFirst: false }).limit(50);
     _bizPageData = bizAll || [];
     _renderBizPage();
