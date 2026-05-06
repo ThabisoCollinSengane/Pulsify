@@ -1,4 +1,7 @@
 {
+  "buildCommand": "npm run build",
+  "outputDirectory": ".",
+  "framework": null,
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.js" },
     { "source": "/business",       "destination": "/apps/business/index.html" },
@@ -13,6 +16,12 @@
     { "source": "/(.+)",           "destination": "/apps/landing-page/$1" }
   ],
   "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    },
     {
       "source": "/",
       "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }]

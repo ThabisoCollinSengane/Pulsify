@@ -2,6 +2,10 @@
   "name": "pulsify",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "build": "echo 'Static site - no build needed'",
+    "dev": "vercel dev"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.43.0"
   }
