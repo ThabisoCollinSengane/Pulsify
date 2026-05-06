@@ -1803,22 +1803,55 @@ async function loadNotifications() {
     const dot = document.getElementById('notif-dot');
     if (dot) dot.style.display = unread ? 'block' : 'none';
     if (!notifs.length) {
-      el.innerHTML = '<div style="padding:30px;text-align:center;font-size:.78rem;color:var(--mu)">No notifications yet</div>';
+      el.innerHTML = '<div style="padding:30px;text-align:center;font-size:.78rem;color:var(--mu)">No notifications yet 🔔</div>';
       return;
     }
+
+    // Batch-fetch avatars for everyone who triggered a notification
+    const fromIds = [...new Set(notifs.map(n => n.from_user_id).filter(Boolean))];
+    let avatarMap = {};
+    if (fromIds.length) {
+      const { data: profs } = await sb.from('profiles').select('id,avatar_url').in('id', fromIds);
+      (profs || []).forEach(p => { avatarMap[p.id] = p.avatar_url; });
+    }
+
     const ico = {follow:'👤',like:'❤️',repost:'🔁',comment:'💬',ticket:'🎟',business_post:'📢',account:'⚙️'};
-    el.innerHTML = notifs.map(n => `
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);background:${n.read?'transparent':'rgba(176,38,255,.06)'}">
-        <div style="font-size:1.2rem;flex-shrink:0;margin-top:2px">${ico[n.type]||'🔔'}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:.78rem;color:var(--tx);line-height:1.45">${x(n.message)}</div>
-          <div style="font-size:.62rem;color:var(--mu);margin-top:3px">${timeAgoShort(n.created_at)}</div>
-        </div>
-        ${!n.read?'<div style="width:7px;height:7px;border-radius:50%;background:var(--or);flex-shrink:0;margin-top:5px"></div>':''}
-      </div>`).join('');
+
+    el.innerHTML = notifs.map(n => {
+      const avatar = n.from_user_id ? avatarMap[n.from_user_id] : null;
+      const avatarEl = avatar
+        ? `<img src="${x(avatar)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid var(--border2)">`
+        : `<div style="width:40px;height:40px;border-radius:50%;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;border:1.5px solid var(--border2)">${ico[n.type]||'🔔'}</div>`;
+
+      // Bold the actor's name inside the message
+      const name = n.from_display_name || '';
+      const msg  = x(n.message || '');
+      const boldMsg = name
+        ? msg.replace(x(name), `<span style="font-weight:700;color:var(--tx)">${x(name)}</span>`)
+        : msg;
+
+      return `
+        <div onclick="markNotifRead('${n.id}')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);background:${n.read?'transparent':'rgba(176,38,255,.07)'};cursor:pointer;transition:background .15s" onmouseenter="this.style.background='rgba(255,255,255,.03)'" onmouseleave="this.style.background='${n.read?'transparent':'rgba(176,38,255,.07)'}'">
+          <div style="position:relative;flex-shrink:0">
+            ${avatarEl}
+            <div style="position:absolute;bottom:-1px;right:-1px;width:18px;height:18px;border-radius:50%;background:var(--surf);display:flex;align-items:center;justify-content:center;font-size:.7rem;border:1.5px solid var(--bg2)">${ico[n.type]||'🔔'}</div>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:.79rem;color:var(--mu2);line-height:1.45">${boldMsg}</div>
+            <div style="font-size:.63rem;color:var(--mu);margin-top:3px">${timeAgoShort(n.created_at)}</div>
+          </div>
+          ${!n.read?'<div style="width:8px;height:8px;border-radius:50%;background:var(--or);flex-shrink:0;box-shadow:0 0 6px var(--or)"></div>':''}
+        </div>`;
+    }).join('');
   } catch(e) {
     el.innerHTML = '<div style="padding:16px;font-size:.75rem;color:var(--mu)">Could not load notifications</div>';
   }
+}
+
+async function markNotifRead(id) {
+  const sb = getSB();
+  if (!sb || !id) return;
+  await sb.from('notifications').update({ read: true }).eq('id', id).eq('user_id', currentUser.id);
 }
 
 async function markAllNotifsRead() {
