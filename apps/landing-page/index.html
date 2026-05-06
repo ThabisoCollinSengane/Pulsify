@@ -36,7 +36,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .back{display:none;align-items:center;gap:6px;background:transparent;border:none;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;padding:6px 10px 6px 0}
 .back.show{display:flex}
 .ib{width:36px;height:36px;border-radius:50%;background:var(--surf);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer;position:relative}
-.nd{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--or);border:1.5px solid var(--bg)}
+.nd{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--or);border:1.5px solid var(--bg);display:none}
 .sb{background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:8px 18px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer}
 .tkr{position:fixed;top:var(--th);left:0;right:0;height:var(--tk);z-index:700;background:linear-gradient(90deg,#B026FF,#FF5C00,#FF2D78);overflow:hidden;display:flex;align-items:center}
 .tkt{display:flex;white-space:nowrap;animation:sc 75s linear infinite}
@@ -2029,7 +2029,18 @@ window.addEventListener('DOMContentLoaded', () => {
         // Show notification dot if unread notifications exist
         const { count } = await sb.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('read', false);
         const dot = document.getElementById('notif-dot');
-        if (dot && count > 0) dot.style.display = 'block';
+        if (dot) dot.style.display = count > 0 ? 'block' : 'none';
+
+        // Realtime: light up bell when a new notification arrives
+        sb.channel(`notifs_${user.id}`)
+          .on('postgres_changes', {
+            event: 'INSERT', schema: 'public', table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          }, () => {
+            const d = document.getElementById('notif-dot');
+            if (d) d.style.display = 'block';
+          })
+          .subscribe();
       }
     });
   }
