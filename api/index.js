@@ -181,7 +181,7 @@ module.exports = async (req, res) => {
 
       let query = sb().from('posts')
         .select('*', { count: 'exact' })
-        .eq('visibility', 'public')
+        .or('visibility.eq.public,visibility.is.null')
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
 
@@ -383,6 +383,349 @@ module.exports = async (req, res) => {
     /* ─── GET /health ─────────────────────────────────────── */
     if (url === '/health' && req.method === 'GET') {
       return res.status(200).json({ status: 'ok', ts: new Date().toISOString() });
+    }
+
+    /* ─── GET /notifications ──────────────────────────────── */
+    if (url === '/notifications' && req.method === 'GET') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const page   = Math.max(1, parseInt(q.page  || '1'));
+      const limit  = Math.min(50, parseInt(q.limit || '20'));
+      const offset = (page - 1) * limit;
+
+      const { data, error, count } = await sb().from('notifications')
+        .select('*', { count: 'exact' })
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ notifications: data || [], total: count || 0, page, limit });
+    }
+
+    /* ─── GET /notifications/count ───────────────────────── */
+    if (url === '/notifications/count' && req.method === 'GET') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { count, error } = await sb().from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('read', false);
+
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ count: count || 0 });
+    }
+
+    /* ─── PATCH /notifications/:id/read ──────────────────── */
+    const notifId = url.match(/^\/notifications\/([^/]+)\/read$/)?.[1];
+    if (notifId && req.method === 'PATCH') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { error } = await sb().from('notifications')
+        .update({ read: true })
+        .eq('id', notifId)
+        .eq('user_id', user.id);
+
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ success: true });
+    }
+
+    /* ─── POST /notifications/mark-all-read ──────────────── */
+    if (url === '/notifications/mark-all-read' && req.method === 'POST') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { error } = await sb().from('notifications')
+        .update({ read: true })
+        .eq('user_id', user.id)
+        .eq('read', false);
+
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ success: true });
+    }
+
+    /* ─── POST /reactions ────────────────────────────────── */
+    if (url === '/reactions' && req.method === 'POST') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { entity_type, entity_id, type = 'like' } = req.body || {};
+      if (!entity_type || !entity_id) return res.status(400).json({ error: 'entity_type and entity_id required' });
+
+      const { data: existing } = await sb().from('reactions')
+        .select('id').eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type).maybeSingle();
+
+      if (existing) {
+        await sb().from('reactions').delete().eq('id', existing.id);
+        if (entity_type === 'post') {
+          const { data: p } = await sb().from('posts').select('likes_count').eq('id', entity_id).single();
+          await sb().from('posts').update({ likes_count: Math.max(0, (p?.likes_count || 1) - 1) }).eq('id', entity_id);
+        }
+        return res.status(200).json({ liked: false });
+      }
+
+      await sb().from('reactions').insert({ user_id: user.id, entity_type, entity_id, type });
+
+      if (entity_type === 'post') {
+        const { data: p } = await sb().from('posts').select('user_id,likes_count').eq('id', entity_id).single();
+        if (p) {
+          await sb().from('posts').update({ likes_count: (p.likes_count || 0) + 1 }).eq('id', entity_id);
+          if (p.user_id !== user.id) {
+            const { data: prof } = await sb().from('profiles').select('display_name').eq('id', user.id).single();
+            const name = prof?.display_name || 'Someone';
+            await sb().from('notifications').insert({
+              user_id: p.user_id, type: 'like', from_user_id: user.id,
+              from_display_name: name, entity_id, entity_type: 'post',
+              message: `${name} liked your post`,
+            });
+          }
+        }
+      }
+
+      return res.status(200).json({ liked: true });
+    }
+
+    /* ─── DELETE /reactions ──────────────────────────────── */
+    if (url === '/reactions' && req.method === 'DELETE') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { entity_id, type = 'like' } = req.body || {};
+      if (!entity_id) return res.status(400).json({ error: 'entity_id required' });
+
+      const { data: existing } = await sb().from('reactions')
+        .select('id,entity_type').eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type).maybeSingle();
+
+      if (!existing) return res.status(200).json({ liked: false });
+
+      await sb().from('reactions').delete().eq('id', existing.id);
+      if (existing.entity_type === 'post') {
+        const { data: p } = await sb().from('posts').select('likes_count').eq('id', entity_id).single();
+        await sb().from('posts').update({ likes_count: Math.max(0, (p?.likes_count || 1) - 1) }).eq('id', entity_id);
+      }
+      return res.status(200).json({ liked: false });
+    }
+
+    /* ─── POST /follows ──────────────────────────────────── */
+    if (url === '/follows' && req.method === 'POST') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { following_id } = req.body || {};
+      if (!following_id) return res.status(400).json({ error: 'following_id required' });
+      if (following_id === user.id) return res.status(400).json({ error: 'Cannot follow yourself' });
+
+      const { error } = await sb().from('follows').insert({ follower_id: user.id, following_id });
+      if (error && error.code !== '23505') return res.status(400).json({ error: error.message });
+
+      if (!error) {
+        const { data: prof } = await sb().from('profiles').select('display_name').eq('id', user.id).single();
+        const name = prof?.display_name || 'Someone';
+        await sb().from('notifications').insert({
+          user_id: following_id, type: 'follow', from_user_id: user.id,
+          from_display_name: name, entity_id: user.id, entity_type: 'profile',
+          message: `${name} started following you`,
+        });
+      }
+
+      return res.status(200).json({ following: true });
+    }
+
+    /* ─── DELETE /follows ────────────────────────────────── */
+    if (url === '/follows' && req.method === 'DELETE') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { following_id } = req.body || {};
+      if (!following_id) return res.status(400).json({ error: 'following_id required' });
+
+      await sb().from('follows').delete()
+        .eq('follower_id', user.id).eq('following_id', following_id);
+
+      return res.status(200).json({ following: false });
+    }
+
+    /* ─── GET /comments ──────────────────────────────────── */
+    if (url === '/comments' && req.method === 'GET') {
+      const entity_id   = q.entity_id;
+      const entity_type = q.entity_type || 'post';
+      if (!entity_id) return res.status(400).json({ error: 'entity_id required' });
+
+      const { data, error } = await sb().from('comments')
+        .select('id,user_id,content,created_at')
+        .eq('entity_id', entity_id)
+        .eq('entity_type', entity_type)
+        .order('created_at', { ascending: true })
+        .limit(50);
+
+      if (error) return res.status(400).json({ error: error.message });
+
+      const profileIds = [...new Set((data || []).map(c => c.user_id))];
+      let profileMap = {};
+      if (profileIds.length) {
+        const { data: profiles } = await sb().from('profiles')
+          .select('id,username,display_name,avatar_url').in('id', profileIds);
+        (profiles || []).forEach(p => { profileMap[p.id] = p; });
+      }
+
+      return res.status(200).json({ comments: (data || []).map(c => ({ ...c, profile: profileMap[c.user_id] || null })) });
+    }
+
+    /* ─── POST /comments ─────────────────────────────────── */
+    if (url === '/comments' && req.method === 'POST') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { entity_id, entity_type = 'post', content } = req.body || {};
+      if (!entity_id || !content?.trim()) return res.status(400).json({ error: 'entity_id and content required' });
+
+      const { data: comment, error } = await sb().from('comments')
+        .insert({ user_id: user.id, entity_id, entity_type, content: content.trim() })
+        .select().single();
+
+      if (error) return res.status(400).json({ error: error.message });
+
+      if (entity_type === 'post') {
+        const { data: p } = await sb().from('posts').select('user_id,comments_count').eq('id', entity_id).single();
+        if (p) {
+          await sb().from('posts').update({ comments_count: (p.comments_count || 0) + 1 }).eq('id', entity_id);
+          if (p.user_id !== user.id) {
+            const { data: prof } = await sb().from('profiles').select('display_name').eq('id', user.id).single();
+            const name = prof?.display_name || 'Someone';
+            await sb().from('notifications').insert({
+              user_id: p.user_id, type: 'comment', from_user_id: user.id,
+              from_display_name: name, entity_id, entity_type: 'post',
+              message: `${name} commented on your post`,
+            });
+          }
+        }
+      }
+
+      return res.status(200).json({ comment, success: true });
+    }
+
+    /* ─── POST /leads/ingest ────────────────────────────── */
+    if (url === '/leads/ingest' && req.method === 'POST') {
+      const key = req.headers['x-ingest-key'];
+      if (!key || key !== process.env.INGEST_SECRET)
+        return res.status(401).json({ error: 'Unauthorized' });
+
+      const leads = req.body?.leads || [];
+      if (!leads.length) return res.status(400).json({ error: 'No leads provided' });
+
+      let inserted = 0, skipped = 0;
+      for (const lead of leads) {
+        if (!lead.name) continue;
+        const { count } = await sb().from('scraped_leads')
+          .select('id', { count: 'exact', head: true })
+          .eq('name', lead.name).eq('source', lead.source || 'manual');
+        if (count > 0) { skipped++; continue; }
+        await sb().from('scraped_leads').insert({
+          name:           lead.name,
+          category:       lead.category       || 'organizer',
+          province:       lead.province       || null,
+          city:           lead.city           || null,
+          email:          lead.email          || null,
+          phone:          lead.phone          || null,
+          website:        lead.website        || null,
+          instagram:      lead.instagram      || null,
+          facebook:       lead.facebook       || null,
+          tiktok:         lead.tiktok         || null,
+          source:         lead.source         || 'manual',
+          description:    lead.description    || null,
+          follower_count: lead.follower_count || null,
+          status:         'new',
+        });
+        inserted++;
+      }
+      return res.status(200).json({ inserted, skipped });
+    }
+
+    /* ─── GET /leads ─────────────────────────────────────── */
+    if (url === '/leads' && req.method === 'GET') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const page     = Math.max(1, parseInt(q.page   || '1'));
+      const limit    = Math.min(100, parseInt(q.limit || '20'));
+      const offset   = (page - 1) * limit;
+      const status   = q.status   || '';
+      const category = q.category || '';
+      const source   = q.source   || '';
+      const province = q.province || '';
+      const search   = q.search   || '';
+
+      let query = sb().from('scraped_leads')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (status   && status   !== 'all') query = query.eq('status',   status);
+      if (category && category !== 'all') query = query.eq('category', category);
+      if (source   && source   !== 'all') query = query.eq('source',   source);
+      if (province && province !== 'all') query = query.eq('province', province);
+      if (search) query = query.or(`name.ilike.%${search}%,city.ilike.%${search}%,email.ilike.%${search}%`);
+
+      const { data, error, count } = await query;
+      if (error) return res.status(400).json({ error: error.message });
+
+      const [
+        { count: newCount },
+        { count: contactedCount },
+        { count: convertedCount },
+        { count: ignoredCount },
+      ] = await Promise.all([
+        sb().from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'new'),
+        sb().from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'contacted'),
+        sb().from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'converted'),
+        sb().from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'ignored'),
+      ]);
+
+      return res.status(200).json({
+        leads: data || [],
+        total: count || 0,
+        page, limit,
+        has_next: offset + limit < (count || 0),
+        stats: {
+          total: (newCount || 0) + (contactedCount || 0) + (convertedCount || 0) + (ignoredCount || 0),
+          new: newCount || 0,
+          contacted: contactedCount || 0,
+          converted: convertedCount || 0,
+          ignored: ignoredCount || 0,
+        },
+      });
+    }
+
+    /* ─── PATCH /leads/:id ───────────────────────────────── */
+    const leadId = url.match(/^\/leads\/([^/]+)$/)?.[1];
+    if (leadId && req.method === 'PATCH') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { status, notes } = req.body || {};
+      const updates = { updated_at: new Date().toISOString() };
+      if (status !== undefined) updates.status = status;
+      if (notes  !== undefined) updates.notes  = notes;
+
+      const { data, error } = await sb().from('scraped_leads')
+        .update(updates).eq('id', leadId).select().single();
+
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ lead: data, success: true });
     }
 
     return res.status(404).json({ error: `Route not found: ${req.method} ${url}` });

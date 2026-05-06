@@ -170,10 +170,11 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 
 <!-- TOP BAR -->
 <header class="tb">
-  <a href="/" class="logo"><span class="dot"></span>PULSIFY</a>
+  <span class="logo"><span class="dot"></span>PULSIFY</span>
   <span class="biz-name-top" id="tb-biz-name"></span>
   <div class="tb-right">
-    <div class="notif-badge" onclick="showTab('orders')" title="Orders">🔔<span class="nd" id="notif-dot"></span></div>
+    <div class="notif-badge" onclick="openSNPanel()" title="Notifications">🔔<span class="nd" id="sn-dot"></span></div>
+    <div class="notif-badge" onclick="showTab('orders')" title="Orders">📦<span class="nd" id="notif-dot"></span></div>
     <button class="logout-btn" onclick="doLogout()">Sign Out</button>
   </div>
 </header>
@@ -407,6 +408,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initDashboard();
   startOrderPoller();
   requestNotifPermission();
+  initSocialNotifBell();
 });
 
 function initDashboard() {
@@ -912,6 +914,59 @@ function sendBrowserNotif(msg) { if ('Notification' in window && Notification.pe
 function xe(s)          { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function emptyState(ico, title, sub) { return `<div class="empty-state"><div class="empty-ico">${ico}</div><div class="empty-title">${title}</div><div class="empty-sub">${sub}</div></div>`; }
 function fmtDate(d)     { if (!d) return ''; return new Date(d).toLocaleDateString('en-ZA', { day:'numeric', month:'short', year:'numeric' }); }
+
+// ── SOCIAL NOTIFICATIONS ─────────────────────────────────────
+async function initSocialNotifBell() {
+  const sb = getSB(); if (!sb) return;
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+  const uid = session.user.id;
+  const tok = session.access_token;
+  async function refreshDot() {
+    try {
+      const r = await fetch('/api/notifications/count', { headers: { 'Authorization': 'Bearer ' + tok } });
+      const j = await r.json();
+      const dot = document.getElementById('sn-dot');
+      if (dot) dot.style.display = (j.count > 0) ? 'block' : 'none';
+    } catch {}
+  }
+  refreshDot();
+  sb.channel('biz_notif_' + uid)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: 'user_id=eq.' + uid }, () => {
+      const dot = document.getElementById('sn-dot');
+      if (dot) dot.style.display = 'block';
+    }).subscribe();
+}
+
+async function openSNPanel() {
+  document.getElementById('sn-overlay').classList.add('open');
+  const sb = getSB(); if (!sb) return;
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+  const list = document.getElementById('sn-list');
+  list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu);font-size:.8rem">Loading…</div>';
+  try {
+    const r = await fetch('/api/notifications?limit=30', { headers: { 'Authorization': 'Bearer ' + session.access_token } });
+    const { notifications } = await r.json();
+    if (!notifications?.length) { list.innerHTML = '<div style="padding:30px;text-align:center;color:var(--mu)">No notifications yet.</div>'; return; }
+    const ICON = { like:'❤️', comment:'💬', follow:'👤', event:'🎟', order:'📦' };
+    list.innerHTML = notifications.map(n => `<div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border)"><div style="width:38px;height:38px;border-radius:50%;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">${ICON[n.type]||'🔔'}</div><div style="flex:1;min-width:0"><div style="font-size:.82rem;line-height:1.4;color:var(--tx)">${n.message||''}</div><div style="font-size:.68rem;color:var(--mu);margin-top:3px">${new Date(n.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div></div></div>`).join('');
+    fetch('/api/notifications/mark-all-read', { method:'POST', headers:{'Authorization':'Bearer '+session.access_token} }).catch(()=>{});
+    const dot = document.getElementById('sn-dot');
+    if (dot) dot.style.display = 'none';
+  } catch { list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu)">Failed to load.</div>'; }
+}
+function closeSNPanel() { document.getElementById('sn-overlay').classList.remove('open'); }
 </script>
+
+<!-- SOCIAL NOTIFICATION PANEL -->
+<div class="overlay" id="sn-overlay" onclick="if(event.target===this)closeSNPanel()">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div class="sheet-title">Notifications</div><button class="sheet-close" onclick="closeSNPanel()">✕</button></div>
+    <div class="sheet-body" id="sn-list"></div>
+  </div>
+</div>
+
 </body>
 </html>

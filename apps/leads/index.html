@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#05080F"/>
 <title>Lead Management — Pulsify</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--te:#00D4AA;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0}
@@ -89,6 +90,24 @@ body{padding:20px;padding-top:80px}
 .toast.show{opacity:1}
 .toast.ok{border-color:rgba(198,255,74,.4);color:var(--li)}
 .loading{text-align:center;padding:40px;color:var(--mu)}
+/* ── auth gate ── */
+.auth-gate{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center;padding:24px}
+.auth-card{width:100%;max-width:380px;background:var(--bg2);border:1px solid var(--border2);border-radius:22px;padding:28px 24px 32px}
+.auth-logo{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.06em;display:flex;align-items:center;gap:8px;margin-bottom:4px;color:var(--tx)}
+.auth-sub{font-size:.78rem;color:var(--mu);margin-bottom:24px}
+.auth-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;margin-bottom:4px}
+.auth-desc{font-size:.78rem;color:var(--mu2);margin-bottom:20px}
+.auth-lbl{font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu2);margin-bottom:5px;display:block}
+.auth-inp{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;margin-bottom:14px;transition:border-color .2s}
+.auth-inp:focus{border-color:var(--or)}
+.auth-inp::placeholder{color:var(--mu)}
+.pw-wrap{position:relative;margin-bottom:14px}
+.pw-wrap .auth-inp{margin-bottom:0;padding-right:48px}
+.pw-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--mu);cursor:pointer;font-size:.78rem;font-family:'Syne',sans-serif;font-weight:700}
+.auth-btn{width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:4px}
+.auth-btn:active{opacity:.85}.auth-btn:disabled{opacity:.4;cursor:not-allowed}
+.auth-err{background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.3);border-radius:10px;padding:10px 14px;font-size:.78rem;color:var(--pk);margin-bottom:14px;display:none}
+.auth-err.show{display:block}
 </style>
 </head>
 <body>
@@ -201,11 +220,328 @@ body{padding:20px;padding-top:80px}
   </div>
 </div>
 
+<!-- Auth Gate -->
+<div class="auth-gate" id="auth-gate">
+  <div class="auth-card">
+    <div class="auth-logo"><span class="dot"></span>PULSIFY</div>
+    <div class="auth-sub">Admin Access</div>
+    <div class="auth-title">Sign In</div>
+    <div class="auth-desc">Lead Management is restricted to authorised team members.</div>
+    <div class="auth-err" id="auth-err"></div>
+    <label class="auth-lbl">Email</label>
+    <input id="auth-email" class="auth-inp" type="email" placeholder="you@example.com" autocomplete="email"/>
+    <label class="auth-lbl">Password</label>
+    <div class="pw-wrap">
+      <input id="auth-pw" class="auth-inp" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doSignIn()"/>
+      <button class="pw-eye" type="button" onclick="togglePw()">SHOW</button>
+    </div>
+    <button class="auth-btn" id="auth-btn" onclick="doSignIn()">Sign In →</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
-// ... (full script content as in your paste, including all functions up to loadLeads())
-loadLeads();
+const API = '/api';
+const SUPA_URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+const sbAuth = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+let currentPage = 1;
+let currentStatus = 'all';
+let searchTimer = null;
+let activeLead = null;
+
+function getToken() {
+  return localStorage.getItem('p_token') || sessionStorage.getItem('p_token') || '';
+}
+
+// ── Auth gate ────────────────────────────────────────────────────────────────
+function togglePw() {
+  const inp = document.getElementById('auth-pw');
+  const btn = document.querySelector('.pw-eye');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? 'SHOW' : 'HIDE';
+}
+
+async function doSignIn() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pw    = document.getElementById('auth-pw').value;
+  const errEl = document.getElementById('auth-err');
+  const btn   = document.getElementById('auth-btn');
+  errEl.className = 'auth-err';
+  if (!email || !pw) { errEl.textContent = 'Email and password required.'; errEl.className = 'auth-err show'; return; }
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try {
+    const { data, error } = await sbAuth.auth.signInWithPassword({ email, password: pw });
+    if (error || !data.session) {
+      errEl.textContent = error?.message || 'Sign in failed.';
+      errEl.className = 'auth-err show';
+      btn.disabled = false; btn.textContent = 'Sign In →';
+      return;
+    }
+    localStorage.setItem('p_token', data.session.access_token);
+    document.getElementById('auth-gate').style.display = 'none';
+    loadLeads();
+  } catch(e) {
+    errEl.textContent = 'Network error. Try again.';
+    errEl.className = 'auth-err show';
+    btn.disabled = false; btn.textContent = 'Sign In →';
+  }
+}
+
+function checkAuth() {
+  const token = getToken();
+  if (token) {
+    document.getElementById('auth-gate').style.display = 'none';
+    loadLeads();
+  }
+  // else gate stays visible
+}
+checkAuth();
+
+function authHeaders() {
+  const t = getToken();
+  return t ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` }
+           : { 'Content-Type': 'application/json' };
+}
+
+function toast(msg, ok = true) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + (ok ? 'ok' : '');
+  setTimeout(() => { el.className = 'toast'; }, 2800);
+}
+
+function filterByStatus(status) {
+  currentStatus = status;
+  currentPage   = 1;
+  document.querySelectorAll('.stat-card').forEach(c => c.classList.toggle('active', c.dataset.status === status));
+  loadLeads();
+}
+
+function applyFiltersAndReload() {
+  currentPage = 1;
+  loadLeads();
+}
+
+function handleSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { currentPage = 1; loadLeads(); }, 400);
+}
+
+function buildParams() {
+  const p = new URLSearchParams();
+  p.set('page',     currentPage);
+  p.set('limit',    '20');
+  if (currentStatus && currentStatus !== 'all') p.set('status', currentStatus);
+  const prov = document.getElementById('filter-province').value;
+  const cat  = document.getElementById('filter-category').value;
+  const src  = document.getElementById('filter-source').value;
+  const srch = document.getElementById('search-input').value.trim();
+  if (prov && prov !== 'all') p.set('province', prov);
+  if (cat  && cat  !== 'all') p.set('category', cat);
+  if (src  && src  !== 'all') p.set('source',   src);
+  if (srch) p.set('search', srch);
+  return p.toString();
+}
+
+async function loadLeads() {
+  document.getElementById('leads-container').innerHTML = '<div class="loading">Loading leads…</div>';
+  try {
+    const res  = await fetch(`${API}/leads?${buildParams()}`, { headers: authHeaders() });
+    const json = await res.json();
+    if (!res.ok) { document.getElementById('leads-container').innerHTML = `<div class="loading">${json.error || 'Error loading leads'}</div>`; return; }
+
+    updateStats(json.stats || {});
+    renderTable(json.leads || []);
+    renderPagination(json.total || 0, json.limit || 20);
+  } catch (e) {
+    document.getElementById('leads-container').innerHTML = '<div class="loading">Failed to load leads</div>';
+  }
+}
+
+function updateStats(s) {
+  document.getElementById('stat-total').textContent     = s.total     || 0;
+  document.getElementById('stat-new').textContent       = s.new       || 0;
+  document.getElementById('stat-contacted').textContent = s.contacted || 0;
+  document.getElementById('stat-converted').textContent = s.converted || 0;
+  document.getElementById('stat-ignored').textContent   = s.ignored   || 0;
+}
+
+function sourceBadge(src) {
+  const map = { facebook: ['source-fb','FB'], instagram: ['source-ig','IG'], tiktok: ['source-tt','TT'], manual: ['','Manual'] };
+  const [cls, label] = map[src] || ['','?'];
+  return `<span class="source-badge ${cls}">${label}</span>`;
+}
+
+function contactIcons(lead) {
+  const items = [
+    { icon: '✉️', href: lead.email    ? `mailto:${lead.email}`    : null, title: 'Email' },
+    { icon: '📞', href: lead.phone    ? `tel:${lead.phone}`       : null, title: 'Phone' },
+    { icon: '🌐', href: lead.website  || null,                             title: 'Website' },
+    { icon: '📸', href: lead.instagram ? `https://instagram.com/${lead.instagram.replace('@','')}` : null, title: 'Instagram' },
+    { icon: '📘', href: lead.facebook || null,                             title: 'Facebook' },
+  ];
+  return items.map(i => i.href
+    ? `<a class="contact-icon active" href="${i.href}" target="_blank" title="${i.title}">${i.icon}</a>`
+    : `<span class="contact-icon inactive" title="No ${i.title}">${i.icon}</span>`
+  ).join('');
+}
+
+function renderTable(leads) {
+  if (!leads.length) {
+    document.getElementById('leads-container').innerHTML = '<div class="loading">No leads found</div>';
+    return;
+  }
+  const rows = leads.map(l => `
+    <tr>
+      <td><strong>${escHtml(l.name)}</strong>${l.city ? `<br><small style="color:var(--mu)">${escHtml(l.city)}</small>` : ''}</td>
+      <td><span class="category-badge category-${l.category||'organizer'}">${l.category||'organizer'}</span></td>
+      <td>${l.province ? escHtml(l.province) : '<span style="color:var(--mu)">—</span>'}</td>
+      <td>${sourceBadge(l.source||'manual')}</td>
+      <td><span class="status-badge status-${l.status||'new'}">${l.status||'new'}</span></td>
+      <td><div class="contact-icons">${contactIcons(l)}</div></td>
+      <td>
+        <div class="action-buttons">
+          <button class="action-btn" onclick="openLead('${l.id}')" title="View details">👁</button>
+          <button class="action-btn" onclick="openEmail('${l.id}')" title="Send email">✉️</button>
+        </div>
+      </td>
+    </tr>`).join('');
+
+  document.getElementById('leads-container').innerHTML = `
+    <table class="leads-table">
+      <thead><tr>
+        <th>Name / City</th><th>Category</th><th>Province</th>
+        <th>Source</th><th>Status</th><th>Contact</th><th>Actions</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+
+  // cache leads for modal
+  window._leadsCache = Object.fromEntries(leads.map(l => [l.id, l]));
+}
+
+function renderPagination(total, limit) {
+  const pages = Math.ceil(total / limit);
+  if (pages <= 1) { document.getElementById('pagination').innerHTML = ''; return; }
+  let html = `<button ${currentPage===1?'disabled':''} onclick="goPage(${currentPage-1})">← Prev</button>`;
+  for (let i = 1; i <= pages; i++) {
+    if (pages > 7 && Math.abs(i - currentPage) > 2 && i !== 1 && i !== pages) { if (i === 2 || i === pages-1) html += '<span style="padding:8px">…</span>'; continue; }
+    html += `<button class="${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  html += `<button ${currentPage===pages?'disabled':''} onclick="goPage(${currentPage+1})">Next →</button>`;
+  document.getElementById('pagination').innerHTML = html;
+}
+
+function goPage(p) { currentPage = p; loadLeads(); window.scrollTo(0,0); }
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Lead detail modal ────────────────────────────────────────────────────────
+function openLead(id) {
+  const l = (window._leadsCache||{})[id];
+  if (!l) return;
+  activeLead = l;
+  document.getElementById('modal-title').textContent = l.name;
+  const notes = Array.isArray(l.notes) ? l.notes : [];
+  document.getElementById('modal-body').innerHTML = `
+    <div class="detail-row"><div class="detail-label">Category</div><div class="detail-value">${escHtml(l.category||'—')}</div></div>
+    <div class="detail-row"><div class="detail-label">Province / City</div><div class="detail-value">${escHtml([l.province,l.city].filter(Boolean).join(', ')||'—')}</div></div>
+    <div class="detail-row"><div class="detail-label">Source</div><div class="detail-value">${sourceBadge(l.source||'manual')}</div></div>
+    <div class="detail-row"><div class="detail-label">Status</div><div class="detail-value">
+      <select class="status-select" id="modal-status-select" onchange="updateStatus('${l.id}',this.value)">
+        ${['new','contacted','converted','ignored'].map(s=>`<option value="${s}"${l.status===s?' selected':''}>${s}</option>`).join('')}
+      </select>
+    </div></div>
+    ${l.email    ? `<div class="detail-row"><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${escHtml(l.email)}">${escHtml(l.email)}</a></div></div>` : ''}
+    ${l.phone    ? `<div class="detail-row"><div class="detail-label">Phone</div><div class="detail-value"><a href="tel:${escHtml(l.phone)}">${escHtml(l.phone)}</a></div></div>` : ''}
+    ${l.website  ? `<div class="detail-row"><div class="detail-label">Website</div><div class="detail-value"><a href="${escHtml(l.website)}" target="_blank">${escHtml(l.website)}</a></div></div>` : ''}
+    ${l.instagram? `<div class="detail-row"><div class="detail-label">Instagram</div><div class="detail-value"><a href="https://instagram.com/${escHtml(l.instagram.replace('@',''))}" target="_blank">@${escHtml(l.instagram.replace('@',''))}</a></div></div>` : ''}
+    ${l.description ? `<div class="detail-row"><div class="detail-label">Description</div><div class="detail-value">${escHtml(l.description)}</div></div>` : ''}
+    <div class="notes-section">
+      <div class="detail-label" style="margin-bottom:10px">Notes (${notes.length})</div>
+      <div class="notes-list" id="notes-list">
+        ${notes.map(n=>`<div class="note-item"><div class="note-text">${escHtml(n.text||n)}</div><div class="note-meta">${n.date||''}</div></div>`).join('')}
+      </div>
+      <textarea class="note-input" id="note-input" placeholder="Add a note…" rows="3"></textarea>
+      <button class="btn-primary" onclick="addNote('${l.id}')">Add Note</button>
+    </div>`;
+  document.getElementById('lead-modal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('lead-modal').classList.remove('open'); activeLead = null; }
+
+async function updateStatus(id, status) {
+  const res = await fetch(`${API}/leads/${id}`, { method:'PATCH', headers: authHeaders(), body: JSON.stringify({ status }) });
+  if (res.ok) { toast('Status updated'); if (window._leadsCache?.[id]) window._leadsCache[id].status = status; loadLeads(); }
+  else toast('Failed to update status', false);
+}
+
+async function addNote(id) {
+  const text = document.getElementById('note-input').value.trim();
+  if (!text) return;
+  const lead  = (window._leadsCache||{})[id];
+  const notes = Array.isArray(lead?.notes) ? lead.notes : [];
+  notes.push({ text, date: new Date().toLocaleDateString() });
+  const res = await fetch(`${API}/leads/${id}`, { method:'PATCH', headers: authHeaders(), body: JSON.stringify({ notes }) });
+  if (res.ok) { toast('Note added'); document.getElementById('note-input').value = ''; openLead(id); }
+  else toast('Failed to save note', false);
+}
+
+// ── Email modal ──────────────────────────────────────────────────────────────
+const TEMPLATES = {
+  intro:   { subject: 'Join Pulsify — Free Listing for SA Events & Businesses', body: `Hi {name},\n\nI came across your page and thought Pulsify would be a great fit for you.\n\nPulsify is South Africa's fastest-growing event discovery platform. We're offering free listings to event organisers and businesses in our launch phase.\n\nInterested? I'd love to set you up in under 5 minutes.\n\nBest,\nThe Pulsify Team\nhttps://pulsify-blue.vercel.app` },
+  followup:{ subject: 'Following up — Pulsify listing for {name}', body: `Hi {name},\n\nJust following up on my previous message about Pulsify. We're growing fast across KZN, Gauteng, and the Western Cape and I'd love to get you on the platform.\n\nNo cost, no commitment — just more visibility for your events.\n\nLet me know if you have any questions.\n\nBest,\nThe Pulsify Team` },
+  convert: { subject: 'Your Pulsify account is ready, {name}!', body: `Hi {name},\n\nGreat news — your Pulsify listing is ready to go live.\n\nHead to https://pulsify-blue.vercel.app and create your account to get started. Once you're in, your profile will be visible to thousands of event-goers across South Africa.\n\nWelcome aboard!\n\nThe Pulsify Team` },
+};
+
+function openEmail(id) {
+  const l = (window._leadsCache||{})[id];
+  if (!l) return;
+  activeLead = l;
+  document.getElementById('email-recipient').textContent = [l.name, l.email].filter(Boolean).join(' — ');
+  const tbWrap = document.getElementById('template-buttons');
+  tbWrap.innerHTML = Object.keys(TEMPLATES).map(k =>
+    `<button class="template-btn" onclick="applyTemplate('${k}')">${k.charAt(0).toUpperCase()+k.slice(1)}</button>`
+  ).join('');
+  applyTemplate('intro');
+  document.getElementById('email-modal').classList.add('open');
+}
+
+function closeEmailModal() { document.getElementById('email-modal').classList.remove('open'); }
+
+function applyTemplate(key) {
+  document.querySelectorAll('.template-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase() === key));
+  const t = TEMPLATES[key];
+  if (!t) return;
+  const name = activeLead?.name || '';
+  document.getElementById('email-subject').value = t.subject.replace(/{name}/g, name);
+  document.getElementById('email-body').value    = t.body.replace(/{name}/g, name);
+}
+
+function sendEmailFromModal() {
+  const to      = activeLead?.email;
+  const subject = encodeURIComponent(document.getElementById('email-subject').value);
+  const body    = encodeURIComponent(document.getElementById('email-body').value);
+  if (to) { window.open(`mailto:${to}?subject=${subject}&body=${body}`, '_blank'); }
+  else    { window.open(`mailto:?subject=${subject}&body=${body}`, '_blank'); }
+  closeEmailModal();
+  if (activeLead) updateStatus(activeLead.id, 'contacted');
+}
+
+function exportToCSV() {
+  const leads = Object.values(window._leadsCache || {});
+  if (!leads.length) { toast('No leads to export', false); return; }
+  const cols = ['name','category','province','city','email','phone','website','instagram','facebook','source','status'];
+  const rows = [cols.join(','), ...leads.map(l => cols.map(c => `"${(l[c]||'').toString().replace(/"/g,'""')}"`).join(','))];
+  const blob = new Blob([rows.join('\n')], { type:'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `pulsify-leads-${new Date().toISOString().split('T')[0]}.csv`; a.click();
+}
 </script>
 </body>
 </html>

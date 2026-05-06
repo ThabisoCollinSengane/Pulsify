@@ -36,7 +36,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .back{display:none;align-items:center;gap:6px;background:transparent;border:none;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;padding:6px 10px 6px 0}
 .back.show{display:flex}
 .ib{width:36px;height:36px;border-radius:50%;background:var(--surf);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer;position:relative}
-.nd{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--or);border:1.5px solid var(--bg)}
+.nd{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--or);border:1.5px solid var(--bg);display:none}
 .sb{background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:8px 18px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer}
 .tkr{position:fixed;top:var(--th);left:0;right:0;height:var(--tk);z-index:700;background:linear-gradient(90deg,#B026FF,#FF5C00,#FF2D78);overflow:hidden;display:flex;align-items:center}
 .tkt{display:flex;white-space:nowrap;animation:sc 75s linear infinite}
@@ -418,7 +418,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 <!-- ══ MAP ══ -->
 <div class="panel" id="tab-map" style="overflow:hidden">
   <!-- Filter bar -->
-  <div style="position:absolute;top:calc(var(--th) + var(--tk));left:0;right:0;z-index:50;background:rgba(5,8,15,.94);backdrop-filter:blur(18px);padding:8px 12px 7px;border-bottom:1px solid var(--border2)">
+  <div style="position:absolute;top:0;left:0;right:0;z-index:50;background:rgba(5,8,15,.94);backdrop-filter:blur(18px);padding:8px 12px 7px;border-bottom:1px solid var(--border2)">
     <div style="display:flex;gap:6px">
       <select id="map-cat" onchange="applyMapFilters()" style="flex:1;background:rgba(13,20,36,.9);border:1px solid var(--border2);border-radius:50px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;padding:7px 10px;outline:none;cursor:pointer;-webkit-appearance:none"><option value="all">✦ All Types</option><option value="event">🎟 Events</option><option value="shisanyama">🔥 Shisanyama</option><option value="bar">🍻 Bar</option><option value="club">💿 Club</option><option value="hotel">🏨 Hotel</option><option value="bnb">🛏 BnB</option></select>
       <select id="map-genre" onchange="applyMapFilters()" style="flex:1;background:rgba(13,20,36,.9);border:1px solid var(--border2);border-radius:50px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;padding:7px 10px;outline:none;cursor:pointer;-webkit-appearance:none"><option value="all">🎵 All Genres</option><option value="gqom">🔊 Gqom</option><option value="amapiano">🎶 Amapiano</option><option value="sport">⚽ Sport</option><option value="march">✊ March</option><option value="jazz">🎷 Jazz</option></select>
@@ -427,10 +427,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   </div>
 
   <!-- Map canvas — fills from filter bar to bottom nav -->
-  <div id="mc" style="position:absolute;top:calc(var(--th) + var(--tk) + 48px);left:0;right:0;bottom:var(--bh);overflow:hidden;will-change:transform"></div>
+  <div id="mc" style="position:absolute;top:48px;left:0;right:0;bottom:0;overflow:hidden;will-change:transform"></div>
 
   <!-- Legend — collapsible, bottom-left -->
-  <div id="map-legend" style="position:absolute;bottom:calc(var(--bh) + 14px);left:12px;z-index:100;background:rgba(5,8,15,.93);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;pointer-events:auto">
+  <div id="map-legend" style="position:absolute;bottom:14px;left:12px;z-index:100;background:rgba(5,8,15,.93);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;pointer-events:auto">
     <div id="map-legend-toggle" onclick="toggleLegend()" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;cursor:pointer">
       <span style="font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--or)">Map Key</span>
       <span id="legend-arrow" style="font-size:.6rem;color:var(--mu);margin-left:10px;transition:transform .25s">▾</span>
@@ -745,6 +745,7 @@ function showTab(name) {
   if (name === 'tickets') renderBookings();
   if (name === 'discover') loadDiscover();
   if (name === 'profile') renderProfile();
+  if (name === 'map' && mapInited && mapObj) setTimeout(() => mapObj.resize(), 50);
 }
 function showDetailTab(name) {
   prevTab = curTab; curTab = name;
@@ -1226,7 +1227,7 @@ function initMap() {
   mapboxgl.accessToken = MAPBOX_TOKEN;
   mapObj = new mapboxgl.Map({
     container: 'mc',
-    style: 'mapbox://styles/mapbox/navigation-night-v1',
+    style: 'mapbox://styles/mapbox/dark-v11',
     center: [30.75, -29.85],
     zoom: 7.5, minZoom: 4, maxZoom: 18,
     dragRotate: false,
@@ -1235,7 +1236,18 @@ function initMap() {
   });
   mapObj.touchZoomRotate.disableRotation();
   mapObj.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
-  mapObj.on('load', () => { placeMapMarkers(); addHeatmap(); });
+  mapObj.on('load', () => {
+    mapObj.resize();
+    // Light blue ocean, rivers and dams
+    const WF = '#1a6b96', WL = '#2980b9';
+    ['water','water-shadow'].forEach(id => {
+      try { if (mapObj.getLayer(id)) mapObj.setPaintProperty(id, 'fill-color', WF); } catch(e) {}
+    });
+    ['waterway'].forEach(id => {
+      try { if (mapObj.getLayer(id)) mapObj.setPaintProperty(id, 'line-color', WL); } catch(e) {}
+    });
+    placeMapMarkers(); addHeatmap();
+  });
   mapObj.on('click', () => closeMapPanel());
 }
 
@@ -1574,41 +1586,26 @@ async function postComment() {
   const inp = document.getElementById('comment-input');
   const val = inp.value.trim();
   if (!val || !activeEntityId) return;
-
-  const sb = getSB();
-  if (!currentUser || !sb) {
-    return showToast('Please sign in to comment.', 'err');
-  }
+  if (!currentUser) return showToast('Please sign in to comment.', 'err');
 
   inp.disabled = true;
+  const token = localStorage.getItem('p_token') || '';
   try {
-    const { data: comment, error } = await sb.from('comments').insert({
-      user_id: currentUser.id,
-      entity_id: activeEntityId,
-      entity_type: activeEntityType,
-      text: val
-    }).select('*, profiles(username, avatar_url, display_name)').single();
+    const res = await fetch('/api/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ entity_id: activeEntityId, entity_type: activeEntityType, content: val }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Failed to post comment');
 
-    if (error) throw error;
-    
-    activeComments.push(comment);
+    const prof = JSON.parse(localStorage.getItem('p_profile') || '{}');
+    activeComments.push({
+      ...json.comment,
+      profiles: { display_name: prof.display_name || currentUser.email?.split('@')[0] || 'User', avatar_url: prof.avatar_url || null, username: prof.username || null },
+    });
     renderComments();
     inp.value = '';
-    
-    // Find the author of the post/event to notify them
-    const { data: entity } = await sb.from(activeEntityType === 'event' ? 'events' : 'posts')
-        .select('user_id')
-        .eq('id', activeEntityId)
-        .single();
-        
-    if (entity && entity.user_id !== currentUser.id) {
-        createNotification(
-            entity.user_id,
-            'comment',
-            `${currentUser.display_name || 'Someone'} commented on your post.`
-        );
-    }
-
   } catch(e) {
     showToast('Failed to post comment: ' + e.message, 'err');
     console.error('Comment post error:', e);
@@ -1623,25 +1620,21 @@ async function postComment() {
 ══════════════════════════════════════════════════ */
 async function toggleLike(btn, entityId, entityType = 'event') {
   if (!currentUser) return showToast('Sign in to like posts', 'err');
-  const sb = getSB();
   const liked = btn.classList.toggle('lk');
   const ico = btn.querySelector('.ai');
   const cntEl = btn.querySelector('span:last-child');
   const currentNum = parseInt(cntEl.textContent.replace('k','')) * (cntEl.textContent.includes('k') ? 1000 : 1);
-  
   ico.textContent = liked ? '❤️' : '🤍';
   cntEl.textContent = fn(liked ? currentNum + 1 : Math.max(0, currentNum - 1));
 
+  const token = localStorage.getItem('p_token') || '';
   try {
-    if (liked) {
-      await sb.from('reactions').insert({ entity_id: entityId, user_id: currentUser.id, entity_type: entityType });
-      const { data: entity } = await sb.from(entityType).select('user_id, name').eq('id', entityId).single();
-      if (entity && entity.user_id !== currentUser.id) {
-        createNotification(entity.user_id, 'like', `${currentUser.display_name || 'Someone'} liked your post.`, entityId, entityType);
-      }
-    } else {
-      await sb.from('reactions').delete().eq('entity_id', entityId).eq('user_id', currentUser.id);
-    }
+    const res = await fetch('/api/reactions', {
+      method: liked ? 'POST' : 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ entity_type: entityType, entity_id: entityId, type: 'like' }),
+    });
+    if (!res.ok) throw new Error((await res.json()).error || 'Failed');
   } catch(e) {
     console.error('Like error:', e);
     btn.classList.toggle('lk');
@@ -1705,23 +1698,23 @@ async function searchUsers(query) {
 }
 
 async function toggleFollow(targetId, btn) {
-  const sb = getSB();
-  if (!sb || !currentUser) { showToast('Sign in to follow'); window.location.href='signin.html'; return; }
+  if (!currentUser) { showToast('Sign in to follow'); window.location.href='signin.html'; return; }
   const isF = btn.classList.contains('cd');
   btn.disabled = true;
+  const token = localStorage.getItem('p_token') || '';
   try {
+    const res = await fetch('/api/follows', {
+      method: isF ? 'DELETE' : 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ following_id: targetId }),
+    });
+    if (!res.ok) throw new Error((await res.json()).error || 'Failed');
     if (isF) {
-      const { error } = await sb.from('follows').delete().eq('follower_id',currentUser.id).eq('following_id',targetId);
-      if (error) throw error;
       _squadFollowing.delete(targetId);
       btn.className='vb cn'; btn.textContent='+ Follow'; showToast('Unfollowed');
     } else {
-      const { error } = await sb.from('follows').insert({follower_id:currentUser.id,following_id:targetId});
-      if (error) throw error;
       _squadFollowing.add(targetId);
       btn.className='vb cd'; btn.textContent='✓ Following'; showToast('🔥 Following!');
-      const { data: tp } = await sb.from('profiles').select('display_name').eq('id', currentUser.id).single();
-      createNotification(targetId, 'follow', `${tp?.display_name || 'Someone'} started following you`);
     }
   } catch(e) { showToast('Error: '+e.message); console.error(e); }
   btn.disabled = false;
@@ -1731,6 +1724,17 @@ async function renderSquad() {
   const el = document.getElementById('squad-content');
   const sb = getSB();
   if (!el) return;
+
+  el.innerHTML = '<div style="padding:12px 16px;font-size:.78rem;color:var(--mu)">Loading…</div>';
+
+  // currentUser may not be set yet if auth is still resolving — fetch from session
+  if (!currentUser && sb) {
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (user) currentUser = user;
+    } catch(e) {}
+  }
+
   if (!currentUser || !sb) {
     el.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Sign in to see your friends.</div>';
     return;
@@ -1803,22 +1807,55 @@ async function loadNotifications() {
     const dot = document.getElementById('notif-dot');
     if (dot) dot.style.display = unread ? 'block' : 'none';
     if (!notifs.length) {
-      el.innerHTML = '<div style="padding:30px;text-align:center;font-size:.78rem;color:var(--mu)">No notifications yet</div>';
+      el.innerHTML = '<div style="padding:30px;text-align:center;font-size:.78rem;color:var(--mu)">No notifications yet 🔔</div>';
       return;
     }
+
+    // Batch-fetch avatars for everyone who triggered a notification
+    const fromIds = [...new Set(notifs.map(n => n.from_user_id).filter(Boolean))];
+    let avatarMap = {};
+    if (fromIds.length) {
+      const { data: profs } = await sb.from('profiles').select('id,avatar_url').in('id', fromIds);
+      (profs || []).forEach(p => { avatarMap[p.id] = p.avatar_url; });
+    }
+
     const ico = {follow:'👤',like:'❤️',repost:'🔁',comment:'💬',ticket:'🎟',business_post:'📢',account:'⚙️'};
-    el.innerHTML = notifs.map(n => `
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);background:${n.read?'transparent':'rgba(176,38,255,.06)'}">
-        <div style="font-size:1.2rem;flex-shrink:0;margin-top:2px">${ico[n.type]||'🔔'}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:.78rem;color:var(--tx);line-height:1.45">${x(n.message)}</div>
-          <div style="font-size:.62rem;color:var(--mu);margin-top:3px">${timeAgoShort(n.created_at)}</div>
-        </div>
-        ${!n.read?'<div style="width:7px;height:7px;border-radius:50%;background:var(--or);flex-shrink:0;margin-top:5px"></div>':''}
-      </div>`).join('');
+
+    el.innerHTML = notifs.map(n => {
+      const avatar = n.from_user_id ? avatarMap[n.from_user_id] : null;
+      const avatarEl = avatar
+        ? `<img src="${x(avatar)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid var(--border2)">`
+        : `<div style="width:40px;height:40px;border-radius:50%;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;border:1.5px solid var(--border2)">${ico[n.type]||'🔔'}</div>`;
+
+      // Bold the actor's name inside the message
+      const name = n.from_display_name || '';
+      const msg  = x(n.message || '');
+      const boldMsg = name
+        ? msg.replace(x(name), `<span style="font-weight:700;color:var(--tx)">${x(name)}</span>`)
+        : msg;
+
+      return `
+        <div onclick="markNotifRead('${n.id}')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);background:${n.read?'transparent':'rgba(176,38,255,.07)'};cursor:pointer;transition:background .15s" onmouseenter="this.style.background='rgba(255,255,255,.03)'" onmouseleave="this.style.background='${n.read?'transparent':'rgba(176,38,255,.07)'}'">
+          <div style="position:relative;flex-shrink:0">
+            ${avatarEl}
+            <div style="position:absolute;bottom:-1px;right:-1px;width:18px;height:18px;border-radius:50%;background:var(--surf);display:flex;align-items:center;justify-content:center;font-size:.7rem;border:1.5px solid var(--bg2)">${ico[n.type]||'🔔'}</div>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:.79rem;color:var(--mu2);line-height:1.45">${boldMsg}</div>
+            <div style="font-size:.63rem;color:var(--mu);margin-top:3px">${timeAgoShort(n.created_at)}</div>
+          </div>
+          ${!n.read?'<div style="width:8px;height:8px;border-radius:50%;background:var(--or);flex-shrink:0;box-shadow:0 0 6px var(--or)"></div>':''}
+        </div>`;
+    }).join('');
   } catch(e) {
     el.innerHTML = '<div style="padding:16px;font-size:.75rem;color:var(--mu)">Could not load notifications</div>';
   }
+}
+
+async function markNotifRead(id) {
+  const sb = getSB();
+  if (!sb || !id) return;
+  await sb.from('notifications').update({ read: true }).eq('id', id).eq('user_id', currentUser.id);
 }
 
 async function markAllNotifsRead() {
@@ -1930,22 +1967,24 @@ async function openProfile(userId) {
 function closeProfOverlay() { document.getElementById('prof-overlay').style.display = 'none'; }
 
 async function toggleFollowOverlay(targetId) {
-  const sb = getSB();
-  if (!sb || !currentUser) { showToast('Sign in to follow'); return; }
+  if (!currentUser) { showToast('Sign in to follow'); return; }
   const btn = document.getElementById('po-follow-btn');
   const isF = btn && btn.textContent.includes('Following');
-  if (btn) { btn.disabled = true; }
+  if (btn) btn.disabled = true;
+  const token = localStorage.getItem('p_token') || '';
   try {
+    const res = await fetch('/api/follows', {
+      method: isF ? 'DELETE' : 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ following_id: targetId }),
+    });
+    if (!res.ok) throw new Error((await res.json()).error || 'Failed');
     if (isF) {
-      await sb.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', targetId);
       if (btn) { btn.textContent = '+ Follow'; btn.style.background = 'linear-gradient(135deg,#B026FF,#FF5C00)'; btn.style.border = 'none'; btn.style.color = '#fff'; }
       showToast('Unfollowed');
     } else {
-      await sb.from('follows').insert({ follower_id: currentUser.id, following_id: targetId });
       if (btn) { btn.textContent = '✓ Following'; btn.style.background = 'transparent'; btn.style.border = '1px solid var(--border2)'; btn.style.color = 'var(--mu2)'; }
-      showToast('Following!');
-      const { data: tp } = await sb.from('profiles').select('display_name').eq('id', currentUser.id).single();
-      createNotification(targetId, 'follow', `${tp?.display_name||'Someone'} started following you`);
+      showToast('🔥 Following!');
     }
   } catch(e) { showToast('Error: ' + e.message); }
   if (btn) btn.disabled = false;
@@ -2029,7 +2068,18 @@ window.addEventListener('DOMContentLoaded', () => {
         // Show notification dot if unread notifications exist
         const { count } = await sb.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('read', false);
         const dot = document.getElementById('notif-dot');
-        if (dot && count > 0) dot.style.display = 'block';
+        if (dot) dot.style.display = count > 0 ? 'block' : 'none';
+
+        // Realtime: light up bell when a new notification arrives
+        sb.channel(`notifs_${user.id}`)
+          .on('postgres_changes', {
+            event: 'INSERT', schema: 'public', table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          }, () => {
+            const d = document.getElementById('notif-dot');
+            if (d) d.style.display = 'block';
+          })
+          .subscribe();
       }
     });
   }
