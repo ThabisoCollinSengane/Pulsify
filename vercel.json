@@ -11,5 +11,15 @@
     { "source": "/admin/(.*)",     "destination": "/apps/admin/$1" },
     { "source": "/",               "destination": "/apps/landing-page/index.html" },
     { "source": "/(.+)",           "destination": "/apps/landing-page/$1" }
+  ],
+  "headers": [
+    {
+      "source": "/",
+      "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }]
+    },
+    {
+      "source": "/(business|organizer|leads|admin)",
+      "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }]
+    }
   ]
 }
