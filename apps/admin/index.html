@@ -82,6 +82,20 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .msg-err{background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);color:var(--pk)}
 .spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:currentColor;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* Tabs */
+.tab-btn{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;padding:12px 20px;cursor:pointer;border-bottom:2px solid transparent;color:var(--mu);transition:all .2s;user-select:none}
+.tab-btn:hover{color:var(--tx)}
+.tab-btn.active{color:var(--or);border-bottom-color:var(--or)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+/* User actions */
+.user-actions{display:flex;gap:6px;flex-wrap:wrap}
+.role-badge{font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;padding:3px 8px;border-radius:50px;white-space:nowrap}
+.role-admin{background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.2);color:var(--pk)}
+.role-business{background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.2);color:var(--cy)}
+.role-user{background:rgba(90,88,112,.1);border:1px solid rgba(90,88,112,.2);color:var(--mu2)}
+.trial-badge{background:rgba(198,255,74,.1);border:1px solid rgba(198,255,74,.2);color:var(--li)}
+.suspended-badge{background:rgba(255,45,120,.15);border:1px solid rgba(255,45,120,.3);color:var(--pk)}
 </style>
 </head>
 <body>
@@ -112,18 +126,81 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <div id="admin-main" style="display:none">
 <div class="page">
 
-  <div style="margin-bottom:20px">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Business Coordinates</div>
-    <div style="font-size:.82rem;color:var(--mu2)">Fix invalid map positions for businesses and events</div>
+  <!-- Tab Navigation -->
+  <div style="display:flex;gap:8px;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:0">
+    <div class="tab-btn active" onclick="switchTab('users')">👥 Users</div>
+    <div class="tab-btn" onclick="switchTab('businesses')">🏢 Businesses</div>
+    <div class="tab-btn" onclick="switchTab('events')">🎉 Events</div>
+    <div class="tab-btn" onclick="switchTab('leads')">📊 Leads</div>
+    <div class="tab-btn" onclick="switchTab('system')">⚙️ System</div>
   </div>
 
-  <!-- Stats -->
-  <div class="stats-bar" id="stats-bar">
-    <div class="stat"><div class="stat-n" id="s-total">—</div><div class="stat-l">Total Businesses</div></div>
-    <div class="stat"><div class="stat-n ok-n" id="s-ok">—</div><div class="stat-l">Valid SA Coords</div></div>
-    <div class="stat"><div class="stat-n bad-n" id="s-bad">—</div><div class="stat-l">Missing / Invalid</div></div>
-    <div class="stat"><div class="stat-n warn-n" id="s-out">—</div><div class="stat-l">Outside SA</div></div>
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: USERS -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <div id="tab-users" class="tab-content active">
+    <div style="margin-bottom:20px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">User Management</div>
+      <div style="font-size:.82rem;color:var(--mu2)">Manage user accounts, roles, trials, and suspensions</div>
+    </div>
+
+    <div class="stats-bar" id="user-stats-bar">
+      <div class="stat"><div class="stat-n" id="us-total">—</div><div class="stat-l">Total Users</div></div>
+      <div class="stat"><div class="stat-n ok-n" id="us-active">—</div><div class="stat-l">Active</div></div>
+      <div class="stat"><div class="stat-n warn-n" id="us-trial">—</div><div class="stat-l">On Trial</div></div>
+      <div class="stat"><div class="stat-n bad-n" id="us-suspended">—</div><div class="stat-l">Suspended</div></div>
+    </div>
+
+    <div class="search-row">
+      <input class="inp" id="user-search-inp" placeholder="Search by name or email…" oninput="filterUsers()"/>
+      <button class="btn btn-surf" onclick="loadUsers()">↺ Refresh</button>
+    </div>
+
+    <div class="filter-row">
+      <div class="fchip on" onclick="setUserFilter('all',this)">All Users</div>
+      <div class="fchip" onclick="setUserFilter('admin',this)">👑 Admins</div>
+      <div class="fchip" onclick="setUserFilter('business',this)">🏢 Business</div>
+      <div class="fchip" onclick="setUserFilter('trial',this)">⏰ On Trial</div>
+      <div class="fchip" onclick="setUserFilter('suspended',this)">🚫 Suspended</div>
+    </div>
+
+    <div id="msg-users" class="msg"></div>
+
+    <div class="tbl-wrap">
+      <table id="users-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Trial Status</th>
+            <th>Status</th>
+            <th>Joined</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody">
+          <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: BUSINESSES -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <div id="tab-businesses" class="tab-content">
+    <div style="margin-bottom:20px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Business Coordinates</div>
+      <div style="font-size:.82rem;color:var(--mu2)">Fix invalid map positions for businesses and events</div>
+    </div>
+
+    <div class="stats-bar" id="stats-bar">
+      <div class="stat"><div class="stat-n" id="s-total">—</div><div class="stat-l">Total Businesses</div></div>
+      <div class="stat"><div class="stat-n ok-n" id="s-ok">—</div><div class="stat-l">Valid SA Coords</div></div>
+      <div class="stat"><div class="stat-n bad-n" id="s-bad">—</div><div class="stat-l">Missing / Invalid</div></div>
+      <div class="stat"><div class="stat-n warn-n" id="s-out">—</div><div class="stat-l">Outside SA</div></div>
+    </div>
 
   <!-- Edit panel (shown when a row is selected) -->
   <div class="edit-panel" id="edit-panel">
@@ -202,6 +279,39 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </table>
   </div>
 
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: EVENTS -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <div id="tab-events" class="tab-content">
+    <div style="margin-bottom:20px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Event Management</div>
+      <div style="font-size:.82rem;color:var(--mu2)">Manage events and their coordinates</div>
+    </div>
+    <div style="padding:40px;text-align:center;color:var(--mu)">Events management coming soon…</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: LEADS -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <div id="tab-leads" class="tab-content">
+    <div style="margin-bottom:20px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Lead Management</div>
+      <div style="font-size:.82rem;color:var(--mu2)">View and manage business leads</div>
+    </div>
+    <div style="padding:40px;text-align:center;color:var(--mu)">Leads management coming soon…</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: SYSTEM -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <div id="tab-system" class="tab-content">
+    <div style="margin-bottom:20px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">System Settings</div>
+      <div style="font-size:.82rem;color:var(--mu2)">Configure system-wide settings</div>
+    </div>
+    <div style="padding:40px;text-align:center;color:var(--mu)">System settings coming soon…</div>
+  </div>
+
 </div>
 </div>
 
@@ -212,8 +322,12 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 let ALL_BIZ   = [];
+let ALL_USERS = [];
 let activeFilter = 'all';
+let activeUserFilter = 'all';
 let editId    = null;
+let currentTab = 'users';
+let adminToken = null;
 
 /* ── Auth ── */
 async function adminLogin() {
@@ -239,7 +353,11 @@ async function checkSession() {
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     const { data: prof } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
-    if (prof?.role === 'admin') { showAdminUI(); return; }
+    if (prof?.role === 'admin') { 
+      adminToken = session.access_token;
+      showAdminUI(); 
+      return; 
+    }
   }
 }
 
@@ -247,7 +365,20 @@ function showAdminUI() {
   document.getElementById('auth-gate').style.display  = 'none';
   document.getElementById('admin-main').style.display  = 'block';
   document.getElementById('logout-btn').style.display  = 'block';
+  loadUsers();
   loadBusinesses();
+}
+
+/* ── Tab switching ── */
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  
+  if (tab === 'users' && !ALL_USERS.length) loadUsers();
+  else if (tab === 'businesses' && !ALL_BIZ.length) loadBusinesses();
 }
 
 async function signOutAdmin() { await sb.auth.signOut(); location.reload(); }
@@ -476,6 +607,217 @@ async function runBulkGeocode() {
 
 function showMainMsg(m, t) { const el=document.getElementById('msg-main'); el.innerHTML=m; el.className='msg show msg-'+(t==='err'?'err':'ok'); }
 function showEditMsg(m, t) { const el=document.getElementById('edit-msg'); el.innerHTML=m; el.className='msg show msg-'+(t==='err'?'err':'ok'); }
+function showUserMsg(m, t) { const el=document.getElementById('msg-users'); el.innerHTML=m; el.className='msg show msg-'+(t==='err'?'err':'ok'); }
+
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+/* USER MANAGEMENT */
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+
+async function loadUsers() {
+  document.getElementById('users-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>';
+  const { data, error } = await sb.from('profiles')
+    .select('id,email,role,full_name,trial_expires_at,suspended,created_at')
+    .order('created_at', { ascending: false });
+  if (error) { showUserMsg('Failed to load users: ' + error.message, 'err'); return; }
+  ALL_USERS = data || [];
+  updateUserStats();
+  renderUsersTable();
+}
+
+function updateUserStats() {
+  const active = ALL_USERS.filter(u => !u.suspended).length;
+  const trial = ALL_USERS.filter(u => u.trial_expires_at && new Date(u.trial_expires_at) > new Date()).length;
+  const suspended = ALL_USERS.filter(u => u.suspended).length;
+  document.getElementById('us-total').textContent = ALL_USERS.length;
+  document.getElementById('us-active').textContent = active;
+  document.getElementById('us-trial').textContent = trial;
+  document.getElementById('us-suspended').textContent = suspended;
+}
+
+function setUserFilter(f, el) {
+  activeUserFilter = f;
+  document.querySelectorAll('#tab-users .fchip').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  renderUsersTable();
+}
+
+function filterUsers() { renderUsersTable(); }
+
+function renderUsersTable() {
+  const search = document.getElementById('user-search-inp').value.toLowerCase();
+  let items = ALL_USERS;
+  
+  if (activeUserFilter === 'admin') items = items.filter(u => u.role === 'admin');
+  else if (activeUserFilter === 'business') items = items.filter(u => u.role === 'business');
+  else if (activeUserFilter === 'trial') items = items.filter(u => u.trial_expires_at && new Date(u.trial_expires_at) > new Date());
+  else if (activeUserFilter === 'suspended') items = items.filter(u => u.suspended);
+  
+  if (search) items = items.filter(u => 
+    (u.full_name||'').toLowerCase().includes(search) || 
+    (u.email||'').toLowerCase().includes(search)
+  );
+
+  if (!items.length) {
+    document.getElementById('users-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--mu)">No users match this filter.</td></tr>';
+    return;
+  }
+
+  document.getElementById('users-tbody').innerHTML = items.map(u => {
+    const roleBadge = u.role === 'admin' 
+      ? '<span class="role-badge role-admin">👑 Admin</span>'
+      : u.role === 'business'
+      ? '<span class="role-badge role-business">🏢 Business</span>'
+      : '<span class="role-badge role-user">👤 User</span>';
+    
+    const trialExpires = u.trial_expires_at ? new Date(u.trial_expires_at) : null;
+    const hasActiveTrial = trialExpires && trialExpires > new Date();
+    const trialBadge = hasActiveTrial
+      ? `<span class="status-badge trial-badge">⏰ Trial until ${trialExpires.toLocaleDateString()}</span>`
+      : u.trial_expires_at
+      ? '<span class="status-badge s-warn">Trial Expired</span>'
+      : '—';
+    
+    const statusBadge = u.suspended
+      ? '<span class="status-badge suspended-badge">🚫 Suspended</span>'
+      : '<span class="status-badge s-ok">✅ Active</span>';
+    
+    const joined = new Date(u.created_at).toLocaleDateString();
+    
+    return `<tr>
+      <td class="name-cell" title="${esc(u.full_name || 'No name')}">${esc(u.full_name || 'No name')}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:.72rem">${esc(u.email)}</td>
+      <td>${roleBadge}</td>
+      <td>${trialBadge}</td>
+      <td>${statusBadge}</td>
+      <td style="font-size:.72rem;color:var(--mu)">${joined}</td>
+      <td>
+        <div class="user-actions">
+          ${u.suspended 
+            ? `<button class="btn btn-li" style="padding:5px 10px;font-size:.68rem" onclick="toggleSuspend('${u.id}',false)">✅ Activate</button>`
+            : `<button class="btn btn-pk" style="padding:5px 10px;font-size:.68rem" onclick="toggleSuspend('${u.id}',true)">🚫 Suspend</button>`
+          }
+          <button class="btn btn-cy" style="padding:5px 10px;font-size:.68rem" onclick="showTrialModal('${u.id}')">⏰ Trial</button>
+          <button class="btn btn-surf" style="padding:5px 10px;font-size:.68rem" onclick="showRoleModal('${u.id}')">👤 Role</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/* ── User Actions ── */
+async function toggleSuspend(userId, suspend) {
+  if (!confirm(`${suspend ? 'Suspend' : 'Activate'} this user?`)) return;
+  
+  try {
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({ suspended: suspend })
+    });
+    
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to update user');
+    }
+    
+    const idx = ALL_USERS.findIndex(u => u.id === userId);
+    if (idx > -1) ALL_USERS[idx].suspended = suspend;
+    updateUserStats();
+    renderUsersTable();
+    showUserMsg(`✅ User ${suspend ? 'suspended' : 'activated'} successfully`, 'ok');
+  } catch(e) {
+    showUserMsg(`Error: ${e.message}`, 'err');
+  }
+}
+
+function showTrialModal(userId) {
+  const user = ALL_USERS.find(u => u.id === userId);
+  if (!user) return;
+  
+  const months = prompt(`Grant free trial to ${user.full_name || user.email}?\n\nEnter number of months (1, 2, or 3):`);
+  if (!months) return;
+  
+  const m = parseInt(months);
+  if (![1,2,3].includes(m)) {
+    alert('Please enter 1, 2, or 3 months');
+    return;
+  }
+  
+  grantTrial(userId, m);
+}
+
+async function grantTrial(userId, months) {
+  try {
+    const res = await fetch(`/api/admin/users/${userId}/trial`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({ months })
+    });
+    
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to grant trial');
+    }
+    
+    const { trial_expires_at } = await res.json();
+    const idx = ALL_USERS.findIndex(u => u.id === userId);
+    if (idx > -1) ALL_USERS[idx].trial_expires_at = trial_expires_at;
+    updateUserStats();
+    renderUsersTable();
+    showUserMsg(`✅ ${months}-month trial granted successfully`, 'ok');
+  } catch(e) {
+    showUserMsg(`Error: ${e.message}`, 'err');
+  }
+}
+
+function showRoleModal(userId) {
+  const user = ALL_USERS.find(u => u.id === userId);
+  if (!user) return;
+  
+  const role = prompt(`Change role for ${user.full_name || user.email}?\n\nCurrent: ${user.role}\n\nEnter new role (user, business, admin):`);
+  if (!role) return;
+  
+  if (!['user','business','admin'].includes(role.toLowerCase())) {
+    alert('Invalid role. Must be: user, business, or admin');
+    return;
+  }
+  
+  changeRole(userId, role.toLowerCase());
+}
+
+async function changeRole(userId, role) {
+  if (!confirm(`Change user role to "${role}"?`)) return;
+  
+  try {
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({ role })
+    });
+    
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to change role');
+    }
+    
+    const idx = ALL_USERS.findIndex(u => u.id === userId);
+    if (idx > -1) ALL_USERS[idx].role = role;
+    updateUserStats();
+    renderUsersTable();
+    showUserMsg(`✅ Role changed to "${role}" successfully`, 'ok');
+  } catch(e) {
+    showUserMsg(`Error: ${e.message}`, 'err');
+  }
+}
 
 checkSession();
 </script>
