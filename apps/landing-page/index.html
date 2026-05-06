@@ -944,19 +944,24 @@ async function loadFeed(resetPage = false) {
   document.getElementById('feed-pg').style.display = 'none';
 
   try {
-    const params = new URLSearchParams({ page: feedPage, limit: 10 });
-    if (feedCity  && feedCity  !== 'all') params.set('city',  feedCity);
-    if (feedGenre && feedGenre !== 'all') params.set('genre', feedGenre);
-
-    const res  = await fetch(API + '/events?' + params);
-    const data = await res.json();
-
-    if (!res.ok) throw new Error(data.error || 'API error');
-
-    const events = data.events || [];
-    feedTotalPages = data.total_pages || 1;
-
-    document.getElementById('feed-lbl').textContent = '🔥 ' + (data.total || events.length) + ' Upcoming Events';
+    const sb = getSB();
+    const today = new Date().toISOString().split('T')[0];
+    const limit = 10, offset = (feedPage - 1) * limit;
+    let q = sb.from('events')
+      .select('id,name,date_local,time_local,venue_name,venue_city,venue_lat,venue_lon,price_min,is_free,image_url,genre,hype_score,like_count,comment_count,is_frontline,frontline_rank,external_url,source,status,description,lineup,organiser_name', { count: 'exact' })
+      .gte('date_local', today)
+      .eq('is_active', true)
+      .order('is_frontline', { ascending: false })
+      .order('hype_score',   { ascending: false, nullsFirst: false })
+      .order('date_local',   { ascending: true })
+      .range(offset, offset + limit - 1);
+    if (feedCity  && feedCity  !== 'all') q = q.ilike('venue_city', `%${feedCity}%`);
+    if (feedGenre === 'free') q = q.eq('is_free', true);
+    else if (feedGenre && feedGenre !== 'all') q = q.ilike('genre', `%${feedGenre}%`);
+    const { data: events, error, count } = await q;
+    if (error) throw error;
+    feedTotalPages = Math.ceil((count || 0) / limit) || 1;
+    document.getElementById('feed-lbl').textContent = '🔥 ' + (count || (events||[]).length) + ' Upcoming Events';
 
     if (events.length === 0) {
       document.getElementById('events-feed').innerHTML = `
@@ -1059,11 +1064,16 @@ function handleSearch(val) {
   if (!val.trim()) return;
   searchTimer = setTimeout(async () => {
     try {
-      const res = await fetch(API + '/events/search?q=' + encodeURIComponent(val));
-      const data = await res.json();
-      if (data.results?.length) {
-        document.getElementById('events-feed').innerHTML = data.results.map((ev, i) => buildCard(ev, i)).join('');
-        document.getElementById('feed-lbl').textContent = '🔍 ' + data.results.length + ' results';
+      const sb = getSB();
+      const today = new Date().toISOString().split('T')[0];
+      const { data: results } = await sb.from('events')
+        .select('id,name,date_local,time_local,venue_name,venue_city,price_min,is_free,image_url,genre,hype_score,like_count,comment_count,is_frontline,frontline_rank,source,organiser_name')
+        .gte('date_local', today).eq('is_active', true)
+        .or(`name.ilike.%${val}%,venue_city.ilike.%${val}%,genre.ilike.%${val}%,venue_name.ilike.%${val}%`)
+        .order('hype_score', { ascending: false, nullsFirst: false }).limit(20);
+      if (results?.length) {
+        document.getElementById('events-feed').innerHTML = results.map((ev, i) => buildCard(ev, i)).join('');
+        document.getElementById('feed-lbl').textContent = '🔍 ' + results.length + ' results';
         triggerRev();
       }
     } catch(e) {}
@@ -1076,9 +1086,16 @@ function handleSearch(val) {
 async function loadFrontline() {
   document.getElementById('frontline-row').innerHTML = bizSkeleton();
   try {
-    const res  = await fetch(API + '/businesses?limit=6' + (feedCity !== 'all' ? '&city=' + feedCity : ''));
-    const data = await res.json();
-    const bizs = data.businesses || [];
+    const sb = getSB();
+    let bq = sb.from('businesses')
+      .select('id,name,category,suburb,city,lat,lon,rating,review_count,price_range,cover_image_url,is_frontline,frontline_rank,tagline')
+      .eq('is_active', true)
+      .order('is_frontline', { ascending: false })
+      .order('frontline_rank', { ascending: true, nullsFirst: false })
+      .order('rating', { ascending: false, nullsFirst: false })
+      .limit(6);
+    if (feedCity && feedCity !== 'all') bq = bq.ilike('city', `%${feedCity}%`);
+    const { data: bizs } = await bq;
     bizForMap  = bizs;
     document.getElementById('frontline-row').innerHTML = bizs.map(b => buildBizCard(b)).join('') + `
       <div class="bc" onclick="showTab('discover')" style="background:rgba(255,92,0,.06);border:1.5px dashed rgba(255,92,0,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-width:130px">
@@ -1115,9 +1132,14 @@ async function openEv(evId) {
   showDetailTab('event-detail');
 
   try {
-    const res = await fetch(API + '/events/' + evId);
-    const { event: ev, tiers = [], photos = [] } = await res.json();
-    if (!ev) throw new Error('Not found');
+    const sb = getSB();
+    const [{ data: ev, error: evErr }, { data: evTiers }, { data: evPhotos }] = await Promise.all([
+      sb.from('events').select('*').eq('id', evId).single(),
+      sb.from('ticket_tiers').select('*').eq('event_id', evId).order('sort_order'),
+      sb.from('event_photos').select('*').eq('event_id', evId).order('created_at', { ascending: false }).limit(12),
+    ]);
+    if (evErr || !ev) throw new Error('Not found');
+    const tiers = evTiers || [], photos = evPhotos || [];
 
     selTier = tiers[0] || null; selQty = 1;
     const iF = ev.is_free, bg = gg(ev.genre), emo = ge(ev.genre), hp = ev.hype_score ?? 70;
@@ -1281,9 +1303,9 @@ async function openBiz(bizId) {
   showDetailTab('biz-detail');
 
   try {
-    const res = await fetch(API + '/businesses/' + bizId);
-    const { business: b } = await res.json();
-    if (!b) throw new Error('Not found');
+    const sb = getSB();
+    const { data: b, error: bizErr } = await sb.from('businesses').select('*').eq('id', bizId).single();
+    if (bizErr || !b) throw new Error('Not found');
 
     const emo  = ce(b.category);
     const stars = '★'.repeat(Math.round(b.rating || 0)) + '☆'.repeat(5 - Math.round(b.rating || 0));
@@ -1346,19 +1368,23 @@ let discLoaded = false;
 async function loadDiscover(cat) {
   if (!cat) cat = discCat;
   try {
-    const params = new URLSearchParams({ show_all: 'true', limit: '20' });
-    if (cat && cat !== 'all') params.set('category', cat);
-    if (feedCity && feedCity !== 'all') params.set('city', feedCity);
-    const [bizRes, evRes] = await Promise.all([
-      fetch(API + '/businesses?' + params),
-      fetch(API + '/events?limit=20'),
-    ]);
-    const bizData = await bizRes.json();
-    const evData  = await evRes.json();
+    const sb = getSB();
+    const today = new Date().toISOString().split('T')[0];
+    let bq = sb.from('businesses')
+      .select('id,name,category,suburb,city,lat,lon,rating,review_count,price_range,cover_image_url,is_frontline,frontline_rank,tagline')
+      .eq('is_active', true).order('is_frontline', { ascending: false })
+      .order('rating', { ascending: false, nullsFirst: false }).limit(20);
+    if (cat && cat !== 'all') bq = bq.eq('category', cat);
+    if (feedCity && feedCity !== 'all') bq = bq.ilike('city', `%${feedCity}%`);
+    let eq = sb.from('events')
+      .select('id,name,date_local,image_url,genre,is_free,price_min,hype_score,venue_city')
+      .gte('date_local', today).eq('is_active', true)
+      .order('hype_score', { ascending: false, nullsFirst: false }).limit(20);
+    const [{ data: bizList }, { data: evList }] = await Promise.all([bq, eq]);
     const dr = document.getElementById('disc-biz-row');
-    if (dr) dr.innerHTML = (bizData.businesses || []).map(b => buildBizCard(b)).join('');
+    if (dr) dr.innerHTML = (bizList || []).map(b => buildBizCard(b)).join('');
     const de = document.getElementById('disc-events');
-    if (de) de.innerHTML = (evData.events || []).map(ev => `
+    if (de) de.innerHTML = (evList || []).map(ev => `
       <div class="de" onclick="openEv('${ev.id}')">
         <div class="det" style="background:${gg(ev.genre)}">${ev.image_url ? `<img src="${ev.image_url}" loading="lazy" onerror="this.style.display='none'"/>` : ge(ev.genre)}<span class="ddb">${fdate(ev.date_local)}</span></div>
         <div class="deb"><div class="den">${x(ev.name)}</div><div class="dec">${x(ev.venue_city)}</div>
@@ -2419,9 +2445,12 @@ async function openBizPage() {
   const grid = document.getElementById('bp-grid');
   if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--mu)">Loading…</div>';
   try {
-    const res  = await fetch(API + '/businesses?show_all=true&limit=50');
-    const data = await res.json();
-    _bizPageData = data.businesses || [];
+    const sb = getSB();
+    const { data: bizAll } = await sb.from('businesses')
+      .select('id,name,category,suburb,city,lat,lon,rating,review_count,price_range,cover_image_url,is_frontline,frontline_rank,tagline,description,phone,website,is_verified')
+      .eq('is_active', true).order('is_frontline', { ascending: false })
+      .order('rating', { ascending: false, nullsFirst: false }).limit(50);
+    _bizPageData = bizAll || [];
     _renderBizPage();
   } catch(e) {
     if (grid) grid.innerHTML = '<div style="grid-column:1/-1;padding:30px;text-align:center;color:var(--mu)">Could not load. Check connection.</div>';
