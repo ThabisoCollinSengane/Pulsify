@@ -949,11 +949,7 @@ async function loadFeed(resetPage = false) {
     const limit = 10, offset = (feedPage - 1) * limit;
     let q = sb.from('events')
       .select('id,name,date_local,time_local,venue_name,venue_city,venue_lat,venue_lon,price_min,is_free,image_url,genre,hype_score,like_count,comment_count,is_frontline,frontline_rank,external_url,source,status,description,lineup,organiser_name', { count: 'exact' })
-      .gte('date_local', today)
-      .eq('is_active', true)
-      .order('is_frontline', { ascending: false })
-      .order('hype_score',   { ascending: false, nullsFirst: false })
-      .order('date_local',   { ascending: true })
+      .order('date_local', { ascending: true })
       .range(offset, offset + limit - 1);
     if (feedCity  && feedCity  !== 'all') q = q.ilike('venue_city', `%${feedCity}%`);
     if (feedGenre === 'free') q = q.eq('is_free', true);
@@ -1090,9 +1086,7 @@ async function loadFrontline() {
     const sb = getSB();
     let bq = sb.from('businesses')
       .select('id,name,category,suburb,city,lat,lon,rating,review_count,price_range,cover_image_url,is_frontline,frontline_rank,tagline')
-      .eq('is_active', true)
       .order('is_frontline', { ascending: false })
-      .order('frontline_rank', { ascending: true, nullsFirst: false })
       .order('rating', { ascending: false, nullsFirst: false })
       .limit(6);
     if (feedCity && feedCity !== 'all') bq = bq.ilike('city', `%${feedCity}%`);
