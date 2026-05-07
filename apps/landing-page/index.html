@@ -987,11 +987,37 @@ async function loadFeed(resetPage = false) {
     // Cache events for map
     eventsForMap = [...(eventsForMap.filter(e => !events.find(n => n.id === e.id))), ...events];
 
+    // Append Quicket events below (fire-and-forget, doesn't block render)
+    if (feedPage === 1) loadQuicketEvents(feedCity, feedGenre);
+
   } catch(err) {
     if (myReq !== _feedReqId) return;
     console.error('[Feed]', err);
     feedEl.innerHTML = `<div class="api-error">⚠️ Could not load events: ${err.message}</div>`;
   }
+}
+
+async function loadQuicketEvents(city, genre) {
+  const container = document.getElementById('events-feed');
+  if (!container) return;
+  try {
+    const params = new URLSearchParams({ city: city || 'all', genre: genre || 'all', page: '1' });
+    const resp = await fetch('/api/quicket-events?' + params);
+    if (!resp.ok) return;
+    const { events } = await resp.json();
+    if (!events?.length) return;
+
+    // Filter out any that are already shown
+    const existingIds = new Set([...container.querySelectorAll('[data-evid]')].map(el => el.dataset.evid));
+    const fresh = events.filter(e => !existingIds.has(e.id));
+    if (!fresh.length) return;
+
+    const section = document.createElement('div');
+    section.innerHTML = `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);padding:16px 0 8px;display:flex;align-items:center;gap:8px"><img src="https://www.quicket.co.za/favicon.ico" width="14" height="14" style="border-radius:3px" onerror="this.style.display='none'"/>More events from Quicket</div>` +
+      fresh.slice(0, 30).map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
+    container.appendChild(section);
+    eventsForMap = [...eventsForMap, ...fresh];
+  } catch(e) { /* Quicket unavailable — silently skip */ }
 }
 
 function buildCard(ev, idx) {
@@ -1177,7 +1203,7 @@ async function openEv(evId) {
         <div style="text-align:center;font-size:.66rem;color:var(--mu);margin-top:8px">🔒 Secured by Paystack · No card data stored</div>
       </div>`;
     } else if (ev.external_url) {
-      const srcLabel = { eventbrite:'Eventbrite', ticketmaster:'Ticketmaster' }[ev.source] || 'Ticket Partner';
+      const srcLabel = { eventbrite:'Eventbrite', ticketmaster:'Ticketmaster', quicket:'Quicket' }[ev.source] || 'Ticket Partner';
       tkHTML = `<div class="tkb"><div class="tkt2">🎟 Get Tickets</div>
         <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:14px">
           <div style="font-size:.78rem;color:var(--mu2);margin-bottom:6px">Listed on <strong style="color:var(--tx)">${srcLabel}</strong></div>
