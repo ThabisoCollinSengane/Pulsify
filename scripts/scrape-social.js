@@ -3,9 +3,25 @@
 // Requires: APIFY_TOKEN, SUPABASE_URL, SUPABASE_SERVICE_KEY env vars.
 'use strict';
 const https   = require('https');
+const fs      = require('fs');
+const path    = require('path');
 const { createClient } = require('@supabase/supabase-js');
 
+// Load .env (no dotenv dependency — read once at startup)
+(function loadEnv() {
+  const envPath = path.join(__dirname, '..', '.env');
+  if (!fs.existsSync(envPath)) return;
+  for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
+    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+  }
+})();
+
 const APIFY_TOKEN = process.env.APIFY_TOKEN;
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY in environment / .env');
+  process.exit(1);
+}
 const sb = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY,
