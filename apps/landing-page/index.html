@@ -812,9 +812,13 @@ let activeEvId     = null;
 let searchTimer    = null;
 let sbClient       = null;
 let currentUser    = null;
-let savedEv        = JSON.parse(localStorage.getItem('p_sev')   || '[]');
-let savedBz        = JSON.parse(localStorage.getItem('p_sbiz')  || '[]');
-let vibes          = JSON.parse(localStorage.getItem('p_vibes') || '[]');
+function safeParse(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); }
+  catch(e) { console.warn('[localStorage] corrupt key, resetting:', key); localStorage.removeItem(key); return fallback; }
+}
+let savedEv        = safeParse('p_sev',   []);
+let savedBz        = safeParse('p_sbiz',  []);
+let vibes          = safeParse('p_vibes', []);
 let miniMaps       = {};
 let activeComments = [];
 let eventsForMap   = [];
