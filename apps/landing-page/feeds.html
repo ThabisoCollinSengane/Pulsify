@@ -235,9 +235,15 @@ async function fetchPosts() {
     if (!ids.length) return { posts: [], total: 0 };
     q = q.in('user_id', ids);
   } else if (_filter === 'organizers') {
-    q = q.eq('profiles.role', 'organizer');
+    const { data: orgRows } = await sb.from('profiles').select('id').eq('role', 'organizer');
+    const orgIds = (orgRows || []).map(r => r.id);
+    if (!orgIds.length) return { posts: [], total: 0 };
+    q = q.in('user_id', orgIds);
   } else if (_filter === 'businesses') {
-    q = q.eq('profiles.role', 'business');
+    const { data: bizRows } = await sb.from('profiles').select('id').eq('role', 'business');
+    const bizIds = (bizRows || []).map(r => r.id);
+    if (!bizIds.length) return { posts: [], total: 0 };
+    q = q.in('user_id', bizIds);
   }
   const { data, error, count } = await q;
   if (error) throw new Error(error.message);
