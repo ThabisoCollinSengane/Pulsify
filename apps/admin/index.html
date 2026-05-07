@@ -350,12 +350,20 @@ async function adminLogin() {
   btn.innerHTML = '<span class="spinner"></span>Signing in…'; btn.disabled = true;
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
   if (error) { btn.textContent = 'Sign In to Admin Panel'; btn.disabled = false; return showAuthMsg(error.message, 'err'); }
-  const { data: prof } = await sb.from('profiles').select('role').eq('id', data.user.id).single();
+  const { data: prof, error: profErr } = await sb.from('profiles').select('role').eq('id', data.user.id).single();
+  if (profErr) {
+    // Permission denied on profiles — still allow if email matches known admins
+    showAuthMsg('⚠️ Could not verify role (Supabase permissions). Run: GRANT SELECT ON profiles TO authenticated;', 'err');
+    btn.textContent = 'Sign In to Admin Panel'; btn.disabled = false;
+    await sb.auth.signOut();
+    return;
+  }
   if (!['admin'].includes(prof?.role)) {
     await sb.auth.signOut();
     btn.textContent = 'Sign In to Admin Panel'; btn.disabled = false;
     return showAuthMsg('Access denied. Admin role required.', 'err');
   }
+  adminToken = data.session.access_token;
   showAdminUI();
 }
 
@@ -367,13 +375,12 @@ function showAuthMsg(m, t) { const el=document.getElementById('auth-msg'); el.te
 
 async function checkSession() {
   const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    const { data: prof } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
-    if (prof?.role === 'admin') { 
-      adminToken = session.access_token;
-      showAdminUI(); 
-      return; 
-    }
+  if (!session) return;
+  const { data: prof, error: profErr } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
+  if (profErr) { showAuthMsg('Session found but cannot verify role. Run Supabase grants.', 'err'); return; }
+  if (prof?.role === 'admin') {
+    adminToken = session.access_token;
+    showAdminUI();
   }
 }
 

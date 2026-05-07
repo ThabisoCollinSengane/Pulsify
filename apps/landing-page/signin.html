@@ -190,15 +190,16 @@ async function saveSession(session) {
   const user = session.user;
   localStorage.setItem('p_token', session.access_token);
   let profile = {};
-  try {
-    const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
-    if (error) throw error;
-    profile = data || {};
-    localStorage.setItem('p_user', JSON.stringify({ id: user.id, email: user.email, display_name: profile.display_name || user.user_metadata?.full_name || user.email?.split('@')[0], role: profile.role || 'user', email_verified: !!user.email_confirmed_at, last_login: new Date().toISOString() }));
-    localStorage.setItem('p_profile', JSON.stringify(profile));
-  } catch(e) {
+  const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  if (error) {
+    // Permission denied — save minimal info and redirect to home; admin/organizer won't be redirected correctly until Supabase grants are applied
+    console.warn('profiles query failed:', error.message);
     localStorage.setItem('p_user', JSON.stringify({ id: user.id, email: user.email, display_name: user.user_metadata?.full_name || user.email?.split('@')[0], role: 'user', last_login: new Date().toISOString() }));
+    return {};
   }
+  profile = data || {};
+  localStorage.setItem('p_user', JSON.stringify({ id: user.id, email: user.email, display_name: profile.display_name || user.user_metadata?.full_name || user.email?.split('@')[0], role: profile.role || 'user', email_verified: !!user.email_confirmed_at, last_login: new Date().toISOString() }));
+  localStorage.setItem('p_profile', JSON.stringify(profile));
   return profile;
 }
 
