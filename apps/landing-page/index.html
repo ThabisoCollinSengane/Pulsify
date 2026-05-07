@@ -326,11 +326,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   border:2px solid rgba(255,255,255,.3);
   cursor:pointer;
   position:relative;
-  transition:all .3s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change:transform;
+  transition:box-shadow .25s, filter .25s;
   backdrop-filter:blur(4px);
 }
-.mp-dot:active{transform:scale(1.15)}
+.mp-dot:active{filter:brightness(1.2)}
 .mp-ring{
   position:absolute;
   inset:-8px;
@@ -938,14 +937,17 @@ function bizSkeleton() {
 /* ══════════════════════════════════════════════════
    LIVE API — EVENTS
 ══════════════════════════════════════════════════ */
+let _feedReqId = 0;
 async function loadFeed(resetPage = false) {
   if (resetPage) feedPage = 1;
-  document.getElementById('events-feed').innerHTML = feedSkeleton();
+  const myReq = ++_feedReqId;
+  const feedEl = document.getElementById('events-feed');
+  feedEl.innerHTML = feedSkeleton();
   document.getElementById('feed-pg').style.display = 'none';
 
   try {
     const sb = getSB();
-    const today = new Date().toISOString().split('T')[0];
+    if (!sb) throw new Error('Supabase SDK not loaded');
     const limit = 10, offset = (feedPage - 1) * limit;
     let q = sb.from('events')
       .select('id,name,date_local,time_local,venue_name,venue_city,venue_lat,venue_lon,price_min,is_free,image_url,genre,hype_score,like_count,comment_count,is_frontline,frontline_rank,external_url,source,status,description,lineup,organiser_name', { count: 'exact' })
@@ -955,13 +957,14 @@ async function loadFeed(resetPage = false) {
     if (feedGenre === 'free') q = q.eq('is_free', true);
     else if (feedGenre && feedGenre !== 'all') q = q.ilike('genre', `%${feedGenre}%`);
     const { data: rawEvents, error, count } = await q;
+    if (myReq !== _feedReqId) return;          // a newer request started — drop this result
     if (error) throw new Error('Supabase: ' + error.message);
     const events = rawEvents || [];
     feedTotalPages = Math.ceil((count || 0) / limit) || 1;
     document.getElementById('feed-lbl').textContent = '🔥 ' + (count || events.length) + ' Upcoming Events';
 
     if (events.length === 0) {
-      document.getElementById('events-feed').innerHTML = `
+      feedEl.innerHTML = `
         <div class="no-results">
           <div class="no-results-ico">🎟</div>
           <div class="no-results-title">No events found</div>
@@ -971,17 +974,18 @@ async function loadFeed(resetPage = false) {
       return;
     }
 
-    document.getElementById('events-feed').innerHTML = events.map((ev, i) => buildCard(ev, i)).join('');
+    // Render cards as already-revealed so they're visible even if IntersectionObserver misses them
+    feedEl.innerHTML = events.map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
     updatePagination();
     triggerRev();
-    document.querySelector('.hi')?.scrollTo({ top: 0, behavior: 'smooth' });
 
     // Cache events for map
     eventsForMap = [...(eventsForMap.filter(e => !events.find(n => n.id === e.id))), ...events];
 
   } catch(err) {
+    if (myReq !== _feedReqId) return;
     console.error('[Feed]', err);
-    document.getElementById('events-feed').innerHTML = `<div class="api-error">⚠️ Could not load events: ${err.message}</div>`;
+    feedEl.innerHTML = `<div class="api-error">⚠️ Could not load events: ${err.message}</div>`;
   }
 }
 
@@ -1538,7 +1542,7 @@ function placeMapMarkers() {
       width: ${isEv ? 32 : 28}px;
       height: ${isEv ? 32 : 28}px;
       border: 2px solid rgba(255,255,255,${isEv ? 0.4 : 0.2});
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: box-shadow 0.25s, filter 0.25s;
     `;
     el.textContent = s.ico;
     el.style.fontSize = isEv ? '.85rem' : '.75rem';
@@ -1559,20 +1563,20 @@ function placeMapMarkers() {
       el.appendChild(ring);
     }
 
-    // Hover effect
+    // Hover effect — only change shadow (NEVER touch transform — Mapbox uses transform for positioning)
     el.addEventListener('mouseenter', () => {
-      el.style.transform = 'scale(1.25)';
       el.style.zIndex = '1000';
+      el.style.filter = 'brightness(1.15)';
       el.style.boxShadow = `
         0 0 ${isEv ? 32 : 24}px rgba(${s.sh}, 1),
         0 6px 20px rgba(0,0,0,0.9),
         inset 0 1px 0 rgba(255,255,255,0.5)
       `;
     });
-    
+
     el.addEventListener('mouseleave', () => {
-      el.style.transform = 'scale(1)';
       el.style.zIndex = '';
+      el.style.filter = '';
       el.style.boxShadow = `
         0 0 ${isEv ? 24 : 16}px rgba(${s.sh}, ${isEv ? 0.8 : 0.5}),
         0 4px 12px rgba(0,0,0,0.8),
@@ -1580,10 +1584,13 @@ function placeMapMarkers() {
       `;
     });
 
-    el.addEventListener('click', e => {
+    const onTap = e => {
       e.stopPropagation();
+      e.preventDefault();
       showMapPanel(item, type, s);
-    });
+    };
+    el.addEventListener('click', onTap);
+    el.addEventListener('touchend', onTap);
 
     mapMarkers.push(new mapboxgl.Marker({element: el, anchor: 'center'}).setLngLat([lon, lat]).addTo(mapObj));
   });
@@ -2221,17 +2228,22 @@ async function openProfile(userId) {
   ov.style.display = 'flex';
   body.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div>';
   try {
-    const res = await fetch('/api/profiles/' + userId);
-    if (!res.ok) throw new Error('Profile not found');
-    const data = await res.json();
-    const profile = data.profile || {};
-    const posts_count = data.posts_count || 0;
-    const followers_count = data.followers_count || 0;
-    const following_count = data.following_count || 0;
-    const recent_posts = data.recent_posts || [];
     const sb = getSB();
+    if (!sb) throw new Error('Supabase not loaded');
+    const [{ data: profile, error: pErr }, { count: postsCnt }, { count: followersCnt }, { count: followingCnt }, { data: recent }] = await Promise.all([
+      sb.from('profiles').select('id,username,display_name,avatar_url,role,bio,city,genres').eq('id', userId).maybeSingle(),
+      sb.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+      sb.from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', userId),
+      sb.from('follows').select('following_id', { count: 'exact', head: true }).eq('follower_id', userId),
+      sb.from('posts').select('id,image_url,caption,created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(6),
+    ]);
+    if (pErr || !profile) throw new Error(pErr?.message || 'Profile not found');
+    const posts_count = postsCnt || 0;
+    const followers_count = followersCnt || 0;
+    const following_count = followingCnt || 0;
+    const recent_posts = recent || [];
     let isFollowing = false;
-    if (sb && currentUser) {
+    if (currentUser) {
       const { data: fw } = await sb.from('follows').select('follower_id').eq('follower_id', currentUser.id).eq('following_id', userId).maybeSingle();
       isFollowing = !!fw;
     }
