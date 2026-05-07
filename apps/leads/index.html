@@ -387,7 +387,7 @@ async function loadLeads() {
     const src  = document.getElementById('filter-source').value;
     const srch = document.getElementById('search-input').value.trim();
 
-    let q = sbAuth.from('leads').select('*', { count: 'exact' }).order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+    let q = sbAuth.from('scraped_leads').select('*', { count: 'exact' }).order('created_at', { ascending: false }).range(offset, offset + limit - 1);
     if (currentStatus && currentStatus !== 'all') q = q.eq('status', currentStatus);
     if (prov && prov !== 'all') q = q.eq('province', prov);
     if (cat  && cat  !== 'all') q = q.eq('category', cat);
@@ -400,7 +400,7 @@ async function loadLeads() {
       return;
     }
 
-    const { data: allRows } = await sbAuth.from('leads').select('status');
+    const { data: allRows } = await sbAuth.from('scraped_leads').select('status');
     const stats = { total: 0, new: 0, contacted: 0, converted: 0, ignored: 0 };
     (allRows || []).forEach(r => { stats.total++; if (stats[r.status] !== undefined) stats[r.status]++; });
 
@@ -527,7 +527,7 @@ function openLead(id) {
 function closeModal() { document.getElementById('lead-modal').classList.remove('open'); activeLead = null; }
 
 async function updateStatus(id, status) {
-  const { error } = await sbAuth.from('leads').update({ status }).eq('id', id);
+  const { error } = await sbAuth.from('scraped_leads').update({ status }).eq('id', id);
   if (!error) { toast('Status updated'); if (window._leadsCache?.[id]) window._leadsCache[id].status = status; loadLeads(); }
   else toast('Failed to update status: ' + error.message, false);
 }
@@ -538,7 +538,7 @@ async function addNote(id) {
   const lead  = (window._leadsCache||{})[id];
   const notes = Array.isArray(lead?.notes) ? lead.notes : [];
   notes.push({ text, date: new Date().toLocaleDateString() });
-  const { error } = await sbAuth.from('leads').update({ notes }).eq('id', id);
+  const { error } = await sbAuth.from('scraped_leads').update({ notes }).eq('id', id);
   if (!error) { toast('Note added'); document.getElementById('note-input').value = ''; openLead(id); }
   else toast('Failed to save note: ' + error.message, false);
 }
