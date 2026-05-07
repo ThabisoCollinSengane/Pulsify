@@ -365,7 +365,19 @@ async function adminLogin() {
 }
 
 async function signInWithGoogle() {
-  await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + '/admin' } });
+  showAuthMsg('Opening Google sign-in…', 'ok');
+  try {
+    const { data, error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/admin' }
+    });
+    if (error) return showAuthMsg('Google sign-in failed: ' + error.message, 'err');
+    if (!data?.url) return showAuthMsg('Google provider not configured in Supabase', 'err');
+    // Browser should redirect to data.url; if not, force it
+    window.location.href = data.url;
+  } catch (e) {
+    showAuthMsg('Google sign-in error: ' + e.message, 'err');
+  }
 }
 
 function showAuthMsg(m, t) { const el=document.getElementById('auth-msg'); el.textContent=m; el.className='msg show msg-'+(t==='err'?'err':'ok'); }

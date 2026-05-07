@@ -403,25 +403,31 @@ function save(k, v)   { localStorage.setItem(key(k), JSON.stringify(v)); }
 window.addEventListener('DOMContentLoaded', async () => {
   let s = localStorage.getItem('biz_session');
 
-  // Bridge: if no biz_session but user has a live Supabase session with business role, create one
+  // Bridge: if no biz_session but user has a live Supabase session, create one.
+  // Falls back to localStorage p_user role if RLS blocks the profile query.
   if (!s) {
     try {
       const sb = getSB();
       const { data: { session } } = await sb.auth.getSession();
       if (session) {
         const { data: profile } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
-        if (profile && ['business','admin'].includes(profile.role)) {
+        let role = profile?.role;
+        if (!role) {
+          // RLS blocked profile read — try localStorage p_user
+          try { role = JSON.parse(localStorage.getItem('p_user') || '{}').role; } catch(e) {}
+        }
+        if (role && ['business','admin'].includes(role)) {
           const bridged = {
             id: session.user.id, email: session.user.email,
-            name: profile.display_name || profile.business_name || session.user.email?.split('@')[0],
-            role: profile.role, city: profile.city || null,
-            province: profile.province || null, phone: profile.phone || null,
+            name: profile?.display_name || profile?.business_name || session.user.email?.split('@')[0] || 'Business',
+            role, city: profile?.city || null,
+            province: profile?.province || null, phone: profile?.phone || null,
           };
           localStorage.setItem('biz_session', JSON.stringify(bridged));
           s = JSON.stringify(bridged);
         }
       }
-    } catch(e) {}
+    } catch(e) { console.warn('[business] bridge failed', e); }
   }
 
   if (!s) { window.location.href = '/signin'; return; }

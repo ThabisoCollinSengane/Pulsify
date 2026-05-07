@@ -323,11 +323,9 @@ async function checkAuth() {
     loadLeads();
     return;
   }
-  const token = getToken();
-  if (token) {
-    document.getElementById('auth-gate').style.display = 'none';
-    loadLeads();
-  }
+  // No live Supabase session — clear stale token, force sign-in
+  localStorage.removeItem('p_token');
+  sessionStorage.removeItem('p_token');
 }
 checkAuth();
 
@@ -382,31 +380,26 @@ async function loadLeads() {
   try {
     const limit = 20;
     const offset = (currentPage - 1) * limit;
+    const params = new URLSearchParams({ page: currentPage, limit, status: currentStatus || 'all' });
     const prov = document.getElementById('filter-province').value;
     const cat  = document.getElementById('filter-category').value;
     const src  = document.getElementById('filter-source').value;
     const srch = document.getElementById('search-input').value.trim();
+    if (prov && prov !== 'all') params.append('province', prov);
+    if (cat  && cat  !== 'all') params.append('category', cat);
+    if (src  && src  !== 'all') params.append('source', src);
+    if (srch) params.append('search', srch);
 
-    let q = sbAuth.from('scraped_leads').select('*', { count: 'exact' }).order('created_at', { ascending: false }).range(offset, offset + limit - 1);
-    if (currentStatus && currentStatus !== 'all') q = q.eq('status', currentStatus);
-    if (prov && prov !== 'all') q = q.eq('province', prov);
-    if (cat  && cat  !== 'all') q = q.eq('category', cat);
-    if (src  && src  !== 'all') q = q.eq('source', src);
-    if (srch) q = q.or(`name.ilike.%${srch}%,email.ilike.%${srch}%,city.ilike.%${srch}%`);
-
-    const { data, error, count } = await q;
-    if (error) {
-      document.getElementById('leads-container').innerHTML = `<div class="loading">${error.message}</div>`;
+    const r = await fetch(`/api/leads?${params}`, { headers: authHeaders() });
+    if (!r.ok) {
+      const errText = await r.text();
+      document.getElementById('leads-container').innerHTML = `<div class="loading">API ${r.status}: ${errText}</div>`;
       return;
     }
-
-    const { data: allRows } = await sbAuth.from('scraped_leads').select('status');
-    const stats = { total: 0, new: 0, contacted: 0, converted: 0, ignored: 0 };
-    (allRows || []).forEach(r => { stats.total++; if (stats[r.status] !== undefined) stats[r.status]++; });
-
-    updateStats(stats);
-    renderTable(data || []);
-    renderPagination(count || 0, limit);
+    const { leads, total, stats } = await r.json();
+    updateStats(stats || { total: 0, new: 0, contacted: 0, converted: 0, ignored: 0 });
+    renderTable(leads || []);
+    renderPagination(total || 0, limit);
   } catch (e) {
     document.getElementById('leads-container').innerHTML = `<div class="loading">Failed to load leads: ${e.message}</div>`;
   }
@@ -527,9 +520,9 @@ function openLead(id) {
 function closeModal() { document.getElementById('lead-modal').classList.remove('open'); activeLead = null; }
 
 async function updateStatus(id, status) {
-  const { error } = await sbAuth.from('scraped_leads').update({ status }).eq('id', id);
-  if (!error) { toast('Status updated'); if (window._leadsCache?.[id]) window._leadsCache[id].status = status; loadLeads(); }
-  else toast('Failed to update status: ' + error.message, false);
+  const r = await fetch(`/api/leads/${id}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ status }) });
+  if (r.ok) { toast('Status updated'); if (window._leadsCache?.[id]) window._leadsCache[id].status = status; loadLeads(); }
+  else { const err = await r.text(); toast('Failed to update status: ' + err, false); }
 }
 
 async function addNote(id) {
@@ -538,9 +531,9 @@ async function addNote(id) {
   const lead  = (window._leadsCache||{})[id];
   const notes = Array.isArray(lead?.notes) ? lead.notes : [];
   notes.push({ text, date: new Date().toLocaleDateString() });
-  const { error } = await sbAuth.from('scraped_leads').update({ notes }).eq('id', id);
-  if (!error) { toast('Note added'); document.getElementById('note-input').value = ''; openLead(id); }
-  else toast('Failed to save note: ' + error.message, false);
+  const r = await fetch(`/api/leads/${id}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ notes }) });
+  if (r.ok) { toast('Note added'); document.getElementById('note-input').value = ''; openLead(id); }
+  else { const err = await r.text(); toast('Failed to save note: ' + err, false); }
 }
 
 // ── Email modal ──────────────────────────────────────────────────────────────

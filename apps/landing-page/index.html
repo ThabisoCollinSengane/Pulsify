@@ -1003,8 +1003,13 @@ async function loadQuicketEvents(city, genre) {
   try {
     const params = new URLSearchParams({ city: city || 'all', genre: genre || 'all', page: '1' });
     const resp = await fetch('/api/quicket-events?' + params);
-    if (!resp.ok) return;
+    if (!resp.ok) {
+      const err = await resp.text();
+      console.warn('[Quicket] API error', resp.status, err);
+      return;
+    }
     const { events } = await resp.json();
+    console.log('[Quicket] Loaded', events?.length || 0, 'events');
     if (!events?.length) return;
 
     // Filter out any that are already shown

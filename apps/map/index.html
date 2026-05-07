@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#05080F"/>
+<title>Map — Pulsify</title>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#05080F;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.08);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--tx:#F0EEF8;--mu:#9997B0}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
+#map{position:fixed;inset:0}
+.tb{position:fixed;top:0;left:0;right:0;height:54px;z-index:100;display:flex;align-items:center;padding:0 14px;background:rgba(5,8,15,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);gap:10px}
+.bk{width:36px;height:36px;border-radius:50%;background:var(--surf);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--tx);font-size:1.05rem;text-decoration:none;flex-shrink:0}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.04em;flex:1}
+.cnt{display:flex;gap:6px;align-items:center;font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em}
+.cnt span{color:var(--or)}
+.fl{position:fixed;top:62px;left:0;right:0;z-index:99;display:flex;gap:6px;padding:0 14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.fl::-webkit-scrollbar{display:none}
+.cb{flex-shrink:0;background:rgba(13,20,36,.92);backdrop-filter:blur(20px);border:1px solid var(--border);color:var(--mu);padding:7px 13px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s}
+.cb.active{background:linear-gradient(135deg,var(--pu),var(--or));color:#fff;border-color:transparent}
+.legend{position:fixed;bottom:14px;left:14px;background:rgba(13,20,36,.92);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:14px;padding:10px 12px;z-index:99;font-size:.7rem;color:var(--mu);max-width:160px}
+.legend div{display:flex;align-items:center;gap:7px;margin:3px 0}
+.legend .pin{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
+
+/* Custom map markers */
+.pulse-pin{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.05rem;cursor:pointer;border:2.5px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.5);transition:transform .15s;position:relative}
+.pulse-pin:hover{transform:scale(1.15)}
+.pulse-pin::after{content:'';position:absolute;top:50%;left:50%;width:100%;height:100%;border-radius:50%;background:inherit;opacity:.4;animation:pulse 1.6s ease-out infinite;z-index:-1;transform:translate(-50%,-50%)}
+@keyframes pulse{0%{transform:translate(-50%,-50%) scale(.8);opacity:.5}100%{transform:translate(-50%,-50%) scale(2);opacity:0}}
+.pin-event{background:linear-gradient(135deg,#FF5C00,#FF2D78)}
+.pin-biz{background:linear-gradient(135deg,#B026FF,#FF2D78)}
+.pin-shisa{background:linear-gradient(135deg,#FF2D78,#C6FF4A)}
+.pin-rest{background:linear-gradient(135deg,#00E5FF,#B026FF)}
+
+.mapboxgl-popup{max-width:280px!important}
+.mapboxgl-popup-content{background:var(--surf)!important;color:var(--tx)!important;border:1px solid var(--border);border-radius:14px;padding:0!important;box-shadow:0 8px 32px rgba(0,0,0,.6)}
+.mapboxgl-popup-tip{border-top-color:var(--surf)!important;border-bottom-color:var(--surf)!important}
+.mapboxgl-popup-close-button{color:var(--tx)!important;font-size:1.4rem;padding:6px 8px}
+.pop{padding:14px}
+.pop-img{width:100%;height:120px;object-fit:cover;border-radius:10px;margin-bottom:10px;background:var(--surf2)}
+.pop-name{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;line-height:1.1;margin-bottom:4px}
+.pop-meta{font-size:.74rem;color:var(--mu);margin-bottom:8px}
+.pop-tag{display:inline-block;background:var(--surf2);border-radius:50px;padding:3px 8px;font-size:.62rem;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;color:var(--or);margin-right:5px;letter-spacing:.05em}
+.pop-btn{display:block;width:100%;background:linear-gradient(135deg,var(--pu),var(--or));color:#fff;text-align:center;padding:9px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;text-decoration:none;margin-top:10px;border:none;cursor:pointer}
+.toast{position:fixed;top:120px;left:50%;transform:translateX(-50%) translateY(-12px);background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:9px 18px;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;z-index:200;opacity:0;transition:all .25s;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{border-color:var(--pk);color:var(--pk)}
+</style>
+</head>
+<body>
+<div class="tb">
+  <a href="/" class="bk" title="Back">←</a>
+  <div class="logo">PULSIFY MAP</div>
+  <div class="cnt"><span id="cnt-num">0</span> spots</div>
+</div>
+
+<div class="fl">
+  <button class="cb active" data-cat="all" onclick="setFilter('all',this)">All</button>
+  <button class="cb" data-cat="event" onclick="setFilter('event',this)">🎟 Events</button>
+  <button class="cb" data-cat="business" onclick="setFilter('business',this)">🏪 Businesses</button>
+  <button class="cb" data-cat="shisanyama" onclick="setFilter('shisanyama',this)">🔥 Shisanyama</button>
+  <button class="cb" data-cat="restaurant" onclick="setFilter('restaurant',this)">🍴 Restaurants</button>
+  <button class="cb" data-cat="nightclub" onclick="setFilter('nightclub',this)">🍻 Nightlife</button>
+</div>
+
+<div id="map"></div>
+
+<div class="legend">
+  <div><div class="pin pin-event">🎟</div>Event</div>
+  <div><div class="pin pin-biz">🏪</div>Business</div>
+  <div><div class="pin pin-shisa">🔥</div>Shisanyama</div>
+  <div><div class="pin pin-rest">🍴</div>Food</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPA_URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+const MAPBOX_TOKEN = 'pk.eyJ1IjoidGhhY29sbGluMiIsImEiOiJjbW51Mm95cHEwYm8xMnJyMXEzaXgxMDBmIn0.nF80wBOn-jxhjpAIus9anw';
+
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+mapboxgl.accessToken = MAPBOX_TOKEN;
+
+const map = new mapboxgl.Map({
+  container: 'map',
+  style: 'mapbox://styles/mapbox/dark-v11',
+  center: [28.5, -29],   // Mid-SA
+  zoom: 5.5,
+  attributionControl: false,
+});
+map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+
+let allItems = [];
+let activeMarkers = [];
+let currentFilter = 'all';
+
+function toast(msg, isErr) { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast show' + (isErr ? ' err' : ''); setTimeout(() => t.classList.remove('show'), 3500); }
+function escape(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// SA bounds — only place markers within these limits
+function inSA(lat, lon) { return lat >= -35 && lat <= -22 && lon >= 16 && lon <= 33; }
+
+// Pick the right pin class based on category/genre
+function pinClass(item) {
+  if (item._kind === 'event') return 'pin-event';
+  const c = (item.category || item.type || '').toLowerCase();
+  if (c.includes('shisa')) return 'pin-shisa';
+  if (c.includes('restaurant') || c.includes('food')) return 'pin-rest';
+  if (c.includes('club') || c.includes('night') || c.includes('bar')) return 'pin-biz';
+  return 'pin-biz';
+}
+function pinIcon(item) {
+  if (item._kind === 'event') return '🎟';
+  const c = (item.category || item.type || '').toLowerCase();
+  if (c.includes('shisa')) return '🔥';
+  if (c.includes('restaurant') || c.includes('food')) return '🍴';
+  if (c.includes('club') || c.includes('night')) return '🍻';
+  return '🏪';
+}
+
+function popupHTML(item) {
+  const isEv = item._kind === 'event';
+  const date = isEv && item.date_local ? new Date(item.date_local).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  const name = isEv ? item.name : item.name;
+  const sub = isEv ? `${item.venue_name || ''} · ${item.venue_city || ''}` : `${item.category || 'Business'} · ${item.city || ''}`;
+  const tag = isEv ? (item.genre || 'event') : (item.category || 'spot');
+  const price = isEv && item.price_min ? `R${item.price_min}` : isEv && item.is_free ? 'FREE' : null;
+  const img = item.image_url || null;
+  const detailUrl = isEv ? `/?eid=${encodeURIComponent(item.id)}` : `/?bid=${encodeURIComponent(item.id)}`;
+
+  return `<div class="pop">
+    ${img ? `<img class="pop-img" src="${escape(img)}" onerror="this.style.display='none'"/>` : ''}
+    <div class="pop-name">${escape(name)}</div>
+    <div class="pop-meta">${escape(sub)}</div>
+    <span class="pop-tag">${escape(tag)}</span>
+    ${price ? `<span class="pop-tag" style="color:var(--li)">${price}</span>` : ''}
+    ${date ? `<div class="pop-meta" style="margin-top:6px">📅 ${date}</div>` : ''}
+    <a class="pop-btn" href="${detailUrl}">View Details →</a>
+  </div>`;
+}
+
+function clearMarkers() {
+  activeMarkers.forEach(m => m.remove());
+  activeMarkers = [];
+}
+
+function renderMarkers() {
+  clearMarkers();
+  const filtered = allItems.filter(item => {
+    if (currentFilter === 'all') return true;
+    if (currentFilter === 'event' && item._kind === 'event') return true;
+    if (currentFilter === 'business' && item._kind === 'business') return true;
+    if (item._kind !== 'business') return false;
+    const c = (item.category || '').toLowerCase();
+    if (currentFilter === 'shisanyama') return c.includes('shisa');
+    if (currentFilter === 'restaurant') return c.includes('restaurant') || c.includes('food');
+    if (currentFilter === 'nightclub')  return c.includes('club') || c.includes('night') || c.includes('bar');
+    return false;
+  });
+
+  filtered.forEach(item => {
+    const lat = parseFloat(item.venue_lat ?? item.lat);
+    const lon = parseFloat(item.venue_lon ?? item.lon);
+    if (!inSA(lat, lon)) return;
+
+    const el = document.createElement('div');
+    el.className = `pulse-pin ${pinClass(item)}`;
+    el.textContent = pinIcon(item);
+    el.title = item.name;
+
+    const popup = new mapboxgl.Popup({ offset: 22, closeButton: true, closeOnClick: true })
+      .setHTML(popupHTML(item));
+
+    const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+      .setLngLat([lon, lat])
+      .setPopup(popup)
+      .addTo(map);
+    activeMarkers.push(marker);
+  });
+
+  document.getElementById('cnt-num').textContent = filtered.length;
+}
+
+function setFilter(cat, btn) {
+  currentFilter = cat;
+  document.querySelectorAll('.cb').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMarkers();
+}
+
+async function loadData() {
+  toast('Loading map…');
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const [evRes, bzRes] = await Promise.all([
+      sb.from('events')
+        .select('id,name,date_local,venue_name,venue_city,venue_lat,venue_lon,price_min,is_free,image_url,genre')
+        .gte('date_local', today)
+        .not('venue_lat', 'is', null)
+        .not('venue_lon', 'is', null)
+        .limit(500),
+      sb.from('businesses')
+        .select('id,name,category,city,province,lat,lon,image_url,description')
+        .not('lat', 'is', null)
+        .not('lon', 'is', null)
+        .limit(500),
+    ]);
+
+    const events = (evRes.data || []).map(e => ({ ...e, _kind: 'event' }));
+    const biz    = (bzRes.data || []).map(b => ({ ...b, _kind: 'business' }));
+    allItems = [...events, ...biz];
+
+    if (!allItems.length) { toast('No locations to show', true); return; }
+
+    renderMarkers();
+
+    // Auto-fit if we have markers
+    const validCoords = allItems
+      .map(i => [parseFloat(i.venue_lon ?? i.lon), parseFloat(i.venue_lat ?? i.lat)])
+      .filter(([lon, lat]) => inSA(lat, lon));
+    if (validCoords.length > 1) {
+      const bounds = validCoords.reduce((b, c) => b.extend(c), new mapboxgl.LngLatBounds(validCoords[0], validCoords[0]));
+      map.fitBounds(bounds, { padding: 70, maxZoom: 11, duration: 800 });
+    }
+  } catch (e) {
+    console.error('[Map]', e);
+    toast('Failed to load: ' + e.message, true);
+  }
+}
+
+map.on('load', loadData);
+</script>
+</body>
+</html>
