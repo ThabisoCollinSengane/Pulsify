@@ -184,9 +184,9 @@ function redirectByRole() {
   const currentPage = window.location.pathname.split('/').pop();
 
   if (role === 'organizer') {
-    if (currentPage !== 'organizer-dashboard.html') window.location.href = 'organizer-dashboard.html';
+    window.location.href = '/organizer';
   } else if (role === 'business' || role === 'admin') {
-    if (currentPage !== 'business-dashboard.html') window.location.href = 'business-dashboard.html';
+    window.location.href = '/business';
   }
 }
 
@@ -304,7 +304,7 @@ async function doRegister() {
       const session = { id: d.user.id, email, name, type, city, province, phone, role: 'business' };
       localStorage.setItem('biz_session', JSON.stringify(session));
       showMsg('reg-msg', '✅ Account created! Redirecting…', 'ok');
-      setTimeout(() => window.location.href = 'business-dashboard.html', 800);
+      setTimeout(() => window.location.href = '/business', 800);
     } else {
       throw new Error('No session token returned.');
     }

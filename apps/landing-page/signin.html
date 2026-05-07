@@ -134,11 +134,10 @@ function selectType(t) {
     const el = document.getElementById('at-'+id);
     if (el) el.classList.toggle('sel', id === t);
   });
-  if (t === 'business') { window.location.href = 'business-login.html'; return; }
   const sub = document.getElementById('card-sub');
   const btn = document.getElementById('btn');
-  if (sub) sub.textContent = t === 'organizer' ? 'Sign in to your organizer dashboard' : 'Sign in to your Pulsify account';
-  if (btn) btn.textContent = t === 'organizer' ? 'Sign In as Organizer' : 'Sign In';
+  if (sub) sub.textContent = t === 'organizer' ? 'Sign in to your organizer dashboard' : t === 'business' ? 'Sign in to your business dashboard' : 'Sign in to your Pulsify account';
+  if (btn) btn.textContent = t === 'organizer' ? 'Sign In as Organizer' : t === 'business' ? 'Sign In as Business' : 'Sign In';
   hideMsg();
 }
 
@@ -148,11 +147,11 @@ function getRoleMismatchError(actualRole, selectedType) {
   if (selectedType === 'user' && actualRole === 'organizer')
     return 'This is an <strong>Organizer</strong> account. Select the Organizer tab to sign in.';
   if (selectedType === 'user' && actualRole === 'business')
-    return 'This is a <strong>Business</strong> account. Use the <a href="business-login.html" style="color:var(--or)">Business sign-in \u2192</a>';
+    return 'This is a <strong>Business</strong> account. <a href="#" onclick="selectType(\'business\');return false;" style="color:var(--or)">Use the Business tab \u2192</a>';
   if (selectedType === 'organizer' && actualRole === 'user')
     return 'No organizer account found for this email. <a href="create-account.html" style="color:var(--or)">Sign up as an organizer \u2192</a>';
   if (selectedType === 'organizer' && actualRole === 'business')
-    return 'This is a <strong>Business</strong> account. Use the <a href="business-login.html" style="color:var(--or)">Business sign-in \u2192</a>';
+    return 'This is a <strong>Business</strong> account. <a href="#" onclick="selectType(\'business\');return false;" style="color:var(--or)">Use the Business tab \u2192</a>';
   return null;
 }
 
