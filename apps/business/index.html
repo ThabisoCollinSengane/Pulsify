@@ -308,12 +308,13 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <div class="sheet-head"><div class="sheet-title">New Post</div><button class="sheet-close" onclick="closeSheet('post-sheet')">✕</button></div>
     <div class="sheet-body">
       <div class="info-box">Posts appear on the Pulsify feed for all your followers.</div>
-      <label class="ff-label">Photo / Video (optional)</label>
-      <div id="biz-img-drop" onclick="document.getElementById('biz-img-file').click()" style="height:110px;background:rgba(255,255,255,.03);border:1.5px dashed rgba(0,229,255,.3);border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-bottom:10px;overflow:hidden;flex-direction:column;gap:6px">
-        <span style="font-size:1.5rem">📷</span>
-        <span id="biz-img-hint" style="font-size:.74rem;color:var(--mu)">Tap to upload a photo</span>
+      <label class="ff-label">Photos (up to 5)</label>
+      <div id="biz-img-drop" onclick="document.getElementById('biz-img-file').click()" style="height:80px;background:rgba(255,255,255,.03);border:1.5px dashed rgba(0,229,255,.3);border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-bottom:8px;flex-direction:column;gap:4px">
+        <span style="font-size:1.4rem">📷</span>
+        <span id="biz-img-hint" style="font-size:.72rem;color:var(--mu)">Tap to add up to 5 photos</span>
       </div>
-      <input type="file" id="biz-img-file" accept="image/*,video/*" style="display:none" onchange="handleBizImg(this)"/>
+      <input type="file" id="biz-img-file" accept="image/*" multiple style="display:none" onchange="handleBizImgs(this)"/>
+      <div id="biz-img-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px"></div>
       <label class="ff-label">Caption *</label>
       <textarea class="ff" id="post-cap" placeholder="What's happening? Share with your followers…" rows="4"></textarea>
       <button class="btn-primary" style="width:100%" onclick="submitPost()">Publish Post 🚀</button>
@@ -373,8 +374,13 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
       </div>
       <label class="ff-label">Category</label>
       <input class="ff" type="text" id="mi-cat" placeholder="e.g. Mains, Drinks, Sides…"/>
-      <label class="ff-label">Image URL (optional)</label>
-      <input class="ff" type="url" id="mi-img" placeholder="https://…/food.jpg"/>
+      <label class="ff-label">Photos (up to 10)</label>
+      <div id="mi-img-drop" onclick="document.getElementById('mi-img-file').click()" style="height:70px;background:rgba(255,255,255,.03);border:1.5px dashed rgba(0,229,255,.3);border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-bottom:8px;flex-direction:column;gap:4px">
+        <span style="font-size:1.2rem">🍽️</span>
+        <span style="font-size:.7rem;color:var(--mu)">Tap to add up to 10 photos</span>
+      </div>
+      <input type="file" id="mi-img-file" accept="image/*" multiple style="display:none" onchange="handleMenuImgs(this)"/>
+      <div id="mi-img-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px"></div>
       <label class="ff-label">Availability</label>
       <select class="ff" id="mi-avail">
         <option value="1">✅ Available</option>
@@ -508,17 +514,44 @@ function getSB() { if (!_sbC && window.supabase) _sbC = window.supabase.createCl
 // ════════════════════════════════════════════════════════════
 //  POSTS — synced to Supabase posts table
 // ════════════════════════════════════════════════════════════
-let _bizImgFile = null;
+let _bizImgFiles  = [];
+let _menuImgFiles = [];
 
-function handleBizImg(input) {
-  const file = input.files[0]; if (!file) return;
-  _bizImgFile = file;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const drop = document.getElementById('biz-img-drop');
-    if (drop) drop.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover"/>`;
-  };
-  reader.readAsDataURL(file);
+function _buildImgGrid(files, gridId, onRemove) {
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  grid.innerHTML = '';
+  files.forEach((f, i) => {
+    const cell = document.createElement('div');
+    cell.style.cssText = 'position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#111';
+    const img = document.createElement('img');
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+    const rd = new FileReader(); rd.onload = e => { img.src = e.target.result; }; rd.readAsDataURL(f);
+    const rm = document.createElement('button');
+    rm.textContent = '✕';
+    rm.style.cssText = 'position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.6rem;cursor:pointer;padding:0;line-height:1';
+    rm.onclick = (ev) => { ev.stopPropagation(); onRemove(i); };
+    cell.appendChild(img); cell.appendChild(rm);
+    grid.appendChild(cell);
+  });
+}
+
+function handleBizImgs(input) {
+  _bizImgFiles = Array.from(input.files || []).slice(0, 5);
+  _buildImgGrid(_bizImgFiles, 'biz-img-grid', i => {
+    _bizImgFiles.splice(i, 1);
+    _buildImgGrid(_bizImgFiles, 'biz-img-grid', arguments.callee);
+  });
+  const hint = document.getElementById('biz-img-hint');
+  if (hint) hint.textContent = _bizImgFiles.length ? `${_bizImgFiles.length} photo${_bizImgFiles.length>1?'s':''} selected` : 'Tap to add up to 5 photos';
+}
+
+function handleMenuImgs(input) {
+  _menuImgFiles = Array.from(input.files || []).slice(0, 10);
+  _buildImgGrid(_menuImgFiles, 'mi-img-grid', i => {
+    _menuImgFiles.splice(i, 1);
+    _buildImgGrid(_menuImgFiles, 'mi-img-grid', arguments.callee);
+  });
 }
 
 async function renderPosts() {
@@ -559,16 +592,20 @@ async function submitPost() {
   let imageUrl = null;
 
   try {
-    if (_bizImgFile && sb) {
+    if (_bizImgFiles.length && sb) {
       const { data: { session } } = await sb.auth.getSession();
       if (session) {
-        const ext  = _bizImgFile.name.split('.').pop() || 'jpg';
-        const path = `${session.user.id}/${Date.now()}.${ext}`;
-        const { data: up, error: upErr } = await sb.storage.from('post-images').upload(path, _bizImgFile);
-        if (!upErr) {
-          const { data: { publicUrl } } = sb.storage.from('post-images').getPublicUrl(path);
-          imageUrl = publicUrl;
+        const urls = [];
+        for (const file of _bizImgFiles) {
+          const ext  = file.name.split('.').pop() || 'jpg';
+          const path = `${session.user.id}/${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
+          const { error: upErr } = await sb.storage.from('post-images').upload(path, file);
+          if (!upErr) {
+            const { data: { publicUrl } } = sb.storage.from('post-images').getPublicUrl(path);
+            urls.push(publicUrl);
+          }
         }
+        imageUrl = urls.length === 1 ? urls[0] : urls.length > 1 ? JSON.stringify(urls) : null;
       }
     }
 
@@ -598,9 +635,11 @@ async function submitPost() {
 
     closeSheet('post-sheet');
     document.getElementById('post-cap').value = '';
-    _bizImgFile = null;
-    const drop = document.getElementById('biz-img-drop');
-    if (drop) drop.innerHTML = '<span style="font-size:1.5rem">📷</span><span id="biz-img-hint" style="font-size:.74rem;color:var(--mu)">Tap to upload a photo</span>';
+    _bizImgFiles = [];
+    const grid = document.getElementById('biz-img-grid');
+    if (grid) grid.innerHTML = '';
+    const hint = document.getElementById('biz-img-hint');
+    if (hint) hint.textContent = 'Tap to add up to 5 photos';
     toast('Post published! ✅', 'ok');
     renderPosts(); renderStats();
   } catch(e) {
@@ -721,7 +760,7 @@ function renderMenu() {
     `<div style="padding:10px 14px 0"><div class="section-label">${xe(cat)}</div></div>` +
     items.filter(i => (i.cat || 'General') === cat).map(item => `
       <div class="menu-item-card">
-        <div class="mi-img">${item.img ? `<img src="${xe(item.img)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : ''}${item.emoji || '🍽️'}</div>
+        <div class="mi-img">${(item.photos?.[0] || item.img) ? `<img src="${xe(item.photos?.[0] || item.img)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : ''}${item.emoji || '🍽️'}${item.photos?.length > 1 ? `<span style="position:absolute;bottom:1px;right:1px;background:rgba(0,0,0,.75);color:#fff;font-size:.52rem;padding:1px 3px;border-radius:3px">+${item.photos.length-1}</span>` : ''}</div>
         <div class="mi-info">
           <div class="mi-name" style="${item.available==='0'||item.available===false?'opacity:.5':''}"}>${xe(item.name)}</div>
           <div class="mi-desc">${xe(item.desc || '')}</div>
@@ -735,13 +774,51 @@ function renderMenu() {
   ).join('');
 }
 
-function submitMenuItem() {
+async function submitMenuItem() {
   const id    = document.getElementById('mi-edit-id').value;
   const name  = document.getElementById('mi-name').value.trim();
   const price = parseFloat(document.getElementById('mi-price').value);
   if (!name)             { toast('Item name is required', 'err'); return; }
   if (isNaN(price)||price<0) { toast('Enter a valid price', 'err'); return; }
-  const item = { id: id || 'mi_' + Date.now(), name, desc: document.getElementById('mi-desc').value.trim(), price, emoji: document.getElementById('mi-emoji').value || '🍽️', cat: document.getElementById('mi-cat').value.trim() || 'General', img: document.getElementById('mi-img').value.trim(), available: document.getElementById('mi-avail').value, bizId: getBizId() };
+
+  let photos = [];
+  if (_menuImgFiles.length) {
+    const sb = getSB();
+    if (sb) {
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) {
+          for (const file of _menuImgFiles) {
+            const ext  = file.name.split('.').pop() || 'jpg';
+            const path = `menu/${session.user.id}/${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
+            const { error } = await sb.storage.from('post-images').upload(path, file);
+            if (!error) {
+              const { data: { publicUrl } } = sb.storage.from('post-images').getPublicUrl(path);
+              photos.push(publicUrl);
+            }
+          }
+        }
+      } catch(e) { console.warn('[menu upload]', e); }
+    }
+  }
+
+  // Preserve existing photos when editing if no new files selected
+  if (!photos.length && id) {
+    const existing = load('menu', []).find(m => m.id === id);
+    photos = existing?.photos || [];
+  }
+
+  const item = {
+    id: id || 'mi_' + Date.now(), name,
+    desc:    document.getElementById('mi-desc').value.trim(),
+    price,
+    emoji:   document.getElementById('mi-emoji').value || '🍽️',
+    cat:     document.getElementById('mi-cat').value.trim() || 'General',
+    img:     photos[0] || '',
+    photos,
+    available: document.getElementById('mi-avail').value,
+    bizId: getBizId()
+  };
   const items = load('menu', []);
   if (id) { const i = items.findIndex(m => m.id === id); if (i >= 0) items[i] = item; } else { items.push(item); }
   save('menu', items);
@@ -759,16 +836,24 @@ function editMenuItem(id) {
   document.getElementById('mi-price').value = item.price || '';
   document.getElementById('mi-emoji').value = item.emoji || '';
   document.getElementById('mi-cat').value   = item.cat || '';
-  document.getElementById('mi-img').value   = item.img || '';
   document.getElementById('mi-avail').value = (item.available !== false && item.available !== '0') ? '1' : '0';
+  _menuImgFiles = [];
+  const grid = document.getElementById('mi-img-grid');
+  if (grid) {
+    const existing = item.photos?.length ? item.photos : (item.img ? [item.img] : []);
+    grid.innerHTML = existing.map(u => `<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;background:#111"><img src="${xe(u)}" style="width:100%;height:100%;object-fit:cover" loading="lazy"/></div>`).join('');
+  }
   openSheet('menu-sheet');
 }
 
 function resetMenuForm() {
   document.getElementById('mi-edit-id').value = '';
   document.getElementById('mi-sheet-title').textContent = 'Add Menu Item';
-  ['mi-name','mi-desc','mi-price','mi-emoji','mi-cat','mi-img'].forEach(id => { document.getElementById(id).value = ''; });
+  ['mi-name','mi-desc','mi-price','mi-emoji','mi-cat'].forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('mi-avail').value = '1';
+  _menuImgFiles = [];
+  const grid = document.getElementById('mi-img-grid');
+  if (grid) grid.innerHTML = '';
 }
 
 function deleteMenuItem(id) {

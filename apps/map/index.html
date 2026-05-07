@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<meta name="theme-color" content="#05080F"/>
+<meta name="theme-color" content="#0A0E1A"/>
 <title>Map — Pulsify</title>
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
@@ -11,138 +11,307 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#05080F;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.08);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--tx:#F0EEF8;--mu:#9997B0}
-html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
+:root{
+  --or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;
+  --tx:#FFFFFF;--mu:rgba(255,255,255,.55);
+  --glass:rgba(10,14,26,.82);--border:rgba(255,255,255,.12)
+}
+html,body{height:100%;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
 #map{position:fixed;inset:0}
-.tb{position:fixed;top:0;left:0;right:0;height:54px;z-index:100;display:flex;align-items:center;padding:0 14px;background:rgba(5,8,15,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);gap:10px}
-.bk{width:36px;height:36px;border-radius:50%;background:var(--surf);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--tx);font-size:1.05rem;text-decoration:none;flex-shrink:0}
-.logo{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.04em;flex:1}
-.cnt{display:flex;gap:6px;align-items:center;font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em}
-.cnt span{color:var(--or)}
-.fl{position:fixed;top:62px;left:0;right:0;z-index:99;display:flex;gap:6px;padding:0 14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* ── Top Bar ── */
+.tb{
+  position:fixed;top:0;left:0;right:0;height:56px;z-index:100;
+  display:flex;align-items:center;padding:0 12px;gap:10px;
+  background:linear-gradient(135deg,rgba(176,38,255,.95),rgba(255,92,0,.95));
+  backdrop-filter:blur(24px);
+}
+.bk{
+  width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.18);
+  border:1px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:#fff;font-size:1rem;text-decoration:none;flex-shrink:0;
+  transition:background .15s
+}
+.bk:hover{background:rgba(255,255,255,.28)}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.06em;color:#fff;flex:1;text-shadow:0 2px 8px rgba(0,0,0,.4)}
+.cnt{
+  display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.15);
+  border-radius:50px;padding:4px 10px;font-family:'Syne',sans-serif;
+  font-size:.68rem;font-weight:800;color:#fff;letter-spacing:.04em;
+}
+.cnt b{color:var(--li)}
+
+/* ── Filter chips ── */
+.fl{
+  position:fixed;top:64px;left:0;right:0;z-index:99;
+  display:flex;gap:6px;padding:8px 12px;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+}
 .fl::-webkit-scrollbar{display:none}
-.cb{flex-shrink:0;background:rgba(13,20,36,.92);backdrop-filter:blur(20px);border:1px solid var(--border);color:var(--mu);padding:7px 13px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s}
-.cb.active{background:linear-gradient(135deg,var(--pu),var(--or));color:#fff;border-color:transparent}
-.legend{position:fixed;bottom:14px;left:14px;background:rgba(13,20,36,.92);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:14px;padding:10px 12px;z-index:99;font-size:.7rem;color:var(--mu);max-width:160px}
-.legend div{display:flex;align-items:center;gap:7px;margin:3px 0}
-.legend .pin{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
+.cb{
+  flex-shrink:0;background:var(--glass);backdrop-filter:blur(20px);
+  border:1.5px solid var(--border);color:rgba(255,255,255,.7);
+  padding:6px 14px;border-radius:50px;font-family:'Syne',sans-serif;
+  font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s;
+}
+.cb.active{
+  background:linear-gradient(135deg,var(--pu),var(--or));
+  color:#fff;border-color:transparent;
+  box-shadow:0 4px 18px rgba(176,38,255,.45)
+}
 
-/* Custom map markers */
-.pulse-pin{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.05rem;cursor:pointer;border:2.5px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.5);transition:transform .15s;position:relative}
-.pulse-pin:hover{transform:scale(1.15)}
-.pulse-pin::after{content:'';position:absolute;top:50%;left:50%;width:100%;height:100%;border-radius:50%;background:inherit;opacity:.4;animation:pulse 1.6s ease-out infinite;z-index:-1;transform:translate(-50%,-50%)}
-@keyframes pulse{0%{transform:translate(-50%,-50%) scale(.8);opacity:.5}100%{transform:translate(-50%,-50%) scale(2);opacity:0}}
-.pin-event{background:linear-gradient(135deg,#FF5C00,#FF2D78)}
-.pin-biz{background:linear-gradient(135deg,#B026FF,#FF2D78)}
-.pin-shisa{background:linear-gradient(135deg,#FF2D78,#C6FF4A)}
-.pin-rest{background:linear-gradient(135deg,#00E5FF,#B026FF)}
+/* ── Markers (NO ::after — avoids flicker) ── */
+.marker-wrap{
+  position:relative;width:48px;height:48px;cursor:pointer;
+  will-change:transform;
+}
+.pulse-ring{
+  position:absolute;inset:-6px;border-radius:50%;
+  pointer-events:none; /* never intercepts touch — fixes flickering */
+  animation:pulse-ring 2.4s ease-out infinite;
+}
+.pin-dot{
+  position:absolute;inset:4px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.15rem;line-height:1;
+  border:2.5px solid rgba(255,255,255,.9);
+  box-shadow:0 4px 20px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.1),inset 0 1px 0 rgba(255,255,255,.25);
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1);
+}
+.marker-wrap:hover .pin-dot{transform:scale(1.22)}
+.marker-wrap:active .pin-dot{transform:scale(.95)}
 
-.mapboxgl-popup{max-width:280px!important}
-.mapboxgl-popup-content{background:var(--surf)!important;color:var(--tx)!important;border:1px solid var(--border);border-radius:14px;padding:0!important;box-shadow:0 8px 32px rgba(0,0,0,.6)}
-.mapboxgl-popup-tip{border-top-color:var(--surf)!important;border-bottom-color:var(--surf)!important}
-.mapboxgl-popup-close-button{color:var(--tx)!important;font-size:1.4rem;padding:6px 8px}
-.pop{padding:14px}
-.pop-img{width:100%;height:120px;object-fit:cover;border-radius:10px;margin-bottom:10px;background:var(--surf2)}
-.pop-name{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;line-height:1.1;margin-bottom:4px}
-.pop-meta{font-size:.74rem;color:var(--mu);margin-bottom:8px}
-.pop-tag{display:inline-block;background:var(--surf2);border-radius:50px;padding:3px 8px;font-size:.62rem;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;color:var(--or);margin-right:5px;letter-spacing:.05em}
-.pop-btn{display:block;width:100%;background:linear-gradient(135deg,var(--pu),var(--or));color:#fff;text-align:center;padding:9px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;text-decoration:none;margin-top:10px;border:none;cursor:pointer}
-.toast{position:fixed;top:120px;left:50%;transform:translateX(-50%) translateY(-12px);background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:9px 18px;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;z-index:200;opacity:0;transition:all .25s;pointer-events:none}
+/* pin colour themes */
+.pin-event .pin-dot{background:linear-gradient(135deg,#FF5C00,#FF2D78)}
+.pin-event .pulse-ring{background:radial-gradient(circle,rgba(255,92,0,.5),transparent 70%)}
+.pin-biz   .pin-dot{background:linear-gradient(135deg,#B026FF,#00E5FF)}
+.pin-biz   .pulse-ring{background:radial-gradient(circle,rgba(176,38,255,.5),transparent 70%)}
+.pin-shisa .pin-dot{background:linear-gradient(135deg,#FF2D78,#FF5C00)}
+.pin-shisa .pulse-ring{background:radial-gradient(circle,rgba(255,45,120,.5),transparent 70%)}
+.pin-rest  .pin-dot{background:linear-gradient(135deg,#00E5FF,#C6FF4A)}
+.pin-rest  .pulse-ring{background:radial-gradient(circle,rgba(0,229,255,.5),transparent 70%)}
+.pin-night .pin-dot{background:linear-gradient(135deg,#C6FF4A,#B026FF)}
+.pin-night .pulse-ring{background:radial-gradient(circle,rgba(198,255,74,.5),transparent 70%)}
+
+@keyframes pulse-ring{
+  0%{transform:scale(.7);opacity:.7}
+  70%{opacity:.3}
+  100%{transform:scale(1.9);opacity:0}
+}
+
+/* ── Popups ── */
+.mapboxgl-popup{max-width:300px!important}
+.mapboxgl-popup-content{
+  background:rgba(10,14,26,.97)!important;
+  border:1.5px solid rgba(176,38,255,.5)!important;
+  border-radius:18px!important;padding:0!important;
+  box-shadow:0 12px 48px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.06)!important;
+  overflow:hidden!important;
+}
+.mapboxgl-popup-tip{border-top-color:rgba(176,38,255,.5)!important;border-bottom-color:rgba(176,38,255,.5)!important}
+.mapboxgl-popup-close-button{
+  color:rgba(255,255,255,.7)!important;font-size:1.3rem;
+  padding:8px 10px;z-index:2;top:2px;right:2px;
+}
+.pop-img{width:100%;height:130px;object-fit:cover;display:block}
+.pop-body{padding:14px}
+.pop-tag-row{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.pop-tag{
+  background:rgba(176,38,255,.2);border:1px solid rgba(176,38,255,.4);
+  color:var(--cy);border-radius:50px;padding:3px 9px;
+  font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.06em
+}
+.pop-tag.or{background:rgba(255,92,0,.2);border-color:rgba(255,92,0,.4);color:var(--or)}
+.pop-tag.gr{background:rgba(198,255,74,.15);border-color:rgba(198,255,74,.4);color:var(--li)}
+.pop-name{font-family:'Bebas Neue',sans-serif;font-size:1.35rem;line-height:1.1;color:#fff;margin-bottom:4px}
+.pop-meta{font-size:.73rem;color:var(--mu);margin-bottom:4px;display:flex;align-items:center;gap:5px}
+.pop-btn{
+  display:block;width:100%;margin-top:12px;
+  background:linear-gradient(135deg,var(--pu),var(--or));
+  color:#fff;text-align:center;padding:10px;border-radius:50px;
+  font-family:'Syne',sans-serif;font-size:.76rem;font-weight:800;
+  text-decoration:none;border:none;cursor:pointer;
+  box-shadow:0 4px 16px rgba(176,38,255,.4);transition:opacity .15s
+}
+.pop-btn:hover{opacity:.88}
+
+/* ── Legend ── */
+.legend{
+  position:fixed;bottom:16px;left:12px;
+  background:var(--glass);backdrop-filter:blur(24px);
+  border:1px solid var(--border);border-radius:16px;
+  padding:10px 14px;z-index:99;
+  box-shadow:0 8px 32px rgba(0,0,0,.5)
+}
+.legend-row{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:.7rem;color:rgba(255,255,255,.7);font-family:'Syne',sans-serif;font-weight:700}
+.legend-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;border:1.5px solid rgba(255,255,255,.5)}
+
+/* ── Toast ── */
+.toast{
+  position:fixed;top:130px;left:50%;transform:translateX(-50%) translateY(-8px);
+  background:var(--glass);backdrop-filter:blur(20px);
+  border:1px solid var(--border);border-radius:50px;
+  padding:9px 20px;font-family:'Syne',sans-serif;font-size:.75rem;
+  font-weight:700;color:#fff;z-index:200;
+  opacity:0;transition:all .25s;pointer-events:none;
+}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.err{border-color:var(--pk);color:var(--pk)}
+
+/* ── Loading overlay ── */
+#loader{
+  position:fixed;inset:0;z-index:300;
+  background:linear-gradient(135deg,#0A0E1A,#1A0D2E);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+}
+.loader-logo{font-family:'Bebas Neue',sans-serif;font-size:2.8rem;letter-spacing:.08em;
+  background:linear-gradient(135deg,var(--pu),var(--or));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.loader-spin{width:36px;height:36px;border-radius:50%;border:3px solid rgba(176,38,255,.3);
+  border-top-color:var(--pu);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
+
+<div id="loader">
+  <div class="loader-logo">PULSIFY</div>
+  <div class="loader-spin"></div>
+</div>
+
 <div class="tb">
   <a href="/" class="bk" title="Back">←</a>
-  <div class="logo">PULSIFY MAP</div>
-  <div class="cnt"><span id="cnt-num">0</span> spots</div>
+  <div class="logo">📍 PULSIFY MAP</div>
+  <div class="cnt"><b id="cnt-num">0</b>&nbsp;spots</div>
 </div>
 
 <div class="fl">
-  <button class="cb active" data-cat="all" onclick="setFilter('all',this)">All</button>
-  <button class="cb" data-cat="event" onclick="setFilter('event',this)">🎟 Events</button>
-  <button class="cb" data-cat="business" onclick="setFilter('business',this)">🏪 Businesses</button>
-  <button class="cb" data-cat="shisanyama" onclick="setFilter('shisanyama',this)">🔥 Shisanyama</button>
-  <button class="cb" data-cat="restaurant" onclick="setFilter('restaurant',this)">🍴 Restaurants</button>
-  <button class="cb" data-cat="nightclub" onclick="setFilter('nightclub',this)">🍻 Nightlife</button>
+  <button class="cb active" onclick="setFilter('all',this)">✦ All</button>
+  <button class="cb" onclick="setFilter('event',this)">🎟 Events</button>
+  <button class="cb" onclick="setFilter('business',this)">🏪 Businesses</button>
+  <button class="cb" onclick="setFilter('shisanyama',this)">🔥 Shisanyama</button>
+  <button class="cb" onclick="setFilter('restaurant',this)">🍴 Restaurants</button>
+  <button class="cb" onclick="setFilter('nightclub',this)">🎵 Nightlife</button>
 </div>
 
 <div id="map"></div>
 
 <div class="legend">
-  <div><div class="pin pin-event">🎟</div>Event</div>
-  <div><div class="pin pin-biz">🏪</div>Business</div>
-  <div><div class="pin pin-shisa">🔥</div>Shisanyama</div>
-  <div><div class="pin pin-rest">🍴</div>Food</div>
+  <div class="legend-row"><div class="legend-dot" style="background:linear-gradient(135deg,#FF5C00,#FF2D78)"></div>Events</div>
+  <div class="legend-row"><div class="legend-dot" style="background:linear-gradient(135deg,#B026FF,#00E5FF)"></div>Businesses</div>
+  <div class="legend-row"><div class="legend-dot" style="background:linear-gradient(135deg,#FF2D78,#FF5C00)"></div>Shisanyama</div>
+  <div class="legend-row"><div class="legend-dot" style="background:linear-gradient(135deg,#00E5FF,#C6FF4A)"></div>Food</div>
+  <div class="legend-row"><div class="legend-dot" style="background:linear-gradient(135deg,#C6FF4A,#B026FF)"></div>Nightlife</div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-const SUPA_URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
-const MAPBOX_TOKEN = 'pk.eyJ1IjoidGhhY29sbGluMiIsImEiOiJjbW51Mm95cHEwYm8xMnJyMXEzaXgxMDBmIn0.nF80wBOn-jxhjpAIus9anw';
+const SUPA_URL  = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+const SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+const MB_TOKEN  = 'pk.eyJ1IjoidGhhY29sbGluMiIsImEiOiJjbW51Mm95cHEwYm8xMnJyMXEzaXgxMDBmIn0.nF80wBOn-jxhjpAIus9anw';
 
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
-mapboxgl.accessToken = MAPBOX_TOKEN;
+mapboxgl.accessToken = MB_TOKEN;
 
 const map = new mapboxgl.Map({
   container: 'map',
-  style: 'mapbox://styles/mapbox/dark-v11',
-  center: [28.5, -29],   // Mid-SA
-  zoom: 5.5,
+  style: 'mapbox://styles/mapbox/satellite-streets-v12',
+  center: [28.0, -26.5],
+  zoom: 6,
   attributionControl: false,
+  antialias: true,
 });
 map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+map.addControl(new mapboxgl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: false }), 'top-right');
 
-let allItems = [];
-let activeMarkers = [];
-let currentFilter = 'all';
+let allItems = [], activeMarkers = [], currentFilter = 'all';
 
-function toast(msg, isErr) { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast show' + (isErr ? ' err' : ''); setTimeout(() => t.classList.remove('show'), 3500); }
-function escape(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function toast(msg, isErr) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isErr ? ' err' : '');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
 
-// SA bounds — only place markers within these limits
-function inSA(lat, lon) { return lat >= -35 && lat <= -22 && lon >= 16 && lon <= 33; }
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
-// Pick the right pin class based on category/genre
-function pinClass(item) {
+/* Strict SA coordinate validation — excludes 0/NaN/ocean/out-of-bounds */
+function validCoord(lat, lon) {
+  const la = parseFloat(lat), lo = parseFloat(lon);
+  if (!isFinite(la) || !isFinite(lo)) return false;
+  if (la === 0 || lo === 0) return false;
+  if (la < -35 || la > -22) return false;
+  if (lo < 16 || lo > 33) return false;
+  return true;
+}
+
+function catOf(item) {
+  return (item.category || item.type || item.genre || '').toLowerCase();
+}
+
+function pinTheme(item) {
   if (item._kind === 'event') return 'pin-event';
-  const c = (item.category || item.type || '').toLowerCase();
+  const c = catOf(item);
   if (c.includes('shisa')) return 'pin-shisa';
-  if (c.includes('restaurant') || c.includes('food')) return 'pin-rest';
-  if (c.includes('club') || c.includes('night') || c.includes('bar')) return 'pin-biz';
+  if (c.includes('restaurant') || c.includes('food') || c.includes('cafe') || c.includes('takeaway')) return 'pin-rest';
+  if (c.includes('club') || c.includes('night') || c.includes('bar') || c.includes('lounge')) return 'pin-night';
   return 'pin-biz';
 }
+
 function pinIcon(item) {
   if (item._kind === 'event') return '🎟';
-  const c = (item.category || item.type || '').toLowerCase();
+  const c = catOf(item);
   if (c.includes('shisa')) return '🔥';
-  if (c.includes('restaurant') || c.includes('food')) return '🍴';
-  if (c.includes('club') || c.includes('night')) return '🍻';
+  if (c.includes('restaurant') || c.includes('food') || c.includes('cafe')) return '🍴';
+  if (c.includes('club') || c.includes('night') || c.includes('bar')) return '🎵';
+  if (c.includes('takeaway')) return '🍟';
   return '🏪';
+}
+
+function makeMarkerEl(item) {
+  const theme = pinTheme(item);
+  const wrap  = document.createElement('div');
+  wrap.className = `marker-wrap ${theme}`;
+  const ring = document.createElement('div');
+  ring.className = 'pulse-ring';
+  const dot  = document.createElement('div');
+  dot.className = 'pin-dot';
+  dot.textContent = pinIcon(item);
+  wrap.appendChild(ring);
+  wrap.appendChild(dot);
+  return wrap;
 }
 
 function popupHTML(item) {
   const isEv = item._kind === 'event';
-  const date = isEv && item.date_local ? new Date(item.date_local).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-  const name = isEv ? item.name : item.name;
-  const sub = isEv ? `${item.venue_name || ''} · ${item.venue_city || ''}` : `${item.category || 'Business'} · ${item.city || ''}`;
-  const tag = isEv ? (item.genre || 'event') : (item.category || 'spot');
-  const price = isEv && item.price_min ? `R${item.price_min}` : isEv && item.is_free ? 'FREE' : null;
-  const img = item.image_url || null;
+  const name  = esc(item.name || 'Unknown');
+  const img   = item.image_url || null;
+  const cat   = esc(catOf(item) || (isEv ? 'Event' : 'Business'));
+  const city  = esc(isEv ? (item.venue_city || '') : (item.city || ''));
+  const venue = isEv ? esc(item.venue_name || '') : '';
+  const date  = isEv && item.date_local
+    ? new Date(item.date_local).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})
+    : '';
+  const price = isEv
+    ? (item.is_free ? 'FREE' : item.price_min ? `From R${item.price_min}` : '')
+    : '';
   const detailUrl = isEv ? `/?eid=${encodeURIComponent(item.id)}` : `/?bid=${encodeURIComponent(item.id)}`;
 
-  return `<div class="pop">
-    ${img ? `<img class="pop-img" src="${escape(img)}" onerror="this.style.display='none'"/>` : ''}
-    <div class="pop-name">${escape(name)}</div>
-    <div class="pop-meta">${escape(sub)}</div>
-    <span class="pop-tag">${escape(tag)}</span>
-    ${price ? `<span class="pop-tag" style="color:var(--li)">${price}</span>` : ''}
-    ${date ? `<div class="pop-meta" style="margin-top:6px">📅 ${date}</div>` : ''}
-    <a class="pop-btn" href="${detailUrl}">View Details →</a>
-  </div>`;
+  return `${img ? `<img class="pop-img" src="${esc(img)}" loading="lazy" onerror="this.remove()"/>` : ''}
+<div class="pop-body">
+  <div class="pop-tag-row">
+    <span class="pop-tag">${cat}</span>
+    ${price ? `<span class="pop-tag gr">${esc(price)}</span>` : ''}
+    ${isEv ? `<span class="pop-tag or">Event</span>` : ''}
+  </div>
+  <div class="pop-name">${name}</div>
+  ${venue ? `<div class="pop-meta">📍 ${venue}${city ? ', ' + city : ''}</div>` : city ? `<div class="pop-meta">📍 ${city}</div>` : ''}
+  ${date ? `<div class="pop-meta">📅 ${date}</div>` : ''}
+  <a class="pop-btn" href="${detailUrl}">View Details →</a>
+</div>`;
 }
 
 function clearMarkers() {
@@ -152,39 +321,48 @@ function clearMarkers() {
 
 function renderMarkers() {
   clearMarkers();
-  const filtered = allItems.filter(item => {
-    if (currentFilter === 'all') return true;
-    if (currentFilter === 'event' && item._kind === 'event') return true;
-    if (currentFilter === 'business' && item._kind === 'business') return true;
-    if (item._kind !== 'business') return false;
-    const c = (item.category || '').toLowerCase();
+  const visible = allItems.filter(item => {
+    if (currentFilter === 'all')       return true;
+    if (currentFilter === 'event')     return item._kind === 'event';
+    if (currentFilter === 'business')  return item._kind === 'business';
+    if (item._kind !== 'business')     return false;
+    const c = catOf(item);
     if (currentFilter === 'shisanyama') return c.includes('shisa');
-    if (currentFilter === 'restaurant') return c.includes('restaurant') || c.includes('food');
+    if (currentFilter === 'restaurant') return c.includes('restaurant') || c.includes('food') || c.includes('cafe');
     if (currentFilter === 'nightclub')  return c.includes('club') || c.includes('night') || c.includes('bar');
     return false;
   });
 
-  filtered.forEach(item => {
+  const bounds = new mapboxgl.LngLatBounds();
+  let placed = 0;
+
+  visible.forEach(item => {
     const lat = parseFloat(item.venue_lat ?? item.lat);
     const lon = parseFloat(item.venue_lon ?? item.lon);
-    if (!inSA(lat, lon)) return;
+    if (!validCoord(lat, lon)) return;
 
-    const el = document.createElement('div');
-    el.className = `pulse-pin ${pinClass(item)}`;
-    el.textContent = pinIcon(item);
-    el.title = item.name;
-
-    const popup = new mapboxgl.Popup({ offset: 22, closeButton: true, closeOnClick: true })
+    const el    = makeMarkerEl(item);
+    const popup = new mapboxgl.Popup({ offset: 26, closeButton: true, closeOnClick: true, maxWidth: '300px' })
       .setHTML(popupHTML(item));
 
     const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
       .setLngLat([lon, lat])
       .setPopup(popup)
       .addTo(map);
+
     activeMarkers.push(marker);
+    bounds.extend([lon, lat]);
+    placed++;
   });
 
-  document.getElementById('cnt-num').textContent = filtered.length;
+  document.getElementById('cnt-num').textContent = placed;
+
+  if (placed > 1) {
+    map.fitBounds(bounds, { padding: 80, maxZoom: 13, duration: 900 });
+  } else if (placed === 1) {
+    const [lon, lat] = bounds.getCenter().toArray();
+    map.flyTo({ center: [lon, lat], zoom: 13, duration: 900 });
+  }
 }
 
 function setFilter(cat, btn) {
@@ -195,7 +373,6 @@ function setFilter(cat, btn) {
 }
 
 async function loadData() {
-  toast('Loading map…');
   try {
     const today = new Date().toISOString().split('T')[0];
     const [evRes, bzRes] = await Promise.all([
@@ -204,32 +381,32 @@ async function loadData() {
         .gte('date_local', today)
         .not('venue_lat', 'is', null)
         .not('venue_lon', 'is', null)
+        .neq('venue_lat', 0)
+        .neq('venue_lon', 0)
         .limit(500),
       sb.from('businesses')
         .select('id,name,category,city,province,lat,lon,image_url,description')
         .not('lat', 'is', null)
         .not('lon', 'is', null)
+        .neq('lat', 0)
+        .neq('lon', 0)
         .limit(500),
     ]);
 
-    const events = (evRes.data || []).map(e => ({ ...e, _kind: 'event' }));
-    const biz    = (bzRes.data || []).map(b => ({ ...b, _kind: 'business' }));
+    const events = (evRes.data  || []).map(e => ({ ...e, _kind: 'event' }));
+    const biz    = (bzRes.data  || []).map(b => ({ ...b, _kind: 'business' }));
     allItems = [...events, ...biz];
 
-    if (!allItems.length) { toast('No locations to show', true); return; }
+    document.getElementById('loader').style.display = 'none';
 
-    renderMarkers();
-
-    // Auto-fit if we have markers
-    const validCoords = allItems
-      .map(i => [parseFloat(i.venue_lon ?? i.lon), parseFloat(i.venue_lat ?? i.lat)])
-      .filter(([lon, lat]) => inSA(lat, lon));
-    if (validCoords.length > 1) {
-      const bounds = validCoords.reduce((b, c) => b.extend(c), new mapboxgl.LngLatBounds(validCoords[0], validCoords[0]));
-      map.fitBounds(bounds, { padding: 70, maxZoom: 11, duration: 800 });
+    if (!allItems.length) {
+      toast('No locations found — add some events or businesses first', true);
+      return;
     }
+    renderMarkers();
   } catch (e) {
     console.error('[Map]', e);
+    document.getElementById('loader').style.display = 'none';
     toast('Failed to load: ' + e.message, true);
   }
 }

@@ -646,13 +646,14 @@ function showUserMsg(m, t) { const el=document.getElementById('msg-users'); el.i
 
 async function loadUsers() {
   document.getElementById('users-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>';
-  const { data, error } = await sb.from('profiles')
-    .select('id,email,role,full_name,trial_expires_at,suspended,created_at')
-    .order('created_at', { ascending: false });
-  if (error) { showUserMsg('Failed to load users: ' + error.message, 'err'); return; }
-  ALL_USERS = data || [];
-  updateUserStats();
-  renderUsersTable();
+  try {
+    const r = await fetch('/api/admin/users', { headers: { Authorization: 'Bearer ' + adminToken } });
+    const json = await r.json();
+    if (!r.ok) { showUserMsg('Failed to load: ' + (json.error || r.statusText), 'err'); return; }
+    ALL_USERS = json.users || [];
+    updateUserStats();
+    renderUsersTable();
+  } catch(e) { showUserMsg('Failed to load users: ' + e.message, 'err'); }
 }
 
 function updateUserStats() {
