@@ -2053,12 +2053,13 @@ async function renderSquad() {
 
   el.innerHTML = '<div style="padding:12px 16px;font-size:.78rem;color:var(--mu)">Loading…</div>';
 
-  // currentUser may not be set yet if auth is still resolving — fetch from session
-  if (!currentUser && sb) {
+  // Always verify a live Supabase session — localStorage p_user may be stale/expired
+  if (sb) {
     try {
       const { data: { user } } = await sb.auth.getUser();
       if (user) currentUser = user;
-    } catch(e) {}
+      else currentUser = null;
+    } catch(e) { currentUser = null; }
   }
 
   if (!currentUser || !sb) {
@@ -2101,7 +2102,10 @@ async function renderSquad() {
       '</div>';
     }).join('');
   } catch(e) {
-    el.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Could not load friends: ' + x(e.message) + '</div>';
+    const msg = (e.message||'').includes('permission denied')
+      ? 'Sign in to see your friends.'
+      : 'Could not load friends. Try again.';
+    el.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">' + msg + '</div>';
     console.error('renderSquad error:', e);
   }
 }
@@ -2373,8 +2377,8 @@ async function initSupabaseSession() {
       try {
         const { data: prof } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
         const role = prof?.role || 'user';
-        if (role === 'organizer') { window.location.href = 'organizer-dashboard.html'; return; }
-        if (role === 'business')  { window.location.href = 'business-dashboard.html';  return; }
+        if (role === 'organizer') { window.location.href = '/organizer'; return; }
+        if (role === 'business')  { window.location.href = '/business';  return; }
       } catch(e) {}
     }
   });
