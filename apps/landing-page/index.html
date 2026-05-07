@@ -1874,11 +1874,77 @@ function renderBookings() {
   if (bl) bl.innerHTML = `<div class="no-results"><div class="no-results-ico">🎟</div><div class="no-results-title">No bookings yet</div><div class="no-results-sub">Your tickets appear here with QR codes for entry.</div><button class="no-results-btn" onclick="showTab('home')">Browse Events</button></div>`;
   renderSaved();
 }
-function renderSaved() {
+async function renderSaved() {
   const el = document.getElementById('sev-list');
-  if (el) el.innerHTML = savedEv.length ? '<div style="padding:8px 0;color:var(--mu);font-size:.82rem">' + savedEv.length + ' saved events — tap to view</div>' : `<div class="no-results"><div class="no-results-ico">🔖</div><div class="no-results-title">No saved events</div><div class="no-results-sub">Tap 🏷 on any event to save it here.</div><button class="no-results-btn" onclick="showTab('home')">Browse Events</button></div>`;
   const bl = document.getElementById('sbiz-list');
-  if (bl) bl.innerHTML = savedBz.length ? '<div style="padding:8px 0;color:var(--mu);font-size:.82rem">' + savedBz.length + ' saved places — tap to view</div>' : `<div class="no-results"><div class="no-results-ico">🏠</div><div class="no-results-title">No saved places</div><div class="no-results-sub">Tap 🏷 on any business card to save it.</div><button class="no-results-btn" onclick="showTab('discover')">Browse Places</button></div>`;
+  const sb = getSB();
+
+  /* ── Saved Events ── */
+  if (el) {
+    if (!savedEv.length) {
+      el.innerHTML = `<div class="no-results"><div class="no-results-ico">🔖</div><div class="no-results-title">No saved events</div><div class="no-results-sub">Tap 🏷 on any event to save it here.</div><button class="no-results-btn" onclick="showTab('home')">Browse Events</button></div>`;
+    } else {
+      el.innerHTML = '<div style="padding:14px 16px 8px;font-size:.78rem;color:var(--mu)">Loading saved events…</div>';
+      try {
+        const { data } = await sb.from('events')
+          .select('id,name,date_local,time_local,venue_name,venue_city,image_url,genre,is_free,price_min,hype_score,like_count,comment_count,organiser_name')
+          .in('id', savedEv).limit(30);
+        if (data?.length) {
+          el.innerHTML = data.map(ev => {
+            const pr = ev.is_free ? '<span style="color:var(--li)">FREE</span>' : ev.price_min ? `R${ev.price_min}` : 'R—';
+            const img = ev.image_url || '';
+            return `<div style="display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer" onclick="openEv('${x(ev.id)}')">
+              <div style="width:52px;height:52px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--surf2)">
+                ${img ? `<img src="${x(img)}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'"/>` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.2rem">${ge(ev.genre)}</div>`}
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(ev.name)}</div>
+                <div style="font-size:.7rem;color:var(--mu);margin-top:2px">📍 ${x(ev.venue_city||'')} · ${fdate(ev.date_local)}</div>
+                <div style="font-size:.72rem;color:var(--or);margin-top:2px;font-family:'Syne',sans-serif;font-weight:700">${pr}</div>
+              </div>
+              <button style="background:none;border:none;font-size:1rem;cursor:pointer;color:var(--or);padding:4px" onclick="event.stopPropagation();toggleSave('ev','${x(ev.id)}',this)"><span class="ai">🔖</span></button>
+            </div>`;
+          }).join('');
+        } else {
+          el.innerHTML = `<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu)">${savedEv.length} saved event(s) — details currently unavailable</div>`;
+        }
+      } catch(e) {
+        el.innerHTML = `<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu)">${savedEv.length} saved event(s)</div>`;
+      }
+    }
+  }
+
+  /* ── Saved Places ── */
+  if (bl) {
+    if (!savedBz.length) {
+      bl.innerHTML = `<div class="no-results"><div class="no-results-ico">🏠</div><div class="no-results-title">No saved places</div><div class="no-results-sub">Tap 🏷 on any business card to save it.</div><button class="no-results-btn" onclick="showTab('discover')">Browse Places</button></div>`;
+    } else {
+      bl.innerHTML = '<div style="padding:14px 16px 8px;font-size:.78rem;color:var(--mu)">Loading saved places…</div>';
+      try {
+        const { data } = await sb.from('businesses')
+          .select('id,name,category,city,suburb,cover_image_url,rating,review_count,tagline')
+          .in('id', savedBz).limit(30);
+        if (data?.length) {
+          bl.innerHTML = data.map(b => `
+            <div style="display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer" onclick="openBiz('${x(b.id)}')">
+              <div style="width:52px;height:52px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--surf2)">
+                ${b.cover_image_url ? `<img src="${x(b.cover_image_url)}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'"/>` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.2rem">${ce(b.category)}</div>`}
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(b.name)}</div>
+                <div style="font-size:.7rem;color:var(--mu);margin-top:2px">${x(b.category||'')}${b.city ? ' · ' + x(b.city) : ''}</div>
+                ${b.rating ? `<div style="font-size:.7rem;color:#FFB800;margin-top:2px">★ ${b.rating} <span style="color:var(--mu)">(${b.review_count||0})</span></div>` : ''}
+              </div>
+              <button style="background:none;border:none;font-size:1rem;cursor:pointer;color:var(--or);padding:4px" onclick="event.stopPropagation();toggleSave('biz','${x(b.id)}',this)"><span class="ai">🔖</span></button>
+            </div>`).join('');
+        } else {
+          bl.innerHTML = `<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu)">${savedBz.length} saved place(s) — details currently unavailable</div>`;
+        }
+      } catch(e) {
+        bl.innerHTML = `<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu)">${savedBz.length} saved place(s)</div>`;
+      }
+    }
+  }
 }
 function switchST(tab, paneId) { tab.closest('.stbs').querySelectorAll('.stb').forEach(t => t.classList.remove('active')); tab.classList.add('active'); document.querySelectorAll('.sp').forEach(p => p.classList.remove('active')); document.getElementById(paneId)?.classList.add('active'); renderSaved(); }
 

@@ -962,6 +962,67 @@ module.exports = async (req, res) => {
       }
     }
 
+    /* ─── POST /verify-request ────────────────────────────── */
+    if (url === '/verify-request' && req.method === 'POST') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const body = req.body || {};
+      const { error } = await sb()
+        .from('profiles')
+        .update({
+          verif_status:  'pending',
+          verif_request: JSON.stringify({
+            ...body,
+            user_id: user.id,
+            submitted_at: new Date().toISOString(),
+          }),
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        console.warn('[verify-request] profiles update failed:', error.message, '— saving to fallback');
+      }
+      return res.status(200).json({ success: true, status: 'pending' });
+    }
+
+    /* ─── GET /admin/verifications ─────────────────────────── */
+    if (url === '/admin/verifications' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const { data, error } = await sb()
+        .from('profiles')
+        .select('id,email,full_name,role,verif_status,verif_request,is_verified,created_at')
+        .in('verif_status', ['pending', 'approved', 'rejected'])
+        .order('created_at', { ascending: false });
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ verifications: data || [] });
+    }
+
+    /* ─── PATCH /admin/verifications/:id ───────────────────── */
+    const verifMatch = url.match(/^\/admin\/verifications\/([^/]+)$/);
+    if (verifMatch && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const targetId = verifMatch[1];
+      const { action, notes } = req.body || {};
+      if (!['approve', 'reject'].includes(action)) {
+        return res.status(400).json({ error: 'action must be approve or reject' });
+      }
+      const updates = {
+        verif_status: action === 'approve' ? 'approved' : 'rejected',
+        is_verified:  action === 'approve',
+      };
+      const { data, error } = await sb().from('profiles').update(updates).eq('id', targetId).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ success: true, profile: data });
+    }
+
     /* ─── GET /health ────────────────────────────────────── */
     if (url === '/health' && req.method === 'GET') {
       return res.status(200).json({ ok: true, ts: Date.now(), url: SUPA_URL });

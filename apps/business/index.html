@@ -98,6 +98,23 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 .ev-sub{font-size:.68rem;color:var(--mu)}
 .ev-price{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--or);flex-shrink:0}
 
+/* ── SETTINGS CARDS ── */
+.setting-card{background:var(--surf2);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:10px}
+.setting-card-row{display:flex;align-items:center;justify-content:space-between}
+.setting-card-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+/* ── FAQ ── */
+.faq-item{border:1px solid var(--border);border-radius:12px;margin-bottom:8px;overflow:hidden}
+.faq-q{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
+.faq-q .faq-arr{transition:transform .2s;flex-shrink:0;color:var(--mu)}
+.faq-item.open .faq-q .faq-arr{transform:rotate(180deg)}
+.faq-a{display:none;padding:0 14px 12px;font-size:.78rem;color:var(--mu);line-height:1.6}
+.faq-item.open .faq-a{display:block}
+/* ── MSG ── */
+.msg{padding:10px 14px;border-radius:10px;font-size:.78rem;margin-bottom:12px;display:none;line-height:1.5}
+.msg.show{display:block}
+.msg-ok{background:rgba(198,255,74,.08);border:1px solid rgba(198,255,74,.25);color:var(--li)}
+.msg-err{background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);color:var(--pk)}
+
 /* ── MENU ITEMS ── */
 .menu-item-card{display:flex;align-items:center;gap:12px;background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:12px 14px;margin:0 14px 10px}
 .mi-img{width:52px;height:52px;border-radius:10px;background:var(--surf2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;position:relative}
@@ -275,7 +292,6 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 
 <!-- ══ PROFILE ══ -->
 <div class="panel" id="tab-profile">
-  <div class="profile-hero" id="profile-hero"></div>
   <div style="padding:0 14px 20px">
     <div class="section-label" style="margin-top:10px">Edit Profile</div>
     <label class="ff-label">Business Name</label>
@@ -297,6 +313,50 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <button class="btn-primary" style="width:100%;margin-top:4px" onclick="saveProfile()">Save Profile</button>
     <div class="info-box" style="margin-top:12px">🌐 Your public order page: <span id="profile-menu-url" style="font-weight:700"></span></div>
   </div>
+
+  <!-- Account Settings -->
+  <div style="padding:0 14px 14px">
+    <div class="section-label">Account</div>
+
+    <!-- Verify Profile -->
+    <div class="setting-card">
+      <div class="setting-card-row">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="setting-card-icon" style="background:linear-gradient(135deg,rgba(198,255,74,.15),rgba(176,38,255,.15));border:1px solid rgba(198,255,74,.25)">🏆</div>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Verify Profile</div>
+            <div id="biz-verif-status" style="font-size:.68rem;color:var(--mu)">Not verified</div>
+          </div>
+        </div>
+        <button class="btn-sec" id="biz-verif-btn" style="padding:6px 12px;font-size:.72rem" onclick="openSheet('verify-sheet')">Apply →</button>
+      </div>
+      <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Get a ✅ verified badge. Takes <strong>1–3 business days</strong> after submission.</div>
+    </div>
+
+    <!-- Payment Method -->
+    <div class="setting-card">
+      <div class="setting-card-row">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="setting-card-icon" style="background:linear-gradient(135deg,rgba(0,229,255,.15),rgba(176,38,255,.1));border:1px solid rgba(0,229,255,.2)">💳</div>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Payment Method</div>
+            <div id="biz-payment-status" style="font-size:.68rem;color:var(--mu)">No payment method added</div>
+          </div>
+        </div>
+        <button class="btn-sec" id="biz-payment-btn" style="padding:6px 12px;font-size:.72rem" onclick="openSheet('payment-sheet')">Add →</button>
+      </div>
+      <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Add your bank account to receive payouts from orders and bookings.</div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div style="padding:0 14px 60px">
+    <div class="section-label">FAQ & Support</div>
+    <div id="faq-biz"></div>
+    <div style="margin-top:14px;text-align:center">
+      <a href="mailto:support@pulsify.co.za" style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;color:var(--or);text-decoration:none">✉️ Contact Support</a>
+    </div>
+  </div>
 </div>
 
 <!-- ══ SHEETS ══ -->
@@ -317,7 +377,10 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
       <div id="biz-img-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px"></div>
       <label class="ff-label">Caption *</label>
       <textarea class="ff" id="post-cap" placeholder="What's happening? Share with your followers…" rows="4"></textarea>
-      <button class="btn-primary" style="width:100%" onclick="submitPost()">Publish Post 🚀</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-sec" style="flex:1" onclick="previewPost()">👁 Preview</button>
+        <button class="btn-primary" style="flex:2" onclick="submitPost()">Publish 🚀</button>
+      </div>
     </div>
   </div>
 </div>
@@ -391,6 +454,115 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
   </div>
 </div>
 
+<!-- VERIFY PROFILE SHEET -->
+<div class="overlay" id="verify-sheet" onclick="if(event.target===this)closeSheet('verify-sheet')">
+  <div class="sheet" style="max-height:92vh">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div class="sheet-title">Verify Profile</div><button class="sheet-close" onclick="closeSheet('verify-sheet')">✕</button></div>
+    <div class="sheet-body">
+      <div class="info-box">⏱ Verification takes <strong>1–3 business days</strong>. You'll be notified once reviewed. Verified accounts get a ✅ badge visible to all Pulsify users.</div>
+      <div id="verif-msg" class="msg"></div>
+      <label class="ff-label">Is your business registered? *</label>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button id="reg-yes-btn" class="btn-sec" style="flex:1;padding:10px;font-size:.78rem" onclick="setRegistered(true)">✅ Yes, registered</button>
+        <button id="reg-no-btn" class="btn-sec" style="flex:1;padding:10px;font-size:.78rem" onclick="setRegistered(false)">Informal / Sole owner</button>
+      </div>
+      <div id="registered-fields" style="display:none">
+        <label class="ff-label">Company / Trading Name *</label>
+        <input class="ff" id="vf-company" placeholder="e.g. ABC Trading (Pty) Ltd"/>
+        <div class="ff-row">
+          <div><label class="ff-label">Registration No.</label><input class="ff" id="vf-reg-num" placeholder="CK / CIPC number"/></div>
+          <div>
+            <label class="ff-label">Entity Type</label>
+            <select class="ff" id="vf-entity">
+              <option value="">(Pty) Ltd</option>
+              <option>CC (Close Corporation)</option>
+              <option>Sole Proprietor</option>
+              <option>Non-Profit</option>
+              <option>Partnership</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <label class="ff-label">Contact Person Name *</label>
+      <input class="ff" id="vf-contact" placeholder="Full name of owner / director"/>
+      <div class="ff-row">
+        <div><label class="ff-label">SA ID Number *</label><input class="ff" id="vf-id" placeholder="13-digit SA ID" inputmode="numeric"/></div>
+        <div><label class="ff-label">Contact Phone *</label><input class="ff" type="tel" id="vf-phone" placeholder="+27…"/></div>
+      </div>
+      <label class="ff-label">Business Physical Address *</label>
+      <input class="ff" id="vf-address" placeholder="Street, suburb, city"/>
+      <label class="ff-label">Business Description *</label>
+      <textarea class="ff" id="vf-desc" rows="3" placeholder="What does your business do?"></textarea>
+      <button class="btn-primary" style="width:100%;margin-top:6px" onclick="submitVerification()">Submit for Verification 🏆</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT METHOD SHEET -->
+<div class="overlay" id="payment-sheet" onclick="if(event.target===this)closeSheet('payment-sheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div class="sheet-title">Payment Method</div><button class="sheet-close" onclick="closeSheet('payment-sheet')">✕</button></div>
+    <div class="sheet-body">
+      <div class="info-box">💳 Your banking details are stored securely for payout processing only.</div>
+      <div id="payment-msg" class="msg"></div>
+      <label class="ff-label">Bank Name *</label>
+      <select class="ff" id="pm-bank">
+        <option value="">Select bank…</option>
+        <option>Absa</option><option>Capitec</option><option>FNB</option>
+        <option>Nedbank</option><option>Standard Bank</option>
+        <option>Investec</option><option>TymeBank</option>
+        <option>African Bank</option><option>Bidvest</option><option>Other</option>
+      </select>
+      <label class="ff-label">Account Holder Name *</label>
+      <input class="ff" id="pm-name" placeholder="Name as it appears on bank account"/>
+      <label class="ff-label">Account Number *</label>
+      <input class="ff" type="text" id="pm-account" placeholder="Your account number" inputmode="numeric"/>
+      <div class="ff-row">
+        <div>
+          <label class="ff-label">Account Type *</label>
+          <select class="ff" id="pm-type">
+            <option value="">Select…</option>
+            <option>Current / Cheque</option><option>Savings</option><option>Transmission</option>
+          </select>
+        </div>
+        <div><label class="ff-label">Branch Code</label><input class="ff" id="pm-branch" placeholder="6-digit code" inputmode="numeric"/></div>
+      </div>
+      <button class="btn-primary" style="width:100%" onclick="submitPaymentMethod()">Save Payment Method 💳</button>
+    </div>
+  </div>
+</div>
+
+<!-- POST PREVIEW SHEET -->
+<div class="overlay" id="preview-sheet" onclick="if(event.target===this)closeSheet('preview-sheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div class="sheet-title">Preview Post</div><button class="sheet-close" onclick="closeSheet('preview-sheet')">✕</button></div>
+    <div class="sheet-body">
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">How it'll appear in the feed</div>
+      <div style="background:var(--surf2);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+        <div id="biz-preview-imgs" style="display:grid;gap:2px"></div>
+        <div style="padding:12px 14px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0">🏪</div>
+            <div>
+              <div style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700" id="biz-preview-name">Business</div>
+              <div style="font-size:.65rem;color:var(--mu)">Just now</div>
+            </div>
+          </div>
+          <div style="font-size:.84rem;line-height:1.5;color:var(--tx);white-space:pre-wrap" id="biz-preview-caption"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn-sec" style="flex:1" onclick="closeSheet('preview-sheet');openSheet('post-sheet')">← Edit</button>
+        <button class="btn-primary" style="flex:2" id="biz-preview-publish-btn" onclick="closeSheet('preview-sheet');submitPost()">Publish 🚀</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ════════════════════════════════════════════════════════════
 //  STATE & SESSION
@@ -404,6 +576,154 @@ function getBizId() { return BIZ?.id || ''; }
 function key(k)     { return getBizId() + '_' + k; }
 function load(k, def) { try { return JSON.parse(localStorage.getItem(key(k))) || def; } catch { return def; } }
 function save(k, v)   { localStorage.setItem(key(k), JSON.stringify(v)); }
+
+// ── FAQ ──────────────────────────────────────────────────────
+const BIZ_FAQ = [
+  { q: 'How do I get more followers?', a: 'Post regularly with photos, tag events, and engage with your community. Accounts with verified badges and active posts rank higher in search.' },
+  { q: 'How long does profile verification take?', a: 'Verified applications are reviewed within 1–3 business days. You\'ll receive a notification once reviewed.' },
+  { q: 'How do customers find my menu?', a: 'Share your public menu link found in the Profile tab. Customers can browse and place pickup orders directly from it.' },
+  { q: 'When do I receive payouts?', a: 'Payouts are processed weekly to your registered bank account once you have added a payment method.' },
+  { q: 'Can I post upcoming events?', a: 'Yes! Tap "New Event" to publish events to the shared Pulsify discovery feed visible to all users.' },
+  { q: 'How do I update my business hours?', a: 'Include your trading hours in your Tagline / Description in the Profile tab.' },
+  { q: 'Can I delete a post?', a: 'Yes, go to the Posts tab, find the post and tap the Delete button.' },
+];
+function renderBizFAQ() {
+  const el = document.getElementById('faq-biz');
+  if (!el) return;
+  el.innerHTML = BIZ_FAQ.map((f, i) => `
+    <div class="faq-item" id="faq-${i}">
+      <div class="faq-q" onclick="toggleFAQ(${i})">
+        <span>${xe(f.q)}</span>
+        <span class="faq-arr">▾</span>
+      </div>
+      <div class="faq-a">${xe(f.a)}</div>
+    </div>`).join('');
+}
+function toggleFAQ(i) { document.getElementById('faq-' + i)?.classList.toggle('open'); }
+
+// ── Registered toggle ────────────────────────────────────────
+let _isRegistered = false;
+function setRegistered(val) {
+  _isRegistered = val;
+  document.getElementById('registered-fields').style.display = val ? 'block' : 'none';
+  document.getElementById('reg-yes-btn').style.background = val ? 'rgba(198,255,74,.15)' : '';
+  document.getElementById('reg-yes-btn').style.borderColor = val ? 'rgba(198,255,74,.4)' : '';
+  document.getElementById('reg-no-btn').style.background  = !val ? 'rgba(0,229,255,.12)' : '';
+  document.getElementById('reg-no-btn').style.borderColor = !val ? 'rgba(0,229,255,.3)' : '';
+}
+
+// ── Verification ─────────────────────────────────────────────
+async function loadVerifStatus() {
+  const saved = load('verif', {});
+  if (saved.status) {
+    const labels = { pending: '⏳ Pending review', approved: '✅ Verified', rejected: '❌ Not approved' };
+    const el = document.getElementById('biz-verif-status');
+    if (el) el.textContent = labels[saved.status] || 'Not verified';
+    const btn = document.getElementById('biz-verif-btn');
+    if (btn && saved.status === 'approved') { btn.textContent = '✅ Verified'; btn.disabled = true; }
+    if (btn && saved.status === 'pending')  { btn.textContent = '⏳ Pending'; btn.disabled = true; }
+  }
+  const pm = load('payment', {});
+  if (pm.bank) {
+    const el = document.getElementById('biz-payment-status');
+    if (el) el.textContent = `${pm.bank} ••••${(pm.account||'').slice(-4)}`;
+    const btn = document.getElementById('biz-payment-btn');
+    if (btn) btn.textContent = 'Edit →';
+  }
+}
+
+async function submitVerification() {
+  const contact = document.getElementById('vf-contact').value.trim();
+  const idNum   = document.getElementById('vf-id').value.trim();
+  const phone   = document.getElementById('vf-phone').value.trim();
+  const address = document.getElementById('vf-address').value.trim();
+  const desc    = document.getElementById('vf-desc').value.trim();
+  if (!contact || !idNum || !phone || !address || !desc) {
+    showMsg('verif-msg', 'Please fill in all required fields.', 'err'); return;
+  }
+  const payload = {
+    is_registered: _isRegistered,
+    company: _isRegistered ? document.getElementById('vf-company').value.trim() : '',
+    reg_num: _isRegistered ? document.getElementById('vf-reg-num').value.trim() : '',
+    entity:  _isRegistered ? document.getElementById('vf-entity').value : '',
+    contact, id_number: idNum, phone, address, description: desc,
+    business_name: BIZ?.name || '',
+    submitted_at: new Date().toISOString(),
+  };
+  const sb = getSB();
+  if (sb) {
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        await fetch('/api/verify-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+          body: JSON.stringify(payload),
+        });
+      }
+    } catch(e) { console.warn('[verif]', e); }
+  }
+  save('verif', { status: 'pending', ...payload });
+  showMsg('verif-msg', '✅ Submitted! We\'ll review within 1–3 business days.', 'ok');
+  loadVerifStatus();
+  setTimeout(() => closeSheet('verify-sheet'), 2200);
+}
+
+// ── Payment Method ───────────────────────────────────────────
+function submitPaymentMethod() {
+  const bank    = document.getElementById('pm-bank').value;
+  const name    = document.getElementById('pm-name').value.trim();
+  const account = document.getElementById('pm-account').value.trim();
+  const type    = document.getElementById('pm-type').value;
+  if (!bank || !name || !account || !type) {
+    showMsg('payment-msg', 'Please fill in all required fields.', 'err'); return;
+  }
+  const pm = { bank, name, account, type, branch: document.getElementById('pm-branch').value.trim(), saved_at: new Date().toISOString() };
+  save('payment', pm);
+  showMsg('payment-msg', '✅ Payment method saved.', 'ok');
+  loadVerifStatus();
+  setTimeout(() => closeSheet('payment-sheet'), 1800);
+}
+
+function showMsg(id, text, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'msg show msg-' + type;
+}
+
+// ── Post Preview ─────────────────────────────────────────────
+function previewPost() {
+  const cap = document.getElementById('post-cap').value.trim();
+  if (!cap && !_bizImgFiles.length) { toast('Add a caption or photo first', 'err'); return; }
+
+  const imgArea = document.getElementById('biz-preview-imgs');
+  if (imgArea) {
+    if (_bizImgFiles.length) {
+      const cols = Math.min(_bizImgFiles.length, 3);
+      imgArea.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      imgArea.innerHTML = '';
+      _bizImgFiles.slice(0, 3).forEach(f => {
+        const div = document.createElement('div');
+        div.style.cssText = 'aspect-ratio:1;overflow:hidden;background:#000';
+        const img = document.createElement('img');
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+        const rd = new FileReader(); rd.onload = e => { img.src = e.target.result; }; rd.readAsDataURL(f);
+        div.appendChild(img); imgArea.appendChild(div);
+      });
+    } else {
+      imgArea.innerHTML = '';
+    }
+  }
+
+  const nameEl = document.getElementById('biz-preview-name');
+  if (nameEl) nameEl.textContent = BIZ?.name || 'Business';
+  const capEl = document.getElementById('biz-preview-caption');
+  if (capEl) capEl.textContent = cap;
+
+  closeSheet('post-sheet');
+  openSheet('preview-sheet');
+}
 
 // ── Boot ─────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
@@ -454,6 +774,8 @@ function initDashboard() {
   renderOrders();
   renderHoursEditor();
   renderProfile();
+  renderBizFAQ();
+  loadVerifStatus();
   renderHomeOrdersPreview();
   const url = `${location.origin}/business-menu.html?id=${getBizId()}`;
   document.getElementById('menu-url-display').textContent = url;

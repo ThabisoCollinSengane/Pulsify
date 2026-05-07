@@ -144,6 +144,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="tab-btn" onclick="switchTab('businesses')">🏢 Businesses</div>
     <div class="tab-btn" onclick="switchTab('events')">🎉 Events</div>
     <div class="tab-btn" onclick="switchTab('leads')">📊 Leads</div>
+    <div class="tab-btn" onclick="switchTab('verifications')">🏆 Verifications</div>
     <div class="tab-btn" onclick="switchTab('system')">⚙️ System</div>
   </div>
 
@@ -316,6 +317,27 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
   <!-- TAB: SYSTEM -->
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: VERIFICATIONS -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <div id="tab-verifications" class="tab-content">
+    <div style="margin-bottom:20px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Profile Verifications</div>
+      <div style="font-size:.82rem;color:var(--mu2)">Review and approve business &amp; organizer verification requests</div>
+    </div>
+    <div class="search-row">
+      <select class="inp" id="verif-filter" onchange="filterVerifList()" style="max-width:180px">
+        <option value="all">All Requests</option>
+        <option value="pending">⏳ Pending</option>
+        <option value="approved">✅ Approved</option>
+        <option value="rejected">❌ Rejected</option>
+      </select>
+      <button class="btn btn-surf" onclick="loadVerifications()">↺ Refresh</button>
+    </div>
+    <div id="msg-verif" class="msg"></div>
+    <div id="verif-list"><div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div></div>
+  </div>
+
   <div id="tab-system" class="tab-content">
     <div style="margin-bottom:20px">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">System Settings</div>
@@ -410,9 +432,86 @@ function switchTab(tab) {
   
   if (tab === 'users' && !ALL_USERS.length) loadUsers();
   else if (tab === 'businesses' && !ALL_BIZ.length) loadBusinesses();
+  else if (tab === 'verifications') loadVerifications();
 }
 
 async function signOutAdmin() { await sb.auth.signOut(); location.reload(); }
+
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+/* VERIFICATIONS */
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+let ALL_VERIF = [];
+
+async function loadVerifications() {
+  document.getElementById('verif-list').innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div>';
+  try {
+    const r = await fetch('/api/admin/verifications', { headers: { Authorization: 'Bearer ' + adminToken } });
+    const json = await r.json();
+    if (!r.ok) { showVerifMsg(json.error || 'Failed to load', 'err'); return; }
+    ALL_VERIF = json.verifications || [];
+    renderVerifList();
+  } catch(e) { showVerifMsg('Error: ' + e.message, 'err'); }
+}
+
+function filterVerifList() { renderVerifList(); }
+
+function renderVerifList() {
+  const filter = document.getElementById('verif-filter')?.value || 'all';
+  const list   = filter === 'all' ? ALL_VERIF : ALL_VERIF.filter(v => v.verif_status === filter);
+  const el     = document.getElementById('verif-list');
+  if (!list.length) { el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">No verification requests match this filter.</div>'; return; }
+
+  el.innerHTML = list.map(v => {
+    let req = {};
+    try { req = JSON.parse(v.verif_request || '{}'); } catch(e) {}
+    const statusBadge = v.verif_status === 'approved'
+      ? '<span class="status-badge s-ok">✅ Approved</span>'
+      : v.verif_status === 'rejected'
+      ? '<span class="status-badge s-bad">❌ Rejected</span>'
+      : '<span class="status-badge s-warn">⏳ Pending</span>';
+    const submitted = req.submitted_at ? new Date(req.submitted_at).toLocaleDateString('en-ZA') : '—';
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800">${esc(req.business_name || v.full_name || v.email)}</div>
+          <div style="font-size:.7rem;color:var(--mu2);margin-top:2px">${esc(v.email)} · Submitted ${submitted}</div>
+        </div>
+        ${statusBadge}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:.76rem;color:var(--mu2);margin-bottom:12px">
+        <div><strong>Role:</strong> ${esc(v.role || '—')}</div>
+        <div><strong>Registered:</strong> ${req.is_registered ? 'Yes' : 'Informal'}</div>
+        ${req.is_registered ? `<div><strong>Reg No:</strong> ${esc(req.reg_num || '—')}</div><div><strong>Entity:</strong> ${esc(req.entity || '—')}</div>` : ''}
+        <div><strong>Contact:</strong> ${esc(req.contact || '—')}</div>
+        <div><strong>Phone:</strong> ${esc(req.phone || '—')}</div>
+        <div><strong>SA ID:</strong> ${esc(req.id_number || '—')}</div>
+        <div><strong>Address:</strong> ${esc(req.address || '—')}</div>
+      </div>
+      ${req.description ? `<div style="font-size:.75rem;color:var(--mu2);margin-bottom:12px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:8px">${esc(req.description)}</div>` : ''}
+      ${v.verif_status === 'pending' ? `<div style="display:flex;gap:8px">
+        <button class="btn btn-li" onclick="reviewVerif('${v.id}','approve')" style="flex:1">✅ Approve &amp; Verify</button>
+        <button class="btn btn-pk" onclick="reviewVerif('${v.id}','reject')" style="flex:1">❌ Reject</button>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function reviewVerif(userId, action) {
+  if (!confirm(`${action === 'approve' ? 'Approve and verify' : 'Reject'} this account?`)) return;
+  try {
+    const r = await fetch(`/api/admin/verifications/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ action }),
+    });
+    const json = await r.json();
+    if (!r.ok) { showVerifMsg(json.error || 'Failed', 'err'); return; }
+    showVerifMsg(`✅ Account ${action === 'approve' ? 'approved and verified' : 'rejected'} successfully.`, 'ok');
+    loadVerifications();
+  } catch(e) { showVerifMsg('Error: ' + e.message, 'err'); }
+}
+
+function showVerifMsg(m, t) { const el=document.getElementById('msg-verif'); if (!el) return; el.textContent=m; el.className='msg show msg-'+(t==='err'?'err':'ok'); }
 
 /* ── SA validation ── */
 function validSA(lat, lon) {
