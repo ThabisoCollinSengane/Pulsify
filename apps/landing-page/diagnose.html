@@ -15,8 +15,8 @@ pre{background:#111;padding:10px;border:1px solid #333;overflow-x:auto;white-spa
 <h1>🔬 Pulsify Diagnostic</h1>
 <div id="out">Running tests…</div>
 <script>
-const URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
-const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+const SUPA_URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
 const out = document.getElementById('out');
 function log(html) { out.innerHTML += html + '<br>'; }
 function section(t) { log(`<h2>${t}</h2>`); }
@@ -28,8 +28,8 @@ function section(t) { log(`<h2>${t}</h2>`); }
 
   section('2. Direct REST query (no SDK)');
   try {
-    const r = await fetch(`${URL}/rest/v1/events?select=id,name&limit=1`, {
-      headers: { 'apikey': KEY, 'Authorization': `Bearer ${KEY}` }
+    const r = await fetch(`${SUPA_URL}/rest/v1/events?select=id,name&limit=1`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
     });
     const txt = await r.text();
     log(`<span class="info">HTTP ${r.status}</span>`);
@@ -40,7 +40,7 @@ function section(t) { log(`<h2>${t}</h2>`); }
 
   section('3. SDK query: events');
   try {
-    const sb = window.supabase.createClient(URL, KEY);
+    const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
     const { data, error, count } = await sb.from('events').select('id,name', { count: 'exact' }).limit(3);
     if (error) log(`<span class="err">✗ ${error.message}</span><pre>${JSON.stringify(error,null,2)}</pre>`);
     else log(`<span class="ok">✓ Got ${data.length} rows (total ${count})</span><pre>${JSON.stringify(data,null,2)}</pre>`);
@@ -48,7 +48,7 @@ function section(t) { log(`<h2>${t}</h2>`); }
 
   section('4. SDK query: businesses');
   try {
-    const sb = window.supabase.createClient(URL, KEY);
+    const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
     const { data, error, count } = await sb.from('businesses').select('id,name', { count: 'exact' }).limit(3);
     if (error) log(`<span class="err">✗ ${error.message}</span><pre>${JSON.stringify(error,null,2)}</pre>`);
     else log(`<span class="ok">✓ Got ${data.length} rows (total ${count})</span><pre>${JSON.stringify(data,null,2)}</pre>`);
@@ -56,7 +56,7 @@ function section(t) { log(`<h2>${t}</h2>`); }
 
   section('5. SDK query: posts');
   try {
-    const sb = window.supabase.createClient(URL, KEY);
+    const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
     const { data, error } = await sb.from('posts').select('id').limit(1);
     if (error) log(`<span class="err">✗ ${error.message}</span>`);
     else log(`<span class="ok">✓ posts accessible (${data.length} rows)</span>`);
@@ -64,7 +64,7 @@ function section(t) { log(`<h2>${t}</h2>`); }
 
   section('6. SDK query: profiles');
   try {
-    const sb = window.supabase.createClient(URL, KEY);
+    const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
     const { data, error } = await sb.from('profiles').select('id').limit(1);
     if (error) log(`<span class="err">✗ ${error.message}</span>`);
     else log(`<span class="ok">✓ profiles accessible (${data.length} rows)</span>`);
@@ -85,13 +85,13 @@ function section(t) { log(`<h2>${t}</h2>`); }
       const isNew = v >= 'v2.2.0';
       log(`<span class="${isNew ? 'ok' : 'err'}">${isNew ? '✓' : '✗'} Landing page version: ${v}${isNew ? '' : ' — OLD CODE still deployed!'}</span>`);
     } else {
-      log(`<span class="err">✗ Could not find build-version in landing page — very old code</span>`);
+      log(`<span class="err">✗ No build-version found — deploy is still OLD code. Run git pull then redeploy.</span>`);
     }
   } catch(e) { log(`<span class="err">Could not fetch landing page: ${e.message}</span>`); }
 
   section('9. Events with future dates (DB check)');
   try {
-    const sb = window.supabase.createClient(URL, KEY);
+    const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
     const today = new Date().toISOString().split('T')[0];
     const { data, error, count } = await sb.from('events').select('id,name,date_local', { count: 'exact' }).gte('date_local', today).limit(3);
     if (error) log(`<span class="err">✗ ${error.message}</span>`);
