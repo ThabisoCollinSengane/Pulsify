@@ -1061,6 +1061,62 @@ module.exports = async (req, res) => {
       return res.status(200).json({ success: true, profile: data });
     }
 
+    /* ─── GET /admin/banners ─────────────────────────────── */
+    if (url === '/admin/banners' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const { data, error } = await sb().from('banners').select('*').order('created_at', { ascending: false });
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ banners: data });
+    }
+
+    /* ─── POST /admin/banners ────────────────────────────── */
+    if (url === '/admin/banners' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const { title, subtitle, target_url, target_type, image_url, bg_color, expires_at } = req.body || {};
+      if (!title) return res.status(400).json({ error: 'title is required' });
+      const { data, error } = await sb().from('banners').insert({
+        title, subtitle: subtitle || null, target_url: target_url || null,
+        target_type: target_type || 'external', image_url: image_url || null,
+        bg_color: bg_color || '#FF5C00', is_active: true,
+        expires_at: expires_at || null,
+      }).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(201).json({ banner: data });
+    }
+
+    /* ─── PATCH /admin/banners/:id ───────────────────────── */
+    const bannerMatch = url.match(/^\/admin\/banners\/([^/]+)$/);
+    if (bannerMatch && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const { data, error } = await sb().from('banners').update(req.body).eq('id', bannerMatch[1]).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ banner: data });
+    }
+
+    /* ─── DELETE /admin/banners/:id ──────────────────────── */
+    if (bannerMatch && req.method === 'DELETE') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const { error } = await sb().from('banners').delete().eq('id', bannerMatch[1]);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ success: true });
+    }
+
+    /* ─── GET /banners (public — active only) ────────────── */
+    if (url === '/banners' && req.method === 'GET') {
+      const now = new Date().toISOString();
+      const { data, error } = await sb().from('banners')
+        .select('id,title,subtitle,target_url,target_type,image_url,bg_color')
+        .eq('is_active', true)
+        .or(`expires_at.is.null,expires_at.gte.${now}`)
+        .order('created_at', { ascending: false });
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ banners: data });
+    }
+
     /* ─── GET /health ────────────────────────────────────── */
     if (url === '/health' && req.method === 'GET') {
       return res.status(200).json({ ok: true, ts: Date.now(), url: SUPA_URL });
