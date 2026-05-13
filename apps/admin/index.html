@@ -188,7 +188,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
             <th>User</th>
             <th>Email</th>
             <th>Role</th>
-            <th>Trial Status</th>
+            <th>Subscription</th>
             <th>Status</th>
             <th>Joined</th>
             <th>Actions</th>
@@ -933,32 +933,39 @@ function renderUsersTable() {
       ? '<span class="role-badge role-business">🏢 Business</span>'
       : '<span class="role-badge role-user">👤 User</span>';
     
+    const subType = u.subscription_type || 'free';
     const trialExpires = u.trial_expires_at ? new Date(u.trial_expires_at) : null;
     const hasActiveTrial = trialExpires && trialExpires > new Date();
-    const trialBadge = hasActiveTrial
-      ? `<span class="status-badge trial-badge">⏰ Trial until ${trialExpires.toLocaleDateString()}</span>`
-      : u.trial_expires_at
+    const subBadge = subType === 'premium'
+      ? '<span class="status-badge" style="background:rgba(176,38,255,.15);border:1px solid rgba(176,38,255,.3);color:#B026FF">💎 Premium</span>'
+      : hasActiveTrial
+      ? `<span class="status-badge trial-badge">⏰ Trial — ${trialExpires.toLocaleDateString()}</span>`
+      : trialExpires
       ? '<span class="status-badge s-warn">Trial Expired</span>'
-      : '—';
-    
+      : '<span style="color:var(--mu);font-size:.72rem">Free</span>';
+
     const statusBadge = u.suspended
       ? '<span class="status-badge suspended-badge">🚫 Suspended</span>'
       : '<span class="status-badge s-ok">✅ Active</span>';
-    
+
     const joined = new Date(u.created_at).toLocaleDateString();
-    
+
     return `<tr>
       <td class="name-cell" title="${esc(u.display_name || 'No name')}">${esc(u.display_name || 'No name')}</td>
       <td style="font-family:'JetBrains Mono',monospace;font-size:.72rem">${esc(u.email)}</td>
       <td>${roleBadge}</td>
-      <td>${trialBadge}</td>
+      <td>${subBadge}</td>
       <td>${statusBadge}</td>
       <td style="font-size:.72rem;color:var(--mu)">${joined}</td>
       <td>
         <div class="user-actions">
-          ${u.suspended 
+          ${u.suspended
             ? `<button class="btn btn-li" style="padding:5px 10px;font-size:.68rem" onclick="toggleSuspend('${u.id}',false)">✅ Activate</button>`
             : `<button class="btn btn-pk" style="padding:5px 10px;font-size:.68rem" onclick="toggleSuspend('${u.id}',true)">🚫 Suspend</button>`
+          }
+          ${subType === 'premium'
+            ? `<button class="btn btn-surf" style="padding:5px 10px;font-size:.68rem" onclick="setSubscription('${u.id}','free')">↓ Free</button>`
+            : `<button class="btn" style="padding:5px 10px;font-size:.68rem;background:rgba(176,38,255,.12);border:1px solid rgba(176,38,255,.3);color:#B026FF;border-radius:8px;cursor:pointer" onclick="setSubscription('${u.id}','premium')">💎 Premium</button>`
           }
           <button class="btn btn-cy" style="padding:5px 10px;font-size:.68rem" onclick="showTrialModal('${u.id}')">⏰ Trial</button>
           <button class="btn btn-surf" style="padding:5px 10px;font-size:.68rem" onclick="showRoleModal('${u.id}')">👤 Role</button>
@@ -1031,13 +1038,36 @@ async function grantTrial(userId, months) {
     
     const { trial_expires_at } = await res.json();
     const idx = ALL_USERS.findIndex(u => u.id === userId);
-    if (idx > -1) ALL_USERS[idx].trial_expires_at = trial_expires_at;
+    if (idx > -1) { ALL_USERS[idx].trial_expires_at = trial_expires_at; ALL_USERS[idx].subscription_type = 'trial'; }
     updateUserStats();
     renderUsersTable();
-    showUserMsg(`✅ ${months}-month trial granted successfully`, 'ok');
+    showUserMsg(`✅ ${months}-month trial granted to ${ALL_USERS.find(u=>u.id===userId)?.display_name||'user'}`, 'ok');
   } catch(e) {
     showUserMsg(`Error: ${e.message}`, 'err');
   }
+}
+
+async function setSubscription(userId, type) {
+  const user = ALL_USERS.find(u => u.id === userId);
+  if (!user) return;
+  const label = type === 'premium' ? '💎 Premium' : 'Free';
+  if (!confirm(`Set ${esc(user.display_name || user.email)} to ${label}?`)) return;
+  try {
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ subscription_type: type }),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Failed'); }
+    const idx = ALL_USERS.findIndex(u => u.id === userId);
+    if (idx > -1) {
+      ALL_USERS[idx].subscription_type = type;
+      if (type !== 'trial') ALL_USERS[idx].trial_expires_at = null;
+    }
+    updateUserStats();
+    renderUsersTable();
+    showUserMsg(`✅ ${esc(user.display_name || user.email)} set to ${label}`, 'ok');
+  } catch(e) { showUserMsg(`Error: ${e.message}`, 'err'); }
 }
 
 function showRoleModal(userId) {

@@ -763,12 +763,16 @@ module.exports = async (req, res) => {
       }
 
       const userId = adminUserMatch[1];
-      const { suspended, role } = req.body || {};
-      
+      const { suspended, role, subscription_type } = req.body || {};
+
       const updates = {};
       if (typeof suspended === 'boolean') updates.suspended = suspended;
-      if (role && ['user', 'business', 'admin'].includes(role)) updates.role = role;
-      
+      if (role && ['user', 'business', 'admin', 'organizer'].includes(role)) updates.role = role;
+      if (subscription_type && ['free', 'premium', 'trial'].includes(subscription_type)) {
+        updates.subscription_type = subscription_type;
+        if (subscription_type !== 'trial') updates.trial_expires_at = null;
+      }
+
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({ error: 'No valid updates provided' });
       }
@@ -805,7 +809,7 @@ module.exports = async (req, res) => {
       
       const { data, error } = await sb()
         .from('profiles')
-        .update({ trial_expires_at: expiresAt.toISOString() })
+        .update({ trial_expires_at: expiresAt.toISOString(), subscription_type: 'trial' })
         .eq('id', userId)
         .select()
         .single();

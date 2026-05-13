@@ -102,6 +102,7 @@ select.inp option{background:#0D1424}
 </div>
 
 <div class="main">
+  <div id="org-sub-banner" style="display:none;margin:0 0 14px;padding:12px 16px;border-radius:14px;font-size:.78rem;line-height:1.5"></div>
   <div class="hero">
     <div class="hero-name" id="org-name">Loading…</div>
     <div class="hero-sub" id="org-handle">@handle · Event Organizer</div>
@@ -509,6 +510,25 @@ function previewOrgPost() {
 function x(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function toast(m, t='') { const el=document.getElementById('toast'); el.textContent=m; el.className='toast '+t+' show'; setTimeout(()=>el.classList.remove('show'),3500); }
 
+function showOrgSubBanner(profile) {
+  const banner = document.getElementById('org-sub-banner');
+  if (!banner) return;
+  const subType = profile.subscription_type || 'free';
+  const trialExpires = profile.trial_expires_at ? new Date(profile.trial_expires_at) : null;
+  const daysLeft = trialExpires ? Math.ceil((trialExpires - Date.now()) / 86400000) : null;
+
+  if (subType === 'trial' && daysLeft !== null && daysLeft > 0 && daysLeft <= 7) {
+    banner.style.cssText = 'display:block;margin:0 0 14px;padding:12px 16px;border-radius:14px;font-size:.78rem;line-height:1.5;background:rgba(255,184,0,.1);border:1px solid rgba(255,184,0,.3);color:#FFB800';
+    banner.innerHTML = `⏰ <strong>Trial expires in ${daysLeft} day${daysLeft===1?'':'s'}</strong> — events will require admin approval after expiry. <a href="mailto:support@pulsify.co.za" style="color:#FFB800;font-weight:700">Upgrade →</a>`;
+  } else if (subType === 'trial' && daysLeft !== null && daysLeft <= 0) {
+    banner.style.cssText = 'display:block;margin:0 0 14px;padding:12px 16px;border-radius:14px;font-size:.78rem;line-height:1.5;background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);color:#FF2D78';
+    banner.innerHTML = `🚫 <strong>Your trial has expired.</strong> New events require admin approval. <a href="mailto:support@pulsify.co.za" style="color:#FF2D78;font-weight:700">Upgrade to Premium →</a>`;
+  } else if (subType === 'premium') {
+    banner.style.cssText = 'display:block;margin:0 0 14px;padding:12px 16px;border-radius:14px;font-size:.78rem;line-height:1.5;background:rgba(176,38,255,.08);border:1px solid rgba(176,38,255,.2);color:#B026FF';
+    banner.innerHTML = `💎 <strong>Premium organizer.</strong> Your events go live instantly without admin approval.`;
+  }
+}
+
 function switchTab(btn, paneId) {
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
@@ -538,6 +558,7 @@ async function init() {
 
   document.getElementById('org-name').textContent = currentProfile.display_name || currentUser.email?.split('@')[0] || 'Organizer';
   document.getElementById('org-handle').textContent = '@' + (currentProfile.username || 'organizer') + ' · Event Organizer';
+  showOrgSubBanner(currentProfile);
 
   const [{ count: postsCount }, { count: followersCount }, { count: eventsCount }] = await Promise.all([
     sb.from('posts').select('*', {count:'exact',head:true}).eq('user_id', currentUser.id),
