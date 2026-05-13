@@ -1074,11 +1074,11 @@ function showRoleModal(userId) {
   const user = ALL_USERS.find(u => u.id === userId);
   if (!user) return;
   
-  const role = prompt(`Change role for ${user.display_name || user.email}?\n\nCurrent: ${user.role}\n\nEnter new role (user, business, admin):`);
+  const role = prompt(`Change role for ${user.display_name || user.email}?\n\nCurrent: ${user.role}\n\nEnter new role (user, business, organizer, admin):`);
   if (!role) return;
-  
-  if (!['user','business','admin'].includes(role.toLowerCase())) {
-    alert('Invalid role. Must be: user, business, or admin');
+
+  if (!['user','business','organizer','admin'].includes(role.toLowerCase())) {
+    alert('Invalid role. Must be: user, business, organizer, or admin');
     return;
   }
   

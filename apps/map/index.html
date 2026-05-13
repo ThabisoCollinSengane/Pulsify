@@ -159,6 +159,12 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:an
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.err{border-color:var(--pk);color:var(--pk)}
 
+/* ── Banner strip ── */
+#banner-strip{position:fixed;top:58px;left:50%;transform:translateX(-50%);z-index:199;width:min(420px,calc(100% - 24px));display:none;pointer-events:auto}
+.b-card{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(12px);margin-bottom:8px;cursor:pointer;animation:slideDown .3s ease;transition:opacity .2s}
+.b-card:hover{opacity:.9}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+
 /* ── Loading overlay ── */
 #loader{
   position:fixed;inset:0;z-index:300;
@@ -196,6 +202,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:an
 </div>
 
 <div id="map"></div>
+<div id="banner-strip"></div>
 
 <div class="legend">
   <div class="legend-row"><div class="legend-dot" style="background:linear-gradient(135deg,#FF5C00,#FF2D78)"></div>Events</div>
@@ -423,7 +430,30 @@ async function loadData() {
   }
 }
 
-map.on('load', loadData);
+map.on('load', () => { loadData(); loadBanners(); });
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function loadBanners() {
+  try {
+    const r = await fetch('/api/banners');
+    const { banners } = await r.json();
+    if (!banners?.length) return;
+    const strip = document.getElementById('banner-strip');
+    strip.style.display = 'block';
+    strip.innerHTML = banners.map(b => `
+      <div class="b-card" style="background:${esc(b.bg_color)}22;border-color:${esc(b.bg_color)}55"
+           onclick="${b.target_url ? `window.location='${esc(b.target_url)}'` : 'void 0'}">
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(b.title)}</div>
+          ${b.subtitle ? `<div style="font-size:.7rem;color:rgba(255,255,255,.6);margin-top:1px">${esc(b.subtitle)}</div>` : ''}
+        </div>
+        <button onclick="event.stopPropagation();this.closest('.b-card').remove();if(!document.querySelector('.b-card'))document.getElementById('banner-strip').style.display='none'"
+          style="background:none;border:none;color:rgba(255,255,255,.5);font-size:.9rem;cursor:pointer;flex-shrink:0;padding:2px 4px;line-height:1">✕</button>
+      </div>`).join('');
+    setTimeout(() => { strip.style.display = 'none'; }, 15000);
+  } catch(e) {}
+}
 </script>
 </body>
 </html>

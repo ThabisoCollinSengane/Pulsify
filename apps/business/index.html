@@ -204,6 +204,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
   <button class="bb" data-tab="events" onclick="showTab('events')"><span class="bb-ico">🎉</span><span class="bb-lbl">Events</span></button>
   <button class="bb" data-tab="menu-mgr" onclick="showTab('menu-mgr')"><span class="bb-ico">🍽️</span><span class="bb-lbl">Menu</span></button>
   <button class="bb" data-tab="orders" onclick="showTab('orders')"><span class="bb-ico">📦</span><span class="bb-lbl">Orders</span><span class="bb-badge" id="orders-badge">0</span></button>
+  <button class="bb" data-tab="analytics" onclick="showTab('analytics')"><span class="bb-ico">📊</span><span class="bb-lbl">Analytics</span></button>
   <button class="bb" data-tab="profile" onclick="showTab('profile')"><span class="bb-ico">⚙️</span><span class="bb-lbl">Profile</span></button>
 </nav>
 
@@ -291,6 +292,14 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
       <tbody id="orders-tbody"></tbody>
     </table>
   </div>
+</div>
+
+<!-- ══ ANALYTICS ══ -->
+<div class="panel" id="tab-analytics">
+  <div class="sec-head">
+    <div><div class="sec-title">Analytics</div><div class="sec-sub">Last 7 days — premium feature</div></div>
+  </div>
+  <div id="analytics-body" style="padding:0 14px 60px"></div>
 </div>
 
 <!-- ══ PROFILE ══ -->
@@ -811,6 +820,7 @@ function showTab(name) {
   document.querySelectorAll('.bb').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   const p = document.getElementById('tab-' + name);
   if (p) { p.classList.add('active'); p.scrollTop = 0; }
+  if (name === 'analytics') renderAnalytics();
 }
 function openSheet(id)  { document.getElementById(id).classList.add('open'); }
 function closeSheet(id) { document.getElementById(id).classList.remove('open'); }
@@ -880,6 +890,93 @@ function renderStats() {
 }
 function stat(n, l, color = '') {
   return `<div class="stat-card"><div class="stat-num" ${color ? 'style="color:' + color + '"' : ''}>${n}</div><div class="stat-lbl">${l}</div></div>`;
+}
+
+async function renderAnalytics() {
+  const el = document.getElementById('analytics-body');
+  if (!el) return;
+
+  // Check subscription from Supabase
+  const sb = getSB();
+  const { data: { session } } = await sb.auth.getSession();
+  const { data: profile } = session
+    ? await sb.from('profiles').select('subscription_type,trial_expires_at').eq('id', session.user.id).single()
+    : { data: null };
+  const subType = profile?.subscription_type || 'free';
+  const trialOk = subType === 'trial' && profile?.trial_expires_at && new Date(profile.trial_expires_at) > new Date();
+  const isPremium = subType === 'premium' || trialOk;
+
+  if (!isPremium) {
+    el.innerHTML = `<div style="text-align:center;padding:48px 20px">
+      <div style="font-size:3rem;margin-bottom:12px">💎</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:6px">Premium Feature</div>
+      <div style="font-size:.8rem;color:var(--mu2);line-height:1.6;margin-bottom:20px">Analytics is available on the Premium plan.<br/>Get revenue charts, order trends, and customer insights.</div>
+      <a href="mailto:support@pulsify.co.za?subject=Premium%20Upgrade" style="background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;padding:12px 28px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;text-decoration:none">Upgrade — R499/month</a>
+    </div>`;
+    return;
+  }
+
+  // Build last-7-days buckets
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (6 - i)); d.setHours(0,0,0,0);
+    return d.toISOString().split('T')[0];
+  });
+
+  const revenue = {}, count = {};
+  days.forEach(d => { revenue[d] = 0; count[d] = 0; });
+
+  ORDERS.forEach(o => {
+    const day = (o.created_at || '').slice(0, 10);
+    if (revenue[day] !== undefined && o.status !== 'cancelled') {
+      revenue[day] += parseFloat(o.total || 0);
+      count[day]++;
+    }
+  });
+
+  const maxRev = Math.max(...days.map(d => revenue[d]), 1);
+  const totalRev = days.reduce((s, d) => s + revenue[d], 0);
+  const totalOrders = days.reduce((s, d) => s + count[d], 0);
+  const avgOrder = totalOrders ? (totalRev / totalOrders) : 0;
+
+  const statusCounts = { pending: 0, ready: 0, completed: 0, cancelled: 0 };
+  ORDERS.forEach(o => { if (statusCounts[o.status] !== undefined) statusCounts[o.status]++; });
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">
+      ${stat('R'+totalRev.toFixed(0),'7-Day Revenue','var(--li)')}
+      ${stat(totalOrders,'Total Orders')}
+      ${stat('R'+avgOrder.toFixed(0),'Avg Order','var(--cy)')}
+    </div>
+
+    <div style="margin-bottom:20px">
+      <div class="section-label">Daily Revenue (Last 7 Days)</div>
+      <div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:16px;display:flex;align-items:flex-end;gap:6px;height:140px">
+        ${days.map(d => {
+          const pct = Math.round((revenue[d] / maxRev) * 100);
+          const label = new Date(d + 'T12:00:00').toLocaleDateString('en-ZA', { weekday:'short' });
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end">
+            <div style="font-size:.56rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700">R${revenue[d].toFixed(0)}</div>
+            <div style="width:100%;background:linear-gradient(180deg,#C6FF4A,#00D4AA);border-radius:4px 4px 0 0;min-height:3px;height:${pct}%;transition:height .4s"></div>
+            <div style="font-size:.6rem;color:var(--mu2)">${label}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">Orders by Status (All Time)</div>
+      <div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        ${[['pending','🟠','var(--or)'],['ready','🟢','var(--li)'],['completed','✅','var(--te)'],['cancelled','❌','var(--pk)']].map(([s,ico,c]) =>
+          `<div style="display:flex;align-items:center;gap:8px">
+            <div style="font-size:1.2rem">${ico}</div>
+            <div>
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;line-height:1;color:${c}">${statusCounts[s]}</div>
+              <div style="font-size:.64rem;color:var(--mu);text-transform:capitalize">${s}</div>
+            </div>
+          </div>`
+        ).join('')}
+      </div>
+    </div>`;
 }
 
 // ════════════════════════════════════════════════════════════
