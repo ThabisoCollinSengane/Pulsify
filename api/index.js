@@ -237,6 +237,15 @@ module.exports = async (req, res) => {
       const { caption, image_url, event_id, event_name, post_type } = req.body || {};
       if (!caption && !image_url) return res.status(400).json({ error: 'caption or image_url required' });
 
+      // Monthly post limit: free organizers/businesses get 1 post per calendar month
+      const { data: poster } = await sb().from('profiles').select('role,subscription_type').eq('id', user.id).single();
+      if (poster?.subscription_type === 'free' && ['organizer', 'business'].includes(poster?.role)) {
+        const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+        const { count } = await sb().from('posts').select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id).gte('created_at', monthStart.toISOString());
+        if (count >= 1) return res.status(403).json({ error: 'Free accounts can post once per month. Upgrade to premium for unlimited posts.' });
+      }
+
       const { data: post, error } = await sb().from('posts').insert({
         user_id: user.id, caption: caption || null, image_url: image_url || null,
         event_id: event_id || null, event_name: event_name || null,

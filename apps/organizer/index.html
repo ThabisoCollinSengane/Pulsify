@@ -658,6 +658,7 @@ async function submitEvent() {
       organiser_id: currentUser.id,
       is_active: true,
       source: 'organizer',
+      approved: currentProfile?.subscription_type === 'premium' || currentProfile?.subscription_type === 'trial',
     });
     if (error) throw new Error(error.message);
 
@@ -672,7 +673,8 @@ async function submitEvent() {
       })
     }).catch(() => {});
 
-    toast('🎉 Event created and posted to feed!', 'ok');
+    const isPremium = currentProfile?.subscription_type === 'premium' || currentProfile?.subscription_type === 'trial';
+    toast(isPremium ? '🎉 Event created and posted to feed!' : '🎉 Event submitted — pending admin approval before it goes live.', 'ok');
     document.getElementById('ev-name').value = '';
     document.getElementById('ev-date').value = '';
     document.getElementById('ev-time').value = '';

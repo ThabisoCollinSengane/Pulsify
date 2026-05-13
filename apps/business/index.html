@@ -1114,19 +1114,26 @@ function syncToSharedEvents(ev) {
 // ════════════════════════════════════════════════════════════
 //  MENU ITEMS
 // ════════════════════════════════════════════════════════════
-function renderMenu() {
-  const items = load('menu', []);
-  const el    = document.getElementById('menu-list');
-  if (!items.length) { el.innerHTML = emptyState('🍽️', 'No menu items', 'Add items to your menu. Customers can order them for pickup via your public order page.'); return; }
-  const cats = [...new Set(items.map(i => i.cat || 'General'))];
-  el.innerHTML = cats.map(cat =>
+async function renderMenu() {
+  const el = document.getElementById('menu-list');
+  el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--mu)">Loading…</div>';
+  const bizId = getBizId();
+  if (!bizId) { el.innerHTML = emptyState('🍽️', 'No menu items', 'Add items to your menu.'); return; }
+  const sb = getSB();
+  if (!sb) return;
+  const { data: items } = await sb.from('menu_items').select('*').eq('business_id', bizId).order('sort_order').order('created_at');
+  if (!items?.length) { el.innerHTML = emptyState('🍽️', 'No menu items', 'Add items to your menu. Customers can order them for pickup via your public order page.'); return; }
+  const cats = [...new Set(items.map(i => i.category || 'General'))];
+  // Free account cap warning
+  const capHtml = items.length >= 10 ? `<div style="margin:10px 14px;padding:10px 14px;background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.3);border-radius:10px;font-size:.74rem;color:var(--or)">⚠️ Free plan limit: 10 items. Upgrade to premium for unlimited menu items.</div>` : '';
+  el.innerHTML = capHtml + cats.map(cat =>
     `<div style="padding:10px 14px 0"><div class="section-label">${xe(cat)}</div></div>` +
-    items.filter(i => (i.cat || 'General') === cat).map(item => `
+    items.filter(i => (i.category || 'General') === cat).map(item => `
       <div class="menu-item-card">
-        <div class="mi-img">${(item.photos?.[0] || item.img) ? `<img src="${xe(item.photos?.[0] || item.img)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : ''}${item.emoji || '🍽️'}${item.photos?.length > 1 ? `<span style="position:absolute;bottom:1px;right:1px;background:rgba(0,0,0,.75);color:#fff;font-size:.52rem;padding:1px 3px;border-radius:3px">+${item.photos.length-1}</span>` : ''}</div>
+        <div class="mi-img">${item.image_url ? `<img src="${xe(item.image_url)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : ''}🍽️</div>
         <div class="mi-info">
-          <div class="mi-name" style="${item.available==='0'||item.available===false?'opacity:.5':''}"}>${xe(item.name)}</div>
-          <div class="mi-desc">${xe(item.desc || '')}</div>
+          <div class="mi-name" style="${!item.is_available ? 'opacity:.5' : ''}">${xe(item.name)}</div>
+          <div class="mi-desc">${xe(item.description || '')}</div>
           <div class="mi-price">R${item.price}</div>
         </div>
         <div class="mi-actions">
@@ -1171,40 +1178,58 @@ async function submitMenuItem() {
     photos = existing?.photos || [];
   }
 
-  const item = {
-    id: id || 'mi_' + Date.now(), name,
-    desc:    document.getElementById('mi-desc').value.trim(),
+  const bizId = getBizId();
+  const sb = getSB();
+  if (!sb) { toast('Not connected', 'err'); return; }
+
+  // Free plan: cap at 10 items (only on new items, not edits)
+  if (!id) {
+    const { count } = await sb.from('menu_items').select('id', { count: 'exact', head: true }).eq('business_id', bizId);
+    if ((count || 0) >= 10) {
+      toast('Free plan limit: 10 items. Upgrade to premium for unlimited.', 'err');
+      return;
+    }
+  }
+
+  const row = {
+    business_id:  bizId,
+    name,
+    description:  document.getElementById('mi-desc').value.trim() || null,
     price,
-    emoji:   document.getElementById('mi-emoji').value || '🍽️',
-    cat:     document.getElementById('mi-cat').value.trim() || 'General',
-    img:     photos[0] || '',
-    photos,
-    available: document.getElementById('mi-avail').value,
-    bizId: getBizId()
+    category:     document.getElementById('mi-cat').value.trim() || 'General',
+    image_url:    photos[0] || null,
+    is_available: document.getElementById('mi-avail').value !== '0',
   };
-  const items = load('menu', []);
-  if (id) { const i = items.findIndex(m => m.id === id); if (i >= 0) items[i] = item; } else { items.push(item); }
-  save('menu', items);
+
+  let error;
+  if (id) {
+    ({ error } = await sb.from('menu_items').update(row).eq('id', id).eq('business_id', bizId));
+  } else {
+    ({ error } = await sb.from('menu_items').insert(row));
+  }
+  if (error) { toast('Failed to save: ' + error.message, 'err'); return; }
+
   closeSheet('menu-sheet'); resetMenuForm();
   toast(id ? 'Item updated ✅' : 'Item added ✅', 'ok');
   renderMenu();
 }
 
-function editMenuItem(id) {
-  const item = load('menu', []).find(m => m.id === id); if (!item) return;
+async function editMenuItem(id) {
+  const sb = getSB(); if (!sb) return;
+  const { data: item } = await sb.from('menu_items').select('*').eq('id', id).single();
+  if (!item) return;
   document.getElementById('mi-edit-id').value    = id;
   document.getElementById('mi-sheet-title').textContent = 'Edit Item';
   document.getElementById('mi-name').value  = item.name || '';
-  document.getElementById('mi-desc').value  = item.desc || '';
+  document.getElementById('mi-desc').value  = item.description || '';
   document.getElementById('mi-price').value = item.price || '';
-  document.getElementById('mi-emoji').value = item.emoji || '';
-  document.getElementById('mi-cat').value   = item.cat || '';
-  document.getElementById('mi-avail').value = (item.available !== false && item.available !== '0') ? '1' : '0';
+  document.getElementById('mi-emoji').value = '';
+  document.getElementById('mi-cat').value   = item.category || '';
+  document.getElementById('mi-avail').value = item.is_available !== false ? '1' : '0';
   _menuImgFiles = [];
   const grid = document.getElementById('mi-img-grid');
   if (grid) {
-    const existing = item.photos?.length ? item.photos : (item.img ? [item.img] : []);
-    grid.innerHTML = existing.map(u => `<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;background:#111"><img src="${xe(u)}" style="width:100%;height:100%;object-fit:cover" loading="lazy"/></div>`).join('');
+    grid.innerHTML = item.image_url ? `<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;background:#111"><img src="${xe(item.image_url)}" style="width:100%;height:100%;object-fit:cover" loading="lazy"/></div>` : '';
   }
   openSheet('menu-sheet');
 }
@@ -1219,9 +1244,11 @@ function resetMenuForm() {
   if (grid) grid.innerHTML = '';
 }
 
-function deleteMenuItem(id) {
+async function deleteMenuItem(id) {
   if (!confirm('Remove this item?')) return;
-  save('menu', load('menu', []).filter(m => m.id !== id));
+  const sb = getSB(); if (!sb) return;
+  const { error } = await sb.from('menu_items').delete().eq('id', id).eq('business_id', getBizId());
+  if (error) { toast('Failed to remove: ' + error.message, 'err'); return; }
   renderMenu(); toast('Item removed');
 }
 
