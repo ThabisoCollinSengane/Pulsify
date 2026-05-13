@@ -815,7 +815,7 @@ module.exports = async (req, res) => {
 
       const { data, error } = await sb()
         .from('profiles')
-        .select('id,email,role,full_name,trial_expires_at,suspended,created_at')
+        .select('id,email,role,display_name,subscription_type,trial_expires_at,suspended,created_at')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -995,11 +995,40 @@ module.exports = async (req, res) => {
       }
       const { data, error } = await sb()
         .from('profiles')
-        .select('id,email,full_name,role,verif_status,verif_request,is_verified,created_at')
+        .select('id,email,display_name,role,verif_status,verif_request,is_verified,created_at')
         .in('verif_status', ['pending', 'approved', 'rejected'])
         .order('created_at', { ascending: false });
       if (error) return res.status(400).json({ error: error.message });
       return res.status(200).json({ verifications: data || [] });
+    }
+
+    /* ─── GET /admin/events ─────────────────────────────────── */
+    if (url === '/admin/events' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const filter = req.query?.filter || 'pending';
+      let query = sb().from('events').select('id,name,venue_name,venue_city,date_local,genre,organiser_id,organiser_name,approved,created_at').order('created_at', { ascending: false });
+      if (filter === 'pending') query = query.eq('approved', false);
+      const { data, error } = await query;
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ events: data || [] });
+    }
+
+    /* ─── PATCH /admin/events/:id ───────────────────────────── */
+    const adminEventMatch = url.match(/^\/admin\/events\/([^/]+)$/);
+    if (adminEventMatch && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const eventId = adminEventMatch[1];
+      const { approved } = req.body || {};
+      if (approved === false) {
+        const { error } = await sb().from('events').delete().eq('id', eventId);
+        if (error) return res.status(400).json({ error: error.message });
+        return res.status(200).json({ success: true, deleted: true });
+      }
+      const { data, error } = await sb().from('events').update({ approved: true }).eq('id', eventId).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ success: true, event: data });
     }
 
     /* ─── PATCH /admin/verifications/:id ───────────────────── */

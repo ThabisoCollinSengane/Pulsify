@@ -297,10 +297,18 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
   <div id="tab-events" class="tab-content">
     <div style="margin-bottom:20px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Event Management</div>
-      <div style="font-size:.82rem;color:var(--mu2)">Manage events and their coordinates</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Event Approval</div>
+      <div style="font-size:.82rem;color:var(--mu2)">Review and approve events submitted by organizers</div>
     </div>
-    <div style="padding:40px;text-align:center;color:var(--mu)">Events management coming soon…</div>
+    <div class="search-row">
+      <select class="inp" id="evt-filter" onchange="loadPendingEvents()" style="max-width:180px">
+        <option value="pending">⏳ Pending</option>
+        <option value="all">All Events</option>
+      </select>
+      <button class="btn btn-surf" onclick="loadPendingEvents()">↺ Refresh</button>
+    </div>
+    <div id="msg-events" class="msg"></div>
+    <div id="events-list"><div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div></div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
@@ -432,6 +440,7 @@ function switchTab(tab) {
   
   if (tab === 'users' && !ALL_USERS.length) loadUsers();
   else if (tab === 'businesses' && !ALL_BIZ.length) loadBusinesses();
+  else if (tab === 'events') loadPendingEvents();
   else if (tab === 'verifications') loadVerifications();
 }
 
@@ -473,7 +482,7 @@ function renderVerifList() {
     return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-bottom:14px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div>
-          <div style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800">${esc(req.business_name || v.full_name || v.email)}</div>
+          <div style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800">${esc(req.business_name || v.display_name || v.email)}</div>
           <div style="font-size:.7rem;color:var(--mu2);margin-top:2px">${esc(v.email)} · Submitted ${submitted}</div>
         </div>
         ${statusBadge}
@@ -784,7 +793,7 @@ function renderUsersTable() {
   else if (activeUserFilter === 'suspended') items = items.filter(u => u.suspended);
   
   if (search) items = items.filter(u => 
-    (u.full_name||'').toLowerCase().includes(search) || 
+    (u.display_name||'').toLowerCase().includes(search) ||
     (u.email||'').toLowerCase().includes(search)
   );
 
@@ -815,7 +824,7 @@ function renderUsersTable() {
     const joined = new Date(u.created_at).toLocaleDateString();
     
     return `<tr>
-      <td class="name-cell" title="${esc(u.full_name || 'No name')}">${esc(u.full_name || 'No name')}</td>
+      <td class="name-cell" title="${esc(u.display_name || 'No name')}">${esc(u.display_name || 'No name')}</td>
       <td style="font-family:'JetBrains Mono',monospace;font-size:.72rem">${esc(u.email)}</td>
       <td>${roleBadge}</td>
       <td>${trialBadge}</td>
@@ -868,7 +877,7 @@ function showTrialModal(userId) {
   const user = ALL_USERS.find(u => u.id === userId);
   if (!user) return;
   
-  const months = prompt(`Grant free trial to ${user.full_name || user.email}?\n\nEnter number of months (1, 2, or 3):`);
+  const months = prompt(`Grant free trial to ${user.display_name || user.email}?\n\nEnter number of months (1, 2, or 3):`);
   if (!months) return;
   
   const m = parseInt(months);
@@ -911,7 +920,7 @@ function showRoleModal(userId) {
   const user = ALL_USERS.find(u => u.id === userId);
   if (!user) return;
   
-  const role = prompt(`Change role for ${user.full_name || user.email}?\n\nCurrent: ${user.role}\n\nEnter new role (user, business, admin):`);
+  const role = prompt(`Change role for ${user.display_name || user.email}?\n\nCurrent: ${user.role}\n\nEnter new role (user, business, admin):`);
   if (!role) return;
   
   if (!['user','business','admin'].includes(role.toLowerCase())) {
@@ -949,6 +958,67 @@ async function changeRole(userId, role) {
     showUserMsg(`Error: ${e.message}`, 'err');
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+/* EVENT APPROVAL */
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+let ALL_EVENTS = [];
+
+async function loadPendingEvents() {
+  document.getElementById('events-list').innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div>';
+  const filter = document.getElementById('evt-filter')?.value || 'pending';
+  try {
+    const r = await fetch(`/api/admin/events?filter=${filter}`, { headers: { Authorization: 'Bearer ' + adminToken } });
+    const json = await r.json();
+    if (!r.ok) { showEvtMsg(json.error || 'Failed to load events', 'err'); return; }
+    ALL_EVENTS = json.events || [];
+    renderEventsList();
+  } catch(e) { showEvtMsg('Error: ' + e.message, 'err'); }
+}
+
+function renderEventsList() {
+  if (!ALL_EVENTS.length) {
+    document.getElementById('events-list').innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">No events to show.</div>';
+    return;
+  }
+  document.getElementById('events-list').innerHTML = ALL_EVENTS.map(ev => {
+    const date = ev.date_local ? new Date(ev.date_local).toLocaleDateString('en-ZA') : '—';
+    const approvedBadge = ev.approved
+      ? '<span class="status-badge s-ok">✅ Approved</span>'
+      : '<span class="status-badge s-warn">⏳ Pending</span>';
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-bottom:14px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px">
+        <div style="flex:1">
+          <div style="font-family:'Syne',sans-serif;font-size:.9rem;font-weight:800">${esc(ev.name)}</div>
+          <div style="font-size:.72rem;color:var(--mu2);margin-top:3px">${esc(ev.venue_name || '—')} · ${esc(ev.venue_city || '—')} · ${date}</div>
+          <div style="font-size:.72rem;color:var(--mu2);margin-top:2px">Genre: ${esc(ev.genre || '—')} · Organizer: ${esc(ev.organiser_name || ev.organiser_id || '—')}</div>
+        </div>
+        ${approvedBadge}
+      </div>
+      ${!ev.approved ? `<div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-li" onclick="reviewEvent('${ev.id}',true)" style="flex:1">✅ Approve</button>
+        <button class="btn btn-pk" onclick="reviewEvent('${ev.id}',false)" style="flex:1">❌ Reject</button>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function reviewEvent(eventId, approve) {
+  if (!confirm(`${approve ? 'Approve' : 'Reject and delete'} this event?`)) return;
+  try {
+    const r = await fetch(`/api/admin/events/${eventId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ approved: approve }),
+    });
+    const json = await r.json();
+    if (!r.ok) { showEvtMsg(json.error || 'Failed', 'err'); return; }
+    showEvtMsg(`✅ Event ${approve ? 'approved' : 'rejected'} successfully.`, 'ok');
+    loadPendingEvents();
+  } catch(e) { showEvtMsg('Error: ' + e.message, 'err'); }
+}
+
+function showEvtMsg(m, t) { const el=document.getElementById('msg-events'); if(!el) return; el.textContent=m; el.className='msg show msg-'+(t==='err'?'err':'ok'); }
 
 checkSession();
 </script>
