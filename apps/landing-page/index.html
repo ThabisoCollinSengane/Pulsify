@@ -934,13 +934,14 @@ function getSB() {
 }
 
 /* ── NAVIGATION ── */
-function showTab(name) {
+function showTab(name, _noPush) {
   prevTab = curTab; curTab = name;
   document.querySelectorAll('.panel').forEach(p => { p.classList.remove('active'); p.style.display = ''; });
   document.querySelectorAll('.bb').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   const panel = document.getElementById('tab-' + name);
   if (panel) { panel.classList.add('active'); panel.style.display = name === 'home' ? 'flex' : 'block'; panel.scrollTop = 0; }
   document.getElementById('back-btn').classList.remove('show');
+  if (!_noPush) history.pushState({ tab: name, detail: false }, '');
   setTimeout(triggerRev, 80);
   if (name === 'squad')   renderSquad();
   if (name === 'tickets') renderBookings();
@@ -948,16 +949,27 @@ function showTab(name) {
   if (name === 'profile') renderProfile();
   if (name === 'map' && mapInited && mapObj) setTimeout(() => mapObj.resize(), 50);
 }
-function showDetailTab(name) {
+function showDetailTab(name, _noPush) {
   prevTab = curTab; curTab = name;
   document.querySelectorAll('.panel').forEach(p => { p.classList.remove('active'); p.style.display = ''; });
   document.querySelectorAll('.bb').forEach(b => b.classList.remove('active'));
   const panel = document.getElementById('tab-' + name);
   if (panel) { panel.classList.add('active'); panel.style.display = 'block'; panel.scrollTop = 0; }
   document.getElementById('back-btn').classList.add('show');
+  if (!_noPush) history.pushState({ tab: name, detail: true }, '');
 }
-function goBack() { if (prevTab && prevTab !== curTab) showTab(prevTab); else showTab('home'); }
+function goBack() { history.back(); }
 function goHome() { showTab('home'); }
+
+window.addEventListener('popstate', e => {
+  const s = e.state;
+  if (s?.tab) {
+    if (s.detail) showDetailTab(s.tab, true);
+    else showTab(s.tab, true);
+  } else {
+    showTab('home', true);
+  }
+});
 
 /* ── SKELETON LOADERS ── */
 function feedSkeleton() {
@@ -2658,6 +2670,7 @@ document.addEventListener('DOMContentLoaded', initSupabaseSession);
   } catch(e) {}
 })();
 window.addEventListener('DOMContentLoaded', () => {
+  history.replaceState({ tab: 'home', detail: false }, '');
   // Load live data immediately
   loadFeed(true);
   loadFrontline();
