@@ -940,12 +940,14 @@ async function submitPost() {
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
           body: JSON.stringify({ caption: cap, image_url: imageUrl, post_type: 'business_update' }),
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
-        // Also save locally so stats reflect immediately
-        const posts = load('posts', []);
-        posts.push({ id: data.post.id, img: imageUrl, cap, created: data.post.created_at });
-        save('posts', posts);
+        const _txt = await res.text();
+        let data = {}; try { data = JSON.parse(_txt); } catch(e) {}
+        if (!res.ok) throw new Error(data.error || 'Post failed');
+        if (data.post) {
+          const posts = load('posts', []);
+          posts.push({ id: data.post.id, img: imageUrl, cap, created: data.post.created_at });
+          save('posts', posts);
+        }
       } else {
         throw new Error('Not signed in to Supabase');
       }
@@ -1007,34 +1009,73 @@ function renderEvents() {
   }).join('');
 }
 
-function submitEvent() {
+async function submitEvent() {
   const id   = document.getElementById('ev-edit-id').value;
   const name = document.getElementById('ev-name').value.trim();
   if (!name) { toast('Event name is required', 'err'); return; }
   const price = parseFloat(document.getElementById('ev-price').value) || 0;
   const lineupRaw = document.getElementById('ev-lineup').value.trim();
+  const date  = document.getElementById('ev-date').value;
+  const time  = document.getElementById('ev-time').value;
+  const venue = document.getElementById('ev-venue').value.trim();
+  const city  = document.getElementById('ev-city').value.trim();
+  const genre = document.getElementById('ev-genre').value.trim();
+  const desc  = document.getElementById('ev-desc').value.trim();
+  const imgUrl = document.getElementById('ev-img').value.trim();
+
   const ev = {
     id: id || 'ev_' + Date.now(), name,
-    date: document.getElementById('ev-date').value,
-    time: document.getElementById('ev-time').value,
-    venue: document.getElementById('ev-venue').value.trim(),
-    city: document.getElementById('ev-city').value.trim(),
-    genre: document.getElementById('ev-genre').value.trim(),
-    price, isFree: price === 0,
+    date, time, venue, city, genre, price, isFree: price === 0,
     hype: parseInt(document.getElementById('ev-hype').value) || 75,
-    desc: document.getElementById('ev-desc').value.trim(),
+    desc,
     lineup: lineupRaw ? lineupRaw.split(',').map(s => s.trim()) : [],
-    img: document.getElementById('ev-img').value.trim(),
+    img: imgUrl,
     created: id ? undefined : new Date().toISOString(),
     bizId: getBizId(), bizName: BIZ.name, bizType: BIZ.type,
   };
   const evs = load('events', []);
   if (id) { const i = evs.findIndex(e => e.id === id); if (i >= 0) evs[i] = { ...evs[i], ...ev }; } else { evs.push(ev); }
   save('events', evs);
-  syncToSharedEvents(ev);
+
+  // Sync new events to Supabase so they appear on the landing page feed
+  if (!id) {
+    const sb = getSB();
+    if (sb) {
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) {
+          await sb.from('events').insert({
+            id: ev.id, name,
+            date_local: date || null,
+            time_local: time || null,
+            venue_name: venue,
+            venue_city: city,
+            genre: genre || 'other',
+            description: desc || null,
+            price_min: price, price_max: price,
+            currency: 'ZAR',
+            image_url: imgUrl || null,
+            organiser_name: BIZ.name,
+            organiser_id: session.user.id,
+            is_active: true,
+            source: 'business',
+          });
+          await fetch('/api/posts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+            body: JSON.stringify({
+              caption: '🎉 ' + name + ' — ' + venue + (city ? ', ' + city : '') + (date ? ' · ' + date : '') + (price > 0 ? ' · R' + price : ' · FREE') + (desc ? '\n' + desc : ''),
+              event_id: ev.id, event_name: name, post_type: 'business_event',
+            }),
+          }).catch(() => {});
+        }
+      } catch(e) { console.warn('[event sync]', e); }
+    }
+  }
+
   closeSheet('event-sheet');
   resetEventForm();
-  toast(id ? 'Event updated ✅' : 'Event published! ✅', 'ok');
+  toast(id ? 'Event updated ✅' : 'Event published to feed! ✅', 'ok');
   renderEvents(); renderStats();
 }
 
