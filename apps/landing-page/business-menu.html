@@ -338,21 +338,35 @@ async function placeOrder() {
 
   if (error) { toast('Failed to place order: ' + error.message, 'err'); return; }
 
-  // Save ref for confirmation page
-  localStorage.setItem('last_order', JSON.stringify({ order_ref: orderRef, bizName: BIZ_DATA.name, bizCity: BIZ_DATA.city, items, total, pickupTime }));
+  // Save ref for confirmation page — shape must match apps/business/order-confirmation.html
+  localStorage.setItem('last_order', JSON.stringify({
+    id:          orderRef,
+    bizId:       BIZ_ID,
+    bizName:     BIZ_DATA.name,
+    bizAddress:  BIZ_DATA.city || '',
+    customer:    name,
+    phone,
+    pickupTime,
+    notes:       notes || '',
+    items,
+    subtotal:    total,
+    service:     0,
+    total,
+    created:     new Date().toISOString(),
+  }));
 
   CART = {}; updateCartUI(); closeSheet('checkout-sheet');
-  window.location.href = '/order-confirmation.html';
+  window.location.href = '/business/order-confirmation.html';
 }
 
 function isOpenNow() {
   if (!HOURS.length) return true;
   const day = new Date().toLocaleDateString('en-ZA', { weekday:'long' });
   const h   = HOURS.find(r => r.day?.toLowerCase() === day.toLowerCase());
-  if (!h || !h.open) return false;
+  if (!h || !h.is_open) return false;
   const now = new Date();
-  const [fH,fM] = (h.from||'10:00').split(':').map(Number);
-  const [tH,tM] = (h.to||'18:00').split(':').map(Number);
+  const [fH,fM] = (h.open_time||'10:00').split(':').map(Number);
+  const [tH,tM] = (h.close_time||'18:00').split(':').map(Number);
   const from = new Date(); from.setHours(fH,fM,0,0);
   const to   = new Date(); to.setHours(tH,tM,0,0);
   return now >= from && now <= to;

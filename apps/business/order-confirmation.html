@@ -185,7 +185,7 @@ function renderConfirmation(o) {
   <div class="actions">
     ${bizWA ? `<a class="btn-wa" href="https://wa.me/27${bizWA.slice(-9)}?text=${waMsg}" target="_blank">💬 WhatsApp the Business</a>` : ''}
     <a class="btn-main" href="index.html">🏠 Back to Pulsify Home</a>
-    <a class="btn-sec" href="business-menu.html?id=${xe(o.bizId || '')}">← Back to Menu</a>
+    <a class="btn-sec" href="/business-menu.html?id=${xe(o.bizId || '')}">← Back to Menu</a>
   </div>`;
 }
 
