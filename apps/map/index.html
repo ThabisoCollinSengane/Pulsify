@@ -187,6 +187,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:an
 
 <div class="fl">
   <button class="cb active" onclick="setFilter('all',this)">✦ All</button>
+  <button class="cb" onclick="setFilter('upcoming',this)">🔜 Upcoming</button>
   <button class="cb" onclick="setFilter('event',this)">🎟 Events</button>
   <button class="cb" onclick="setFilter('business',this)">🏪 Businesses</button>
   <button class="cb" onclick="setFilter('shisanyama',this)">🔥 Shisanyama</button>
@@ -275,8 +276,10 @@ function makeMarkerEl(item) {
   const theme = pinTheme(item);
   const wrap  = document.createElement('div');
   wrap.className = `marker-wrap ${theme}`;
+  if (item._past) wrap.style.opacity = '0.55';
   const ring = document.createElement('div');
   ring.className = 'pulse-ring';
+  if (item._past) ring.style.animationDuration = '0s'; // no pulse for past events
   const dot  = document.createElement('div');
   dot.className = 'pin-dot';
   dot.textContent = pinIcon(item);
@@ -298,6 +301,7 @@ function popupHTML(item) {
   const price = isEv
     ? (item.is_free ? 'FREE' : item.price_min ? `From R${item.price_min}` : '')
     : '';
+  const isPast    = isEv && item._past;
   const detailUrl = isEv ? `/?eid=${encodeURIComponent(item.id)}` : `/?bid=${encodeURIComponent(item.id)}`;
 
   return `${img ? `<img class="pop-img" src="${esc(img)}" loading="lazy" onerror="this.remove()"/>` : ''}
@@ -306,6 +310,7 @@ function popupHTML(item) {
     <span class="pop-tag">${cat}</span>
     ${price ? `<span class="pop-tag gr">${esc(price)}</span>` : ''}
     ${isEv ? `<span class="pop-tag or">Event</span>` : ''}
+    ${isPast ? `<span class="pop-tag" style="background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2);color:rgba(255,255,255,.5)">Past</span>` : ''}
   </div>
   <div class="pop-name">${name}</div>
   ${venue ? `<div class="pop-meta">📍 ${venue}${city ? ', ' + city : ''}</div>` : city ? `<div class="pop-meta">📍 ${city}</div>` : ''}
@@ -323,6 +328,7 @@ function renderMarkers() {
   clearMarkers();
   const visible = allItems.filter(item => {
     if (currentFilter === 'all')       return true;
+    if (currentFilter === 'upcoming')  return item._kind === 'event' && !item._past;
     if (currentFilter === 'event')     return item._kind === 'event';
     if (currentFilter === 'business')  return item._kind === 'business';
     if (item._kind !== 'business')     return false;
@@ -374,15 +380,21 @@ function setFilter(cat, btn) {
 
 async function loadData() {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    // Show events from last 30 days through future — keeps the map populated
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    const fromDate = cutoff.toISOString().split('T')[0];
+    const today    = new Date().toISOString().split('T')[0];
+
     const [evRes, bzRes] = await Promise.all([
       sb.from('events')
         .select('id,name,date_local,venue_name,venue_city,venue_lat,venue_lon,price_min,is_free,image_url,genre')
-        .gte('date_local', today)
+        .gte('date_local', fromDate)
         .not('venue_lat', 'is', null)
         .not('venue_lon', 'is', null)
         .neq('venue_lat', 0)
         .neq('venue_lon', 0)
+        .order('date_local', { ascending: false })
         .limit(500),
       sb.from('businesses')
         .select('id,name,category,city,province,lat,lon,image_url,description')
@@ -393,7 +405,7 @@ async function loadData() {
         .limit(500),
     ]);
 
-    const events = (evRes.data  || []).map(e => ({ ...e, _kind: 'event' }));
+    const events = (evRes.data  || []).map(e => ({ ...e, _kind: 'event', _past: e.date_local < today }));
     const biz    = (bzRes.data  || []).map(b => ({ ...b, _kind: 'business' }));
     allItems = [...events, ...biz];
 
