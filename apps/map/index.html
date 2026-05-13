@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#0A0E1A"/>
 <title>Map — Pulsify</title>
-<link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet"/>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
-<script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -186,7 +186,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:an
 </div>
 
 <div class="tb">
-  <a href="/" class="bk" title="Back">←</a>
+  <a onclick="history.length>1?history.back():window.location.href='/'" class="bk" title="Back" style="cursor:pointer">←</a>
   <div class="logo">📍 PULSIFY MAP</div>
   <div class="cnt"><b id="cnt-num">0</b>&nbsp;spots</div>
 </div>
@@ -431,8 +431,6 @@ async function loadData() {
 }
 
 map.on('load', () => { loadData(); loadBanners(); });
-
-function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 async function loadBanners() {
   try {
