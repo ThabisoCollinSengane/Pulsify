@@ -21,82 +21,63 @@ const out = document.getElementById('out');
 function log(html) { out.innerHTML += html + '<br>'; }
 function section(t) { log(`<h2>${t}</h2>`); }
 
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, rej) => setTimeout(() => rej(new Error(`Timed out after ${ms}ms`)), ms))
+  ]);
+}
+
 (async () => {
   out.innerHTML = '';
-  section('1. SDK loaded');
-  log(window.supabase ? '<span class="ok">✓ Supabase SDK loaded</span>' : '<span class="err">✗ SDK NOT loaded</span>');
 
-  section('2. Direct REST query (no SDK)');
+  // Run version check FIRST — most important, independent of Supabase SDK
+  section('1. Landing page version');
   try {
-    const r = await fetch(`${SUPA_URL}/rest/v1/events?select=id,name&limit=1`, {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
-    });
-    const txt = await r.text();
-    log(`<span class="info">HTTP ${r.status}</span>`);
-    log(`<pre>${txt}</pre>`);
-  } catch (e) {
-    log(`<span class="err">Network error: ${e.message}</span>`);
-  }
-
-  section('3. SDK query: events');
-  try {
-    const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
-    const { data, error, count } = await sb.from('events').select('id,name', { count: 'exact' }).limit(3);
-    if (error) log(`<span class="err">✗ ${error.message}</span><pre>${JSON.stringify(error,null,2)}</pre>`);
-    else log(`<span class="ok">✓ Got ${data.length} rows (total ${count})</span><pre>${JSON.stringify(data,null,2)}</pre>`);
-  } catch (e) { log(`<span class="err">Crash: ${e.message}</span>`); }
-
-  section('4. SDK query: businesses');
-  try {
-    const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
-    const { data, error, count } = await sb.from('businesses').select('id,name', { count: 'exact' }).limit(3);
-    if (error) log(`<span class="err">✗ ${error.message}</span><pre>${JSON.stringify(error,null,2)}</pre>`);
-    else log(`<span class="ok">✓ Got ${data.length} rows (total ${count})</span><pre>${JSON.stringify(data,null,2)}</pre>`);
-  } catch (e) { log(`<span class="err">Crash: ${e.message}</span>`); }
-
-  section('5. SDK query: posts');
-  try {
-    const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
-    const { data, error } = await sb.from('posts').select('id').limit(1);
-    if (error) log(`<span class="err">✗ ${error.message}</span>`);
-    else log(`<span class="ok">✓ posts accessible (${data.length} rows)</span>`);
-  } catch (e) { log(`<span class="err">Crash: ${e.message}</span>`); }
-
-  section('6. SDK query: profiles');
-  try {
-    const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
-    const { data, error } = await sb.from('profiles').select('id').limit(1);
-    if (error) log(`<span class="err">✗ ${error.message}</span>`);
-    else log(`<span class="ok">✓ profiles accessible (${data.length} rows)</span>`);
-  } catch (e) { log(`<span class="err">Crash: ${e.message}</span>`); }
-
-  section('7. Deployment freshness check');
-  log(`<span class="info">Page loaded at: ${new Date().toISOString()}</span>`);
-  log(`<span class="info">User agent: ${navigator.userAgent}</span>`);
-  log(`<span class="info">Origin: ${window.location.origin}</span>`);
-
-  section('8. Landing page version check');
-  try {
-    const r = await fetch('/', { cache: 'no-store' });
+    const r = await withTimeout(fetch('/', { cache: 'no-store' }), 5000);
     const html = await r.text();
     const m = html.match(/build-version[^>]*content="([^"]+)"/);
     if (m) {
       const v = m[1];
       const isNew = v >= 'v2.2.0';
-      log(`<span class="${isNew ? 'ok' : 'err'}">${isNew ? '✓' : '✗'} Landing page version: ${v}${isNew ? '' : ' — OLD CODE still deployed!'}</span>`);
+      log(`<span class="${isNew ? 'ok' : 'err'}">${isNew ? '✓' : '✗'} index.html version: ${v}${isNew ? ' — NEW CODE deployed ✓' : ' — OLD CODE still deployed! Redeploy needed.'}</span>`);
     } else {
-      log(`<span class="err">✗ No build-version found — deploy is still OLD code. Run git pull then redeploy.</span>`);
+      log(`<span class="err">✗ No build-version found — OLD CODE deployed. Run git pull then redeploy.</span>`);
     }
   } catch(e) { log(`<span class="err">Could not fetch landing page: ${e.message}</span>`); }
 
-  section('9. Events with future dates (DB check)');
+  section('2. SDK loaded');
+  log(window.supabase ? '<span class="ok">✓ Supabase SDK loaded</span>' : '<span class="err">✗ SDK NOT loaded</span>');
+
+  section('3. Direct REST query (fetch, no SDK)');
   try {
-    const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
-    const today = new Date().toISOString().split('T')[0];
-    const { data, error, count } = await sb.from('events').select('id,name,date_local', { count: 'exact' }).gte('date_local', today).limit(3);
+    const r = await withTimeout(fetch(`${SUPA_URL}/rest/v1/events?select=id,name&limit=1`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    }), 8000);
+    const txt = await r.text();
+    log(`<span class="${r.ok ? 'ok' : 'err'}">HTTP ${r.status}</span>`);
+    log(`<pre>${txt.slice(0, 300)}</pre>`);
+  } catch (e) {
+    log(`<span class="err">✗ ${e.message}</span>`);
+  }
+
+  section('4. SDK createClient test');
+  try {
+    const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
+      realtime: { params: { eventsPerSecond: 1 } }
+    });
+    const { data, error, count } = await withTimeout(
+      sb.from('events').select('id,name', { count: 'exact' }).limit(2),
+      10000
+    );
     if (error) log(`<span class="err">✗ ${error.message}</span>`);
-    else log(`<span class="ok">✓ ${count} upcoming events in DB</span><pre>${JSON.stringify(data,null,2)}</pre>`);
-  } catch(e) { log(`<span class="err">Crash: ${e.message}</span>`); }
+    else log(`<span class="ok">✓ SDK works — ${count} events total. Sample: ${data.map(e=>e.name).join(', ')}</span>`);
+  } catch (e) { log(`<span class="err">✗ ${e.message}</span>`); }
+
+  section('5. Deployment info');
+  log(`<span class="info">Loaded at: ${new Date().toISOString()}</span>`);
+  log(`<span class="info">Origin: ${window.location.origin}</span>`);
+  log(`<span class="info">UA: ${navigator.userAgent.slice(0,80)}</span>`);
 })();
 </script>
 </body>
