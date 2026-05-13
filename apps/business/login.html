@@ -152,13 +152,24 @@ const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 (async () => {
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
-    redirectByRole();
+    // Always re-sync profile on page load — localStorage may be stale or missing
+    try {
+      const res = await fetch('/api/auth/ensure-business-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      });
+      const { profile, error } = await res.json();
+      if (res.ok && profile) {
+        await saveConfirmedProfile(session, profile);
+        redirectByRole();
+      }
+    } catch (e) { /* ignore — user stays on login page */ }
   }
 })();
 
-// Listen for auth events (e.g., redirect from Google)
+// Listen for auth events from Google OAuth only (email login handled by doLogin)
 sb.auth.onAuthStateChange(async (event, session) => {
-  if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+  if (event === 'SIGNED_IN' && session && session.user.app_metadata?.provider !== 'email') {
     try {
       const res = await fetch('/api/auth/ensure-business-profile', {
         method: 'POST',
@@ -166,7 +177,6 @@ sb.auth.onAuthStateChange(async (event, session) => {
       });
       const { profile, error } = await res.json();
       if (!res.ok) throw new Error(error || 'Failed to sync business profile.');
-      
       await saveConfirmedProfile(session, profile);
       redirectByRole();
     } catch (e) {
