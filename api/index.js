@@ -1170,6 +1170,77 @@ module.exports = async (req, res) => {
       return res.status(200).json({ banners: data });
     }
 
+    /* ─── GET /push/vapid-public-key ────────────────────── */
+    if (url === '/push/vapid-public-key' && req.method === 'GET') {
+      return res.status(200).json({ key: process.env.VAPID_PUBLIC_KEY || null });
+    }
+
+    /* ─── POST /push/subscribe ──────────────────────────── */
+    if (url === '/push/subscribe' && req.method === 'POST') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+      const { subscription, city, genres } = req.body || {};
+      if (!subscription?.endpoint) return res.status(400).json({ error: 'subscription required' });
+      await sb().from('push_subscriptions').upsert({
+        user_id:  user.id,
+        endpoint: subscription.endpoint,
+        p256dh:   subscription.keys?.p256dh || null,
+        auth:     subscription.keys?.auth   || null,
+        city:     city   || null,
+        genres:   genres || [],
+      }, { onConflict: 'endpoint' });
+      return res.status(200).json({ ok: true });
+    }
+
+    /* ─── POST /admin/notify ─────────────────────────────── */
+    if (url === '/admin/notify' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+
+      const { title, body: msgBody, url: targetUrl = '/', target = 'all' } = req.body || {};
+      if (!title || !msgBody) return res.status(400).json({ error: 'title and body required' });
+
+      // Resolve target users
+      let uq = sb().from('profiles').select('id,city,genres');
+      if (target.startsWith('city:'))  uq = uq.ilike('city', target.slice(5));
+      if (target.startsWith('genre:')) uq = uq.contains('genres', [target.slice(6)]);
+      if (target.startsWith('user:'))  uq = uq.eq('id', target.slice(5));
+      const { data: users } = await uq;
+      if (!users?.length) return res.status(200).json({ notif_sent: 0, push_sent: 0 });
+
+      // Batch-insert in-app notifications
+      const notifs = users.map(u => ({
+        user_id: u.id, type: 'broadcast',
+        title, body: msgBody, message: msgBody,
+        data: { url: targetUrl },
+        from_display_name: 'Pulsify',
+      }));
+      await sb().from('notifications').insert(notifs);
+
+      // Web push (only if VAPID keys configured)
+      let push_sent = 0;
+      const VPUB = process.env.VAPID_PUBLIC_KEY;
+      const VPRIV = process.env.VAPID_PRIVATE_KEY;
+      if (VPUB && VPRIV) {
+        try {
+          const webpush = require('web-push');
+          webpush.setVapidDetails('mailto:admin@pulsify.co.za', VPUB, VPRIV);
+          const ids = users.map(u => u.id);
+          const { data: subs } = await sb().from('push_subscriptions').select('*').in('user_id', ids);
+          const payload = JSON.stringify({ title, body: msgBody, url: targetUrl });
+          await Promise.all((subs || []).map(s =>
+            webpush.sendNotification(
+              { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+              payload
+            ).then(() => push_sent++).catch(() => {})
+          ));
+        } catch(e) { /* web-push not installed or keys invalid */ }
+      }
+
+      return res.status(200).json({ notif_sent: notifs.length, push_sent });
+    }
+
     /* ─── GET /health ────────────────────────────────────── */
     if (url === '/health' && req.method === 'GET') {
       return res.status(200).json({ ok: true, ts: Date.now(), url: SUPA_URL });

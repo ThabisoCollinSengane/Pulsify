@@ -2572,10 +2572,42 @@ window.addEventListener('DOMContentLoaded', () => {
             if (d) d.style.display = 'block';
           })
           .subscribe();
+
+        // Register service worker + subscribe to web push
+        _registerPush(user);
       }
     });
   }
 });
+
+async function _registerPush(user) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) return; // already subscribed
+    const { key } = await fetch('/api/push/vapid-public-key').then(r => r.json());
+    if (!key) return; // VAPID not configured
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: _urlB64ToUint8(key),
+    });
+    const { data: { session } } = await getSB().auth.getSession();
+    if (!session) return;
+    const pf = JSON.parse(localStorage.getItem('p_profile') || '{}');
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ subscription: sub, city: pf.city || null, genres: pf.genres || [] }),
+    });
+  } catch(e) { /* push not supported or denied — silent fail */ }
+}
+
+function _urlB64ToUint8(b64) {
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(raw, c => c.charCodeAt(0));
+}
 
 /* ── BUSINESSES FULL PAGE ── */
 let _bizPageData = [];
