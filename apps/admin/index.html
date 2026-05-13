@@ -285,11 +285,12 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <th>Latitude</th>
           <th>Longitude</th>
           <th>Status</th>
+          <th>Featured</th>
           <th>Action</th>
         </tr>
       </thead>
       <tbody id="biz-tbody">
-        <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>
+        <tr><td colspan="8" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>
       </tbody>
     </table>
   </div>
@@ -637,9 +638,9 @@ function validSA(lat, lon) {
 
 /* ── Load businesses ── */
 async function loadBusinesses() {
-  document.getElementById('biz-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>';
+  document.getElementById('biz-tbody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>';
   const { data, error } = await sb.from('businesses')
-    .select('id,name,category,city,suburb,address,province,lat,lon')
+    .select('id,name,category,city,suburb,address,province,lat,lon,is_frontline,frontline_rank')
     .order('name');
   if (error) { showMainMsg('Failed to load: ' + error.message, 'err'); return; }
   ALL_BIZ = data || [];
@@ -675,7 +676,7 @@ function renderTable() {
   if (search) items = items.filter(b => (b.name||'').toLowerCase().includes(search) || (b.city||'').toLowerCase().includes(search));
 
   if (!items.length) {
-    document.getElementById('biz-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--mu)">No businesses match this filter.</td></tr>';
+    document.getElementById('biz-tbody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--mu)">No businesses match this filter.</td></tr>';
     return;
   }
 
@@ -689,6 +690,9 @@ function renderTable() {
       : st === 'outside'
       ? '<span class="status-badge s-warn">⚠️ Outside SA</span>'
       : '<span class="status-badge s-bad">❌ Missing</span>';
+    const featBadge = b.is_frontline
+      ? '<span class="status-badge s-ok">⭐ Featured</span>'
+      : '<span style="color:var(--mu);font-size:.72rem">—</span>';
     return `<tr>
       <td class="name-cell" title="${esc(b.name)}">${esc(b.name)}</td>
       <td>${esc(b.city || b.suburb || '—')}</td>
@@ -696,12 +700,26 @@ function renderTable() {
       <td class="coord-cell ${coordClass}">${isNaN(lat) ? '—' : lat.toFixed(4)}</td>
       <td class="coord-cell ${coordClass}">${isNaN(lon) ? '—' : lon.toFixed(4)}</td>
       <td>${badge}</td>
-      <td><button class="btn btn-surf" style="padding:5px 12px;font-size:.68rem" onclick="openEdit('${b.id}')">✏️ Edit</button></td>
+      <td>${featBadge}</td>
+      <td style="display:flex;gap:5px;flex-wrap:wrap">
+        <button class="btn btn-surf" style="padding:5px 10px;font-size:.68rem" onclick="openEdit('${b.id}')">✏️ Edit</button>
+        <button class="btn ${b.is_frontline ? 'btn-pk' : 'btn-li'}" style="padding:5px 10px;font-size:.68rem" onclick="toggleFeatured('${b.id}',${!!b.is_frontline})">${b.is_frontline ? 'Unfeature' : '⭐ Feature'}</button>
+      </td>
     </tr>`;
   }).join('');
 }
 
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function toggleFeatured(id, current) {
+  const updates = current ? { is_frontline: false, frontline_rank: null } : { is_frontline: true, frontline_rank: 1 };
+  const { error } = await sb.from('businesses').update(updates).eq('id', id);
+  if (error) { showMainMsg('Failed: ' + error.message, 'err'); return; }
+  const idx = ALL_BIZ.findIndex(b => b.id === id);
+  if (idx > -1) Object.assign(ALL_BIZ[idx], updates);
+  renderTable();
+  showMainMsg(`Business ${current ? 'removed from' : 'added to'} featured listing.`, 'ok');
+}
 
 /* ── Edit panel ── */
 function openEdit(id) {

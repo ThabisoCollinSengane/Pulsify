@@ -6,6 +6,7 @@
 <title>Pulsify — Order Confirmed!</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--te:#00D4AA;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0}
@@ -110,10 +111,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function renderConfirmation(o) {
   const orderRef = o.id.slice(-8).toUpperCase();
+  const qrData   = o.id; // full order_ref encoded in QR
   const subtotal = o.subtotal || (o.items || []).reduce((s, i) => s + i.price * i.qty, 0);
   const service  = o.service || 0;
   const total    = o.total || subtotal + service;
-  const qrRows   = generateQrPattern(orderRef);
 
   // WhatsApp message to notify business
   const bizWA = (() => {
@@ -155,10 +156,10 @@ function renderConfirmation(o) {
     </div>
     <div class="tear"><div class="tear-circle"></div><div class="tear-line"></div><div class="tear-circle"></div></div>
     <div class="qr-wrap">
-      <div class="qr-box">${qrRows}</div>
+      <div id="qr-code-el" style="width:72px;height:72px;flex-shrink:0"></div>
       <div class="qr-info">
         <div class="qr-id">#${orderRef}</div>
-        <div class="qr-scan">Show this code at the counter when collecting your order.</div>
+        <div class="qr-scan">Show this QR code at the counter when collecting your order.</div>
       </div>
     </div>
   </div>
@@ -187,21 +188,15 @@ function renderConfirmation(o) {
     <a class="btn-main" href="index.html">🏠 Back to Pulsify Home</a>
     <a class="btn-sec" href="/business-menu.html?id=${xe(o.bizId || '')}">← Back to Menu</a>
   </div>`;
-}
 
-function generateQrPattern(seed) {
-  const charCodes = seed.split('').map(c => c.charCodeAt(0));
-  let html = '';
-  for (let r = 0; r < 5; r++) {
-    html += '<div class="qr-row">';
-    for (let c = 0; c < 5; c++) {
-      const val = (charCodes[(r * 5 + c) % charCodes.length] + r + c) % 5;
-      const bg = val < 3 ? (val === 0 ? 'var(--or)' : val === 1 ? '#fff' : 'var(--cy)') : 'var(--surf2)';
-      html += `<div class="qr-cell" style="background:${bg}"></div>`;
-    }
-    html += '</div>';
+  // Generate real QR code containing the full order_ref for scanner
+  if (window.QRCode) {
+    new QRCode(document.getElementById('qr-code-el'), {
+      text: qrData, width: 72, height: 72,
+      colorDark: '#000000', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M,
+    });
   }
-  return html;
 }
 
 function renderError() {

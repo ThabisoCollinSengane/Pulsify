@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--te:#00D4AA;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0;--th:58px;--bh:68px}
@@ -273,6 +274,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <div class="panel" id="tab-orders">
   <div class="sec-head">
     <div><div class="sec-title">Incoming Orders</div><div class="sec-sub" id="orders-sub">All orders</div></div>
+    <button class="btn-primary" onclick="openQrScanner()">📷 Scan QR</button>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:0 14px 12px" id="order-stats-row"></div>
   <div style="display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:0 14px 10px">
@@ -331,6 +333,21 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
         <button class="btn-sec" id="biz-verif-btn" style="padding:6px 12px;font-size:.72rem" onclick="openSheet('verify-sheet')">Apply →</button>
       </div>
       <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Get a ✅ verified badge. Takes <strong>1–3 business days</strong> after submission.</div>
+    </div>
+
+    <!-- Premium Upgrade -->
+    <div class="setting-card" id="premium-card">
+      <div class="setting-card-row">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="setting-card-icon" style="background:linear-gradient(135deg,rgba(176,38,255,.2),rgba(255,92,0,.15));border:1px solid rgba(176,38,255,.3)">💎</div>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Upgrade to Premium</div>
+            <div style="font-size:.68rem;color:var(--mu)">R499/month — currently on free plan</div>
+          </div>
+        </div>
+        <a href="https://wa.me/27000000000?text=Hi%20Pulsify%2C%20I%27d%20like%20to%20upgrade%20my%20business%20to%20Premium." target="_blank" class="btn-sec" style="padding:6px 12px;font-size:.72rem;text-decoration:none">Upgrade →</a>
+      </div>
+      <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">⭐ Featured on map · Unlimited menu items · Analytics dashboard · Priority support</div>
     </div>
 
     <!-- Payment Method -->
@@ -569,6 +586,8 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 // ════════════════════════════════════════════════════════════
 let BIZ = null;
 let orderFilter = 'all';
+let ORDERS = [];
+let lastOrderCount = 0;
 const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const GENRE_EMOJI = {gqom:'🔊',amapiano:'🎶',nightlife:'🌙',sport:'⚽',march:'✊',food:'🍔',jazz:'🎷',comedy:'😂',house:'🎵',kwaito:'🎤',shisanyama:'🥩',braai:'🔥'};
 
@@ -771,7 +790,7 @@ function initDashboard() {
   renderPosts();
   renderEvents();
   renderMenu();
-  renderOrders();
+  loadOrders();
   renderHoursEditor();
   renderProfile();
   renderBizFAQ();
@@ -813,13 +832,12 @@ function setGreeting() {
 function renderStats() {
   const posts   = load('posts', []);
   const events  = load('events', []);
-  const orders  = load('orders', []);
   const today   = new Date().toISOString().split('T')[0];
-  const todayRevenue = orders.filter(o => o.status !== 'cancelled' && o.created?.startsWith(today)).reduce((s, o) => s + (o.total || 0), 0);
-  const pending = orders.filter(o => o.status === 'pending').length;
+  const todayRevenue = ORDERS.filter(o => o.status !== 'cancelled' && (o.created_at||'').startsWith(today)).reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
+  const pending = ORDERS.filter(o => o.status === 'pending').length;
   document.getElementById('stats-row').innerHTML =
     stat(posts.length, 'Posts') + stat(events.length, 'Events') +
-    stat(pending, 'Pending', 'var(--pk)') + stat('R' + todayRevenue, 'Revenue', 'var(--li)');
+    stat(pending, 'Pending', 'var(--pk)') + stat('R' + todayRevenue.toFixed(0), 'Revenue', 'var(--li)');
 }
 function stat(n, l, color = '') {
   return `<div class="stat-card"><div class="stat-num" ${color ? 'style="color:' + color + '"' : ''}>${n}</div><div class="stat-lbl">${l}</div></div>`;
@@ -1281,42 +1299,57 @@ function saveHours() {
 }
 
 // ════════════════════════════════════════════════════════════
-//  ORDERS — reads from BIZ_ID_orders (written by business-menu.html)
+//  ORDERS — synced with Supabase pickup_orders table
 // ════════════════════════════════════════════════════════════
-function renderOrders() {
-  const all      = load('orders', []);
-  const filtered = orderFilter === 'all' ? all : all.filter(o => o.status === orderFilter);
-  const today    = new Date().toISOString().split('T')[0];
-  const todayAll = all.filter(o => o.created?.startsWith(today));
-  const revenue  = todayAll.filter(o => o.status !== 'cancelled').reduce((s, o) => s + (o.total || 0), 0);
-  const pending  = all.filter(o => o.status === 'pending').length;
+async function loadOrders() {
+  const sb = getSB(); if (!sb || !getBizId()) return;
+  const { data } = await sb.from('pickup_orders')
+    .select('*').eq('business_id', getBizId()).order('created_at', { ascending: false });
+  ORDERS = data || [];
+  renderOrders(); renderStats(); renderHomeOrdersPreview(); updateOrderBadge();
+}
 
-  document.getElementById('order-stats-row').innerHTML =
-    stat(todayAll.length,'Today Orders') + stat(pending,'Pending','var(--pk)') + stat('R'+revenue,'Revenue','var(--li)');
-  document.getElementById('orders-sub').textContent = `${all.length} total · ${pending} pending`;
-
+function updateOrderBadge() {
+  const pending = ORDERS.filter(o => o.status === 'pending').length;
   const badge = document.getElementById('orders-badge');
   badge.textContent = pending; badge.classList.toggle('show', pending > 0);
   document.getElementById('notif-dot').classList.toggle('show', pending > 0);
+}
+
+function renderOrders() {
+  const filtered = orderFilter === 'all' ? ORDERS : ORDERS.filter(o => o.status === orderFilter);
+  const today    = new Date().toISOString().split('T')[0];
+  const todayAll = ORDERS.filter(o => (o.created_at||'').startsWith(today));
+  const revenue  = todayAll.filter(o => o.status !== 'cancelled').reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
+  const pending  = ORDERS.filter(o => o.status === 'pending').length;
+
+  document.getElementById('order-stats-row').innerHTML =
+    stat(todayAll.length,'Today Orders') + stat(pending,'Pending','var(--pk)') + stat('R'+revenue.toFixed(0),'Revenue','var(--li)');
+  document.getElementById('orders-sub').textContent = `${ORDERS.length} total · ${pending} pending`;
+  updateOrderBadge();
 
   if (!filtered.length) {
     document.getElementById('orders-tbody').innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--mu);padding:32px;font-size:.82rem">No orders found</td></tr>`;
     return;
   }
-  document.getElementById('orders-tbody').innerHTML = filtered.slice().reverse().map(o => `
+  document.getElementById('orders-tbody').innerHTML = filtered.map(o => {
+    const ref   = o.order_ref || o.id.slice(-8).toUpperCase();
+    const phone = o.customer_phone || '';
+    return `
     <tr>
-      <td style="font-family:'Syne',sans-serif;font-weight:700;font-size:.72rem;color:var(--cy)">#${o.id.slice(-6).toUpperCase()}</td>
-      <td><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.78rem">${xe(o.customer)}</div><div style="font-size:.66rem;color:var(--mu)">${xe(o.phone||'')}</div></td>
+      <td style="font-family:'Syne',sans-serif;font-weight:700;font-size:.72rem;color:var(--cy)">${xe(ref)}</td>
+      <td><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.78rem">${xe(o.customer_name||'')}</div><div style="font-size:.66rem;color:var(--mu)">${xe(phone)}</div></td>
       <td style="max-width:140px"><div style="font-size:.74rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${xe((o.items||[]).map(i=>i.name+'×'+i.qty).join(', '))}</div></td>
-      <td style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--li)">R${o.total}</td>
-      <td style="font-size:.72rem;color:var(--mu2)">${xe(o.pickupTime||'—')}</td>
+      <td style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--li)">R${parseFloat(o.total||0).toFixed(2)}</td>
+      <td style="font-size:.72rem;color:var(--mu2)">${xe(o.pickup_time||'—')}</td>
       <td>
         <select class="status-sel" onchange="updateOrderStatus('${o.id}',this.value)">
           ${['pending','ready','completed','cancelled'].map(s=>`<option value="${s}"${o.status===s?' selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
         </select>
-        ${o.phone ? `<br/><a href="https://wa.me/27${(o.phone||'').replace(/\D/g,'').slice(1)}?text=${encodeURIComponent('Hi '+o.customer+'! Your Pulsify order #'+o.id.slice(-6).toUpperCase()+' at '+BIZ.name+' is READY for pickup! 🎉')}" target="_blank" style="font-size:.62rem;color:var(--te);text-decoration:none">💬 Notify</a>` : ''}
+        ${phone ? `<br/><a href="https://wa.me/27${phone.replace(/\D/g,'').slice(-9)}?text=${encodeURIComponent('Hi '+o.customer_name+'! Your Pulsify order '+ref+' at '+BIZ.name+' is READY for pickup! 🎉')}" target="_blank" style="font-size:.62rem;color:var(--te);text-decoration:none">💬 Notify</a>` : ''}
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 function filterOrders(btn, f) {
@@ -1324,24 +1357,25 @@ function filterOrders(btn, f) {
   btn.classList.add('active'); orderFilter = f; renderOrders();
 }
 
-function updateOrderStatus(id, status) {
-  const orders = load('orders', []);
-  const i = orders.findIndex(o => o.id === id);
-  if (i >= 0) { orders[i].status = status; save('orders', orders); }
+async function updateOrderStatus(id, status) {
+  const sb = getSB();
+  if (sb) await sb.from('pickup_orders').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+  const i = ORDERS.findIndex(o => o.id === id);
+  if (i >= 0) ORDERS[i].status = status;
   renderOrders(); renderStats(); renderHomeOrdersPreview();
   if (status === 'ready') toast('Order marked Ready 🟢', 'ok');
 }
 
 function renderHomeOrdersPreview() {
-  const orders = load('orders', []).filter(o => o.status === 'pending').slice(-3).reverse();
+  const orders = ORDERS.filter(o => o.status === 'pending').slice(0, 3);
   const el     = document.getElementById('home-orders-preview');
   if (!orders.length) { el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--mu);font-size:.8rem">No pending orders right now</div>'; return; }
   el.innerHTML = orders.map(o => `
     <div style="display:flex;align-items:center;gap:10px;background:var(--surf);border:1px solid rgba(255,92,0,.25);border-radius:14px;padding:12px 14px;margin-bottom:8px">
       <div style="font-size:1.4rem">📦</div>
       <div style="flex:1;min-width:0">
-        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem">${xe(o.customer)} — R${o.total}</div>
-        <div style="font-size:.68rem;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${xe(o.pickupTime||'Time not set')} · ${xe((o.items||[]).map(i=>i.name).join(', '))}</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem">${xe(o.customer_name||'')} — R${parseFloat(o.total||0).toFixed(2)}</div>
+        <div style="font-size:.68rem;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${xe(o.pickup_time||'Time not set')} · ${xe((o.items||[]).map(i=>i.name).join(', '))}</div>
       </div>
       <span class="status-badge s-pending">Pending</span>
     </div>`).join('');
@@ -1389,23 +1423,18 @@ function saveProfile() {
 // ════════════════════════════════════════════════════════════
 //  NOTIFICATIONS (browser + WhatsApp fallback)
 // ════════════════════════════════════════════════════════════
-let lastOrderCount = 0;
 function startOrderPoller() {
-  setInterval(() => {
-    const orders = load('orders', []);
-    const pending = orders.filter(o => o.status === 'pending').length;
-    if (pending > lastOrderCount && lastOrderCount > 0) {
-      const n = pending - lastOrderCount;
+  setInterval(async () => {
+    const prevPending = ORDERS.filter(o => o.status === 'pending').length;
+    await loadOrders();
+    const newPending = ORDERS.filter(o => o.status === 'pending').length;
+    if (newPending > prevPending && prevPending >= 0 && lastOrderCount >= 0) {
+      const n = newPending - prevPending;
       sendBrowserNotif(`🔔 ${n} new order${n>1?'s':''} received!`);
       toast(`📦 ${n} new order${n>1?'s':''}!`, 'ok');
     }
-    lastOrderCount = pending;
-    const badge = document.getElementById('orders-badge');
-    badge.textContent = pending; badge.classList.toggle('show', pending > 0);
-    document.getElementById('notif-dot').classList.toggle('show', pending > 0);
-    renderHomeOrdersPreview(); renderStats();
-  }, 10000);
-  lastOrderCount = load('orders', []).filter(o => o.status === 'pending').length;
+    lastOrderCount = newPending;
+  }, 15000);
 }
 
 function requestNotifPermission() { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); }
@@ -1460,7 +1489,107 @@ async function openSNPanel() {
   } catch { list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu)">Failed to load.</div>'; }
 }
 function closeSNPanel() { document.getElementById('sn-overlay').classList.remove('open'); }
+
+// ════════════════════════════════════════════════════════════
+//  QR SCANNER
+// ════════════════════════════════════════════════════════════
+let _qrStream = null;
+let _qrAnimFrame = null;
+let _qrScanned = false;
+
+async function openQrScanner() {
+  _qrScanned = false;
+  document.getElementById('qr-result').innerHTML = '';
+  document.getElementById('qr-overlay').style.display = 'flex';
+  try {
+    _qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const video = document.getElementById('qr-video');
+    video.srcObject = _qrStream;
+    video.addEventListener('loadedmetadata', () => { video.play(); _qrScanLoop(); });
+  } catch(e) {
+    document.getElementById('qr-result').innerHTML = `<div style="color:var(--pk);font-size:.8rem;text-align:center;padding:16px">Camera access denied: ${xe(e.message)}</div>`;
+  }
+}
+
+function _qrScanLoop() {
+  if (_qrScanned) return;
+  const video  = document.getElementById('qr-video');
+  const canvas = document.getElementById('qr-canvas');
+  if (!video.videoWidth) { _qrAnimFrame = requestAnimationFrame(_qrScanLoop); return; }
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+  const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const code = window.jsQR && window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+  if (code?.data) {
+    _qrScanned = true;
+    handleQrResult(code.data);
+  } else {
+    _qrAnimFrame = requestAnimationFrame(_qrScanLoop);
+  }
+}
+
+async function handleQrResult(orderRef) {
+  const res = document.getElementById('qr-result');
+  res.innerHTML = `<div style="text-align:center;color:var(--mu);font-size:.8rem">Looking up order <strong>${xe(orderRef)}</strong>…</div>`;
+  const sb = getSB();
+  const { data, error } = await sb.from('pickup_orders')
+    .select('*').eq('order_ref', orderRef).eq('business_id', getBizId()).maybeSingle();
+  if (error || !data) {
+    res.innerHTML = `<div style="text-align:center;padding:16px"><div style="font-size:2rem;margin-bottom:8px">🤔</div><div style="font-size:.84rem;color:var(--pk)">Order <strong>${xe(orderRef)}</strong> not found for this business.</div><button class="btn-sec" style="margin-top:12px;width:100%" onclick="_qrScanned=false;document.getElementById('qr-result').innerHTML='';_qrScanLoop()">Try Again</button></div>`;
+    return;
+  }
+  if (data.status === 'completed') {
+    res.innerHTML = `<div style="text-align:center;padding:16px"><div style="font-size:2rem;margin-bottom:8px">✅</div><div style="font-size:.84rem;color:var(--li)">Order already marked as completed.</div><button class="btn-sec" style="margin-top:12px;width:100%" onclick="closeQrScanner()">Close</button></div>`;
+    return;
+  }
+  const items = (data.items||[]).map(i => `${xe(i.name)} ×${i.qty}`).join(', ');
+  res.innerHTML = `
+    <div style="background:var(--surf2);border:1px solid var(--border2);border-radius:16px;padding:16px;margin-top:4px">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;margin-bottom:6px">📦 ${xe(data.order_ref||orderRef)}</div>
+      <div style="font-size:.8rem;color:var(--mu2);margin-bottom:4px">👤 ${xe(data.customer_name)} · ${xe(data.customer_phone||'')}</div>
+      <div style="font-size:.78rem;color:var(--mu2);margin-bottom:4px">🕐 Pickup: ${xe(data.pickup_time||'ASAP')}</div>
+      <div style="font-size:.76rem;color:var(--mu2);margin-bottom:12px">${items}</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--or);margin-bottom:14px">R${parseFloat(data.total||0).toFixed(2)}</div>
+      <button onclick="markOrderCompleted('${data.id}')" style="width:100%;background:linear-gradient(135deg,#00D4AA,#C6FF4A);color:#05080F;border:none;padding:14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer">✅ Mark as Collected</button>
+    </div>`;
+}
+
+async function markOrderCompleted(id) {
+  await updateOrderStatus(id, 'completed');
+  document.getElementById('qr-result').innerHTML = `<div style="text-align:center;padding:20px"><div style="font-size:2.5rem;margin-bottom:8px">🎉</div><div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--li)">Order Completed!</div><button class="btn-sec" style="margin-top:14px;width:100%" onclick="closeQrScanner()">Done</button></div>`;
+  toast('Order marked as collected ✅', 'ok');
+}
+
+function closeQrScanner() {
+  _qrScanned = true;
+  if (_qrAnimFrame) { cancelAnimationFrame(_qrAnimFrame); _qrAnimFrame = null; }
+  if (_qrStream) { _qrStream.getTracks().forEach(t => t.stop()); _qrStream = null; }
+  const video = document.getElementById('qr-video');
+  video.srcObject = null;
+  document.getElementById('qr-overlay').style.display = 'none';
+}
 </script>
+
+<!-- QR SCANNER -->
+<div class="overlay" id="qr-overlay" onclick="if(event.target===this)closeQrScanner()" style="display:none">
+  <div class="sheet" style="max-height:90vh">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div class="sheet-title">📷 Scan Order QR</div><button class="sheet-close" onclick="closeQrScanner()">✕</button></div>
+    <div class="sheet-body">
+      <p style="font-size:.78rem;color:var(--mu);margin-bottom:14px">Point the camera at the customer's order QR code to mark it as collected.</p>
+      <div style="position:relative;border-radius:16px;overflow:hidden;background:#000;margin-bottom:14px">
+        <video id="qr-video" autoplay playsinline muted style="width:100%;display:block;border-radius:16px"></video>
+        <canvas id="qr-canvas" style="display:none"></canvas>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+          <div style="width:200px;height:200px;border:2px solid var(--or);border-radius:16px;box-shadow:0 0 0 2000px rgba(0,0,0,.45)"></div>
+        </div>
+      </div>
+      <div id="qr-result"></div>
+    </div>
+  </div>
+</div>
 
 <!-- SOCIAL NOTIFICATION PANEL -->
 <div class="overlay" id="sn-overlay" onclick="if(event.target===this)closeSNPanel()">
