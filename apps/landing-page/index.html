@@ -991,8 +991,10 @@ async function loadFeed(resetPage = false) {
     const sb = getSB();
     if (!sb) throw new Error('Supabase SDK not loaded');
     const limit = 10, offset = (feedPage - 1) * limit;
+    const today = new Date().toISOString().split('T')[0];
     let q = sb.from('events')
       .select('id,name,date_local,time_local,venue_name,venue_city,venue_lat,venue_lon,price_min,is_free,image_url,genre,hype_score,like_count,comment_count,is_frontline,frontline_rank,external_url,source,status,description,lineup,organiser_name', { count: 'exact' })
+      .gte('date_local', today)
       .order('date_local', { ascending: true })
       .range(offset, offset + limit - 1);
     if (feedCity  && feedCity  !== 'all') q = q.ilike('venue_city', `%${feedCity}%`);
