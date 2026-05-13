@@ -173,6 +173,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="fchip on" onclick="setUserFilter('all',this)">All Users</div>
       <div class="fchip" onclick="setUserFilter('admin',this)">👑 Admins</div>
       <div class="fchip" onclick="setUserFilter('business',this)">🏢 Business</div>
+      <div class="fchip" onclick="setUserFilter('premium',this)">💎 Premium</div>
       <div class="fchip" onclick="setUserFilter('trial',this)">⏰ On Trial</div>
       <div class="fchip" onclick="setUserFilter('suspended',this)">🚫 Suspended</div>
     </div>
@@ -317,9 +318,55 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div id="tab-leads" class="tab-content">
     <div style="margin-bottom:20px">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Lead Management</div>
-      <div style="font-size:.82rem;color:var(--mu2)">View and manage business leads</div>
+      <div style="font-size:.82rem;color:var(--mu2)">Business and organizer leads from scraping</div>
     </div>
-    <div style="padding:40px;text-align:center;color:var(--mu)">Leads management coming soon…</div>
+
+    <div class="stats-bar" id="leads-stats-bar">
+      <div class="stat"><div class="stat-n warn-n" id="ls-new">—</div><div class="stat-l">New</div></div>
+      <div class="stat"><div class="stat-n" id="ls-contacted">—</div><div class="stat-l">Contacted</div></div>
+      <div class="stat"><div class="stat-n ok-n" id="ls-converted">—</div><div class="stat-l">Converted</div></div>
+      <div class="stat"><div class="stat-n bad-n" id="ls-ignored">—</div><div class="stat-l">Ignored</div></div>
+    </div>
+
+    <div class="search-row" style="flex-wrap:wrap;gap:8px">
+      <input class="inp" id="leads-search" placeholder="Search name, city, email…" oninput="loadLeads(1)" style="flex:1;min-width:180px"/>
+      <select class="inp" id="leads-status" onchange="loadLeads(1)" style="max-width:140px">
+        <option value="all">All Status</option>
+        <option value="new">New</option>
+        <option value="contacted">Contacted</option>
+        <option value="converted">Converted</option>
+        <option value="ignored">Ignored</option>
+      </select>
+      <select class="inp" id="leads-source" onchange="loadLeads(1)" style="max-width:150px">
+        <option value="all">All Sources</option>
+        <option value="google_maps">Google Maps</option>
+        <option value="instagram">Instagram</option>
+        <option value="manual">Manual</option>
+      </select>
+      <button class="btn btn-surf" onclick="loadLeads(1)">↺ Refresh</button>
+    </div>
+
+    <div id="msg-leads" class="msg"></div>
+
+    <div class="tbl-wrap">
+      <table id="leads-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Category</th>
+            <th>City</th>
+            <th>Contact</th>
+            <th>Source</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="leads-tbody">
+          <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="leads-pagination" style="display:flex;justify-content:center;gap:10px;margin-top:16px"></div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
@@ -441,6 +488,7 @@ function switchTab(tab) {
   if (tab === 'users' && !ALL_USERS.length) loadUsers();
   else if (tab === 'businesses' && !ALL_BIZ.length) loadBusinesses();
   else if (tab === 'events') loadPendingEvents();
+  else if (tab === 'leads') loadLeads(1);
   else if (tab === 'verifications') loadVerifications();
 }
 
@@ -789,6 +837,7 @@ function renderUsersTable() {
   
   if (activeUserFilter === 'admin') items = items.filter(u => u.role === 'admin');
   else if (activeUserFilter === 'business') items = items.filter(u => u.role === 'business');
+  else if (activeUserFilter === 'premium') items = items.filter(u => u.subscription_type === 'premium');
   else if (activeUserFilter === 'trial') items = items.filter(u => u.trial_expires_at && new Date(u.trial_expires_at) > new Date());
   else if (activeUserFilter === 'suspended') items = items.filter(u => u.suspended);
   
@@ -958,6 +1007,88 @@ async function changeRole(userId, role) {
     showUserMsg(`Error: ${e.message}`, 'err');
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+/* LEADS */
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+let leadsCurrentPage = 1;
+
+async function loadLeads(page = 1) {
+  leadsCurrentPage = page;
+  document.getElementById('leads-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>';
+  const search   = document.getElementById('leads-search')?.value  || '';
+  const status   = document.getElementById('leads-status')?.value  || 'all';
+  const source   = document.getElementById('leads-source')?.value  || 'all';
+  const params   = new URLSearchParams({ page, limit: 20, search, status, source });
+  try {
+    const r    = await fetch(`/api/leads?${params}`, { headers: { Authorization: 'Bearer ' + adminToken } });
+    const json = await r.json();
+    if (!r.ok) { showLeadsMsg(json.error || 'Failed to load leads', 'err'); return; }
+    renderLeadsTable(json.leads || []);
+    renderLeadsPagination(json.page, json.has_next);
+    const s = json.stats || {};
+    document.getElementById('ls-new').textContent       = s.new       ?? '—';
+    document.getElementById('ls-contacted').textContent = s.contacted ?? '—';
+    document.getElementById('ls-converted').textContent = s.converted ?? '—';
+    document.getElementById('ls-ignored').textContent   = s.ignored   ?? '—';
+  } catch(e) { showLeadsMsg('Error: ' + e.message, 'err'); }
+}
+
+const LEAD_STATUS_LABELS = { new:'🆕 New', contacted:'📞 Contacted', converted:'✅ Converted', ignored:'🚫 Ignored' };
+const LEAD_STATUS_NEXT   = { new:'contacted', contacted:'converted', converted:'ignored', ignored:'new' };
+
+function renderLeadsTable(leads) {
+  if (!leads.length) {
+    document.getElementById('leads-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--mu)">No leads found.</td></tr>';
+    return;
+  }
+  document.getElementById('leads-tbody').innerHTML = leads.map(l => {
+    const statusCls = { new:'s-warn', contacted:'', converted:'s-ok', ignored:'s-bad' }[l.status] || '';
+    const contact = [l.phone, l.email].filter(Boolean).join(' · ') || '—';
+    const socials = [
+      l.instagram ? `<a href="https://instagram.com/${l.instagram.replace('@','')}" target="_blank" style="color:var(--pk)">IG</a>` : '',
+      l.website   ? `<a href="${esc(l.website)}" target="_blank" style="color:var(--pk)">Web</a>` : '',
+    ].filter(Boolean).join(' ');
+    return `<tr>
+      <td style="font-weight:600">${esc(l.name || '—')}${socials ? ' ' + socials : ''}</td>
+      <td style="font-size:.75rem;color:var(--mu2)">${esc(l.category || '—')}</td>
+      <td style="font-size:.75rem">${esc(l.city || '—')}</td>
+      <td style="font-size:.72rem;font-family:'JetBrains Mono',monospace">${esc(contact)}</td>
+      <td style="font-size:.72rem;color:var(--mu2)">${esc(l.source || '—')}</td>
+      <td><span class="status-badge ${statusCls}">${LEAD_STATUS_LABELS[l.status] || l.status}</span></td>
+      <td>
+        <div class="user-actions">
+          <button class="btn btn-li" style="padding:5px 10px;font-size:.68rem" onclick="advanceLead('${l.id}','${LEAD_STATUS_NEXT[l.status] || 'contacted'}')">→ ${LEAD_STATUS_LABELS[LEAD_STATUS_NEXT[l.status] || 'contacted']}</button>
+          ${l.status !== 'ignored' ? `<button class="btn btn-pk" style="padding:5px 10px;font-size:.68rem" onclick="advanceLead('${l.id}','ignored')">🚫</button>` : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderLeadsPagination(page, hasNext) {
+  const el = document.getElementById('leads-pagination');
+  if (!el) return;
+  el.innerHTML = [
+    page > 1 ? `<button class="btn btn-surf" style="padding:6px 14px" onclick="loadLeads(${page-1})">← Prev</button>` : '',
+    `<span style="color:var(--mu);font-size:.8rem;align-self:center">Page ${page}</span>`,
+    hasNext   ? `<button class="btn btn-surf" style="padding:6px 14px" onclick="loadLeads(${page+1})">Next →</button>` : '',
+  ].join('');
+}
+
+async function advanceLead(id, newStatus) {
+  try {
+    const r = await fetch(`/api/leads/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    if (!r.ok) { const j = await r.json(); showLeadsMsg(j.error || 'Failed', 'err'); return; }
+    loadLeads(leadsCurrentPage);
+  } catch(e) { showLeadsMsg('Error: ' + e.message, 'err'); }
+}
+
+function showLeadsMsg(m, t) { const el=document.getElementById('msg-leads'); if(!el) return; el.textContent=m; el.className='msg show msg-'+(t==='err'?'err':'ok'); }
 
 /* ══════════════════════════════════════════════════════════════════════════════════ */
 /* EVENT APPROVAL */
