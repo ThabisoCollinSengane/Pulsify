@@ -127,6 +127,7 @@ const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 let _accType = 'user';
 let _signingIn = false;
 let _sessionHandled = false;
+let _resendAt = 0;
 
 function selectType(t) {
   _accType = t;
@@ -233,7 +234,7 @@ async function doSignIn() {
     setLoading(false);
     const msg = error.message || '';
     if (msg.includes('Email not confirmed') || msg.includes('not confirmed'))
-      return showErr('Please verify your email before signing in. <br><a href="#" onclick="resendVerification()" style="color:var(--or)">Resend verification email \u2192</a>');
+      return showErr('Please verify your email before signing in.<br><a id="resend-btn" href="#" onclick="resendVerification()" style="color:var(--or)">Resend verification email \u2192</a> &nbsp;\u00b7&nbsp; <a href="/create-account" style="color:var(--mu2)">Wrong email? Sign up again \u2192</a>');
     if (msg.includes('Invalid login') || msg.includes('invalid_credentials') || msg.includes('Invalid credentials'))
       return showErr('Incorrect email or password. <a href="/create-account" style="color:var(--or)">Need an account? \u2192</a>');
     if (msg.includes('rate') || msg.includes('too many') || error.status === 429)
@@ -260,11 +261,23 @@ async function handleForgot() {
 }
 
 async function resendVerification() {
+  const now = Date.now();
+  if (now < _resendAt) {
+    showErr('Please wait ' + Math.ceil((_resendAt - now) / 1000) + 's before requesting another email.<br><a id="resend-btn" href="#" onclick="resendVerification()" style="color:var(--or)">Resend verification email \u2192</a> &nbsp;\u00b7&nbsp; <a href="/create-account" style="color:var(--mu2)">Wrong email? Sign up again \u2192</a>');
+    return;
+  }
   const em = document.getElementById('em').value.trim();
   if (!em) return showErr('Enter your email address first.');
+  _resendAt = now + 60000;
+  const btn = document.getElementById('resend-btn');
+  if (btn) { btn.textContent = 'Sending\u2026'; btn.style.pointerEvents = 'none'; }
   const { error } = await sb.auth.resend({ type: 'signup', email: em });
-  if (error) return showErr('Could not resend: ' + error.message);
-  showOk('\u2705 Verification email resent to <strong>' + em + '</strong>.');
+  if (error) {
+    _resendAt = 0;
+    return showErr('Could not resend: ' + error.message + '<br><a id="resend-btn" href="#" onclick="resendVerification()" style="color:var(--or)">Try again \u2192</a>');
+  }
+  showOk('\u2705 Verification email resent to <strong>' + em + '</strong>. Check your inbox and spam folder.');
+  setTimeout(() => { _resendAt = 0; }, 60000);
 }
 
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && !document.getElementById('btn').disabled) doSignIn(); });

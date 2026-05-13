@@ -207,18 +207,13 @@ sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'SIGNED_IN' && session) {
     let pending = {};
     try { pending = JSON.parse(localStorage.getItem('p_pending_profile') || '{}'); } catch(e) {}
-    
+    await saveSessionAndProfile(session, pending);
+    localStorage.removeItem('p_pending_profile');
     const role = pending.role || 'user';
     const dest = role === 'organizer' ? '/organizer'
       : role === 'business' ? '/business'
       : '/';
-
-    // The user has just signed in. Redirect them immediately.
     window.location.href = dest;
-
-    // After starting the redirect, do the cleanup and save in the background.
-    await saveSessionAndProfile(session, pending);
-    localStorage.removeItem('p_pending_profile');
   }
 });
 
@@ -366,7 +361,10 @@ async function doCreate() {
 
   var { data, error } = await sb.auth.signUp({
     email: em, password: pw,
-    options: { data: { full_name: fn, username: un } }
+    options: {
+      data: { full_name: fn, username: un },
+      emailRedirectTo: window.location.origin + '/'
+    }
   });
 
   if (error) {
@@ -402,14 +400,33 @@ async function doCreate() {
     setTimeout(()=>window.location.href=dest, 1200);
   } else {
     btn.innerHTML='Create My Account 🔥'; btn.disabled=false;
-    showOk('<div style="font-size:1.4rem;margin-bottom:8px">📧</div><strong>Check your inbox!</strong><br/>We sent a confirmation link to <strong>' + em + '</strong>.<br/>Click the link in that email to activate your account.<br/><span style="font-size:.74rem;color:var(--mu)">Didn\'t get it? Check spam or <a href="#" onclick="resendEmail(\'' + em + '\')" style="color:var(--li)">resend →</a></span>');
+    showOk('<div style="font-size:1.4rem;margin-bottom:8px">📧</div><strong>Check your inbox!</strong><br/>We sent a confirmation link to <strong>' + em + '</strong>.<br/>Click the link in that email to activate your account. You\'ll be redirected to your dashboard after verification.<br/><span style="font-size:.74rem;color:var(--mu)">Didn\'t get it? Check spam or <a id="resend-link" href="#" onclick="resendEmail(\'' + em + '\')" style="color:var(--li)">resend →</a></span>');
     localStorage.setItem('p_pending_profile', JSON.stringify(profileData));
   }
 }
 
+var _resendAt = 0;
 async function resendEmail(em) {
-  await sb.auth.resend({ type: 'signup', email: em });
-  toast('Verification email resent to ' + em, 'ok');
+  var now = Date.now();
+  if (now < _resendAt) {
+    toast('Wait ' + Math.ceil((_resendAt - now) / 1000) + 's before resending', '');
+    return;
+  }
+  _resendAt = now + 60000;
+  var link = document.getElementById('resend-link');
+  if (link) { link.textContent = 'Sending…'; link.style.pointerEvents = 'none'; }
+  var { error } = await sb.auth.resend({ type: 'signup', email: em });
+  if (error) {
+    _resendAt = 0;
+    if (link) { link.textContent = 'resend →'; link.style.pointerEvents = ''; }
+    toast('Could not resend: ' + error.message, '');
+    return;
+  }
+  if (link) {
+    link.textContent = 'Sent ✓ (resend in 60s)';
+    setTimeout(() => { if (link) { link.textContent = 'resend →'; link.style.pointerEvents = ''; } }, 60000);
+  }
+  toast('Verification email resent!', 'ok');
 }
 </script>
 </body>

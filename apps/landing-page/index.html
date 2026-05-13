@@ -2486,6 +2486,35 @@ async function initSupabaseSession() {
   sb.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
       try {
+        localStorage.setItem('p_token', session.access_token);
+
+        // Email confirmation flow: create profile from pending data then redirect
+        let pending = null;
+        try { pending = JSON.parse(localStorage.getItem('p_pending_profile') || 'null'); } catch(e) {}
+        if (pending) {
+          try {
+            const r = await fetch('/api/auth/profile', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+              body: JSON.stringify({ profile: pending })
+            });
+            const d = await r.json().catch(() => ({}));
+            const profile = d.profile || pending;
+            localStorage.setItem('p_user', JSON.stringify({
+              id: session.user.id, email: session.user.email,
+              display_name: profile.display_name || session.user.email?.split('@')[0],
+              role: profile.role || 'user'
+            }));
+            localStorage.setItem('p_profile', JSON.stringify(profile));
+          } catch(e) {}
+          localStorage.removeItem('p_pending_profile');
+          const role = pending.role || 'user';
+          const dest = role === 'organizer' ? '/organizer' : role === 'business' ? '/business' : '/feeds';
+          window.location.href = dest;
+          return;
+        }
+
+        // Existing user (e.g. Google OAuth callback)
         const { data: prof } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
         const role = prof?.role || 'user';
         if (role === 'organizer') { window.location.href = '/organizer'; return; }
