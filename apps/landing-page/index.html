@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
 <meta name="description" content="Pulsify — Feel the Vibe 🇿🇦 South Africa's live event discovery platform"/>
-<meta name="build-version" content="v2.1.0-20260513"/>
+<meta name="build-version" content="v2.2.0-20260513"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
@@ -1057,7 +1057,12 @@ async function loadFeed(resetPage = false) {
   } catch(err) {
     if (myReq !== _feedReqId) return;
     console.error('[Feed]', err);
-    feedEl.innerHTML = `<div class="api-error">⚠️ Could not load events: ${err.message}</div>`;
+    feedEl.innerHTML = `<div class="api-error" style="text-align:center;padding:32px 16px">
+      <div style="font-size:2rem;margin-bottom:12px">⚠️</div>
+      <div style="font-weight:700;margin-bottom:6px">Could not load events</div>
+      <div style="font-size:.75rem;color:var(--mu);margin-bottom:16px;word-break:break-all">${err.message || 'Network error'}</div>
+      <button onclick="loadFeed(true)" style="background:var(--or);color:#fff;border:none;border-radius:24px;padding:10px 28px;font-size:.85rem;font-weight:700;cursor:pointer">Try Again</button>
+    </div>`;
   }
 }
 
@@ -1984,13 +1989,10 @@ function renderProfile() {
 
   // Sign out
   const soBtn = document.getElementById('signout-btn');
-  if (soBtn) soBtn.onclick = () => {
-    localStorage.removeItem('p_user');
-    localStorage.removeItem('p_profile');
-    localStorage.removeItem('p_token');
-    currentUser = null;
-    renderProfile();
-    showToast('Signed out');
+  if (soBtn) soBtn.onclick = async () => {
+    try { const sb2 = getSB(); if (sb2) await sb2.auth.signOut(); } catch(e) {}
+    ['p_user','p_profile','p_token','p_sev','p_sbiz'].forEach(k => localStorage.removeItem(k));
+    window.location.href = '/signin';
   };
 
   // Top-right button → Feed

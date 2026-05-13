@@ -74,6 +74,29 @@ function section(t) { log(`<h2>${t}</h2>`); }
   log(`<span class="info">Page loaded at: ${new Date().toISOString()}</span>`);
   log(`<span class="info">User agent: ${navigator.userAgent}</span>`);
   log(`<span class="info">Origin: ${window.location.origin}</span>`);
+
+  section('8. Landing page version check');
+  try {
+    const r = await fetch('/', { cache: 'no-store' });
+    const html = await r.text();
+    const m = html.match(/build-version[^>]*content="([^"]+)"/);
+    if (m) {
+      const v = m[1];
+      const isNew = v >= 'v2.2.0';
+      log(`<span class="${isNew ? 'ok' : 'err'}">${isNew ? '✓' : '✗'} Landing page version: ${v}${isNew ? '' : ' — OLD CODE still deployed!'}</span>`);
+    } else {
+      log(`<span class="err">✗ Could not find build-version in landing page — very old code</span>`);
+    }
+  } catch(e) { log(`<span class="err">Could not fetch landing page: ${e.message}</span>`); }
+
+  section('9. Events with future dates (DB check)');
+  try {
+    const sb = window.supabase.createClient(URL, KEY);
+    const today = new Date().toISOString().split('T')[0];
+    const { data, error, count } = await sb.from('events').select('id,name,date_local', { count: 'exact' }).gte('date_local', today).limit(3);
+    if (error) log(`<span class="err">✗ ${error.message}</span>`);
+    else log(`<span class="ok">✓ ${count} upcoming events in DB</span><pre>${JSON.stringify(data,null,2)}</pre>`);
+  } catch(e) { log(`<span class="err">Crash: ${e.message}</span>`); }
 })();
 </script>
 </body>
