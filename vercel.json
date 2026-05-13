@@ -23,6 +23,7 @@
     { "source": "/feeds",            "destination": "/apps/landing-page/feeds.html" },
     { "source": "/terms",            "destination": "/apps/landing-page/terms.html" },
     { "source": "/business-menu",    "destination": "/apps/landing-page/business-menu.html" },
+    { "source": "/diagnose",         "destination": "/apps/landing-page/diagnose.html" },
     { "source": "/",               "destination": "/apps/landing-page/index.html" },
     { "source": "/(.+)",           "destination": "/apps/landing-page/$1" }
   ],
