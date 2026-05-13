@@ -147,6 +147,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="tab-btn" onclick="switchTab('verifications')">🏆 Verifications</div>
     <div class="tab-btn" onclick="switchTab('banners')">🖼 Banners</div>
     <div class="tab-btn" onclick="switchTab('notifications')">🔔 Notify</div>
+    <div class="tab-btn" onclick="switchTab('reports')">🚩 Reports</div>
     <div class="tab-btn" onclick="switchTab('system')">⚙️ System</div>
   </div>
 
@@ -502,6 +503,27 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div id="notif-history"><div style="padding:40px;text-align:center;color:var(--mu);font-size:.82rem">Click ↺ History to load</div></div>
   </div>
 
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: REPORTS -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <div id="tab-reports" class="tab-content">
+    <div style="margin-bottom:20px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Event Reports</div>
+      <div style="font-size:.82rem;color:var(--mu2)">User-submitted reports for events</div>
+    </div>
+    <div class="search-row">
+      <select class="inp" id="report-filter" onchange="loadReports()" style="max-width:180px">
+        <option value="pending">⏳ Pending</option>
+        <option value="reviewed">✅ Reviewed</option>
+        <option value="dismissed">🚫 Dismissed</option>
+        <option value="all">All</option>
+      </select>
+      <button class="btn btn-surf" onclick="loadReports()">↺ Refresh</button>
+    </div>
+    <div id="msg-reports" class="msg"></div>
+    <div id="reports-list"><div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div></div>
+  </div>
+
   <div id="tab-system" class="tab-content">
     <div style="margin-bottom:20px">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">System Settings</div>
@@ -601,6 +623,7 @@ function switchTab(tab) {
   else if (tab === 'verifications') loadVerifications();
   else if (tab === 'banners') loadBanners();
   else if (tab === 'notifications') loadNotifHistory();
+  else if (tab === 'reports') loadReports();
 }
 
 async function signOutAdmin() { await sb.auth.signOut(); location.reload(); }
@@ -1472,6 +1495,68 @@ async function loadNotifHistory() {
 
 function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function showNotifMsg(m, t) { const el=document.getElementById('msg-notif'); if(!el) return; el.textContent=m; el.className='msg show msg-'+(t==='err'?'err':'ok'); setTimeout(()=>el.classList.remove('show'),6000); }
+
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+/* EVENT REPORTS */
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+const REASON_LABELS = {
+  fake_event: '🎭 Fake / misleading event',
+  stolen_content: '📋 Stolen event info',
+  i_am_owner: '👤 I am the owner',
+  doesnt_exist: '❌ Event no longer exists',
+  inappropriate: '⚠️ Inappropriate content',
+  other: '💬 Other',
+};
+
+async function loadReports() {
+  const el = document.getElementById('reports-list');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div>';
+  const status = document.getElementById('report-filter')?.value || 'pending';
+  try {
+    const r = await fetch(`/api/admin/reports?status=${status}`, { headers: { Authorization: 'Bearer ' + adminToken } });
+    const json = await r.json();
+    if (!r.ok) { el.innerHTML = `<div style="padding:20px;color:var(--pk)">${escHtml(json.error)}</div>`; return; }
+    const reports = json.reports || [];
+    if (!reports.length) { el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">No reports found.</div>'; return; }
+    el.innerHTML = reports.map(rep => `
+      <div style="background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:16px;margin-bottom:12px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px">
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;margin-bottom:2px">${escHtml(rep.event_name || rep.event_id)}</div>
+            <div style="font-size:.72rem;color:var(--mu)">Event ID: ${escHtml(rep.event_id)}</div>
+          </div>
+          <span style="background:${rep.status === 'pending' ? 'rgba(255,92,0,.15)' : rep.status === 'reviewed' ? 'rgba(198,255,74,.15)' : 'rgba(255,255,255,.06)'};color:${rep.status === 'pending' ? 'var(--or)' : rep.status === 'reviewed' ? '#C6FF4A' : 'var(--mu)'};padding:3px 10px;border-radius:50px;font-size:.66rem;font-family:'Syne',sans-serif;font-weight:700;white-space:nowrap">${rep.status}</span>
+        </div>
+        <div style="font-size:.8rem;color:var(--mu2);margin-bottom:4px">${REASON_LABELS[rep.reason] || rep.reason}</div>
+        ${rep.detail ? `<div style="font-size:.76rem;color:var(--mu);background:rgba(255,255,255,.03);border-radius:8px;padding:8px;margin-bottom:8px;line-height:1.5">${escHtml(rep.detail)}</div>` : ''}
+        <div style="font-size:.68rem;color:var(--mu);margin-bottom:10px">${new Date(rep.created_at).toLocaleString('en-ZA')}</div>
+        ${rep.status === 'pending' ? `
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-li" style="flex:1;padding:6px 0;font-size:.72rem" onclick="updateReport('${rep.id}','reviewed')">✅ Mark Reviewed</button>
+          <button class="btn btn-surf" style="flex:1;padding:6px 0;font-size:.72rem" onclick="updateReport('${rep.id}','dismissed')">🚫 Dismiss</button>
+          <a href="/feeds?eid=${encodeURIComponent(rep.event_id)}" target="_blank" class="btn btn-cy" style="flex:1;padding:6px 0;font-size:.72rem;text-align:center;text-decoration:none">👁 View</a>
+        </div>` : ''}
+      </div>`).join('');
+  } catch(e) {
+    el.innerHTML = `<div style="padding:20px;color:var(--pk)">${escHtml(e.message)}</div>`;
+  }
+}
+
+async function updateReport(id, status) {
+  try {
+    const r = await fetch(`/api/admin/reports/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ status }),
+    });
+    if (!r.ok) throw new Error((await r.json()).error);
+    loadReports();
+  } catch(e) {
+    const msg = document.getElementById('msg-reports');
+    if (msg) { msg.textContent = e.message; msg.className = 'msg show msg-err'; setTimeout(() => msg.classList.remove('show'), 4000); }
+  }
+}
 
 checkSession();
 </script>

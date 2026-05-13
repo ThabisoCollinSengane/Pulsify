@@ -759,6 +759,29 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 </div>
 
 <!-- TICKET CONFIRMATION MODAL -->
+<div id="report-overlay" onclick="if(event.target===this)closeReportModal()" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);align-items:flex-end;justify-content:center">
+  <div style="width:100%;max-width:480px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);padding:20px 20px 32px;animation:su .3s ease">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem">🚩 Report Event</div>
+      <button onclick="closeReportModal()" style="background:rgba(255,255,255,.06);border:none;color:var(--tx);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.9rem">✕</button>
+    </div>
+    <div id="report-msg" style="display:none;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px"></div>
+    <div style="font-size:.76rem;color:var(--mu);margin-bottom:6px">Reason *</div>
+    <select id="report-reason" style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--tx);font-size:.84rem;margin-bottom:12px;outline:none">
+      <option value="">— Select a reason —</option>
+      <option value="fake_event">🎭 Fake or misleading event</option>
+      <option value="stolen_content">📋 Stolen event info / images</option>
+      <option value="i_am_owner">👤 I am the owner of this event</option>
+      <option value="doesnt_exist">❌ This event no longer exists</option>
+      <option value="inappropriate">⚠️ Inappropriate content</option>
+      <option value="other">💬 Other</option>
+    </select>
+    <div style="font-size:.76rem;color:var(--mu);margin-bottom:6px">Additional details <span style="color:var(--mu)">(optional)</span></div>
+    <textarea id="report-detail" rows="3" placeholder="Tell us more..." style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--tx);font-size:.84rem;resize:none;outline:none;box-sizing:border-box"></textarea>
+    <button id="report-submit-btn" onclick="submitReport()" style="width:100%;margin-top:14px;padding:13px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Submit Report</button>
+  </div>
+</div>
+
 <div id="ticket-confirm-modal" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.85);backdrop-filter:blur(14px);align-items:center;justify-content:center;padding:20px">
   <div style="width:100%;max-width:360px;background:var(--bg2);border-radius:22px;border:1px solid rgba(255,255,255,.12);overflow:hidden;animation:su .3s ease">
     <div style="background:linear-gradient(135deg,#B026FF,#FF5C00);padding:20px;text-align:center">
@@ -1189,8 +1212,13 @@ async function openEv(evId) {
     const tiers = evTiers || [], photos = evPhotos || [];
 
     selTier = tiers[0] || null; selQty = 1;
-    const iF = ev.is_free, bg = gg(ev.genre), emo = ge(ev.genre), hp = ev.hype_score ?? 70;
+    const iF = ev.is_free, bg = gg(ev.genre), emo = ge(ev.genre);
     const lc = ev.like_count || 0, cc = ev.comment_count || 0;
+    const totalCap = tiers.reduce((s, t) => s + (t.capacity || 0), 0) || ev.capacity || 0;
+    const sold = tiers.reduce((s, t) => s + (t.sold || 0), 0) || ev.tickets_sold || ev.attendance_count || 0;
+    const vibe = Math.min(100, Math.round((sold / Math.max(totalCap, 1)) * 60 + Math.min(lc / 5, 40)));
+    const vibeLabel = vibe >= 81 ? 'FULL SEND 💥' : vibe >= 61 ? 'Lit 🔥' : vibe >= 41 ? 'Vibing 🎵' : vibe >= 21 ? 'Warming Up 🌡️' : 'Chill 😴';
+    const vibeColor = vibe >= 81 ? '#FF2D78' : vibe >= 61 ? '#FF5C00' : vibe >= 41 ? '#C6FF4A' : vibe >= 21 ? '#00E5FF' : '#666';
     const lineup = Array.isArray(ev.lineup) ? ev.lineup : (ev.lineup ? JSON.parse(ev.lineup) : []);
 
     let tkHTML = '';
@@ -1249,6 +1277,7 @@ async function openEv(evId) {
         <button class="rb" onclick="this.classList.toggle('act');showToast('RSVP confirmed! See you there 🎉','ok')"><span class="ri">${iF ? '✅' : '🎟'}</span><span class="rl">${fn(ev.attendance_count || 0)}</span></button>
         <button class="rb" onclick="toggleSave('ev','${x(ev.id)}',this)"><span class="ri">${savedEv.includes(ev.id) ? '🔖' : '🏷'}</span><span class="rl">Save</span></button>
         <button class="rb" onclick="shareIt('${x(ev.name)}')"><span class="ri">🔗</span><span class="rl">Share</span></button>
+        <button class="rb" onclick="openReportModal('${x(ev.id)}','${x(ev.name).replace(/'/g,'\\\'')}')"><span class="ri">🚩</span><span class="rl">Report</span></button>
       </div>
       <div class="db">
         <div class="ig">
@@ -1260,9 +1289,12 @@ async function openEv(evId) {
           ${ev.age_restriction ? `<div class="ib2"><div class="il">Age</div><div class="iv" style="font-size:.78rem">${x(ev.age_restriction)}</div></div>` : ''}
         </div>
         <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:18px">
-          <div class="hr"><span>🔥 Hype Meter</span><span>${hp}%</span></div>
-          <div class="hb"><div class="hf" style="width:${hp}%"></div></div>
-          <div style="font-size:.76rem;color:var(--mu)">${fn(ev.attendance_count || 0)} people going</div>
+          <div class="hr"><span>⚡ Vibe Meter</span><span style="color:${vibeColor};font-family:'Bebas Neue',sans-serif;font-size:1rem">${vibeLabel}</span></div>
+          <div class="hb" style="margin:8px 0"><div class="hf" style="width:${vibe}%;background:linear-gradient(90deg,${vibeColor},${vibeColor}88)"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--mu)">
+            <span>${fn(sold)} ${totalCap ? 'of ' + fn(totalCap) + ' tickets' : 'going'}</span>
+            <span>${fn(lc)} likes · ${vibe}% vibe</span>
+          </div>
         </div>
         ${ev.description ? `<div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:18px"><div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">About</div><div style="font-size:.82rem;line-height:1.65;color:var(--mu2)">${x(ev.description)}</div></div>` : ''}
         ${tkHTML}
@@ -2676,6 +2708,59 @@ function _renderBizPage() {
         </div>
       </div>
     </div>`).join('');
+}
+
+/* ══════════════════════════════════════════════════
+   REPORT EVENT
+══════════════════════════════════════════════════ */
+let _reportEvId = null, _reportEvName = null;
+
+function openReportModal(evId, evName) {
+  _reportEvId = evId; _reportEvName = evName;
+  document.getElementById('report-reason').value = '';
+  document.getElementById('report-detail').value = '';
+  const msg = document.getElementById('report-msg');
+  msg.style.display = 'none';
+  document.getElementById('report-submit-btn').disabled = false;
+  document.getElementById('report-submit-btn').textContent = 'Submit Report';
+  const ov = document.getElementById('report-overlay');
+  ov.style.display = 'flex';
+}
+
+function closeReportModal() {
+  document.getElementById('report-overlay').style.display = 'none';
+  _reportEvId = null; _reportEvName = null;
+}
+
+async function submitReport() {
+  const reason = document.getElementById('report-reason').value;
+  const detail = document.getElementById('report-detail').value.trim();
+  const msg = document.getElementById('report-msg');
+  if (!reason) {
+    msg.style.cssText = 'display:block;background:rgba(255,45,120,.12);color:#FF2D78;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px';
+    msg.textContent = 'Please select a reason.';
+    return;
+  }
+  const btn = document.getElementById('report-submit-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const { data: { session } } = await getSB().auth.getSession();
+    const headers = { 'Content-Type': 'application/json' };
+    if (session) headers['Authorization'] = 'Bearer ' + session.access_token;
+    const r = await fetch('/api/report-event', {
+      method: 'POST', headers,
+      body: JSON.stringify({ event_id: _reportEvId, event_name: _reportEvName, reason, detail: detail || null }),
+    });
+    if (!r.ok) throw new Error((await r.json()).error || 'Failed');
+    msg.style.cssText = 'display:block;background:rgba(198,255,74,.1);color:#C6FF4A;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px';
+    msg.textContent = '✅ Report submitted. Our team will review it shortly.';
+    btn.textContent = 'Reported';
+    setTimeout(closeReportModal, 2000);
+  } catch(e) {
+    msg.style.cssText = 'display:block;background:rgba(255,45,120,.12);color:#FF2D78;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px';
+    msg.textContent = e.message || 'Failed to submit. Please try again.';
+    btn.disabled = false; btn.textContent = 'Submit Report';
+  }
 }
 
 </script>

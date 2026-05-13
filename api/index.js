@@ -1241,6 +1241,46 @@ module.exports = async (req, res) => {
       return res.status(200).json({ notif_sent: notifs.length, push_sent });
     }
 
+    /* ─── POST /report-event ────────────────────────────── */
+    if (url === '/report-event' && req.method === 'POST') {
+      const token  = (req.headers.authorization || '').replace('Bearer ', '').trim();
+      const user   = token ? await verifyToken(token) : null;
+      const { event_id, event_name, reason, detail } = req.body || {};
+      const validReasons = ['fake_event','stolen_content','i_am_owner','doesnt_exist','inappropriate','other'];
+      if (!event_id || !validReasons.includes(reason)) return res.status(400).json({ error: 'event_id and valid reason required' });
+      const { error } = await sb().from('event_reports').insert({
+        event_id, event_name: event_name || null,
+        reporter_id: user?.id || null,
+        reason, detail: detail?.trim() || null,
+      });
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(201).json({ ok: true });
+    }
+
+    /* ─── GET /admin/reports ─────────────────────────────── */
+    if (url === '/admin/reports' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const status = req.query?.status || 'pending';
+      let q = sb().from('event_reports').select('*').order('created_at', { ascending: false });
+      if (status !== 'all') q = q.eq('status', status);
+      const { data, error } = await q;
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ reports: data || [] });
+    }
+
+    /* ─── PATCH /admin/reports/:id ───────────────────────── */
+    const reportMatch = url.match(/^\/admin\/reports\/([^/]+)$/);
+    if (reportMatch && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const { status } = req.body || {};
+      if (!['reviewed','dismissed'].includes(status)) return res.status(400).json({ error: 'status must be reviewed or dismissed' });
+      const { error } = await sb().from('event_reports').update({ status }).eq('id', reportMatch[1]);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ ok: true });
+    }
+
     /* ─── GET /health ────────────────────────────────────── */
     if (url === '/health' && req.method === 'GET') {
       return res.status(200).json({ ok: true, ts: Date.now(), url: SUPA_URL });

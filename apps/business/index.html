@@ -896,12 +896,11 @@ async function renderAnalytics() {
   const el = document.getElementById('analytics-body');
   if (!el) return;
 
-  // Check subscription from Supabase
   const sb = getSB();
   const { data: { session } } = await sb.auth.getSession();
-  const { data: profile } = session
-    ? await sb.from('profiles').select('subscription_type,trial_expires_at').eq('id', session.user.id).single()
-    : { data: null };
+  if (!session) return;
+
+  const { data: profile } = await sb.from('profiles').select('subscription_type,trial_expires_at').eq('id', session.user.id).single();
   const subType = profile?.subscription_type || 'free';
   const trialOk = subType === 'trial' && profile?.trial_expires_at && new Date(profile.trial_expires_at) > new Date();
   const isPremium = subType === 'premium' || trialOk;
@@ -916,40 +915,69 @@ async function renderAnalytics() {
     return;
   }
 
-  // Build last-7-days buckets
+  el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading analytics…</div>';
+
+  // Fetch all data in parallel
+  const uid = session.user.id;
+  const [
+    { count: followerCount },
+    { data: posts },
+    { data: events },
+  ] = await Promise.all([
+    sb.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', uid),
+    sb.from('posts').select('id,caption,image_url,likes_count,comments_count,created_at').eq('user_id', uid).order('created_at', { ascending: false }).limit(20),
+    sb.from('events').select('id,name,date_local,capacity,tickets_sold,attendance_count').eq('organiser_id', uid).order('date_local', { ascending: false }).limit(10),
+  ]);
+
+  // Order stats from cached ORDERS
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(); d.setDate(d.getDate() - (6 - i)); d.setHours(0,0,0,0);
     return d.toISOString().split('T')[0];
   });
-
-  const revenue = {}, count = {};
-  days.forEach(d => { revenue[d] = 0; count[d] = 0; });
-
+  const revenue = {}, ordCount = {};
+  days.forEach(d => { revenue[d] = 0; ordCount[d] = 0; });
   ORDERS.forEach(o => {
     const day = (o.created_at || '').slice(0, 10);
     if (revenue[day] !== undefined && o.status !== 'cancelled') {
       revenue[day] += parseFloat(o.total || 0);
-      count[day]++;
+      ordCount[day]++;
     }
   });
-
   const maxRev = Math.max(...days.map(d => revenue[d]), 1);
   const totalRev = days.reduce((s, d) => s + revenue[d], 0);
-  const totalOrders = days.reduce((s, d) => s + count[d], 0);
+  const totalOrders = days.reduce((s, d) => s + ordCount[d], 0);
   const avgOrder = totalOrders ? (totalRev / totalOrders) : 0;
-
   const statusCounts = { pending: 0, ready: 0, completed: 0, cancelled: 0 };
   ORDERS.forEach(o => { if (statusCounts[o.status] !== undefined) statusCounts[o.status]++; });
 
+  // Post engagement totals
+  const postList = posts || [];
+  const totalLikes    = postList.reduce((s, p) => s + (p.likes_count || 0), 0);
+  const totalComments = postList.reduce((s, p) => s + (p.comments_count || 0), 0);
+  const topPost = postList.sort((a, b) => ((b.likes_count||0) + (b.comments_count||0)) - ((a.likes_count||0) + (a.comments_count||0)))[0];
+
+  // Event stats
+  const evList = events || [];
+  const totalTicketsSold = evList.reduce((s, e) => s + (e.tickets_sold || e.attendance_count || 0), 0);
+
+  const xe2 = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
   el.innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">
+    <!-- Summary KPIs -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
       ${stat('R'+totalRev.toFixed(0),'7-Day Revenue','var(--li)')}
-      ${stat(totalOrders,'Total Orders')}
-      ${stat('R'+avgOrder.toFixed(0),'Avg Order','var(--cy)')}
+      ${stat(followerCount || 0,'Followers','var(--pk)')}
+      ${stat(postList.length,'Posts','var(--cy)')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px">
+      ${stat(totalLikes,'Post Likes','var(--or)')}
+      ${stat(totalComments,'Comments')}
+      ${stat(totalTicketsSold,'Tickets Sold','var(--te)')}
     </div>
 
-    <div style="margin-bottom:20px">
-      <div class="section-label">Daily Revenue (Last 7 Days)</div>
+    <!-- Revenue chart -->
+    <div style="margin-bottom:22px">
+      <div class="section-label">Daily Revenue — Last 7 Days</div>
       <div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:16px;display:flex;align-items:flex-end;gap:6px;height:140px">
         ${days.map(d => {
           const pct = Math.round((revenue[d] / maxRev) * 100);
@@ -963,8 +991,9 @@ async function renderAnalytics() {
       </div>
     </div>
 
-    <div>
-      <div class="section-label">Orders by Status (All Time)</div>
+    <!-- Order status breakdown -->
+    <div style="margin-bottom:22px">
+      <div class="section-label">Orders by Status</div>
       <div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
         ${[['pending','🟠','var(--or)'],['ready','🟢','var(--li)'],['completed','✅','var(--te)'],['cancelled','❌','var(--pk)']].map(([s,ico,c]) =>
           `<div style="display:flex;align-items:center;gap:8px">
@@ -976,7 +1005,44 @@ async function renderAnalytics() {
           </div>`
         ).join('')}
       </div>
-    </div>`;
+    </div>
+
+    <!-- Top post -->
+    ${topPost ? `
+    <div style="margin-bottom:22px">
+      <div class="section-label">Top Performing Post</div>
+      <div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px">
+        ${topPost.image_url ? `<img src="${xe2(topPost.image_url)}" style="width:60px;height:60px;border-radius:10px;object-fit:cover;flex-shrink:0" onerror="this.style.display='none'"/>` : '<div style="width:60px;height:60px;border-radius:10px;background:rgba(255,255,255,.06);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.5rem">📸</div>'}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.8rem;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px">${xe2((topPost.caption || 'No caption').slice(0, 80))}</div>
+          <div style="display:flex;gap:14px;font-size:.72rem;color:var(--mu)">
+            <span>❤️ ${topPost.likes_count || 0}</span>
+            <span>💬 ${topPost.comments_count || 0}</span>
+            <span>${new Date(topPost.created_at).toLocaleDateString('en-ZA')}</span>
+          </div>
+        </div>
+      </div>
+    </div>` : ''}
+
+    <!-- Events performance -->
+    ${evList.length ? `
+    <div style="margin-bottom:22px">
+      <div class="section-label">Events Performance</div>
+      <div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+        ${evList.map((e, i) => {
+          const cap = e.capacity || 0;
+          const sold = e.tickets_sold || e.attendance_count || 0;
+          const pct = cap ? Math.round(sold / cap * 100) : 0;
+          return `<div style="padding:12px 14px${i < evList.length - 1 ? ';border-bottom:1px solid var(--border)' : ''}">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <div style="font-size:.82rem;font-family:'Syne',sans-serif;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%">${xe2(e.name)}</div>
+              <div style="font-size:.72rem;color:var(--mu);white-space:nowrap">${sold}${cap ? ' / ' + cap : ''} tickets</div>
+            </div>
+            ${cap ? `<div style="height:4px;background:rgba(255,255,255,.06);border-radius:4px"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#FF5C00,#C6FF4A);border-radius:4px;transition:width .4s"></div></div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : ''}`;
 }
 
 // ════════════════════════════════════════════════════════════
