@@ -13,6 +13,8 @@
     { "source": "/leads/(.*)",     "destination": "/apps/leads/$1" },
     { "source": "/admin",          "destination": "/apps/admin/index.html" },
     { "source": "/admin/(.*)",     "destination": "/apps/admin/$1" },
+    { "source": "/map",            "destination": "/apps/map/index.html" },
+    { "source": "/map/(.*)",       "destination": "/apps/map/$1" },
     { "source": "/",               "destination": "/apps/landing-page/index.html" },
     { "source": "/(.+)",           "destination": "/apps/landing-page/$1" }
   ],
@@ -27,17 +29,21 @@
       "source": "/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
-        { "key": "Pragma", "value": "no-cache" },
-        { "key": "Expires", "value": "0" }
+        { "key": "Pragma",        "value": "no-cache" },
+        { "key": "Expires",       "value": "0" }
       ]
     },
     {
       "source": "/",
-      "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }]
+      "headers": [
+        { "key": "Content-Type", "value": "text/html; charset=utf-8" }
+      ]
     },
     {
-      "source": "/(business|organizer|leads|admin)",
-      "headers": [{ "key": "Content-Type", "value": "text/html; charset=utf-8" }]
+      "source": "/(business|organizer|leads|admin|map)",
+      "headers": [
+        { "key": "Content-Type", "value": "text/html; charset=utf-8" }
+      ]
     }
   ]
 }

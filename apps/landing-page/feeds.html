@@ -223,18 +223,31 @@ let _loading    = false;
 
 async function fetchPosts() {
   const sb = getSB();
-  const token = sb ? (await sb.auth.getSession())?.data?.session?.access_token : null;
-  const params = new URLSearchParams({ page: _page, limit: 10, filter: _filter });
-  if (_uid) params.set('follower_id', _uid);
-  const headers = token ? { Authorization: 'Bearer ' + token } : {};
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 15000);
-  try {
-    const res = await fetch('/api/posts?' + params, { headers, signal: ctrl.signal });
-    clearTimeout(t);
-    if (!res.ok) throw new Error('Failed to load posts');
-    return res.json();
-  } catch(e) { clearTimeout(t); throw e; }
+  if (!sb) throw new Error('Supabase not loaded');
+  const limit = 10, offset = (_page - 1) * limit;
+  let q = sb.from('posts')
+    .select('id,user_id,post_type,image_url,caption,event_name,created_at,profiles:user_id(username,display_name,avatar_url,role)', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+  if (_filter === 'following' && _uid) {
+    const { data: followsRows } = await sb.from('follows').select('following_id').eq('follower_id', _uid);
+    const ids = (followsRows || []).map(r => r.following_id);
+    if (!ids.length) return { posts: [], total: 0 };
+    q = q.in('user_id', ids);
+  } else if (_filter === 'organizers') {
+    const { data: orgRows } = await sb.from('profiles').select('id').eq('role', 'organizer');
+    const orgIds = (orgRows || []).map(r => r.id);
+    if (!orgIds.length) return { posts: [], total: 0 };
+    q = q.in('user_id', orgIds);
+  } else if (_filter === 'businesses') {
+    const { data: bizRows } = await sb.from('profiles').select('id').eq('role', 'business');
+    const bizIds = (bizRows || []).map(r => r.id);
+    if (!bizIds.length) return { posts: [], total: 0 };
+    q = q.in('user_id', bizIds);
+  }
+  const { data, error, count } = await q;
+  if (error) throw new Error(error.message);
+  return { posts: data || [], total: count || 0 };
 }
 
 function mapPost(p) {
@@ -316,7 +329,7 @@ async function render() {
       }
     }
   } catch(e) {
-    feedEl.innerHTML = '<div class="es"><div class="ei">📡</div><div class="et">Could not load posts</div><div class="em">Check your connection and try again.</div></div>';
+    feedEl.innerHTML = '<div class="es"><div class="ei">📡</div><div class="et">Could not load posts</div><div class="em">'+x(e.message || 'Unknown error')+'</div></div>';
     console.error('Feed load error:', e);
   }
   _loading = false;

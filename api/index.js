@@ -1,9 +1,11 @@
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 
-const sb = () => createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
+const SUPA_URL  = process.env.SUPABASE_URL  || 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+const SUPA_ANON = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+const SUPA_SVC  = process.env.SUPABASE_SERVICE_KEY || SUPA_ANON;
+
+const sb = () => createClient(SUPA_URL, SUPA_SVC,
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
@@ -21,7 +23,7 @@ function haverBox(lat, lon, km) {
 async function verifyToken(token) {
   if (!token) return null;
   try {
-    const userSb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY,
+    const userSb = createClient(SUPA_URL, SUPA_ANON,
       { auth: { autoRefreshToken: false, persistSession: false } });
     const { data: { user } } = await userSb.auth.getUser(token);
     return user || null;
@@ -32,7 +34,7 @@ async function authUser(req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
   if (!token) return null;
   try {
-    const userSb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY,
+    const userSb = createClient(SUPA_URL, SUPA_ANON,
       { auth: { autoRefreshToken: false, persistSession: false } });
     const { data: { user }, error } = await userSb.auth.getUser(token);
     if (error || !user) return null;
@@ -376,8 +378,7 @@ module.exports = async (req, res) => {
       const token = (req.headers.authorization || '').replace('Bearer ', '');
       if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
-      const { createClient: make } = require('@supabase/supabase-js');
-      const userSb = make(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+      const userSb = createClient(SUPA_URL, SUPA_ANON);
       const { data: { user } } = await userSb.auth.getUser(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -853,6 +854,178 @@ module.exports = async (req, res) => {
         profile = updatedProfile;
       }
       return res.status(200).json({ profile });
+    }
+
+    /* ─── GET /quicket-events ─────────────────────────────── */
+    if (url === '/quicket-events' && req.method === 'GET') {
+      const QUICKET_KEY = process.env.QUICKET_API_KEY;
+      if (!QUICKET_KEY) return res.status(503).json({ error: 'QUICKET_API_KEY not configured' });
+
+      const city  = q.city  || 'all';   // 'durban' | 'johannesburg' | 'all'
+      const genre = q.genre || 'all';
+      const page  = Math.max(1, parseInt(q.page || '1'));
+
+      // Quicket genre → Pulsify genre
+      const GENRE_MAP = {
+        music: 'house', concert: 'house', festival: 'house',
+        amapiano: 'amapiano', gqom: 'gqom',
+        'hip-hop': 'hiphop', hiphop: 'hiphop', hip_hop: 'hiphop', rap: 'hiphop',
+        house: 'house', afrobeats: 'afrobeats', afrohouse: 'afrohouse',
+        rock: 'rock', gospel: 'gospel', jazz: 'jazz',
+        comedy: 'comedy', sport: 'sport', sports: 'sport',
+        maskandi: 'maskandi',
+      };
+
+      // Pulsify genre → Quicket category query string
+      const PULSIFY_TO_QCT = {
+        amapiano: 'amapiano', gqom: 'gqom', hiphop: 'hip-hop',
+        house: 'house music', afrobeats: 'afrobeats', rock: 'rock',
+        gospel: 'gospel', jazz: 'jazz', comedy: 'comedy', sport: 'sport',
+      };
+
+      const citiesToFetch = city === 'all'
+        ? ['Durban', 'Johannesburg']
+        : city === 'johannesburg' ? ['Johannesburg'] : ['Durban'];
+
+      const quicketFetch = async (fetchCity) => {
+        const params = new URLSearchParams({
+          pagesize: '50',
+          page: String(page),
+          location: fetchCity,
+          country: 'ZA',
+          startDate: new Date().toISOString().split('T')[0],
+          ...(genre !== 'all' && PULSIFY_TO_QCT[genre] ? { category: PULSIFY_TO_QCT[genre] } : {}),
+        });
+
+        const resp = await fetch(`https://api.quicket.co.za/api/events?${params}`, {
+          headers: { 'X-API-Key': QUICKET_KEY, 'Accept': 'application/json' },
+          signal: AbortSignal.timeout(8000),
+        });
+
+        if (!resp.ok) {
+          console.warn(`[Quicket] ${fetchCity} → HTTP ${resp.status}: ${await resp.text().catch(()=>'')}`);
+          return [];
+        }
+        const json = await resp.json();
+        // Quicket returns { data: [...] } or { events: [...] } or directly an array
+        return json?.data || json?.events || (Array.isArray(json) ? json : []);
+      };
+
+      const normalize = (item, fetchCity) => {
+        // Handle multiple possible Quicket response shapes
+        const id         = item.id || item.event_id || item.EventId;
+        const title      = item.title || item.name || item.EventName;
+        const venue      = item.venue?.name || item.venueName || item.venue_name || item.Venue || '';
+        const cityVal    = item.venue?.city || item.city || item.venueCity || fetchCity;
+        const start      = item.startDate || item.start_date || item.StartDate || item.date_local;
+        const image      = item.imageUrl || item.image_url || item.bannerUrl || item.banner_url || null;
+        const desc       = item.description || item.shortDescription || item.short_description || null;
+        const url_       = item.url || item.eventUrl || item.event_url || `https://www.quicket.co.za/events/${id}`;
+        const priceRaw   = item.minPrice ?? item.min_price ?? item.ticketMinPrice ?? item.price_min ?? 0;
+        const catRaw     = (item.category || item.categories?.[0]?.name || item.genre || '').toLowerCase().replace(/\s+/g, '');
+        const mappedGenre = GENRE_MAP[catRaw] || 'other';
+        const lat        = parseFloat(item.venue?.latitude  || item.latitude  || item.lat  || 0) || null;
+        const lon        = parseFloat(item.venue?.longitude || item.longitude || item.lon || 0) || null;
+
+        if (!id || !title || !start) return null;
+
+        return {
+          id:            `qkt_${id}`,
+          name:          title,
+          date_local:    start,
+          venue_name:    venue,
+          venue_city:    cityVal,
+          venue_lat:     lat,
+          venue_lon:     lon,
+          price_min:     typeof priceRaw === 'number' ? priceRaw : parseFloat(priceRaw) || 0,
+          is_free:       (priceRaw === 0 || priceRaw === '0' || priceRaw === 'Free'),
+          image_url:     image,
+          genre:         mappedGenre,
+          description:   desc,
+          external_url:  url_,
+          source:        'quicket',
+          is_active:     true,
+          organiser_name: item.organiser?.name || item.organiserName || item.organizer || null,
+        };
+      };
+
+      try {
+        const raw = (await Promise.all(citiesToFetch.map(c => quicketFetch(c)))).flat();
+        const events = raw.map((item, i) => normalize(item, citiesToFetch[i % citiesToFetch.length])).filter(Boolean);
+        // Sort: soonest first
+        events.sort((a, b) => new Date(a.date_local) - new Date(b.date_local));
+        res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=3600');
+        return res.status(200).json({ events, total: events.length, source: 'quicket' });
+      } catch(e) {
+        console.error('[Quicket]', e.message);
+        return res.status(502).json({ error: 'Failed to fetch Quicket events', detail: e.message });
+      }
+    }
+
+    /* ─── POST /verify-request ────────────────────────────── */
+    if (url === '/verify-request' && req.method === 'POST') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const body = req.body || {};
+      const { error } = await sb()
+        .from('profiles')
+        .update({
+          verif_status:  'pending',
+          verif_request: JSON.stringify({
+            ...body,
+            user_id: user.id,
+            submitted_at: new Date().toISOString(),
+          }),
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        console.warn('[verify-request] profiles update failed:', error.message, '— saving to fallback');
+      }
+      return res.status(200).json({ success: true, status: 'pending' });
+    }
+
+    /* ─── GET /admin/verifications ─────────────────────────── */
+    if (url === '/admin/verifications' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const { data, error } = await sb()
+        .from('profiles')
+        .select('id,email,full_name,role,verif_status,verif_request,is_verified,created_at')
+        .in('verif_status', ['pending', 'approved', 'rejected'])
+        .order('created_at', { ascending: false });
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ verifications: data || [] });
+    }
+
+    /* ─── PATCH /admin/verifications/:id ───────────────────── */
+    const verifMatch = url.match(/^\/admin\/verifications\/([^/]+)$/);
+    if (verifMatch && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const targetId = verifMatch[1];
+      const { action, notes } = req.body || {};
+      if (!['approve', 'reject'].includes(action)) {
+        return res.status(400).json({ error: 'action must be approve or reject' });
+      }
+      const updates = {
+        verif_status: action === 'approve' ? 'approved' : 'rejected',
+        is_verified:  action === 'approve',
+      };
+      const { data, error } = await sb().from('profiles').update(updates).eq('id', targetId).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ success: true, profile: data });
+    }
+
+    /* ─── GET /health ────────────────────────────────────── */
+    if (url === '/health' && req.method === 'GET') {
+      return res.status(200).json({ ok: true, ts: Date.now(), url: SUPA_URL });
     }
 
     return res.status(404).json({ error: `Route not found: ${req.method} ${url}` });

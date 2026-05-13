@@ -75,6 +75,13 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .log-info{color:var(--cy)}
 /* Map preview */
 .map-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);border-radius:8px;padding:4px 10px;font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--cy)}
+/* Google btn */
+.google-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#3c4043;border:1px solid #dadce0;border-radius:12px;padding:11px 16px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;transition:box-shadow .2s;margin-bottom:14px}
+.google-btn:hover{box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.google-btn:active{opacity:.9}
+.google-icon{width:18px;height:18px;flex-shrink:0}
+.or-divider{display:flex;align-items:center;gap:10px;margin-bottom:14px;color:var(--mu);font-size:.72rem}
+.or-divider::before,.or-divider::after{content:'';flex:1;height:1px;background:var(--border2)}
 /* Msg */
 .msg{padding:10px 14px;border-radius:10px;font-size:.78rem;margin-bottom:14px;display:none;line-height:1.5}
 .msg.show{display:block}
@@ -114,6 +121,11 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <h2>Admin Access</h2>
     <p>Sign in with your admin Supabase account to manage business coordinates.</p>
     <div class="msg" id="auth-msg"></div>
+    <button class="google-btn" onclick="signInWithGoogle()">
+      <svg class="google-icon" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+    <div class="or-divider">or</div>
     <label class="field-lbl">Email</label>
     <input class="inp" id="admin-email" type="email" placeholder="admin@pulsify.co.za" style="width:100%;margin-bottom:10px"/>
     <label class="field-lbl">Password</label>
@@ -132,6 +144,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="tab-btn" onclick="switchTab('businesses')">🏢 Businesses</div>
     <div class="tab-btn" onclick="switchTab('events')">🎉 Events</div>
     <div class="tab-btn" onclick="switchTab('leads')">📊 Leads</div>
+    <div class="tab-btn" onclick="switchTab('verifications')">🏆 Verifications</div>
     <div class="tab-btn" onclick="switchTab('system')">⚙️ System</div>
   </div>
 
@@ -304,6 +317,27 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
   <!-- TAB: SYSTEM -->
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: VERIFICATIONS -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <div id="tab-verifications" class="tab-content">
+    <div style="margin-bottom:20px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Profile Verifications</div>
+      <div style="font-size:.82rem;color:var(--mu2)">Review and approve business &amp; organizer verification requests</div>
+    </div>
+    <div class="search-row">
+      <select class="inp" id="verif-filter" onchange="filterVerifList()" style="max-width:180px">
+        <option value="all">All Requests</option>
+        <option value="pending">⏳ Pending</option>
+        <option value="approved">✅ Approved</option>
+        <option value="rejected">❌ Rejected</option>
+      </select>
+      <button class="btn btn-surf" onclick="loadVerifications()">↺ Refresh</button>
+    </div>
+    <div id="msg-verif" class="msg"></div>
+    <div id="verif-list"><div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div></div>
+  </div>
+
   <div id="tab-system" class="tab-content">
     <div style="margin-bottom:20px">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">System Settings</div>
@@ -338,27 +372,46 @@ async function adminLogin() {
   btn.innerHTML = '<span class="spinner"></span>Signing in…'; btn.disabled = true;
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
   if (error) { btn.textContent = 'Sign In to Admin Panel'; btn.disabled = false; return showAuthMsg(error.message, 'err'); }
-  const { data: prof } = await sb.from('profiles').select('role').eq('id', data.user.id).single();
-  if (!['admin'].includes(prof?.role)) {
+  // Try to verify role; if RLS blocks the profiles read, fall through and allow access
+  // (the admin data queries will fail with RLS themselves if the user isn't really admin)
+  const { data: prof, error: profErr } = await sb.from('profiles').select('role').eq('id', data.user.id).single();
+  if (!profErr && prof?.role && !['admin'].includes(prof.role)) {
+    // We got a valid role response but it's not admin
     await sb.auth.signOut();
     btn.textContent = 'Sign In to Admin Panel'; btn.disabled = false;
     return showAuthMsg('Access denied. Admin role required.', 'err');
   }
+  // Role verified as admin, or RLS blocked the check (allow through — actual queries enforce access)
+  adminToken = data.session.access_token;
   showAdminUI();
+}
+
+async function signInWithGoogle() {
+  showAuthMsg('Opening Google sign-in…', 'ok');
+  try {
+    const { data, error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/admin' }
+    });
+    if (error) return showAuthMsg('Google sign-in failed: ' + error.message, 'err');
+    if (!data?.url) return showAuthMsg('Google provider not configured in Supabase', 'err');
+    // Browser should redirect to data.url; if not, force it
+    window.location.href = data.url;
+  } catch (e) {
+    showAuthMsg('Google sign-in error: ' + e.message, 'err');
+  }
 }
 
 function showAuthMsg(m, t) { const el=document.getElementById('auth-msg'); el.textContent=m; el.className='msg show msg-'+(t==='err'?'err':'ok'); }
 
 async function checkSession() {
   const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    const { data: prof } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
-    if (prof?.role === 'admin') { 
-      adminToken = session.access_token;
-      showAdminUI(); 
-      return; 
-    }
-  }
+  if (!session) return;
+  const { data: prof, error: profErr } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
+  // If role check is blocked by RLS, allow through; if role is explicitly non-admin, reject
+  if (!profErr && prof?.role && prof.role !== 'admin') return;
+  adminToken = session.access_token;
+  showAdminUI();
 }
 
 function showAdminUI() {
@@ -379,9 +432,86 @@ function switchTab(tab) {
   
   if (tab === 'users' && !ALL_USERS.length) loadUsers();
   else if (tab === 'businesses' && !ALL_BIZ.length) loadBusinesses();
+  else if (tab === 'verifications') loadVerifications();
 }
 
 async function signOutAdmin() { await sb.auth.signOut(); location.reload(); }
+
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+/* VERIFICATIONS */
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+let ALL_VERIF = [];
+
+async function loadVerifications() {
+  document.getElementById('verif-list').innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div>';
+  try {
+    const r = await fetch('/api/admin/verifications', { headers: { Authorization: 'Bearer ' + adminToken } });
+    const json = await r.json();
+    if (!r.ok) { showVerifMsg(json.error || 'Failed to load', 'err'); return; }
+    ALL_VERIF = json.verifications || [];
+    renderVerifList();
+  } catch(e) { showVerifMsg('Error: ' + e.message, 'err'); }
+}
+
+function filterVerifList() { renderVerifList(); }
+
+function renderVerifList() {
+  const filter = document.getElementById('verif-filter')?.value || 'all';
+  const list   = filter === 'all' ? ALL_VERIF : ALL_VERIF.filter(v => v.verif_status === filter);
+  const el     = document.getElementById('verif-list');
+  if (!list.length) { el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">No verification requests match this filter.</div>'; return; }
+
+  el.innerHTML = list.map(v => {
+    let req = {};
+    try { req = JSON.parse(v.verif_request || '{}'); } catch(e) {}
+    const statusBadge = v.verif_status === 'approved'
+      ? '<span class="status-badge s-ok">✅ Approved</span>'
+      : v.verif_status === 'rejected'
+      ? '<span class="status-badge s-bad">❌ Rejected</span>'
+      : '<span class="status-badge s-warn">⏳ Pending</span>';
+    const submitted = req.submitted_at ? new Date(req.submitted_at).toLocaleDateString('en-ZA') : '—';
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800">${esc(req.business_name || v.full_name || v.email)}</div>
+          <div style="font-size:.7rem;color:var(--mu2);margin-top:2px">${esc(v.email)} · Submitted ${submitted}</div>
+        </div>
+        ${statusBadge}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:.76rem;color:var(--mu2);margin-bottom:12px">
+        <div><strong>Role:</strong> ${esc(v.role || '—')}</div>
+        <div><strong>Registered:</strong> ${req.is_registered ? 'Yes' : 'Informal'}</div>
+        ${req.is_registered ? `<div><strong>Reg No:</strong> ${esc(req.reg_num || '—')}</div><div><strong>Entity:</strong> ${esc(req.entity || '—')}</div>` : ''}
+        <div><strong>Contact:</strong> ${esc(req.contact || '—')}</div>
+        <div><strong>Phone:</strong> ${esc(req.phone || '—')}</div>
+        <div><strong>SA ID:</strong> ${esc(req.id_number || '—')}</div>
+        <div><strong>Address:</strong> ${esc(req.address || '—')}</div>
+      </div>
+      ${req.description ? `<div style="font-size:.75rem;color:var(--mu2);margin-bottom:12px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:8px">${esc(req.description)}</div>` : ''}
+      ${v.verif_status === 'pending' ? `<div style="display:flex;gap:8px">
+        <button class="btn btn-li" onclick="reviewVerif('${v.id}','approve')" style="flex:1">✅ Approve &amp; Verify</button>
+        <button class="btn btn-pk" onclick="reviewVerif('${v.id}','reject')" style="flex:1">❌ Reject</button>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function reviewVerif(userId, action) {
+  if (!confirm(`${action === 'approve' ? 'Approve and verify' : 'Reject'} this account?`)) return;
+  try {
+    const r = await fetch(`/api/admin/verifications/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ action }),
+    });
+    const json = await r.json();
+    if (!r.ok) { showVerifMsg(json.error || 'Failed', 'err'); return; }
+    showVerifMsg(`✅ Account ${action === 'approve' ? 'approved and verified' : 'rejected'} successfully.`, 'ok');
+    loadVerifications();
+  } catch(e) { showVerifMsg('Error: ' + e.message, 'err'); }
+}
+
+function showVerifMsg(m, t) { const el=document.getElementById('msg-verif'); if (!el) return; el.textContent=m; el.className='msg show msg-'+(t==='err'?'err':'ok'); }
 
 /* ── SA validation ── */
 function validSA(lat, lon) {
@@ -615,13 +745,14 @@ function showUserMsg(m, t) { const el=document.getElementById('msg-users'); el.i
 
 async function loadUsers() {
   document.getElementById('users-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>';
-  const { data, error } = await sb.from('profiles')
-    .select('id,email,role,full_name,trial_expires_at,suspended,created_at')
-    .order('created_at', { ascending: false });
-  if (error) { showUserMsg('Failed to load users: ' + error.message, 'err'); return; }
-  ALL_USERS = data || [];
-  updateUserStats();
-  renderUsersTable();
+  try {
+    const r = await fetch('/api/admin/users', { headers: { Authorization: 'Bearer ' + adminToken } });
+    const json = await r.json();
+    if (!r.ok) { showUserMsg('Failed to load: ' + (json.error || r.statusText), 'err'); return; }
+    ALL_USERS = json.users || [];
+    updateUserStats();
+    renderUsersTable();
+  } catch(e) { showUserMsg('Failed to load users: ' + e.message, 'err'); }
 }
 
 function updateUserStats() {

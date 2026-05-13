@@ -209,9 +209,9 @@ sb.auth.onAuthStateChange(async (event, session) => {
     try { pending = JSON.parse(localStorage.getItem('p_pending_profile') || '{}'); } catch(e) {}
     
     const role = pending.role || 'user';
-    const dest = role === 'organizer' ? 'organizer-dashboard.html'
-      : role === 'business' ? 'business-dashboard.html'
-      : 'index.html';
+    const dest = role === 'organizer' ? '/organizer'
+      : role === 'business' ? '/business'
+      : '/';
 
     // The user has just signed in. Redirect them immediately.
     window.location.href = dest;
@@ -396,9 +396,9 @@ async function doCreate() {
       : role === 'business' ? '🏪 Business account created! Setting up your dashboard…'
       : '🎉 Welcome to Pulsify!';
     toast(destLabel, 'ok');
-    const dest = role === 'organizer' ? 'organizer-dashboard.html'
-      : role === 'business' ? 'business-dashboard.html'
-      : 'index.html';
+    const dest = role === 'organizer' ? '/organizer'
+      : role === 'business' ? '/business'
+      : '/';
     setTimeout(()=>window.location.href=dest, 1200);
   } else {
     btn.innerHTML='Create My Account 🔥'; btn.disabled=false;

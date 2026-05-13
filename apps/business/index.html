@@ -98,6 +98,23 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 .ev-sub{font-size:.68rem;color:var(--mu)}
 .ev-price{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--or);flex-shrink:0}
 
+/* ── SETTINGS CARDS ── */
+.setting-card{background:var(--surf2);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:10px}
+.setting-card-row{display:flex;align-items:center;justify-content:space-between}
+.setting-card-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+/* ── FAQ ── */
+.faq-item{border:1px solid var(--border);border-radius:12px;margin-bottom:8px;overflow:hidden}
+.faq-q{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
+.faq-q .faq-arr{transition:transform .2s;flex-shrink:0;color:var(--mu)}
+.faq-item.open .faq-q .faq-arr{transform:rotate(180deg)}
+.faq-a{display:none;padding:0 14px 12px;font-size:.78rem;color:var(--mu);line-height:1.6}
+.faq-item.open .faq-a{display:block}
+/* ── MSG ── */
+.msg{padding:10px 14px;border-radius:10px;font-size:.78rem;margin-bottom:12px;display:none;line-height:1.5}
+.msg.show{display:block}
+.msg-ok{background:rgba(198,255,74,.08);border:1px solid rgba(198,255,74,.25);color:var(--li)}
+.msg-err{background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);color:var(--pk)}
+
 /* ── MENU ITEMS ── */
 .menu-item-card{display:flex;align-items:center;gap:12px;background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:12px 14px;margin:0 14px 10px}
 .mi-img{width:52px;height:52px;border-radius:10px;background:var(--surf2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;position:relative}
@@ -275,7 +292,6 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 
 <!-- ══ PROFILE ══ -->
 <div class="panel" id="tab-profile">
-  <div class="profile-hero" id="profile-hero"></div>
   <div style="padding:0 14px 20px">
     <div class="section-label" style="margin-top:10px">Edit Profile</div>
     <label class="ff-label">Business Name</label>
@@ -297,6 +313,50 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <button class="btn-primary" style="width:100%;margin-top:4px" onclick="saveProfile()">Save Profile</button>
     <div class="info-box" style="margin-top:12px">🌐 Your public order page: <span id="profile-menu-url" style="font-weight:700"></span></div>
   </div>
+
+  <!-- Account Settings -->
+  <div style="padding:0 14px 14px">
+    <div class="section-label">Account</div>
+
+    <!-- Verify Profile -->
+    <div class="setting-card">
+      <div class="setting-card-row">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="setting-card-icon" style="background:linear-gradient(135deg,rgba(198,255,74,.15),rgba(176,38,255,.15));border:1px solid rgba(198,255,74,.25)">🏆</div>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Verify Profile</div>
+            <div id="biz-verif-status" style="font-size:.68rem;color:var(--mu)">Not verified</div>
+          </div>
+        </div>
+        <button class="btn-sec" id="biz-verif-btn" style="padding:6px 12px;font-size:.72rem" onclick="openSheet('verify-sheet')">Apply →</button>
+      </div>
+      <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Get a ✅ verified badge. Takes <strong>1–3 business days</strong> after submission.</div>
+    </div>
+
+    <!-- Payment Method -->
+    <div class="setting-card">
+      <div class="setting-card-row">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="setting-card-icon" style="background:linear-gradient(135deg,rgba(0,229,255,.15),rgba(176,38,255,.1));border:1px solid rgba(0,229,255,.2)">💳</div>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Payment Method</div>
+            <div id="biz-payment-status" style="font-size:.68rem;color:var(--mu)">No payment method added</div>
+          </div>
+        </div>
+        <button class="btn-sec" id="biz-payment-btn" style="padding:6px 12px;font-size:.72rem" onclick="openSheet('payment-sheet')">Add →</button>
+      </div>
+      <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Add your bank account to receive payouts from orders and bookings.</div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div style="padding:0 14px 60px">
+    <div class="section-label">FAQ & Support</div>
+    <div id="faq-biz"></div>
+    <div style="margin-top:14px;text-align:center">
+      <a href="mailto:support@pulsify.co.za" style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;color:var(--or);text-decoration:none">✉️ Contact Support</a>
+    </div>
+  </div>
 </div>
 
 <!-- ══ SHEETS ══ -->
@@ -308,15 +368,19 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <div class="sheet-head"><div class="sheet-title">New Post</div><button class="sheet-close" onclick="closeSheet('post-sheet')">✕</button></div>
     <div class="sheet-body">
       <div class="info-box">Posts appear on the Pulsify feed for all your followers.</div>
-      <label class="ff-label">Photo / Video (optional)</label>
-      <div id="biz-img-drop" onclick="document.getElementById('biz-img-file').click()" style="height:110px;background:rgba(255,255,255,.03);border:1.5px dashed rgba(0,229,255,.3);border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-bottom:10px;overflow:hidden;flex-direction:column;gap:6px">
-        <span style="font-size:1.5rem">📷</span>
-        <span id="biz-img-hint" style="font-size:.74rem;color:var(--mu)">Tap to upload a photo</span>
+      <label class="ff-label">Photos (up to 5)</label>
+      <div id="biz-img-drop" onclick="document.getElementById('biz-img-file').click()" style="height:80px;background:rgba(255,255,255,.03);border:1.5px dashed rgba(0,229,255,.3);border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-bottom:8px;flex-direction:column;gap:4px">
+        <span style="font-size:1.4rem">📷</span>
+        <span id="biz-img-hint" style="font-size:.72rem;color:var(--mu)">Tap to add up to 5 photos</span>
       </div>
-      <input type="file" id="biz-img-file" accept="image/*,video/*" style="display:none" onchange="handleBizImg(this)"/>
+      <input type="file" id="biz-img-file" accept="image/*" multiple style="display:none" onchange="handleBizImgs(this)"/>
+      <div id="biz-img-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px"></div>
       <label class="ff-label">Caption *</label>
       <textarea class="ff" id="post-cap" placeholder="What's happening? Share with your followers…" rows="4"></textarea>
-      <button class="btn-primary" style="width:100%" onclick="submitPost()">Publish Post 🚀</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-sec" style="flex:1" onclick="previewPost()">👁 Preview</button>
+        <button class="btn-primary" style="flex:2" onclick="submitPost()">Publish 🚀</button>
+      </div>
     </div>
   </div>
 </div>
@@ -373,14 +437,128 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
       </div>
       <label class="ff-label">Category</label>
       <input class="ff" type="text" id="mi-cat" placeholder="e.g. Mains, Drinks, Sides…"/>
-      <label class="ff-label">Image URL (optional)</label>
-      <input class="ff" type="url" id="mi-img" placeholder="https://…/food.jpg"/>
+      <label class="ff-label">Photos (up to 10)</label>
+      <div id="mi-img-drop" onclick="document.getElementById('mi-img-file').click()" style="height:70px;background:rgba(255,255,255,.03);border:1.5px dashed rgba(0,229,255,.3);border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-bottom:8px;flex-direction:column;gap:4px">
+        <span style="font-size:1.2rem">🍽️</span>
+        <span style="font-size:.7rem;color:var(--mu)">Tap to add up to 10 photos</span>
+      </div>
+      <input type="file" id="mi-img-file" accept="image/*" multiple style="display:none" onchange="handleMenuImgs(this)"/>
+      <div id="mi-img-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px"></div>
       <label class="ff-label">Availability</label>
       <select class="ff" id="mi-avail">
         <option value="1">✅ Available</option>
         <option value="0">❌ Unavailable (hidden from customers)</option>
       </select>
       <button class="btn-primary" style="width:100%" onclick="submitMenuItem()">Save Item ✅</button>
+    </div>
+  </div>
+</div>
+
+<!-- VERIFY PROFILE SHEET -->
+<div class="overlay" id="verify-sheet" onclick="if(event.target===this)closeSheet('verify-sheet')">
+  <div class="sheet" style="max-height:92vh">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div class="sheet-title">Verify Profile</div><button class="sheet-close" onclick="closeSheet('verify-sheet')">✕</button></div>
+    <div class="sheet-body">
+      <div class="info-box">⏱ Verification takes <strong>1–3 business days</strong>. You'll be notified once reviewed. Verified accounts get a ✅ badge visible to all Pulsify users.</div>
+      <div id="verif-msg" class="msg"></div>
+      <label class="ff-label">Is your business registered? *</label>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button id="reg-yes-btn" class="btn-sec" style="flex:1;padding:10px;font-size:.78rem" onclick="setRegistered(true)">✅ Yes, registered</button>
+        <button id="reg-no-btn" class="btn-sec" style="flex:1;padding:10px;font-size:.78rem" onclick="setRegistered(false)">Informal / Sole owner</button>
+      </div>
+      <div id="registered-fields" style="display:none">
+        <label class="ff-label">Company / Trading Name *</label>
+        <input class="ff" id="vf-company" placeholder="e.g. ABC Trading (Pty) Ltd"/>
+        <div class="ff-row">
+          <div><label class="ff-label">Registration No.</label><input class="ff" id="vf-reg-num" placeholder="CK / CIPC number"/></div>
+          <div>
+            <label class="ff-label">Entity Type</label>
+            <select class="ff" id="vf-entity">
+              <option value="">(Pty) Ltd</option>
+              <option>CC (Close Corporation)</option>
+              <option>Sole Proprietor</option>
+              <option>Non-Profit</option>
+              <option>Partnership</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <label class="ff-label">Contact Person Name *</label>
+      <input class="ff" id="vf-contact" placeholder="Full name of owner / director"/>
+      <div class="ff-row">
+        <div><label class="ff-label">SA ID Number *</label><input class="ff" id="vf-id" placeholder="13-digit SA ID" inputmode="numeric"/></div>
+        <div><label class="ff-label">Contact Phone *</label><input class="ff" type="tel" id="vf-phone" placeholder="+27…"/></div>
+      </div>
+      <label class="ff-label">Business Physical Address *</label>
+      <input class="ff" id="vf-address" placeholder="Street, suburb, city"/>
+      <label class="ff-label">Business Description *</label>
+      <textarea class="ff" id="vf-desc" rows="3" placeholder="What does your business do?"></textarea>
+      <button class="btn-primary" style="width:100%;margin-top:6px" onclick="submitVerification()">Submit for Verification 🏆</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT METHOD SHEET -->
+<div class="overlay" id="payment-sheet" onclick="if(event.target===this)closeSheet('payment-sheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div class="sheet-title">Payment Method</div><button class="sheet-close" onclick="closeSheet('payment-sheet')">✕</button></div>
+    <div class="sheet-body">
+      <div class="info-box">💳 Your banking details are stored securely for payout processing only.</div>
+      <div id="payment-msg" class="msg"></div>
+      <label class="ff-label">Bank Name *</label>
+      <select class="ff" id="pm-bank">
+        <option value="">Select bank…</option>
+        <option>Absa</option><option>Capitec</option><option>FNB</option>
+        <option>Nedbank</option><option>Standard Bank</option>
+        <option>Investec</option><option>TymeBank</option>
+        <option>African Bank</option><option>Bidvest</option><option>Other</option>
+      </select>
+      <label class="ff-label">Account Holder Name *</label>
+      <input class="ff" id="pm-name" placeholder="Name as it appears on bank account"/>
+      <label class="ff-label">Account Number *</label>
+      <input class="ff" type="text" id="pm-account" placeholder="Your account number" inputmode="numeric"/>
+      <div class="ff-row">
+        <div>
+          <label class="ff-label">Account Type *</label>
+          <select class="ff" id="pm-type">
+            <option value="">Select…</option>
+            <option>Current / Cheque</option><option>Savings</option><option>Transmission</option>
+          </select>
+        </div>
+        <div><label class="ff-label">Branch Code</label><input class="ff" id="pm-branch" placeholder="6-digit code" inputmode="numeric"/></div>
+      </div>
+      <button class="btn-primary" style="width:100%" onclick="submitPaymentMethod()">Save Payment Method 💳</button>
+    </div>
+  </div>
+</div>
+
+<!-- POST PREVIEW SHEET -->
+<div class="overlay" id="preview-sheet" onclick="if(event.target===this)closeSheet('preview-sheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div class="sheet-title">Preview Post</div><button class="sheet-close" onclick="closeSheet('preview-sheet')">✕</button></div>
+    <div class="sheet-body">
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">How it'll appear in the feed</div>
+      <div style="background:var(--surf2);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+        <div id="biz-preview-imgs" style="display:grid;gap:2px"></div>
+        <div style="padding:12px 14px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0">🏪</div>
+            <div>
+              <div style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700" id="biz-preview-name">Business</div>
+              <div style="font-size:.65rem;color:var(--mu)">Just now</div>
+            </div>
+          </div>
+          <div style="font-size:.84rem;line-height:1.5;color:var(--tx);white-space:pre-wrap" id="biz-preview-caption"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn-sec" style="flex:1" onclick="closeSheet('preview-sheet');openSheet('post-sheet')">← Edit</button>
+        <button class="btn-primary" style="flex:2" id="biz-preview-publish-btn" onclick="closeSheet('preview-sheet');submitPost()">Publish 🚀</button>
+      </div>
     </div>
   </div>
 </div>
@@ -399,10 +577,186 @@ function key(k)     { return getBizId() + '_' + k; }
 function load(k, def) { try { return JSON.parse(localStorage.getItem(key(k))) || def; } catch { return def; } }
 function save(k, v)   { localStorage.setItem(key(k), JSON.stringify(v)); }
 
+// ── FAQ ──────────────────────────────────────────────────────
+const BIZ_FAQ = [
+  { q: 'How do I get more followers?', a: 'Post regularly with photos, tag events, and engage with your community. Accounts with verified badges and active posts rank higher in search.' },
+  { q: 'How long does profile verification take?', a: 'Verified applications are reviewed within 1–3 business days. You\'ll receive a notification once reviewed.' },
+  { q: 'How do customers find my menu?', a: 'Share your public menu link found in the Profile tab. Customers can browse and place pickup orders directly from it.' },
+  { q: 'When do I receive payouts?', a: 'Payouts are processed weekly to your registered bank account once you have added a payment method.' },
+  { q: 'Can I post upcoming events?', a: 'Yes! Tap "New Event" to publish events to the shared Pulsify discovery feed visible to all users.' },
+  { q: 'How do I update my business hours?', a: 'Include your trading hours in your Tagline / Description in the Profile tab.' },
+  { q: 'Can I delete a post?', a: 'Yes, go to the Posts tab, find the post and tap the Delete button.' },
+];
+function renderBizFAQ() {
+  const el = document.getElementById('faq-biz');
+  if (!el) return;
+  el.innerHTML = BIZ_FAQ.map((f, i) => `
+    <div class="faq-item" id="faq-${i}">
+      <div class="faq-q" onclick="toggleFAQ(${i})">
+        <span>${xe(f.q)}</span>
+        <span class="faq-arr">▾</span>
+      </div>
+      <div class="faq-a">${xe(f.a)}</div>
+    </div>`).join('');
+}
+function toggleFAQ(i) { document.getElementById('faq-' + i)?.classList.toggle('open'); }
+
+// ── Registered toggle ────────────────────────────────────────
+let _isRegistered = false;
+function setRegistered(val) {
+  _isRegistered = val;
+  document.getElementById('registered-fields').style.display = val ? 'block' : 'none';
+  document.getElementById('reg-yes-btn').style.background = val ? 'rgba(198,255,74,.15)' : '';
+  document.getElementById('reg-yes-btn').style.borderColor = val ? 'rgba(198,255,74,.4)' : '';
+  document.getElementById('reg-no-btn').style.background  = !val ? 'rgba(0,229,255,.12)' : '';
+  document.getElementById('reg-no-btn').style.borderColor = !val ? 'rgba(0,229,255,.3)' : '';
+}
+
+// ── Verification ─────────────────────────────────────────────
+async function loadVerifStatus() {
+  const saved = load('verif', {});
+  if (saved.status) {
+    const labels = { pending: '⏳ Pending review', approved: '✅ Verified', rejected: '❌ Not approved' };
+    const el = document.getElementById('biz-verif-status');
+    if (el) el.textContent = labels[saved.status] || 'Not verified';
+    const btn = document.getElementById('biz-verif-btn');
+    if (btn && saved.status === 'approved') { btn.textContent = '✅ Verified'; btn.disabled = true; }
+    if (btn && saved.status === 'pending')  { btn.textContent = '⏳ Pending'; btn.disabled = true; }
+  }
+  const pm = load('payment', {});
+  if (pm.bank) {
+    const el = document.getElementById('biz-payment-status');
+    if (el) el.textContent = `${pm.bank} ••••${(pm.account||'').slice(-4)}`;
+    const btn = document.getElementById('biz-payment-btn');
+    if (btn) btn.textContent = 'Edit →';
+  }
+}
+
+async function submitVerification() {
+  const contact = document.getElementById('vf-contact').value.trim();
+  const idNum   = document.getElementById('vf-id').value.trim();
+  const phone   = document.getElementById('vf-phone').value.trim();
+  const address = document.getElementById('vf-address').value.trim();
+  const desc    = document.getElementById('vf-desc').value.trim();
+  if (!contact || !idNum || !phone || !address || !desc) {
+    showMsg('verif-msg', 'Please fill in all required fields.', 'err'); return;
+  }
+  const payload = {
+    is_registered: _isRegistered,
+    company: _isRegistered ? document.getElementById('vf-company').value.trim() : '',
+    reg_num: _isRegistered ? document.getElementById('vf-reg-num').value.trim() : '',
+    entity:  _isRegistered ? document.getElementById('vf-entity').value : '',
+    contact, id_number: idNum, phone, address, description: desc,
+    business_name: BIZ?.name || '',
+    submitted_at: new Date().toISOString(),
+  };
+  const sb = getSB();
+  if (sb) {
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        await fetch('/api/verify-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+          body: JSON.stringify(payload),
+        });
+      }
+    } catch(e) { console.warn('[verif]', e); }
+  }
+  save('verif', { status: 'pending', ...payload });
+  showMsg('verif-msg', '✅ Submitted! We\'ll review within 1–3 business days.', 'ok');
+  loadVerifStatus();
+  setTimeout(() => closeSheet('verify-sheet'), 2200);
+}
+
+// ── Payment Method ───────────────────────────────────────────
+function submitPaymentMethod() {
+  const bank    = document.getElementById('pm-bank').value;
+  const name    = document.getElementById('pm-name').value.trim();
+  const account = document.getElementById('pm-account').value.trim();
+  const type    = document.getElementById('pm-type').value;
+  if (!bank || !name || !account || !type) {
+    showMsg('payment-msg', 'Please fill in all required fields.', 'err'); return;
+  }
+  const pm = { bank, name, account, type, branch: document.getElementById('pm-branch').value.trim(), saved_at: new Date().toISOString() };
+  save('payment', pm);
+  showMsg('payment-msg', '✅ Payment method saved.', 'ok');
+  loadVerifStatus();
+  setTimeout(() => closeSheet('payment-sheet'), 1800);
+}
+
+function showMsg(id, text, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'msg show msg-' + type;
+}
+
+// ── Post Preview ─────────────────────────────────────────────
+function previewPost() {
+  const cap = document.getElementById('post-cap').value.trim();
+  if (!cap && !_bizImgFiles.length) { toast('Add a caption or photo first', 'err'); return; }
+
+  const imgArea = document.getElementById('biz-preview-imgs');
+  if (imgArea) {
+    if (_bizImgFiles.length) {
+      const cols = Math.min(_bizImgFiles.length, 3);
+      imgArea.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      imgArea.innerHTML = '';
+      _bizImgFiles.slice(0, 3).forEach(f => {
+        const div = document.createElement('div');
+        div.style.cssText = 'aspect-ratio:1;overflow:hidden;background:#000';
+        const img = document.createElement('img');
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+        const rd = new FileReader(); rd.onload = e => { img.src = e.target.result; }; rd.readAsDataURL(f);
+        div.appendChild(img); imgArea.appendChild(div);
+      });
+    } else {
+      imgArea.innerHTML = '';
+    }
+  }
+
+  const nameEl = document.getElementById('biz-preview-name');
+  if (nameEl) nameEl.textContent = BIZ?.name || 'Business';
+  const capEl = document.getElementById('biz-preview-caption');
+  if (capEl) capEl.textContent = cap;
+
+  closeSheet('post-sheet');
+  openSheet('preview-sheet');
+}
+
 // ── Boot ─────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', () => {
-  const s = localStorage.getItem('biz_session');
-  if (!s) { window.location.href = 'business-login.html'; return; }
+window.addEventListener('DOMContentLoaded', async () => {
+  let s = localStorage.getItem('biz_session');
+
+  // Bridge: if no biz_session but user has a live Supabase session, create one.
+  // Falls back to localStorage p_user role if RLS blocks the profile query.
+  if (!s) {
+    try {
+      const sb = getSB();
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        const { data: profile } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
+        let role = profile?.role;
+        if (!role) {
+          // RLS blocked profile read — try localStorage p_user
+          try { role = JSON.parse(localStorage.getItem('p_user') || '{}').role; } catch(e) {}
+        }
+        if (role && ['business','admin'].includes(role)) {
+          const bridged = {
+            id: session.user.id, email: session.user.email,
+            name: profile?.display_name || profile?.business_name || session.user.email?.split('@')[0] || 'Business',
+            role, city: profile?.city || null,
+            province: profile?.province || null, phone: profile?.phone || null,
+          };
+          localStorage.setItem('biz_session', JSON.stringify(bridged));
+          s = JSON.stringify(bridged);
+        }
+      }
+    } catch(e) { console.warn('[business] bridge failed', e); }
+  }
+
+  if (!s) { window.location.href = '/signin'; return; }
   BIZ = JSON.parse(s);
   document.getElementById('tb-biz-name').textContent = BIZ.name;
   initDashboard();
@@ -420,6 +774,8 @@ function initDashboard() {
   renderOrders();
   renderHoursEditor();
   renderProfile();
+  renderBizFAQ();
+  loadVerifStatus();
   renderHomeOrdersPreview();
   const url = `${location.origin}/business-menu.html?id=${getBizId()}`;
   document.getElementById('menu-url-display').textContent = url;
@@ -438,7 +794,7 @@ function showTab(name) {
 function openSheet(id)  { document.getElementById(id).classList.add('open'); }
 function closeSheet(id) { document.getElementById(id).classList.remove('open'); }
 function toast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast ' + type + ' show'; setTimeout(() => t.className = 'toast', 2600); }
-function doLogout()     { localStorage.removeItem('biz_session'); window.location.href = 'business-login.html'; }
+function doLogout()     { localStorage.removeItem('biz_session'); window.location.href = '/signin'; }
 function copyMenuLink() { const url = `${location.origin}/business-menu.html?id=${getBizId()}`; navigator.clipboard?.writeText(url); toast('🔗 Menu link copied!', 'ok'); }
 
 // ════════════════════════════════════════════════════════════
@@ -480,17 +836,44 @@ function getSB() { if (!_sbC && window.supabase) _sbC = window.supabase.createCl
 // ════════════════════════════════════════════════════════════
 //  POSTS — synced to Supabase posts table
 // ════════════════════════════════════════════════════════════
-let _bizImgFile = null;
+let _bizImgFiles  = [];
+let _menuImgFiles = [];
 
-function handleBizImg(input) {
-  const file = input.files[0]; if (!file) return;
-  _bizImgFile = file;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const drop = document.getElementById('biz-img-drop');
-    if (drop) drop.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover"/>`;
-  };
-  reader.readAsDataURL(file);
+function _buildImgGrid(files, gridId, onRemove) {
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  grid.innerHTML = '';
+  files.forEach((f, i) => {
+    const cell = document.createElement('div');
+    cell.style.cssText = 'position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#111';
+    const img = document.createElement('img');
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+    const rd = new FileReader(); rd.onload = e => { img.src = e.target.result; }; rd.readAsDataURL(f);
+    const rm = document.createElement('button');
+    rm.textContent = '✕';
+    rm.style.cssText = 'position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.6rem;cursor:pointer;padding:0;line-height:1';
+    rm.onclick = (ev) => { ev.stopPropagation(); onRemove(i); };
+    cell.appendChild(img); cell.appendChild(rm);
+    grid.appendChild(cell);
+  });
+}
+
+function handleBizImgs(input) {
+  _bizImgFiles = Array.from(input.files || []).slice(0, 5);
+  _buildImgGrid(_bizImgFiles, 'biz-img-grid', i => {
+    _bizImgFiles.splice(i, 1);
+    _buildImgGrid(_bizImgFiles, 'biz-img-grid', arguments.callee);
+  });
+  const hint = document.getElementById('biz-img-hint');
+  if (hint) hint.textContent = _bizImgFiles.length ? `${_bizImgFiles.length} photo${_bizImgFiles.length>1?'s':''} selected` : 'Tap to add up to 5 photos';
+}
+
+function handleMenuImgs(input) {
+  _menuImgFiles = Array.from(input.files || []).slice(0, 10);
+  _buildImgGrid(_menuImgFiles, 'mi-img-grid', i => {
+    _menuImgFiles.splice(i, 1);
+    _buildImgGrid(_menuImgFiles, 'mi-img-grid', arguments.callee);
+  });
 }
 
 async function renderPosts() {
@@ -531,16 +914,20 @@ async function submitPost() {
   let imageUrl = null;
 
   try {
-    if (_bizImgFile && sb) {
+    if (_bizImgFiles.length && sb) {
       const { data: { session } } = await sb.auth.getSession();
       if (session) {
-        const ext  = _bizImgFile.name.split('.').pop() || 'jpg';
-        const path = `${session.user.id}/${Date.now()}.${ext}`;
-        const { data: up, error: upErr } = await sb.storage.from('post-images').upload(path, _bizImgFile);
-        if (!upErr) {
-          const { data: { publicUrl } } = sb.storage.from('post-images').getPublicUrl(path);
-          imageUrl = publicUrl;
+        const urls = [];
+        for (const file of _bizImgFiles) {
+          const ext  = file.name.split('.').pop() || 'jpg';
+          const path = `${session.user.id}/${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
+          const { error: upErr } = await sb.storage.from('post-images').upload(path, file);
+          if (!upErr) {
+            const { data: { publicUrl } } = sb.storage.from('post-images').getPublicUrl(path);
+            urls.push(publicUrl);
+          }
         }
+        imageUrl = urls.length === 1 ? urls[0] : urls.length > 1 ? JSON.stringify(urls) : null;
       }
     }
 
@@ -553,12 +940,14 @@ async function submitPost() {
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
           body: JSON.stringify({ caption: cap, image_url: imageUrl, post_type: 'business_update' }),
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
-        // Also save locally so stats reflect immediately
-        const posts = load('posts', []);
-        posts.push({ id: data.post.id, img: imageUrl, cap, created: data.post.created_at });
-        save('posts', posts);
+        const _txt = await res.text();
+        let data = {}; try { data = JSON.parse(_txt); } catch(e) {}
+        if (!res.ok) throw new Error(data.error || 'Post failed');
+        if (data.post) {
+          const posts = load('posts', []);
+          posts.push({ id: data.post.id, img: imageUrl, cap, created: data.post.created_at });
+          save('posts', posts);
+        }
       } else {
         throw new Error('Not signed in to Supabase');
       }
@@ -570,9 +959,11 @@ async function submitPost() {
 
     closeSheet('post-sheet');
     document.getElementById('post-cap').value = '';
-    _bizImgFile = null;
-    const drop = document.getElementById('biz-img-drop');
-    if (drop) drop.innerHTML = '<span style="font-size:1.5rem">📷</span><span id="biz-img-hint" style="font-size:.74rem;color:var(--mu)">Tap to upload a photo</span>';
+    _bizImgFiles = [];
+    const grid = document.getElementById('biz-img-grid');
+    if (grid) grid.innerHTML = '';
+    const hint = document.getElementById('biz-img-hint');
+    if (hint) hint.textContent = 'Tap to add up to 5 photos';
     toast('Post published! ✅', 'ok');
     renderPosts(); renderStats();
   } catch(e) {
@@ -618,34 +1009,73 @@ function renderEvents() {
   }).join('');
 }
 
-function submitEvent() {
+async function submitEvent() {
   const id   = document.getElementById('ev-edit-id').value;
   const name = document.getElementById('ev-name').value.trim();
   if (!name) { toast('Event name is required', 'err'); return; }
   const price = parseFloat(document.getElementById('ev-price').value) || 0;
   const lineupRaw = document.getElementById('ev-lineup').value.trim();
+  const date  = document.getElementById('ev-date').value;
+  const time  = document.getElementById('ev-time').value;
+  const venue = document.getElementById('ev-venue').value.trim();
+  const city  = document.getElementById('ev-city').value.trim();
+  const genre = document.getElementById('ev-genre').value.trim();
+  const desc  = document.getElementById('ev-desc').value.trim();
+  const imgUrl = document.getElementById('ev-img').value.trim();
+
   const ev = {
     id: id || 'ev_' + Date.now(), name,
-    date: document.getElementById('ev-date').value,
-    time: document.getElementById('ev-time').value,
-    venue: document.getElementById('ev-venue').value.trim(),
-    city: document.getElementById('ev-city').value.trim(),
-    genre: document.getElementById('ev-genre').value.trim(),
-    price, isFree: price === 0,
+    date, time, venue, city, genre, price, isFree: price === 0,
     hype: parseInt(document.getElementById('ev-hype').value) || 75,
-    desc: document.getElementById('ev-desc').value.trim(),
+    desc,
     lineup: lineupRaw ? lineupRaw.split(',').map(s => s.trim()) : [],
-    img: document.getElementById('ev-img').value.trim(),
+    img: imgUrl,
     created: id ? undefined : new Date().toISOString(),
     bizId: getBizId(), bizName: BIZ.name, bizType: BIZ.type,
   };
   const evs = load('events', []);
   if (id) { const i = evs.findIndex(e => e.id === id); if (i >= 0) evs[i] = { ...evs[i], ...ev }; } else { evs.push(ev); }
   save('events', evs);
-  syncToSharedEvents(ev);
+
+  // Sync new events to Supabase so they appear on the landing page feed
+  if (!id) {
+    const sb = getSB();
+    if (sb) {
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) {
+          await sb.from('events').insert({
+            id: ev.id, name,
+            date_local: date || null,
+            time_local: time || null,
+            venue_name: venue,
+            venue_city: city,
+            genre: genre || 'other',
+            description: desc || null,
+            price_min: price, price_max: price,
+            currency: 'ZAR',
+            image_url: imgUrl || null,
+            organiser_name: BIZ.name,
+            organiser_id: session.user.id,
+            is_active: true,
+            source: 'business',
+          });
+          await fetch('/api/posts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+            body: JSON.stringify({
+              caption: '🎉 ' + name + ' — ' + venue + (city ? ', ' + city : '') + (date ? ' · ' + date : '') + (price > 0 ? ' · R' + price : ' · FREE') + (desc ? '\n' + desc : ''),
+              event_id: ev.id, event_name: name, post_type: 'business_event',
+            }),
+          }).catch(() => {});
+        }
+      } catch(e) { console.warn('[event sync]', e); }
+    }
+  }
+
   closeSheet('event-sheet');
   resetEventForm();
-  toast(id ? 'Event updated ✅' : 'Event published! ✅', 'ok');
+  toast(id ? 'Event updated ✅' : 'Event published to feed! ✅', 'ok');
   renderEvents(); renderStats();
 }
 
@@ -693,7 +1123,7 @@ function renderMenu() {
     `<div style="padding:10px 14px 0"><div class="section-label">${xe(cat)}</div></div>` +
     items.filter(i => (i.cat || 'General') === cat).map(item => `
       <div class="menu-item-card">
-        <div class="mi-img">${item.img ? `<img src="${xe(item.img)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : ''}${item.emoji || '🍽️'}</div>
+        <div class="mi-img">${(item.photos?.[0] || item.img) ? `<img src="${xe(item.photos?.[0] || item.img)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : ''}${item.emoji || '🍽️'}${item.photos?.length > 1 ? `<span style="position:absolute;bottom:1px;right:1px;background:rgba(0,0,0,.75);color:#fff;font-size:.52rem;padding:1px 3px;border-radius:3px">+${item.photos.length-1}</span>` : ''}</div>
         <div class="mi-info">
           <div class="mi-name" style="${item.available==='0'||item.available===false?'opacity:.5':''}"}>${xe(item.name)}</div>
           <div class="mi-desc">${xe(item.desc || '')}</div>
@@ -707,13 +1137,51 @@ function renderMenu() {
   ).join('');
 }
 
-function submitMenuItem() {
+async function submitMenuItem() {
   const id    = document.getElementById('mi-edit-id').value;
   const name  = document.getElementById('mi-name').value.trim();
   const price = parseFloat(document.getElementById('mi-price').value);
   if (!name)             { toast('Item name is required', 'err'); return; }
   if (isNaN(price)||price<0) { toast('Enter a valid price', 'err'); return; }
-  const item = { id: id || 'mi_' + Date.now(), name, desc: document.getElementById('mi-desc').value.trim(), price, emoji: document.getElementById('mi-emoji').value || '🍽️', cat: document.getElementById('mi-cat').value.trim() || 'General', img: document.getElementById('mi-img').value.trim(), available: document.getElementById('mi-avail').value, bizId: getBizId() };
+
+  let photos = [];
+  if (_menuImgFiles.length) {
+    const sb = getSB();
+    if (sb) {
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) {
+          for (const file of _menuImgFiles) {
+            const ext  = file.name.split('.').pop() || 'jpg';
+            const path = `menu/${session.user.id}/${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
+            const { error } = await sb.storage.from('post-images').upload(path, file);
+            if (!error) {
+              const { data: { publicUrl } } = sb.storage.from('post-images').getPublicUrl(path);
+              photos.push(publicUrl);
+            }
+          }
+        }
+      } catch(e) { console.warn('[menu upload]', e); }
+    }
+  }
+
+  // Preserve existing photos when editing if no new files selected
+  if (!photos.length && id) {
+    const existing = load('menu', []).find(m => m.id === id);
+    photos = existing?.photos || [];
+  }
+
+  const item = {
+    id: id || 'mi_' + Date.now(), name,
+    desc:    document.getElementById('mi-desc').value.trim(),
+    price,
+    emoji:   document.getElementById('mi-emoji').value || '🍽️',
+    cat:     document.getElementById('mi-cat').value.trim() || 'General',
+    img:     photos[0] || '',
+    photos,
+    available: document.getElementById('mi-avail').value,
+    bizId: getBizId()
+  };
   const items = load('menu', []);
   if (id) { const i = items.findIndex(m => m.id === id); if (i >= 0) items[i] = item; } else { items.push(item); }
   save('menu', items);
@@ -731,16 +1199,24 @@ function editMenuItem(id) {
   document.getElementById('mi-price').value = item.price || '';
   document.getElementById('mi-emoji').value = item.emoji || '';
   document.getElementById('mi-cat').value   = item.cat || '';
-  document.getElementById('mi-img').value   = item.img || '';
   document.getElementById('mi-avail').value = (item.available !== false && item.available !== '0') ? '1' : '0';
+  _menuImgFiles = [];
+  const grid = document.getElementById('mi-img-grid');
+  if (grid) {
+    const existing = item.photos?.length ? item.photos : (item.img ? [item.img] : []);
+    grid.innerHTML = existing.map(u => `<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;background:#111"><img src="${xe(u)}" style="width:100%;height:100%;object-fit:cover" loading="lazy"/></div>`).join('');
+  }
   openSheet('menu-sheet');
 }
 
 function resetMenuForm() {
   document.getElementById('mi-edit-id').value = '';
   document.getElementById('mi-sheet-title').textContent = 'Add Menu Item';
-  ['mi-name','mi-desc','mi-price','mi-emoji','mi-cat','mi-img'].forEach(id => { document.getElementById(id).value = ''; });
+  ['mi-name','mi-desc','mi-price','mi-emoji','mi-cat'].forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('mi-avail').value = '1';
+  _menuImgFiles = [];
+  const grid = document.getElementById('mi-img-grid');
+  if (grid) grid.innerHTML = '';
 }
 
 function deleteMenuItem(id) {

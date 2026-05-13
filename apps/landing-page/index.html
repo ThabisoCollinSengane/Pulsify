@@ -317,21 +317,21 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 #map-legend-body{transition:all .25s}
 /* Enhanced glowing marker */
 .mp-dot{
-  width:28px;
-  height:28px;
+  width:36px;
+  height:36px;
   border-radius:50%;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:.75rem;
-  border:2px solid rgba(255,255,255,.3);
+  font-size:.9rem;
+  border:2.5px solid rgba(255,255,255,.45);
   cursor:pointer;
   position:relative;
-  transition:all .3s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change:transform;
-  backdrop-filter:blur(4px);
+  transition:box-shadow .2s, filter .2s;
+  backdrop-filter:blur(6px);
 }
-.mp-dot:active{transform:scale(1.15)}
+.mp-dot:active{filter:brightness(1.3) saturate(1.4)}
+.mp-dot-ev{width:42px;height:42px;font-size:1rem;border-width:3px}
 .mp-ring{
   position:absolute;
   inset:-8px;
@@ -575,7 +575,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
         <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">🎟</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">My Bookings</div><div style="font-size:.68rem;color:var(--mu)">Tickets and QR codes</div></div></div>
         <span style="color:var(--or);font-size:.8rem">→</span>
       </button>
-      <button onclick="window.location.href='business-login.html'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <button onclick="window.location.href='/business'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">🏪</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Business Dashboard</div><div style="font-size:.68rem;color:var(--mu)">Manage your venue or event page</div></div></div>
         <span style="color:var(--or);font-size:.8rem">→</span>
       </button>
@@ -813,9 +813,13 @@ let activeEvId     = null;
 let searchTimer    = null;
 let sbClient       = null;
 let currentUser    = null;
-let savedEv        = JSON.parse(localStorage.getItem('p_sev')   || '[]');
-let savedBz        = JSON.parse(localStorage.getItem('p_sbiz')  || '[]');
-let vibes          = JSON.parse(localStorage.getItem('p_vibes') || '[]');
+function safeParse(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); }
+  catch(e) { console.warn('[localStorage] corrupt key, resetting:', key); localStorage.removeItem(key); return fallback; }
+}
+let savedEv        = safeParse('p_sev',   []);
+let savedBz        = safeParse('p_sbiz',  []);
+let vibes          = safeParse('p_vibes', []);
 let miniMaps       = {};
 let activeComments = [];
 let eventsForMap   = [];
@@ -835,6 +839,15 @@ const PROV_CITY = {
 
 /* ── UTILS ── */
 function x(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function firstImg(imageUrl) {
+  if (!imageUrl) return null;
+  if (imageUrl.startsWith('[')) { try { const arr = JSON.parse(imageUrl); return arr[0] || null; } catch(e) {} }
+  return imageUrl;
+}
+function imgCount(imageUrl) {
+  if (!imageUrl || !imageUrl.startsWith('[')) return 1;
+  try { return JSON.parse(imageUrl).length; } catch(e) { return 1; }
+}
 function fn(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n || 0); }
 function fdate(dt) {
   if (!dt) return '';
@@ -939,28 +952,34 @@ function bizSkeleton() {
 /* ══════════════════════════════════════════════════
    LIVE API — EVENTS
 ══════════════════════════════════════════════════ */
+let _feedReqId = 0;
 async function loadFeed(resetPage = false) {
   if (resetPage) feedPage = 1;
-  document.getElementById('events-feed').innerHTML = feedSkeleton();
+  const myReq = ++_feedReqId;
+  const feedEl = document.getElementById('events-feed');
+  feedEl.innerHTML = feedSkeleton();
   document.getElementById('feed-pg').style.display = 'none';
 
   try {
-    const params = new URLSearchParams({ page: feedPage, limit: 10 });
-    if (feedCity  && feedCity  !== 'all') params.set('city',  feedCity);
-    if (feedGenre && feedGenre !== 'all') params.set('genre', feedGenre);
-
-    const res  = await fetch(API + '/events?' + params);
-    const data = await res.json();
-
-    if (!res.ok) throw new Error(data.error || 'API error');
-
-    const events = data.events || [];
-    feedTotalPages = data.total_pages || 1;
-
-    document.getElementById('feed-lbl').textContent = '🔥 ' + (data.total || events.length) + ' Upcoming Events';
+    const sb = getSB();
+    if (!sb) throw new Error('Supabase SDK not loaded');
+    const limit = 10, offset = (feedPage - 1) * limit;
+    let q = sb.from('events')
+      .select('id,name,date_local,time_local,venue_name,venue_city,venue_lat,venue_lon,price_min,is_free,image_url,genre,hype_score,like_count,comment_count,is_frontline,frontline_rank,external_url,source,status,description,lineup,organiser_name', { count: 'exact' })
+      .order('date_local', { ascending: true })
+      .range(offset, offset + limit - 1);
+    if (feedCity  && feedCity  !== 'all') q = q.ilike('venue_city', `%${feedCity}%`);
+    if (feedGenre === 'free') q = q.eq('is_free', true);
+    else if (feedGenre && feedGenre !== 'all') q = q.ilike('genre', `%${feedGenre}%`);
+    const { data: rawEvents, error, count } = await q;
+    if (myReq !== _feedReqId) return;          // a newer request started — drop this result
+    if (error) throw new Error('Supabase: ' + error.message);
+    const events = rawEvents || [];
+    feedTotalPages = Math.ceil((count || 0) / limit) || 1;
+    document.getElementById('feed-lbl').textContent = '🔥 ' + (count || events.length) + ' Upcoming Events';
 
     if (events.length === 0) {
-      document.getElementById('events-feed').innerHTML = `
+      feedEl.innerHTML = `
         <div class="no-results">
           <div class="no-results-ico">🎟</div>
           <div class="no-results-title">No events found</div>
@@ -970,18 +989,50 @@ async function loadFeed(resetPage = false) {
       return;
     }
 
-    document.getElementById('events-feed').innerHTML = events.map((ev, i) => buildCard(ev, i)).join('');
+    // Render cards as already-revealed so they're visible even if IntersectionObserver misses them
+    feedEl.innerHTML = events.map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
     updatePagination();
     triggerRev();
-    document.querySelector('.hi')?.scrollTo({ top: 0, behavior: 'smooth' });
 
     // Cache events for map
     eventsForMap = [...(eventsForMap.filter(e => !events.find(n => n.id === e.id))), ...events];
 
+    // Append Quicket events below (fire-and-forget, doesn't block render)
+    if (feedPage === 1) loadQuicketEvents(feedCity, feedGenre);
+
   } catch(err) {
+    if (myReq !== _feedReqId) return;
     console.error('[Feed]', err);
-    document.getElementById('events-feed').innerHTML = `<div class="api-error">⚠️ Could not load events. Check your connection.</div>`;
+    feedEl.innerHTML = `<div class="api-error">⚠️ Could not load events: ${err.message}</div>`;
   }
+}
+
+async function loadQuicketEvents(city, genre) {
+  const container = document.getElementById('events-feed');
+  if (!container) return;
+  try {
+    const params = new URLSearchParams({ city: city || 'all', genre: genre || 'all', page: '1' });
+    const resp = await fetch('/api/quicket-events?' + params);
+    if (!resp.ok) {
+      const err = await resp.text();
+      console.warn('[Quicket] API error', resp.status, err);
+      return;
+    }
+    const { events } = await resp.json();
+    console.log('[Quicket] Loaded', events?.length || 0, 'events');
+    if (!events?.length) return;
+
+    // Filter out any that are already shown
+    const existingIds = new Set([...container.querySelectorAll('[data-evid]')].map(el => el.dataset.evid));
+    const fresh = events.filter(e => !existingIds.has(e.id));
+    if (!fresh.length) return;
+
+    const section = document.createElement('div');
+    section.innerHTML = `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);padding:16px 0 8px;display:flex;align-items:center;gap:8px"><img src="https://www.quicket.co.za/favicon.ico" width="14" height="14" style="border-radius:3px" onerror="this.style.display='none'"/>More events from Quicket</div>` +
+      fresh.slice(0, 30).map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
+    container.appendChild(section);
+    eventsForMap = [...eventsForMap, ...fresh];
+  } catch(e) { /* Quicket unavailable — silently skip */ }
 }
 
 function buildCard(ev, idx) {
@@ -1060,11 +1111,16 @@ function handleSearch(val) {
   if (!val.trim()) return;
   searchTimer = setTimeout(async () => {
     try {
-      const res = await fetch(API + '/events/search?q=' + encodeURIComponent(val));
-      const data = await res.json();
-      if (data.results?.length) {
-        document.getElementById('events-feed').innerHTML = data.results.map((ev, i) => buildCard(ev, i)).join('');
-        document.getElementById('feed-lbl').textContent = '🔍 ' + data.results.length + ' results';
+      const sb = getSB();
+      const today = new Date().toISOString().split('T')[0];
+      const { data: results } = await sb.from('events')
+        .select('id,name,date_local,time_local,venue_name,venue_city,price_min,is_free,image_url,genre,hype_score,like_count,comment_count,is_frontline,frontline_rank,source,organiser_name')
+        .gte('date_local', today)
+        .or(`name.ilike.%${val}%,venue_city.ilike.%${val}%,genre.ilike.%${val}%,venue_name.ilike.%${val}%`)
+        .order('hype_score', { ascending: false, nullsFirst: false }).limit(20);
+      if (results?.length) {
+        document.getElementById('events-feed').innerHTML = results.map((ev, i) => buildCard(ev, i)).join('');
+        document.getElementById('feed-lbl').textContent = '🔍 ' + results.length + ' results';
         triggerRev();
       }
     } catch(e) {}
@@ -1077,9 +1133,16 @@ function handleSearch(val) {
 async function loadFrontline() {
   document.getElementById('frontline-row').innerHTML = bizSkeleton();
   try {
-    const res  = await fetch(API + '/businesses?limit=6' + (feedCity !== 'all' ? '&city=' + feedCity : ''));
-    const data = await res.json();
-    const bizs = data.businesses || [];
+    const sb = getSB();
+    let bq = sb.from('businesses')
+      .select('id,name,category,suburb,city,lat,lon,rating,review_count,price_range,cover_image_url,is_frontline,frontline_rank,tagline')
+      .order('is_frontline', { ascending: false })
+      .order('rating', { ascending: false, nullsFirst: false })
+      .limit(6);
+    if (feedCity && feedCity !== 'all') bq = bq.ilike('city', `%${feedCity}%`);
+    const { data: rawBizs, error: bizErr } = await bq;
+    if (bizErr) throw new Error(bizErr.message);
+    const bizs = rawBizs || [];
     bizForMap  = bizs;
     document.getElementById('frontline-row').innerHTML = bizs.map(b => buildBizCard(b)).join('') + `
       <div class="bc" onclick="showTab('discover')" style="background:rgba(255,92,0,.06);border:1.5px dashed rgba(255,92,0,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-width:130px">
@@ -1087,7 +1150,7 @@ async function loadFrontline() {
         <span style="font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--or);text-align:center;padding:0 8px">Show More</span>
       </div>`;
   } catch(e) {
-    document.getElementById('frontline-row').innerHTML = '<div style="padding:14px;color:var(--mu);font-size:.78rem">Could not load places.</div>';
+    document.getElementById('frontline-row').innerHTML = `<div style="padding:14px;color:var(--mu);font-size:.78rem">Could not load places: ${e.message}</div>`;
   }
 }
 
@@ -1116,9 +1179,14 @@ async function openEv(evId) {
   showDetailTab('event-detail');
 
   try {
-    const res = await fetch(API + '/events/' + evId);
-    const { event: ev, tiers = [], photos = [] } = await res.json();
-    if (!ev) throw new Error('Not found');
+    const sb = getSB();
+    const [{ data: ev, error: evErr }, { data: evTiers }, { data: evPhotos }] = await Promise.all([
+      sb.from('events').select('*').eq('id', evId).single(),
+      sb.from('ticket_tiers').select('*').eq('event_id', evId).order('sort_order'),
+      sb.from('event_photos').select('*').eq('event_id', evId).order('created_at', { ascending: false }).limit(12),
+    ]);
+    if (evErr || !ev) throw new Error('Not found');
+    const tiers = evTiers || [], photos = evPhotos || [];
 
     selTier = tiers[0] || null; selQty = 1;
     const iF = ev.is_free, bg = gg(ev.genre), emo = ge(ev.genre), hp = ev.hype_score ?? 70;
@@ -1150,7 +1218,7 @@ async function openEv(evId) {
         <div style="text-align:center;font-size:.66rem;color:var(--mu);margin-top:8px">🔒 Secured by Paystack · No card data stored</div>
       </div>`;
     } else if (ev.external_url) {
-      const srcLabel = { eventbrite:'Eventbrite', ticketmaster:'Ticketmaster' }[ev.source] || 'Ticket Partner';
+      const srcLabel = { eventbrite:'Eventbrite', ticketmaster:'Ticketmaster', quicket:'Quicket' }[ev.source] || 'Ticket Partner';
       tkHTML = `<div class="tkb"><div class="tkt2">🎟 Get Tickets</div>
         <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:14px">
           <div style="font-size:.78rem;color:var(--mu2);margin-bottom:6px">Listed on <strong style="color:var(--tx)">${srcLabel}</strong></div>
@@ -1282,9 +1350,9 @@ async function openBiz(bizId) {
   showDetailTab('biz-detail');
 
   try {
-    const res = await fetch(API + '/businesses/' + bizId);
-    const { business: b } = await res.json();
-    if (!b) throw new Error('Not found');
+    const sb = getSB();
+    const { data: b, error: bizErr } = await sb.from('businesses').select('*').eq('id', bizId).single();
+    if (bizErr || !b) throw new Error('Not found');
 
     const emo  = ce(b.category);
     const stars = '★'.repeat(Math.round(b.rating || 0)) + '☆'.repeat(5 - Math.round(b.rating || 0));
@@ -1347,19 +1415,23 @@ let discLoaded = false;
 async function loadDiscover(cat) {
   if (!cat) cat = discCat;
   try {
-    const params = new URLSearchParams({ show_all: 'true', limit: '20' });
-    if (cat && cat !== 'all') params.set('category', cat);
-    if (feedCity && feedCity !== 'all') params.set('city', feedCity);
-    const [bizRes, evRes] = await Promise.all([
-      fetch(API + '/businesses?' + params),
-      fetch(API + '/events?limit=20'),
-    ]);
-    const bizData = await bizRes.json();
-    const evData  = await evRes.json();
+    const sb = getSB();
+    const today = new Date().toISOString().split('T')[0];
+    let bq = sb.from('businesses')
+      .select('id,name,category,suburb,city,lat,lon,rating,review_count,price_range,cover_image_url,is_frontline,frontline_rank,tagline')
+      .order('is_frontline', { ascending: false })
+      .order('rating', { ascending: false, nullsFirst: false }).limit(20);
+    if (cat && cat !== 'all') bq = bq.eq('category', cat);
+    if (feedCity && feedCity !== 'all') bq = bq.ilike('city', `%${feedCity}%`);
+    let eq = sb.from('events')
+      .select('id,name,date_local,image_url,genre,is_free,price_min,hype_score,venue_city')
+      .gte('date_local', today)
+      .order('hype_score', { ascending: false, nullsFirst: false }).limit(20);
+    const [{ data: bizList }, { data: evList }] = await Promise.all([bq, eq]);
     const dr = document.getElementById('disc-biz-row');
-    if (dr) dr.innerHTML = (bizData.businesses || []).map(b => buildBizCard(b)).join('');
+    if (dr) dr.innerHTML = (bizList || []).map(b => buildBizCard(b)).join('');
     const de = document.getElementById('disc-events');
-    if (de) de.innerHTML = (evData.events || []).map(ev => `
+    if (de) de.innerHTML = (evList || []).map(ev => `
       <div class="de" onclick="openEv('${ev.id}')">
         <div class="det" style="background:${gg(ev.genre)}">${ev.image_url ? `<img src="${ev.image_url}" loading="lazy" onerror="this.style.display='none'"/>` : ge(ev.genre)}<span class="ddb">${fdate(ev.date_local)}</span></div>
         <div class="deb"><div class="den">${x(ev.name)}</div><div class="dec">${x(ev.venue_city)}</div>
@@ -1388,16 +1460,15 @@ function initMap() {
   mapboxgl.accessToken = MAPBOX_TOKEN;
   mapObj = new mapboxgl.Map({
     container: 'mc',
-    style: 'mapbox://styles/mapbox/dark-v11',
-    center: [30.9753, -29.8587], // Durban center
-    zoom: 9,
-    minZoom: 6,
+    style: 'mapbox://styles/mapbox/navigation-night-v1',
+    center: [30.9753, -29.8587], // Durban, KZN
+    zoom: 10,
+    minZoom: 5,
     maxZoom: 18,
     dragRotate: false,
     pitchWithRotate: false,
     touchPitch: false,
-    // Restrict map bounds to South Africa
-    maxBounds: [[16.45, -34.85], [32.95, -22.12]]
+    maxBounds: [[14, -36], [34, -20]]
   });
   mapObj.touchZoomRotate.disableRotation();
   
@@ -1433,9 +1504,11 @@ function initMap() {
     addPulseAnimation();
   });
   
-  mapObj.on('click', () => closeMapPanel());
-  
-  // Smooth zoom on scroll
+  // Close panel on map tap — but NOT if a marker was just tapped
+  let _markerJustTapped = false;
+  mapObj.on('click', () => { if (_markerJustTapped) { _markerJustTapped = false; return; } closeMapPanel(); });
+  window._mapMarkerTapped = () => { _markerJustTapped = true; };
+
   mapObj.scrollZoom.setWheelZoomRate(1/200);
 }
 
@@ -1503,20 +1576,16 @@ function placeMapMarkers() {
     const isEv = type === 'event';
 
     const el = document.createElement('div');
-    el.className = 'mp-dot';
-    
-    // Enhanced styling with gradient and better shadows
+    el.className = isEv ? 'mp-dot mp-dot-ev' : 'mp-dot';
     el.style.cssText = `
       background: ${s.grad || s.bg};
       color: ${s.dark ? '#000' : '#fff'};
-      box-shadow: 
-        0 0 ${isEv ? 24 : 16}px rgba(${s.sh}, ${isEv ? 0.8 : 0.5}),
-        0 4px 12px rgba(0,0,0,0.8),
-        inset 0 1px 0 rgba(255,255,255,0.3);
-      width: ${isEv ? 32 : 28}px;
-      height: ${isEv ? 32 : 28}px;
-      border: 2px solid rgba(255,255,255,${isEv ? 0.4 : 0.2});
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow:
+        0 0 ${isEv ? 28 : 18}px rgba(${s.sh}, ${isEv ? 0.9 : 0.6}),
+        0 0 ${isEv ? 56 : 32}px rgba(${s.sh}, ${isEv ? 0.35 : 0.2}),
+        0 4px 14px rgba(0,0,0,0.9),
+        inset 0 1px 0 rgba(255,255,255,0.4);
+      transition: box-shadow 0.2s, filter 0.2s;
     `;
     el.textContent = s.ico;
     el.style.fontSize = isEv ? '.85rem' : '.75rem';
@@ -1537,20 +1606,20 @@ function placeMapMarkers() {
       el.appendChild(ring);
     }
 
-    // Hover effect
+    // Hover effect — only change shadow (NEVER touch transform — Mapbox uses transform for positioning)
     el.addEventListener('mouseenter', () => {
-      el.style.transform = 'scale(1.25)';
       el.style.zIndex = '1000';
+      el.style.filter = 'brightness(1.15)';
       el.style.boxShadow = `
         0 0 ${isEv ? 32 : 24}px rgba(${s.sh}, 1),
         0 6px 20px rgba(0,0,0,0.9),
         inset 0 1px 0 rgba(255,255,255,0.5)
       `;
     });
-    
+
     el.addEventListener('mouseleave', () => {
-      el.style.transform = 'scale(1)';
       el.style.zIndex = '';
+      el.style.filter = '';
       el.style.boxShadow = `
         0 0 ${isEv ? 24 : 16}px rgba(${s.sh}, ${isEv ? 0.8 : 0.5}),
         0 4px 12px rgba(0,0,0,0.8),
@@ -1560,17 +1629,22 @@ function placeMapMarkers() {
 
     el.addEventListener('click', e => {
       e.stopPropagation();
+      if (window._mapMarkerTapped) window._mapMarkerTapped();
       showMapPanel(item, type, s);
     });
 
     mapMarkers.push(new mapboxgl.Marker({element: el, anchor: 'center'}).setLngLat([lon, lat]).addTo(mapObj));
   });
   
-  // Auto-fit bounds if markers exist
-  if (mapMarkers.length > 0) {
+  // Only auto-fit if markers are within KZN/eastern SA (not ocean strays)
+  const kznMarkers = mapMarkers.filter(m => {
+    const ll = m.getLngLat();
+    return ll.lng >= 28.5 && ll.lng <= 32.5 && ll.lat >= -31 && ll.lat <= -27;
+  });
+  if (kznMarkers.length > 0) {
     const bounds = new mapboxgl.LngLatBounds();
-    mapMarkers.forEach(m => bounds.extend(m.getLngLat()));
-    mapObj.fitBounds(bounds, { padding: 80, maxZoom: 13, duration: 1000 });
+    kznMarkers.forEach(m => bounds.extend(m.getLngLat()));
+    mapObj.fitBounds(bounds, { padding: 100, maxZoom: 12, duration: 1200 });
   }
 }
 
@@ -1801,11 +1875,77 @@ function renderBookings() {
   if (bl) bl.innerHTML = `<div class="no-results"><div class="no-results-ico">🎟</div><div class="no-results-title">No bookings yet</div><div class="no-results-sub">Your tickets appear here with QR codes for entry.</div><button class="no-results-btn" onclick="showTab('home')">Browse Events</button></div>`;
   renderSaved();
 }
-function renderSaved() {
+async function renderSaved() {
   const el = document.getElementById('sev-list');
-  if (el) el.innerHTML = savedEv.length ? '<div style="padding:8px 0;color:var(--mu);font-size:.82rem">' + savedEv.length + ' saved events — tap to view</div>' : `<div class="no-results"><div class="no-results-ico">🔖</div><div class="no-results-title">No saved events</div><div class="no-results-sub">Tap 🏷 on any event to save it here.</div><button class="no-results-btn" onclick="showTab('home')">Browse Events</button></div>`;
   const bl = document.getElementById('sbiz-list');
-  if (bl) bl.innerHTML = savedBz.length ? '<div style="padding:8px 0;color:var(--mu);font-size:.82rem">' + savedBz.length + ' saved places — tap to view</div>' : `<div class="no-results"><div class="no-results-ico">🏠</div><div class="no-results-title">No saved places</div><div class="no-results-sub">Tap 🏷 on any business card to save it.</div><button class="no-results-btn" onclick="showTab('discover')">Browse Places</button></div>`;
+  const sb = getSB();
+
+  /* ── Saved Events ── */
+  if (el) {
+    if (!savedEv.length) {
+      el.innerHTML = `<div class="no-results"><div class="no-results-ico">🔖</div><div class="no-results-title">No saved events</div><div class="no-results-sub">Tap 🏷 on any event to save it here.</div><button class="no-results-btn" onclick="showTab('home')">Browse Events</button></div>`;
+    } else {
+      el.innerHTML = '<div style="padding:14px 16px 8px;font-size:.78rem;color:var(--mu)">Loading saved events…</div>';
+      try {
+        const { data } = await sb.from('events')
+          .select('id,name,date_local,time_local,venue_name,venue_city,image_url,genre,is_free,price_min,hype_score,like_count,comment_count,organiser_name')
+          .in('id', savedEv).limit(30);
+        if (data?.length) {
+          el.innerHTML = data.map(ev => {
+            const pr = ev.is_free ? '<span style="color:var(--li)">FREE</span>' : ev.price_min ? `R${ev.price_min}` : 'R—';
+            const img = ev.image_url || '';
+            return `<div style="display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer" onclick="openEv('${x(ev.id)}')">
+              <div style="width:52px;height:52px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--surf2)">
+                ${img ? `<img src="${x(img)}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'"/>` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.2rem">${ge(ev.genre)}</div>`}
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(ev.name)}</div>
+                <div style="font-size:.7rem;color:var(--mu);margin-top:2px">📍 ${x(ev.venue_city||'')} · ${fdate(ev.date_local)}</div>
+                <div style="font-size:.72rem;color:var(--or);margin-top:2px;font-family:'Syne',sans-serif;font-weight:700">${pr}</div>
+              </div>
+              <button style="background:none;border:none;font-size:1rem;cursor:pointer;color:var(--or);padding:4px" onclick="event.stopPropagation();toggleSave('ev','${x(ev.id)}',this)"><span class="ai">🔖</span></button>
+            </div>`;
+          }).join('');
+        } else {
+          el.innerHTML = `<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu)">${savedEv.length} saved event(s) — details currently unavailable</div>`;
+        }
+      } catch(e) {
+        el.innerHTML = `<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu)">${savedEv.length} saved event(s)</div>`;
+      }
+    }
+  }
+
+  /* ── Saved Places ── */
+  if (bl) {
+    if (!savedBz.length) {
+      bl.innerHTML = `<div class="no-results"><div class="no-results-ico">🏠</div><div class="no-results-title">No saved places</div><div class="no-results-sub">Tap 🏷 on any business card to save it.</div><button class="no-results-btn" onclick="showTab('discover')">Browse Places</button></div>`;
+    } else {
+      bl.innerHTML = '<div style="padding:14px 16px 8px;font-size:.78rem;color:var(--mu)">Loading saved places…</div>';
+      try {
+        const { data } = await sb.from('businesses')
+          .select('id,name,category,city,suburb,cover_image_url,rating,review_count,tagline')
+          .in('id', savedBz).limit(30);
+        if (data?.length) {
+          bl.innerHTML = data.map(b => `
+            <div style="display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer" onclick="openBiz('${x(b.id)}')">
+              <div style="width:52px;height:52px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--surf2)">
+                ${b.cover_image_url ? `<img src="${x(b.cover_image_url)}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'"/>` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.2rem">${ce(b.category)}</div>`}
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(b.name)}</div>
+                <div style="font-size:.7rem;color:var(--mu);margin-top:2px">${x(b.category||'')}${b.city ? ' · ' + x(b.city) : ''}</div>
+                ${b.rating ? `<div style="font-size:.7rem;color:#FFB800;margin-top:2px">★ ${b.rating} <span style="color:var(--mu)">(${b.review_count||0})</span></div>` : ''}
+              </div>
+              <button style="background:none;border:none;font-size:1rem;cursor:pointer;color:var(--or);padding:4px" onclick="event.stopPropagation();toggleSave('biz','${x(b.id)}',this)"><span class="ai">🔖</span></button>
+            </div>`).join('');
+        } else {
+          bl.innerHTML = `<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu)">${savedBz.length} saved place(s) — details currently unavailable</div>`;
+        }
+      } catch(e) {
+        bl.innerHTML = `<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu)">${savedBz.length} saved place(s)</div>`;
+      }
+    }
+  }
 }
 function switchST(tab, paneId) { tab.closest('.stbs').querySelectorAll('.stb').forEach(t => t.classList.remove('active')); tab.classList.add('active'); document.querySelectorAll('.sp').forEach(p => p.classList.remove('active')); document.getElementById(paneId)?.classList.add('active'); renderSaved(); }
 
@@ -2002,18 +2142,14 @@ async function toggleFollow(targetId, btn) {
   if (!currentUser) { showToast('Sign in to follow'); window.location.href='signin.html'; return; }
   const isF = btn.classList.contains('cd');
   btn.disabled = true;
-  const token = localStorage.getItem('p_token') || '';
+  const sb = getSB();
   try {
-    const res = await fetch('/api/follows', {
-      method: isF ? 'DELETE' : 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ following_id: targetId }),
-    });
-    if (!res.ok) throw new Error((await res.json()).error || 'Failed');
     if (isF) {
+      await sb.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', targetId);
       _squadFollowing.delete(targetId);
       btn.className='vb cn'; btn.textContent='+ Follow'; showToast('Unfollowed');
     } else {
+      await sb.from('follows').insert({ follower_id: currentUser.id, following_id: targetId });
       _squadFollowing.add(targetId);
       btn.className='vb cd'; btn.textContent='✓ Following'; showToast('🔥 Following!');
     }
@@ -2028,12 +2164,13 @@ async function renderSquad() {
 
   el.innerHTML = '<div style="padding:12px 16px;font-size:.78rem;color:var(--mu)">Loading…</div>';
 
-  // currentUser may not be set yet if auth is still resolving — fetch from session
-  if (!currentUser && sb) {
+  // Always verify a live Supabase session — localStorage p_user may be stale/expired
+  if (sb) {
     try {
       const { data: { user } } = await sb.auth.getUser();
       if (user) currentUser = user;
-    } catch(e) {}
+      else currentUser = null;
+    } catch(e) { currentUser = null; }
   }
 
   if (!currentUser || !sb) {
@@ -2076,7 +2213,10 @@ async function renderSquad() {
       '</div>';
     }).join('');
   } catch(e) {
-    el.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Could not load friends: ' + x(e.message) + '</div>';
+    const msg = (e.message||'').includes('permission denied')
+      ? 'Sign in to see your friends.'
+      : 'Could not load friends. Try again.';
+    el.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">' + msg + '</div>';
     console.error('renderSquad error:', e);
   }
 }
@@ -2199,17 +2339,22 @@ async function openProfile(userId) {
   ov.style.display = 'flex';
   body.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div>';
   try {
-    const res = await fetch('/api/profiles/' + userId);
-    if (!res.ok) throw new Error('Profile not found');
-    const data = await res.json();
-    const profile = data.profile || {};
-    const posts_count = data.posts_count || 0;
-    const followers_count = data.followers_count || 0;
-    const following_count = data.following_count || 0;
-    const recent_posts = data.recent_posts || [];
     const sb = getSB();
+    if (!sb) throw new Error('Supabase not loaded');
+    const [{ data: profile, error: pErr }, { count: postsCnt }, { count: followersCnt }, { count: followingCnt }, { data: recent }] = await Promise.all([
+      sb.from('profiles').select('id,username,display_name,avatar_url,role,bio,city,genres').eq('id', userId).maybeSingle(),
+      sb.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+      sb.from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', userId),
+      sb.from('follows').select('following_id', { count: 'exact', head: true }).eq('follower_id', userId),
+      sb.from('posts').select('id,image_url,caption,created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(6),
+    ]);
+    if (pErr || !profile) throw new Error(pErr?.message || 'Profile not found');
+    const posts_count = postsCnt || 0;
+    const followers_count = followersCnt || 0;
+    const following_count = followingCnt || 0;
+    const recent_posts = recent || [];
     let isFollowing = false;
-    if (sb && currentUser) {
+    if (currentUser) {
       const { data: fw } = await sb.from('follows').select('follower_id').eq('follower_id', currentUser.id).eq('following_id', userId).maybeSingle();
       isFollowing = !!fw;
     }
@@ -2224,7 +2369,7 @@ async function openProfile(userId) {
 
     const postsHtml = recent_posts.length ? recent_posts.map(p => `
       <div style="border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surf);margin-bottom:10px">
-        ${p.image_url ? `<div style="width:100%;aspect-ratio:1;background:#000;overflow:hidden"><img src="${x(p.image_url)}" style="width:100%;height:100%;object-fit:cover" loading="lazy"/></div>` : ''}
+        ${firstImg(p.image_url) ? `<div style="position:relative;width:100%;aspect-ratio:1;background:#000;overflow:hidden"><img src="${x(firstImg(p.image_url))}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'"/>${imgCount(p.image_url)>1?`<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.7);color:#fff;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;padding:3px 8px;border-radius:50px">📷 ${imgCount(p.image_url)}</span>`:''}</div>` : ''}
         ${p.caption ? `<div style="padding:10px 12px;font-size:.82rem;color:var(--tx);line-height:1.45">${x(p.caption)}</div>` : ''}
         <div style="padding:6px 12px 10px;font-size:.62rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.08em;text-transform:uppercase">${timeAgoShort(p.created_at)}</div>
       </div>
@@ -2272,18 +2417,14 @@ async function toggleFollowOverlay(targetId) {
   const btn = document.getElementById('po-follow-btn');
   const isF = btn && btn.textContent.includes('Following');
   if (btn) btn.disabled = true;
-  const token = localStorage.getItem('p_token') || '';
+  const sb = getSB();
   try {
-    const res = await fetch('/api/follows', {
-      method: isF ? 'DELETE' : 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ following_id: targetId }),
-    });
-    if (!res.ok) throw new Error((await res.json()).error || 'Failed');
     if (isF) {
+      await sb.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', targetId);
       if (btn) { btn.textContent = '+ Follow'; btn.style.background = 'linear-gradient(135deg,#B026FF,#FF5C00)'; btn.style.border = 'none'; btn.style.color = '#fff'; }
       showToast('Unfollowed');
     } else {
+      await sb.from('follows').insert({ follower_id: currentUser.id, following_id: targetId });
       if (btn) { btn.textContent = '✓ Following'; btn.style.background = 'transparent'; btn.style.border = '1px solid var(--border2)'; btn.style.color = 'var(--mu2)'; }
       showToast('🔥 Following!');
     }
@@ -2347,8 +2488,8 @@ async function initSupabaseSession() {
       try {
         const { data: prof } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
         const role = prof?.role || 'user';
-        if (role === 'organizer') { window.location.href = 'organizer-dashboard.html'; return; }
-        if (role === 'business')  { window.location.href = 'business-dashboard.html';  return; }
+        if (role === 'organizer') { window.location.href = '/organizer'; return; }
+        if (role === 'business')  { window.location.href = '/business';  return; }
       } catch(e) {}
     }
   });
@@ -2420,9 +2561,12 @@ async function openBizPage() {
   const grid = document.getElementById('bp-grid');
   if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--mu)">Loading…</div>';
   try {
-    const res  = await fetch(API + '/businesses?show_all=true&limit=50');
-    const data = await res.json();
-    _bizPageData = data.businesses || [];
+    const sb = getSB();
+    const { data: bizAll } = await sb.from('businesses')
+      .select('id,name,category,suburb,city,lat,lon,rating,review_count,price_range,cover_image_url,is_frontline,frontline_rank,tagline,description,phone,website,is_verified')
+      .order('is_frontline', { ascending: false })
+      .order('rating', { ascending: false, nullsFirst: false }).limit(50);
+    _bizPageData = bizAll || [];
     _renderBizPage();
   } catch(e) {
     if (grid) grid.innerHTML = '<div style="grid-column:1/-1;padding:30px;text-align:center;color:var(--mu)">Could not load. Check connection.</div>';

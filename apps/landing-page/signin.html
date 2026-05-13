@@ -134,11 +134,10 @@ function selectType(t) {
     const el = document.getElementById('at-'+id);
     if (el) el.classList.toggle('sel', id === t);
   });
-  if (t === 'business') { window.location.href = 'business-login.html'; return; }
   const sub = document.getElementById('card-sub');
   const btn = document.getElementById('btn');
-  if (sub) sub.textContent = t === 'organizer' ? 'Sign in to your organizer dashboard' : 'Sign in to your Pulsify account';
-  if (btn) btn.textContent = t === 'organizer' ? 'Sign In as Organizer' : 'Sign In';
+  if (sub) sub.textContent = t === 'organizer' ? 'Sign in to your organizer dashboard' : t === 'business' ? 'Sign in to your business dashboard' : 'Sign in to your Pulsify account';
+  if (btn) btn.textContent = t === 'organizer' ? 'Sign In as Organizer' : t === 'business' ? 'Sign In as Business' : 'Sign In';
   hideMsg();
 }
 
@@ -148,11 +147,11 @@ function getRoleMismatchError(actualRole, selectedType) {
   if (selectedType === 'user' && actualRole === 'organizer')
     return 'This is an <strong>Organizer</strong> account. Select the Organizer tab to sign in.';
   if (selectedType === 'user' && actualRole === 'business')
-    return 'This is a <strong>Business</strong> account. Use the <a href="business-login.html" style="color:var(--or)">Business sign-in \u2192</a>';
+    return 'This is a <strong>Business</strong> account. <a href="#" onclick="selectType(\'business\');return false;" style="color:var(--or)">Use the Business tab \u2192</a>';
   if (selectedType === 'organizer' && actualRole === 'user')
     return 'No organizer account found for this email. <a href="create-account.html" style="color:var(--or)">Sign up as an organizer \u2192</a>';
   if (selectedType === 'organizer' && actualRole === 'business')
-    return 'This is a <strong>Business</strong> account. Use the <a href="business-login.html" style="color:var(--or)">Business sign-in \u2192</a>';
+    return 'This is a <strong>Business</strong> account. <a href="#" onclick="selectType(\'business\');return false;" style="color:var(--or)">Use the Business tab \u2192</a>';
   return null;
 }
 
@@ -181,8 +180,8 @@ sb.auth.onAuthStateChange(async (event, session) => {
 function redirectByRole() {
   let role = 'user';
   try { role = JSON.parse(localStorage.getItem('p_user') || '{}').role || 'user'; } catch(e) { window.location.href = 'index.html'; return; }
-  if (role === 'organizer') { window.location.href = 'organizer-dashboard.html'; }
-  else if (role === 'business') { window.location.href = 'business-dashboard.html'; }
+  if (role === 'organizer') { window.location.href = '/organizer'; }
+  else if (role === 'business') { window.location.href = '/business'; }
   else { window.location.href = 'index.html'; }
 }
 
@@ -190,15 +189,16 @@ async function saveSession(session) {
   const user = session.user;
   localStorage.setItem('p_token', session.access_token);
   let profile = {};
-  try {
-    const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
-    if (error) throw error;
-    profile = data || {};
-    localStorage.setItem('p_user', JSON.stringify({ id: user.id, email: user.email, display_name: profile.display_name || user.user_metadata?.full_name || user.email?.split('@')[0], role: profile.role || 'user', email_verified: !!user.email_confirmed_at, last_login: new Date().toISOString() }));
-    localStorage.setItem('p_profile', JSON.stringify(profile));
-  } catch(e) {
+  const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  if (error) {
+    // Permission denied — save minimal info and redirect to home; admin/organizer won't be redirected correctly until Supabase grants are applied
+    console.warn('profiles query failed:', error.message);
     localStorage.setItem('p_user', JSON.stringify({ id: user.id, email: user.email, display_name: user.user_metadata?.full_name || user.email?.split('@')[0], role: 'user', last_login: new Date().toISOString() }));
+    return {};
   }
+  profile = data || {};
+  localStorage.setItem('p_user', JSON.stringify({ id: user.id, email: user.email, display_name: profile.display_name || user.user_metadata?.full_name || user.email?.split('@')[0], role: profile.role || 'user', email_verified: !!user.email_confirmed_at, last_login: new Date().toISOString() }));
+  localStorage.setItem('p_profile', JSON.stringify(profile));
   return profile;
 }
 

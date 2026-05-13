@@ -55,6 +55,22 @@ select.inp option{background:#0D1424}
 .bb.active svg{stroke:var(--or)}
 .bl{font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);transition:color .2s}
 .bb.active .bl{color:var(--or)}
+/* ── SETTINGS ── */
+.setting-card{background:var(--surf2);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:10px}
+.setting-card-row{display:flex;align-items:center;justify-content:space-between}
+.setting-card-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.faq-item{border:1px solid var(--border);border-radius:12px;margin-bottom:8px;overflow:hidden}
+.faq-q{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.faq-q .faq-arr{transition:transform .2s;flex-shrink:0;color:var(--mu)}
+.faq-item.open .faq-q .faq-arr{transform:rotate(180deg)}
+.faq-a{display:none;padding:0 14px 12px;font-size:.78rem;color:var(--mu);line-height:1.6}
+.faq-item.open .faq-a{display:block}
+.msg{padding:10px 14px;border-radius:10px;font-size:.78rem;margin-bottom:12px;display:none;line-height:1.5}
+.msg.show{display:block}
+.msg-ok{background:rgba(198,255,74,.08);border:1px solid rgba(198,255,74,.25);color:var(--li)}
+.msg-err{background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);color:var(--pk)}
+.btn-sec{background:var(--surf);border:1.5px solid var(--border2);border-radius:50px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;padding:9px 16px;cursor:pointer;transition:all .2s}
+.section-label{font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:8px;margin-top:14px}
 .toast{position:fixed;bottom:calc(var(--bh)+16px);left:50%;transform:translateX(-50%) translateY(12px);background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 22px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--tx);z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.ok{border-color:rgba(198,255,74,.4);color:var(--li)}
@@ -101,6 +117,7 @@ select.inp option{background:#0D1424}
     <div class="tab active" onclick="switchTab(this,'pane-post')">📢 New Post</div>
     <div class="tab" onclick="switchTab(this,'pane-event')">🎟 New Event</div>
     <div class="tab" onclick="switchTab(this,'pane-myposts')">📋 My Posts</div>
+    <div class="tab" onclick="switchTab(this,'pane-settings')">⚙️ Settings</div>
   </div>
 
   <div class="pane active" id="pane-post">
@@ -108,12 +125,16 @@ select.inp option{background:#0D1424}
       <div class="card-body">
         <div class="img-drop" id="img-drop" onclick="document.getElementById('post-img').click()">
           <span style="font-size:1.8rem">🖼</span>
-          <span style="font-size:.78rem;color:var(--mu)">Tap to add an image (optional)</span>
+          <span id="org-img-hint" style="font-size:.78rem;color:var(--mu)">Tap to add up to 5 photos</span>
         </div>
-        <input type="file" id="post-img" accept="image/*" style="display:none" onchange="previewImg(this)"/>
+        <input type="file" id="post-img" accept="image/*" multiple style="display:none" onchange="previewImgs(this)"/>
+        <div id="org-img-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:8px"></div>
         <textarea class="inp" id="post-caption" placeholder="Write your update, promo or announcement…" maxlength="1000"></textarea>
         <input class="inp" id="post-event-tag" placeholder="Tag an event name (optional)"/>
-        <button class="btn-primary" id="post-btn" onclick="submitPost()">Publish to Feed 🚀</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn-sec" style="flex:1" onclick="previewOrgPost()">👁 Preview</button>
+          <button class="btn-primary" id="post-btn" style="flex:2" onclick="submitPost()">Publish 🚀</button>
+        </div>
       </div>
     </div>
   </div>
@@ -123,8 +144,14 @@ select.inp option{background:#0D1424}
       <div class="card-body">
         <input class="inp" id="ev-name" placeholder="Event name *"/>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <input class="inp" id="ev-date" type="date" style="color-scheme:dark;margin-bottom:0"/>
-          <input class="inp" id="ev-time" type="time" style="color-scheme:dark;margin-bottom:0"/>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:5px">Date *</div>
+            <input class="inp" id="ev-date" type="date" style="color-scheme:dark;margin-bottom:0;width:100%"/>
+          </div>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:5px">Time</div>
+            <input class="inp" id="ev-time" type="time" style="color-scheme:dark;margin-bottom:0;width:100%"/>
+          </div>
         </div>
         <div style="height:10px"></div>
         <input class="inp" id="ev-venue" placeholder="Venue name *"/>
@@ -156,10 +183,55 @@ select.inp option{background:#0D1424}
       <div class="empty">Loading your posts…</div>
     </div>
   </div>
+
+  <div class="pane" id="pane-settings">
+    <div class="card">
+      <div class="card-body" style="padding-bottom:0">
+
+        <!-- Verify Profile -->
+        <div class="section-label">Account</div>
+        <div class="setting-card">
+          <div class="setting-card-row">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="setting-card-icon" style="background:linear-gradient(135deg,rgba(198,255,74,.15),rgba(176,38,255,.15));border:1px solid rgba(198,255,74,.25)">🏆</div>
+              <div>
+                <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Verify Profile</div>
+                <div id="org-verif-status" style="font-size:.68rem;color:var(--mu)">Not verified</div>
+              </div>
+            </div>
+            <button class="btn-sec" id="org-verif-btn" style="padding:6px 12px;font-size:.72rem" onclick="openOrgSheet('org-verify-sheet')">Apply →</button>
+          </div>
+          <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Get a ✅ verified badge. Takes <strong>1–3 business days</strong> after submission.</div>
+        </div>
+
+        <!-- Payment Method -->
+        <div class="setting-card">
+          <div class="setting-card-row">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="setting-card-icon" style="background:linear-gradient(135deg,rgba(0,229,255,.15),rgba(176,38,255,.1));border:1px solid rgba(0,229,255,.2)">💳</div>
+              <div>
+                <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Payment Method</div>
+                <div id="org-payment-status" style="font-size:.68rem;color:var(--mu)">No payment method added</div>
+              </div>
+            </div>
+            <button class="btn-sec" id="org-payment-btn" style="padding:6px 12px;font-size:.72rem" onclick="openOrgSheet('org-payment-sheet')">Add →</button>
+          </div>
+          <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Add bank account to receive payouts from ticket sales.</div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="section-label" style="margin-top:4px">FAQ & Support</div>
+        <div id="faq-org"></div>
+        <div style="margin-top:14px;padding-bottom:60px;text-align:center">
+          <a href="mailto:support@pulsify.co.za" style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;color:var(--or);text-decoration:none">✉️ Contact Support</a>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <nav class="bn">
-  <button class="bb" onclick="window.location.href='/feeds'">
+  <button class="bb" onclick="window.location.href='/'">
     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
     <span class="bl">Feed</span>
   </button>
@@ -173,6 +245,120 @@ select.inp option{background:#0D1424}
   </button>
 </nav>
 
+<!-- ORG VERIFY SHEET -->
+<div class="sn-overlay" id="org-verify-sheet" onclick="if(event.target===this)closeOrgSheet('org-verify-sheet')">
+  <div class="sn-sheet" style="max-height:92vh">
+    <div class="sn-handle"></div>
+    <div class="sn-head"><div class="sn-title">Verify Profile</div><button class="sn-close" onclick="closeOrgSheet('org-verify-sheet')">✕</button></div>
+    <div class="sn-body" style="padding-bottom:32px">
+      <div style="background:rgba(176,38,255,.08);border:1px solid rgba(176,38,255,.2);border-radius:10px;padding:10px 14px;font-size:.76rem;color:var(--mu);line-height:1.5;margin:14px 0">⏱ Verification takes <strong style="color:var(--tx)">1–3 business days</strong>. You'll be notified once reviewed.</div>
+      <div id="org-verif-msg" class="msg"></div>
+      <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Is your organisation registered? *</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button id="org-reg-yes" class="btn-sec" style="flex:1;padding:10px;font-size:.78rem" onclick="setOrgRegistered(true)">✅ Yes, registered</button>
+        <button id="org-reg-no" class="btn-sec" style="flex:1;padding:10px;font-size:.78rem" onclick="setOrgRegistered(false)">Informal / Individual</button>
+      </div>
+      <div id="org-registered-fields" style="display:none">
+        <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Company / Organisation Name *</div>
+        <input class="inp" id="ovf-company" style="width:100%;margin-bottom:10px" placeholder="e.g. Events SA (Pty) Ltd"/>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Reg. Number</div>
+            <input class="inp" id="ovf-reg" style="width:100%" placeholder="CIPC / CK number"/>
+          </div>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Entity Type</div>
+            <select class="inp" id="ovf-entity" style="width:100%;background:var(--bg2);color:var(--tx)">
+              <option>(Pty) Ltd</option><option>CC</option><option>Non-Profit</option><option>Partnership</option><option>Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Contact Person Name *</div>
+      <input class="inp" id="ovf-contact" style="width:100%;margin-bottom:10px" placeholder="Full name"/>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">SA ID Number *</div>
+          <input class="inp" id="ovf-id" style="width:100%" placeholder="13-digit ID" inputmode="numeric"/>
+        </div>
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Phone *</div>
+          <input class="inp" id="ovf-phone" style="width:100%" type="tel" placeholder="+27…"/>
+        </div>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Address *</div>
+      <input class="inp" id="ovf-address" style="width:100%;margin-bottom:10px" placeholder="Physical business address"/>
+      <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">About Your Events *</div>
+      <textarea class="inp" id="ovf-desc" style="width:100%;min-height:80px;margin-bottom:14px;resize:vertical" placeholder="What kind of events do you organise?"></textarea>
+      <button class="btn-primary" style="width:100%" onclick="submitOrgVerification()">Submit for Verification 🏆</button>
+    </div>
+  </div>
+</div>
+
+<!-- ORG PAYMENT SHEET -->
+<div class="sn-overlay" id="org-payment-sheet" onclick="if(event.target===this)closeOrgSheet('org-payment-sheet')">
+  <div class="sn-sheet">
+    <div class="sn-handle"></div>
+    <div class="sn-head"><div class="sn-title">Payment Method</div><button class="sn-close" onclick="closeOrgSheet('org-payment-sheet')">✕</button></div>
+    <div class="sn-body" style="padding-bottom:32px">
+      <div style="background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:10px 14px;font-size:.76rem;color:var(--mu);margin:14px 0">💳 Banking details stored securely for ticket payout processing.</div>
+      <div id="org-payment-msg" class="msg"></div>
+      <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Bank Name *</div>
+      <select class="inp" id="opm-bank" style="width:100%;background:var(--bg2);color:var(--tx);margin-bottom:10px">
+        <option value="">Select bank…</option>
+        <option>Absa</option><option>Capitec</option><option>FNB</option>
+        <option>Nedbank</option><option>Standard Bank</option><option>Investec</option>
+        <option>TymeBank</option><option>African Bank</option><option>Other</option>
+      </select>
+      <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Account Holder Name *</div>
+      <input class="inp" id="opm-name" style="width:100%;margin-bottom:10px" placeholder="Name as on bank account"/>
+      <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Account Number *</div>
+      <input class="inp" id="opm-account" style="width:100%;margin-bottom:10px" inputmode="numeric" placeholder="Account number"/>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Account Type *</div>
+          <select class="inp" id="opm-type" style="width:100%;background:var(--bg2);color:var(--tx)">
+            <option value="">Select…</option><option>Current / Cheque</option><option>Savings</option><option>Transmission</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Branch Code</div>
+          <input class="inp" id="opm-branch" style="width:100%" inputmode="numeric" placeholder="6-digit code"/>
+        </div>
+      </div>
+      <button class="btn-primary" style="width:100%" onclick="submitOrgPayment()">Save Payment Method 💳</button>
+    </div>
+  </div>
+</div>
+
+<!-- ORG POST PREVIEW SHEET -->
+<div class="sn-overlay" id="org-preview-sheet" onclick="if(event.target===this)closeOrgSheet('org-preview-sheet')">
+  <div class="sn-sheet">
+    <div class="sn-handle"></div>
+    <div class="sn-head"><div class="sn-title">Preview Post</div><button class="sn-close" onclick="closeOrgSheet('org-preview-sheet')">✕</button></div>
+    <div class="sn-body" style="padding-bottom:32px">
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">How it'll appear in the feed</div>
+      <div style="background:var(--surf2);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+        <div id="org-preview-imgs" style="display:grid;gap:2px"></div>
+        <div style="padding:12px 14px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0">🎪</div>
+            <div>
+              <div style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700" id="org-preview-name">Organizer</div>
+              <div style="font-size:.65rem;color:var(--mu)">Just now</div>
+            </div>
+          </div>
+          <div style="font-size:.84rem;line-height:1.5;color:var(--tx);white-space:pre-wrap" id="org-preview-caption"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn-sec" style="flex:1" onclick="closeOrgSheet('org-preview-sheet')">← Edit</button>
+        <button class="btn-primary" style="flex:2" onclick="closeOrgSheet('org-preview-sheet');submitPost()">Publish 🚀</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -183,7 +369,142 @@ const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 let currentUser = null;
 let currentProfile = null;
 let _token = null;
-let _imgFile = null;
+let _imgFiles = [];
+
+// ── Org sheet helpers ─────────────────────────────────────────
+function openOrgSheet(id)  { const el = document.getElementById(id); if (el) el.classList.add('open'); }
+function closeOrgSheet(id) { const el = document.getElementById(id); if (el) el.classList.remove('open'); }
+
+// ── Org FAQ ───────────────────────────────────────────────────
+const ORG_FAQ = [
+  { q: 'How do I get a verified badge?', a: 'Go to Settings → Verify Profile, complete the form. Takes 1–3 business days to review.' },
+  { q: 'How do I earn from my events?', a: 'Add a payment method in Settings. Payouts from ticket sales are processed weekly.' },
+  { q: 'Can I edit an event after posting?', a: 'Yes — go to My Posts, find the event card, and tap Edit.' },
+  { q: 'How do I reach more people?', a: 'Tag your events with a genre and city. Verified organisers get boosted placement in the discover feed.' },
+  { q: 'What genres are supported?', a: 'Amapiano, Gqom, Hip Hop, House, Afrobeats, Maskandi, Jazz, Gospel, Rock, Sport, Comedy, and more.' },
+  { q: 'How long does verification take?', a: '1–3 business days. You\'ll receive a notification once your application is reviewed.' },
+];
+function renderOrgFAQ() {
+  const el = document.getElementById('faq-org');
+  if (!el) return;
+  el.innerHTML = ORG_FAQ.map((f, i) => `
+    <div class="faq-item" id="ofaq-${i}">
+      <div class="faq-q" onclick="document.getElementById('ofaq-${i}').classList.toggle('open')">
+        <span>${f.q}</span><span class="faq-arr">▾</span>
+      </div>
+      <div class="faq-a">${f.a}</div>
+    </div>`).join('');
+}
+
+// ── Org registered toggle ────────────────────────────────────
+let _orgIsRegistered = false;
+function setOrgRegistered(val) {
+  _orgIsRegistered = val;
+  document.getElementById('org-registered-fields').style.display = val ? 'block' : 'none';
+  document.getElementById('org-reg-yes').style.background = val ? 'rgba(198,255,74,.15)' : '';
+  document.getElementById('org-reg-yes').style.borderColor = val ? 'rgba(198,255,74,.4)' : '';
+  document.getElementById('org-reg-no').style.background  = !val ? 'rgba(0,229,255,.12)' : '';
+  document.getElementById('org-reg-no').style.borderColor = !val ? 'rgba(0,229,255,.3)' : '';
+}
+
+// ── Org Verification ─────────────────────────────────────────
+function showOrgMsg(id, text, type) { const el = document.getElementById(id); if (!el) return; el.textContent = text; el.className = 'msg show msg-' + type; }
+
+function loadOrgSettingsStatus() {
+  try {
+    const verif = JSON.parse(localStorage.getItem('org_verif') || '{}');
+    if (verif.status) {
+      const labels = { pending: '⏳ Pending review', approved: '✅ Verified', rejected: '❌ Not approved' };
+      const el = document.getElementById('org-verif-status');
+      if (el) el.textContent = labels[verif.status] || 'Not verified';
+      const btn = document.getElementById('org-verif-btn');
+      if (btn && verif.status !== 'rejected') { btn.textContent = verif.status === 'approved' ? '✅ Verified' : '⏳ Pending'; btn.disabled = true; }
+    }
+    const pm = JSON.parse(localStorage.getItem('org_payment') || '{}');
+    if (pm.bank) {
+      const el = document.getElementById('org-payment-status');
+      if (el) el.textContent = `${pm.bank} ••••${(pm.account||'').slice(-4)}`;
+      const btn = document.getElementById('org-payment-btn');
+      if (btn) btn.textContent = 'Edit →';
+    }
+  } catch(e) {}
+}
+
+async function submitOrgVerification() {
+  const contact = document.getElementById('ovf-contact').value.trim();
+  const idNum   = document.getElementById('ovf-id').value.trim();
+  const phone   = document.getElementById('ovf-phone').value.trim();
+  const address = document.getElementById('ovf-address').value.trim();
+  const desc    = document.getElementById('ovf-desc').value.trim();
+  if (!contact || !idNum || !phone || !address || !desc) {
+    showOrgMsg('org-verif-msg', 'Please fill in all required fields.', 'err'); return;
+  }
+  const payload = {
+    is_registered: _orgIsRegistered,
+    company: _orgIsRegistered ? document.getElementById('ovf-company').value.trim() : '',
+    reg_num: _orgIsRegistered ? document.getElementById('ovf-reg').value.trim() : '',
+    entity:  _orgIsRegistered ? document.getElementById('ovf-entity').value : '',
+    contact, id_number: idNum, phone, address, description: desc,
+    business_name: currentProfile?.display_name || '',
+    submitted_at: new Date().toISOString(),
+  };
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      await fetch('/api/verify-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+        body: JSON.stringify(payload),
+      });
+    }
+  } catch(e) { console.warn('[verif]', e); }
+  localStorage.setItem('org_verif', JSON.stringify({ status: 'pending', ...payload }));
+  showOrgMsg('org-verif-msg', '✅ Submitted! We\'ll review within 1–3 business days.', 'ok');
+  loadOrgSettingsStatus();
+  setTimeout(() => closeOrgSheet('org-verify-sheet'), 2200);
+}
+
+function submitOrgPayment() {
+  const bank    = document.getElementById('opm-bank').value;
+  const name    = document.getElementById('opm-name').value.trim();
+  const account = document.getElementById('opm-account').value.trim();
+  const type    = document.getElementById('opm-type').value;
+  if (!bank || !name || !account || !type) {
+    showOrgMsg('org-payment-msg', 'Please fill in all required fields.', 'err'); return;
+  }
+  const pm = { bank, name, account, type, branch: document.getElementById('opm-branch').value.trim() };
+  localStorage.setItem('org_payment', JSON.stringify(pm));
+  showOrgMsg('org-payment-msg', '✅ Payment method saved.', 'ok');
+  loadOrgSettingsStatus();
+  setTimeout(() => closeOrgSheet('org-payment-sheet'), 1800);
+}
+
+// ── Post Preview ──────────────────────────────────────────────
+function previewOrgPost() {
+  const cap = document.getElementById('post-caption').value.trim();
+  if (!cap && !_imgFiles.length) { toast('Add a caption or image first', 'err'); return; }
+  const imgArea = document.getElementById('org-preview-imgs');
+  if (imgArea) {
+    if (_imgFiles.length) {
+      const cols = Math.min(_imgFiles.length, 3);
+      imgArea.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      imgArea.innerHTML = '';
+      _imgFiles.slice(0, 3).forEach(f => {
+        const div = document.createElement('div');
+        div.style.cssText = 'aspect-ratio:1;overflow:hidden;background:#000';
+        const img = document.createElement('img');
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+        const rd = new FileReader(); rd.onload = e => { img.src = e.target.result; }; rd.readAsDataURL(f);
+        div.appendChild(img); imgArea.appendChild(div);
+      });
+    } else { imgArea.innerHTML = ''; }
+  }
+  const nameEl = document.getElementById('org-preview-name');
+  if (nameEl) nameEl.textContent = currentProfile?.display_name || 'Organizer';
+  const capEl = document.getElementById('org-preview-caption');
+  if (capEl) capEl.textContent = cap;
+  openOrgSheet('org-preview-sheet');
+}
 
 function x(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function toast(m, t='') { const el=document.getElementById('toast'); el.textContent=m; el.className='toast '+t+' show'; setTimeout(()=>el.classList.remove('show'),3500); }
@@ -198,16 +519,20 @@ function switchTab(btn, paneId) {
 
 async function init() {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) { window.location.href = 'signin.html'; return; }
+  if (!session) { window.location.href = '/signin'; return; }
   currentUser = session.user;
   _token = session.access_token;
 
-  const { data: profile } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  const { data: profile, error: profErr } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
   currentProfile = profile || {};
 
-  if (!['organizer','admin'].includes(currentProfile.role)) {
+  // If RLS blocks the profile read, fall back to localStorage role rather than kicking user out
+  const localRole = (() => { try { return JSON.parse(localStorage.getItem('p_user') || '{}').role; } catch(e) { return null; } })();
+  const effectiveRole = currentProfile.role || localRole;
+
+  if (!['organizer','admin'].includes(effectiveRole)) {
     toast('This dashboard is for organizers only', 'err');
-    setTimeout(() => window.location.href = '/', 2000);
+    setTimeout(() => window.location.href = '/signin', 2000);
     return;
   }
 
@@ -225,35 +550,50 @@ async function init() {
   document.getElementById('stat-events').textContent = eventsCount || 0;
 }
 
-function previewImg(input) {
-  if (!input.files?.[0]) return;
-  _imgFile = input.files[0];
-  const reader = new FileReader();
-  reader.onload = e => {
-    const drop = document.getElementById('img-drop');
-    drop.innerHTML = '<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover;border-radius:10px"/>';
-  };
-  reader.readAsDataURL(_imgFile);
+function previewImgs(input) {
+  _imgFiles = Array.from(input.files || []).slice(0, 5);
+  const grid = document.getElementById('org-img-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  _imgFiles.forEach((f, i) => {
+    const cell = document.createElement('div');
+    cell.style.cssText = 'position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#111';
+    const img = document.createElement('img');
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+    const rd = new FileReader(); rd.onload = e => { img.src = e.target.result; }; rd.readAsDataURL(f);
+    const rm = document.createElement('button');
+    rm.textContent = '✕';
+    rm.style.cssText = 'position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.6rem;cursor:pointer;padding:0;line-height:1';
+    rm.onclick = (ev) => { ev.stopPropagation(); _imgFiles.splice(i, 1); previewImgs({ files: _imgFiles }); };
+    cell.appendChild(img); cell.appendChild(rm);
+    grid.appendChild(cell);
+  });
+  const hint = document.getElementById('org-img-hint');
+  if (hint) hint.textContent = _imgFiles.length ? `${_imgFiles.length} photo${_imgFiles.length>1?'s':''} selected` : 'Tap to add up to 5 photos';
 }
 
 async function submitPost() {
   const caption = document.getElementById('post-caption').value.trim();
   const evTag   = document.getElementById('post-event-tag').value.trim();
-  if (!caption && !_imgFile) return toast('Add a caption or image to post', 'err');
+  if (!caption && !_imgFiles.length) return toast('Add a caption or image to post', 'err');
 
   const btn = document.getElementById('post-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Publishing…';
 
   try {
     let imageUrl = null;
-    if (_imgFile) {
-      const ext  = _imgFile.name.split('.').pop() || 'jpg';
-      const path = currentUser.id + '/' + Date.now() + '.' + ext;
-      const { error: upErr } = await sb.storage.from('post-images').upload(path, _imgFile, { upsert: false });
-      if (!upErr) {
-        const { data: { publicUrl } } = sb.storage.from('post-images').getPublicUrl(path);
-        imageUrl = publicUrl;
+    if (_imgFiles.length) {
+      const urls = [];
+      for (const file of _imgFiles) {
+        const ext  = file.name.split('.').pop() || 'jpg';
+        const path = currentUser.id + '/' + Date.now() + '_' + Math.random().toString(36).slice(2,7) + '.' + ext;
+        const { error: upErr } = await sb.storage.from('post-images').upload(path, file, { upsert: false });
+        if (!upErr) {
+          const { data: { publicUrl } } = sb.storage.from('post-images').getPublicUrl(path);
+          urls.push(publicUrl);
+        }
       }
+      imageUrl = urls.length === 1 ? urls[0] : urls.length > 1 ? JSON.stringify(urls) : null;
     }
 
     const res = await fetch('/api/posts', {
@@ -261,19 +601,23 @@ async function submitPost() {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token },
       body: JSON.stringify({ caption, image_url: imageUrl, event_name: evTag || null, post_type: 'organizer' })
     });
-    const data = await res.json();
+    const _txt = await res.text();
+    let data = {}; try { data = JSON.parse(_txt); } catch(e) {}
     if (!res.ok) throw new Error(data.error || 'Post failed');
 
     toast('🔥 Published to feed!', 'ok');
     document.getElementById('post-caption').value = '';
     document.getElementById('post-event-tag').value = '';
-    document.getElementById('img-drop').innerHTML = '<span style="font-size:1.8rem">🖼</span><span style="font-size:.78rem;color:var(--mu)">Tap to add an image (optional)</span>';
-    _imgFile = null;
+    const orgGrid = document.getElementById('org-img-grid');
+    if (orgGrid) orgGrid.innerHTML = '';
+    const orgHint = document.getElementById('org-img-hint');
+    if (orgHint) orgHint.textContent = 'Tap to add up to 5 photos';
+    _imgFiles = [];
     document.getElementById('stat-posts').textContent = parseInt(document.getElementById('stat-posts').textContent||0)+1;
   } catch(e) {
     toast('Error: ' + e.message, 'err');
   }
-  btn.disabled = false; btn.textContent = 'Publish to Feed ��';
+  btn.disabled = false; btn.textContent = 'Publish 🚀';
 }
 
 async function submitEvent() {
@@ -296,14 +640,14 @@ async function submitEvent() {
 
   try {
     const eventId = 'org_' + currentUser.id.slice(0,8) + '_' + Date.now();
-    const dateLocal = date + (time ? 'T'+time+':00' : 'T20:00:00');
 
     const { error } = await sb.from('events').insert({
       id: eventId,
       name,
-      date_local: dateLocal,
+      date_local: date,
+      time_local: time || null,
       venue_name: venue,
-      city,
+      venue_city: city,
       province: currentProfile.province || null,
       genre: genre || 'other',
       description: desc || null,
@@ -410,6 +754,8 @@ async function openSNPanel() {
 }
 function closeSNPanel() { document.getElementById('sn-overlay').classList.remove('open'); }
 
+renderOrgFAQ();
+loadOrgSettingsStatus();
 init().then(() => initNotifBell());
 </script>
 
