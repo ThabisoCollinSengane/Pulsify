@@ -416,6 +416,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     </div>
     <div class="sl"><span>🏆 Top Spots</span><a onclick="openBizPage();return false">See all →</a></div>
     <div class="hs" id="frontline-row"><div class="skel" style="width:150px;height:120px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:150px;height:120px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:150px;height:120px;flex-shrink:0;border-radius:18px"></div></div>
+    <div id="featured-weekend" style="display:none">
+      <div class="sl"><span>⚡ Featured This Weekend</span></div>
+      <div id="featured-weekend-cards"></div>
+    </div>
     <div class="sl"><span id="feed-lbl">🔥 Upcoming Events</span><a href="/map">View Map →</a></div>
     <div id="events-feed"></div>
     <div class="pg" id="feed-pg" style="display:none">
@@ -1012,16 +1016,26 @@ async function loadFeed(resetPage = false) {
       return;
     }
 
+    // Load promotions in parallel with rendering (fire-and-forget, doesn't block)
+    const promoPromise = feedPage === 1 ? loadPromotions() : Promise.resolve({ featured: [], injected: [] });
+
     // Render cards as already-revealed so they're visible even if IntersectionObserver misses them
-    feedEl.innerHTML = events.map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
+    const cards = events.map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"'));
+    feedEl.innerHTML = cards.join('');
     updatePagination();
     triggerRev();
 
     // Cache events for map
     eventsForMap = [...(eventsForMap.filter(e => !events.find(n => n.id === e.id))), ...events];
 
-    // Append Quicket events below (fire-and-forget, doesn't block render)
-    if (feedPage === 1) loadQuicketEvents(feedCity, feedGenre);
+    // Wire promotions once resolved
+    if (feedPage === 1) {
+      promoPromise.then(({ featured = [], injected = [] }) => {
+        renderFeaturedWeekend(featured);
+        if (injected.length) feedEl.innerHTML = injectPromos(cards, injected);
+      });
+      loadQuicketEvents(feedCity, feedGenre);
+    }
 
   } catch(err) {
     if (myReq !== _feedReqId) return;
@@ -1097,6 +1111,76 @@ function buildCard(ev, idx) {
       <button class="tb2 ${iF ? 'fr' : ''}" onclick="openEv('${x(ev.id)}');event.stopPropagation()">${btnLbl}</button>
     </div>
   </div>`;
+}
+
+/* ══════════════════════════════════════════════════
+   NATIVE PROMOTIONS
+══════════════════════════════════════════════════ */
+const ADS_ENABLED = false;
+let _cachedPromos = null;
+
+async function loadPromotions() {
+  if (!ADS_ENABLED) return { featured: [], injected: [] };
+  try {
+    const params = new URLSearchParams({ city: feedCity || '', genre: feedGenre || '' });
+    const r = await fetch('/api/promotions?' + params);
+    if (!r.ok) return { featured: [], injected: [] };
+    _cachedPromos = await r.json();
+    return _cachedPromos;
+  } catch(e) { return { featured: [], injected: [] }; }
+}
+
+function buildPromoCard(promo) {
+  const iF  = promo.is_free;
+  const pr  = iF ? 'FREE' : (promo.price_min ? 'R' + promo.price_min : 'TBA');
+  const bg  = gg(promo.genre);
+  const emo = ge(promo.genre);
+  const hp  = promo.hype_score ?? 70;
+  const href = promo.external_url ? `href="${x(promo.external_url)}" target="_blank" rel="noopener"` : '';
+  const click = promo.external_url ? `window.open('${x(promo.external_url)}','_blank','noopener')` : '';
+  const sponsoredBadge = '<span class="fbg" style="background:rgba(176,38,255,.08);color:rgba(176,38,255,.55);border:1px solid rgba(176,38,255,.18);font-size:.56rem;letter-spacing:.06em">SPONSORED</span>';
+  return `<div class="fc rv in" onclick="${click}">
+    <div class="fh"><div class="fa" style="background:${bg}">${emo}</div>
+      <div style="flex:1;min-width:0"><div class="fo">${x(promo.organiser_name || 'Promoted')}</div>
+      <div class="fl">📍 ${x(promo.venue_city || '')} · ${fdt(promo.date_local, promo.time_local)}</div></div>${sponsoredBadge}</div>
+    <div class="fb" style="background:transparent">
+      <img src="${x(promo.image_url || '')}" loading="lazy" onerror="this.style.display='none'"/>
+      <div class="fg"><div class="ft2">${x(promo.title)}</div>
+        <div class="fp ${iF ? 'fr' : ''}">${pr}</div></div>
+    </div>
+    <div class="fd">
+      <div class="fm"><span class="fct">📍 ${x(promo.venue_city || '')}</span><span class="fdt"></span><span class="fda">${fdt(promo.date_local, promo.time_local)}</span></div>
+      <div class="fv">${x(promo.venue_name || '')} · ${x(promo.genre || '')}</div>
+      <div class="hr"><span>Hype Meter</span><span>🔥 ${hp}%</span></div>
+      <div class="hb"><div class="hf" style="width:${hp}%"></div></div>
+    </div>
+    <div class="fac" onclick="event.stopPropagation()">
+      <button class="ab" onclick="shareIt('${x(promo.title)}')"><span class="ai">🔗</span></button>
+      ${promo.external_url ? `<a class="tb2 ${iF ? 'fr' : ''}" href="${x(promo.external_url)}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">${iF ? 'RSVP Free' : 'Book Now'}</a>` : ''}
+    </div>
+  </div>`;
+}
+
+function injectPromos(cardArray, pool) {
+  if (!pool.length) return cardArray.join('');
+  const out = [];
+  let injected = 0;
+  cardArray.forEach((card, i) => {
+    out.push(card);
+    if ((i + 1) % 5 === 0 && injected < 2 && injected < pool.length) {
+      out.push(buildPromoCard(pool[injected++]));
+    }
+  });
+  return out.join('');
+}
+
+function renderFeaturedWeekend(featured) {
+  const section = document.getElementById('featured-weekend');
+  const container = document.getElementById('featured-weekend-cards');
+  if (!section || !container) return;
+  if (!featured.length) { section.style.display = 'none'; return; }
+  container.innerHTML = featured.slice(0, 5).map(p => buildPromoCard(p)).join('');
+  section.style.display = 'block';
 }
 
 function updatePagination() {

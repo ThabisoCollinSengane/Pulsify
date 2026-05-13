@@ -1241,6 +1241,33 @@ module.exports = async (req, res) => {
       return res.status(200).json({ notif_sent: notifs.length, push_sent });
     }
 
+    /* ─── GET /promotions ───────────────────────────────── */
+    if (url === '/promotions' && req.method === 'GET') {
+      const city  = (q.city  || '').toLowerCase();
+      const genre = (q.genre || '').toLowerCase();
+      const now   = new Date().toISOString();
+
+      const { data, error } = await sb().from('promotions')
+        .select('*')
+        .eq('is_active', true)
+        .lte('starts_at', now)
+        .or(`ends_at.is.null,ends_at.gt.${now}`)
+        .order('priority', { ascending: false });
+
+      if (error) return res.status(400).json({ error: error.message });
+
+      const promos = (data || []).filter(p => {
+        const cityOk  = !p.city_targets?.length  || !city  || p.city_targets.some(c => city.includes(c.toLowerCase()) || c.toLowerCase().includes(city));
+        const genreOk = !p.genre_targets?.length || !genre || p.genre_targets.some(g => genre.includes(g.toLowerCase()) || g.toLowerCase().includes(genre));
+        return cityOk && genreOk;
+      });
+
+      const featured  = promos.filter(p => p.placement === 'featured_weekend' || p.placement === 'both').slice(0, 5);
+      const injected  = promos.filter(p => p.placement === 'feed_inject'      || p.placement === 'both').slice(0, 4);
+
+      return res.status(200).json({ featured, injected });
+    }
+
     /* ─── POST /report-event ────────────────────────────── */
     if (url === '/report-event' && req.method === 'POST') {
       const token  = (req.headers.authorization || '').replace('Bearer ', '').trim();
