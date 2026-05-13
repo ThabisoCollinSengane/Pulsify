@@ -807,7 +807,7 @@ function initDashboard() {
   renderBizFAQ();
   loadVerifStatus();
   renderHomeOrdersPreview();
-  const url = `${location.origin}/business-menu.html?id=${getBizId()}`;
+  const url = `${location.origin}/business-menu?id=${getBizId()}`;
   document.getElementById('menu-url-display').textContent = url;
   document.getElementById('profile-menu-url').textContent = url;
 }
@@ -826,7 +826,7 @@ function openSheet(id)  { document.getElementById(id).classList.add('open'); }
 function closeSheet(id) { document.getElementById(id).classList.remove('open'); }
 function toast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast ' + type + ' show'; setTimeout(() => t.className = 'toast', 2600); }
 function doLogout()     { localStorage.removeItem('biz_session'); window.location.href = '/signin'; }
-function copyMenuLink() { const url = `${location.origin}/business-menu.html?id=${getBizId()}`; navigator.clipboard?.writeText(url); toast('🔗 Menu link copied!', 'ok'); }
+function copyMenuLink() { const url = `${location.origin}/business-menu?id=${getBizId()}`; navigator.clipboard?.writeText(url); toast('🔗 Menu link copied!', 'ok'); }
 
 // ════════════════════════════════════════════════════════════
 //  GREETING

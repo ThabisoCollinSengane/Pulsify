@@ -106,7 +106,7 @@ textarea.ff-c{resize:none;height:80px;line-height:1.55}
 
 <header class="tb">
   <button class="back-btn" onclick="window.location.href='/'">← Back</button>
-  <a class="logo" href="feeds.html"><span class="dot"></span>
+  <a class="logo" href="/feeds"><span class="dot"></span>
     <span style="font-size:1.4rem">Feed</span>
   </a>
   <div style="display:flex;align-items:center;gap:8px">
@@ -137,7 +137,7 @@ textarea.ff-c{resize:none;height:80px;line-height:1.55}
 <button class="fab" onclick="openCompose()" title="Share a post">✏️</button>
 
 <nav class="bn">
-  <button class="bb" onclick="window.location.href='index.html'">
+  <button class="bb" onclick="window.location.href='/'">
     <svg viewBox="0 0 24 24"><path d="M12 3C12 3 4 9.5 4 15a8 8 0 0016 0C20 9.5 12 3 12 3Z"/><path d="M12 10v5M9.5 13h5"/></svg>
     <span class="bl">Home</span>
   </button>
@@ -145,15 +145,15 @@ textarea.ff-c{resize:none;height:80px;line-height:1.55}
     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
     <span class="bl">Feed</span>
   </button>
-  <button class="bb" onclick="window.location.href='index.html'">
+  <button class="bb" onclick="window.location.href='/'">
     <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3M9 20V7m6 13l5.447-2.724A1 1 0 0021 16.382V5.618a1 1 0 00-1.447-.894L15 7m0 13V7M9 7l6-3"/></svg>
     <span class="bl">Map</span>
   </button>
-  <button class="bb" onclick="window.location.href='index.html'">
+  <button class="bb" onclick="window.location.href='/'">
     <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M16 7v-.5a3.5 3.5 0 00-7 0V7M16 17v.5a3.5 3.5 0 01-7 0V17"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
     <span class="bl">Bookings</span>
   </button>
-  <button class="bb" onclick="window.location.href='index.html'">
+  <button class="bb" onclick="window.location.href='/'">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
     <span class="bl">Profile</span>
   </button>
@@ -582,7 +582,7 @@ async function doFollowOverlay(targetId) {
 let _cImg = null;
 let _cImgFile = null;
 function openCompose() {
-  if (!_uid) { window.location.href='signin.html'; return; }
+  if (!_uid) { window.location.href='/signin'; return; }
   const isOrg = ['organizer','business','admin'].includes(_session?.role);
   const orgSection = document.getElementById('organizer-text-section');
   const userNote   = document.getElementById('user-posting-note');

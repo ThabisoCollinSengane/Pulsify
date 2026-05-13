@@ -356,7 +356,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   <div class="top-r">
     <button class="back" id="back-btn" onclick="goBack()">← Back</button>
     <div class="ib" id="notif-btn" onclick="openNotifPanel()">🔔<span class="nd" id="notif-dot"></span></div>
-    <button class="sb" id="auth-btn" onclick="window.location.href='signin.html'">Sign In</button>
+    <button class="sb" id="auth-btn" onclick="window.location.href='/signin'">Sign In</button>
   </div>
 </header>
 
@@ -542,15 +542,15 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 16px;border:3px solid rgba(255,255,255,.1)">😊</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;margin-bottom:6px">Sign In to Pulsify</div>
     <div style="font-size:.82rem;color:var(--mu);margin-bottom:24px">Access your tickets, saves &amp; squad</div>
-    <button class="fmb" onclick="window.location.href='signin.html'" style="border-radius:50px;padding:13px;letter-spacing:.05em;margin-bottom:10px">Sign In</button>
-    <div style="font-size:.78rem;color:var(--mu)">No account? <a href="create-account.html" style="color:var(--or);font-weight:700;text-decoration:none">Sign up free →</a></div>
+    <button class="fmb" onclick="window.location.href='/signin'" style="border-radius:50px;padding:13px;letter-spacing:.05em;margin-bottom:10px">Sign In</button>
+    <div style="font-size:.78rem;color:var(--mu)">No account? <a href="/create-account" style="color:var(--or);font-weight:700;text-decoration:none">Sign up free →</a></div>
   </div>
   <div id="prof-in" style="display:none">
     <div style="height:90px;background:linear-gradient(135deg,rgba(176,38,255,.3),rgba(255,92,0,.2));position:relative"></div>
     <div style="padding:0 16px;margin-top:-40px;margin-bottom:12px;display:flex;align-items:flex-end;justify-content:space-between">
       <div id="profile-av" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:2rem;border:3px solid var(--bg);overflow:hidden;flex-shrink:0">😊</div>
       <div style="display:flex;gap:8px;padding-bottom:6px">
-        <button onclick="window.location.href='profile-settings.html'" style="background:var(--surf);border:1px solid var(--border2);border-radius:50px;padding:7px 14px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu2);cursor:pointer">⚙️ Settings</button>
+        <button onclick="window.location.href='/profile-settings'" style="background:var(--surf);border:1px solid var(--border2);border-radius:50px;padding:7px 14px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu2);cursor:pointer">⚙️ Settings</button>
       </div>
     </div>
     <div style="padding:0 16px 6px">
@@ -563,11 +563,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
       <div class="vs"><div class="vn" id="ps-posts">0</div><div class="vl">Posts</div></div>
     </div>
     <div style="padding:8px 14px">
-      <button onclick="window.location.href='feeds.html'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <button onclick="window.location.href='/feeds'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">📰</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Social Feed</div><div style="font-size:.68rem;color:var(--mu)">Posts from people you follow</div></div></div>
         <span style="color:var(--or);font-size:.8rem">→</span>
       </button>
-      <button onclick="window.location.href='user-profile.html'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <button onclick="window.location.href='/user-profile'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">👤</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">My Profile &amp; Posts</div><div style="font-size:.68rem;color:var(--mu)">Your memories and events attended</div></div></div>
         <span style="color:var(--or);font-size:.8rem">→</span>
       </button>
@@ -1824,7 +1824,7 @@ function renderProfile() {
 
   if (!loggedIn) {
     const ab = document.getElementById('auth-btn');
-    if (ab) { ab.textContent = 'Sign In'; ab.onclick = () => window.location.href = 'signin.html'; }
+    if (ab) { ab.textContent = 'Sign In'; ab.onclick = () => window.location.href = '/signin'; }
     return;
   }
 
@@ -1862,7 +1862,7 @@ function renderProfile() {
 
   // Top-right button → Feed
   const ab = document.getElementById('auth-btn');
-  if (ab) { ab.textContent = 'Feed'; ab.onclick = () => window.location.href = 'feeds.html'; }
+  if (ab) { ab.textContent = 'Feed'; ab.onclick = () => window.location.href = '/feeds'; }
 
   currentUser = sess;
 }
@@ -2099,7 +2099,7 @@ async function searchUsers(query) {
   if (!query || query.trim().length < 2) { el.innerHTML = ''; return; }
   const sb = getSB();
   if (!sb) {
-    el.innerHTML = '<div style="padding:12px 16px;font-size:.78rem;color:var(--mu)">Sign in to search. <a href="signin.html" style="color:var(--or)">Sign in →</a></div>';
+    el.innerHTML = '<div style="padding:12px 16px;font-size:.78rem;color:var(--mu)">Sign in to search. <a href="/signin" style="color:var(--or)">Sign in →</a></div>';
     return;
   }
   el.innerHTML = '<div style="padding:10px 16px;font-size:.75rem;color:var(--mu)">Searching…</div>';
@@ -2139,7 +2139,7 @@ async function searchUsers(query) {
 }
 
 async function toggleFollow(targetId, btn) {
-  if (!currentUser) { showToast('Sign in to follow'); window.location.href='signin.html'; return; }
+  if (!currentUser) { showToast('Sign in to follow'); window.location.href='/signin'; return; }
   const isF = btn.classList.contains('cd');
   btn.disabled = true;
   const sb = getSB();
@@ -2387,7 +2387,7 @@ async function openProfile(userId) {
         </div>
         <div style="display:flex;gap:8px;padding-bottom:6px">
           ${currentUser && currentUser.id !== userId ? `<button id="po-follow-btn" onclick="toggleFollowOverlay('${x(userId)}')" style="background:${isFollowing?'transparent':'linear-gradient(135deg,#B026FF,#FF5C00)'};border:${isFollowing?'1px solid var(--border2)':'none'};color:${isFollowing?'var(--mu2)':'#fff'};padding:9px 20px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;cursor:pointer">${isFollowing?'✓ Following':'+ Follow'}</button>` : ''}
-          <button onclick="closeProfOverlay();window.location.href='user-profile.html?id=${x(userId)}'" style="background:var(--surf);border:1px solid var(--border2);color:var(--mu2);padding:9px 14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">Full Profile →</button>
+          <button onclick="closeProfOverlay();window.location.href='/user-profile?id=${x(userId)}'" style="background:var(--surf);border:1px solid var(--border2);color:var(--mu2);padding:9px 14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">Full Profile →</button>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
@@ -2478,7 +2478,7 @@ async function initSupabaseSession() {
       localStorage.setItem('p_token', session.access_token);
     }
     const btn = document.getElementById('auth-btn');
-    if (btn) { btn.textContent='Feed'; btn.onclick=()=>window.location.href='feeds.html'; }
+    if (btn) { btn.textContent='Feed'; btn.onclick=()=>window.location.href='/feeds'; }
     currentUser = session.user;
     renderProfile();
   } catch(e) { console.warn('initSupabaseSession:', e.message); }
@@ -2506,7 +2506,7 @@ document.addEventListener('DOMContentLoaded', initSupabaseSession);
     var s = JSON.parse(localStorage.getItem('p_user'));
     if (s && s.id) {
       var btn = document.getElementById('auth-btn');
-      if (btn) { btn.textContent = 'Feed'; btn.onclick = function(){ window.location.href='feeds.html'; }; }
+      if (btn) { btn.textContent = 'Feed'; btn.onclick = function(){ window.location.href='/feeds'; }; }
     }
   } catch(e) {}
 })();

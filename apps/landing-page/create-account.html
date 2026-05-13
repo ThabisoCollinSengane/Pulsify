@@ -71,7 +71,7 @@ select.inp option{background:#0D1424}
 </style>
 </head>
 <body>
-<a class="logo" href="index.html"><span class="dot"></span>PULSIFY</a>
+<a class="logo" href="/"><span class="dot"></span>PULSIFY</a>
 <p class="tagline">Join South Africa's vibe platform 🇿🇦</p>
 
 <div class="card">
@@ -182,7 +182,7 @@ select.inp option{background:#0D1424}
     <div class="sec-div">Terms</div>
     <div class="terms-row" id="trow" onclick="togTerms()">
       <div class="chkbox" id="tchk"></div>
-      <div class="terms-txt">I agree to the Pulsify <a href="terms.html" target="_blank" onclick="event.stopPropagation()">Terms of Service</a> and <a href="terms.html" target="_blank" onclick="event.stopPropagation()">Privacy Policy</a>. I confirm I am at least 13 years old.</div>
+      <div class="terms-txt">I agree to the Pulsify <a href="/terms" target="_blank" onclick="event.stopPropagation()">Terms of Service</a> and <a href="/terms" target="_blank" onclick="event.stopPropagation()">Privacy Policy</a>. I confirm I am at least 13 years old.</div>
     </div>
 
     <button class="btn-back" onclick="goStep1()">← Back</button>
@@ -190,7 +190,7 @@ select.inp option{background:#0D1424}
   </div>
 </div>
 
-<div class="asw">Already have an account? <a href="signin.html">Sign in →</a></div>
+<div class="asw">Already have an account? <a href="/signin">Sign in →</a></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -200,7 +200,7 @@ const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 (async () => {
   const { data: { session } } = await sb.auth.getSession();
-  if (session) window.location.href = 'index.html';
+  if (session) window.location.href = '/';
 })();
 
 sb.auth.onAuthStateChange(async (event, session) => {
@@ -275,7 +275,7 @@ function toast(m,t){ var el=document.getElementById('toast'); el.textContent=m; 
 async function signUpWithGoogle() {
   const { error } = await sb.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: window.location.origin + '/index.html' }
+    options: { redirectTo: window.location.origin + '/' }
   });
   if (error) showErr('Google sign-up failed: ' + error.message);
 }
@@ -372,7 +372,7 @@ async function doCreate() {
   if (error) {
     btn.innerHTML='Create My Account 🔥'; btn.disabled=false;
     if (error.message.includes('already registered') || error.message.includes('already been registered')) {
-      return showErr('An account with this email already exists. <a href="signin.html" style="color:var(--or)">Sign in instead →</a>');
+      return showErr('An account with this email already exists. <a href="/signin" style="color:var(--or)">Sign in instead →</a>');
     }
     return showErr(error.message);
   }

@@ -168,7 +168,7 @@ async function loadUserData() {
 
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { 
-    if (!profileId) { window.location.href = 'signin.html'; return; }
+    if (!profileId) { window.location.href = '/signin'; return; }
   } else {
     currentUser = session.user;
   }
@@ -196,10 +196,10 @@ async function loadUserData() {
   document.getElementById('nav-title').textContent = isOwnProfile ? 'My Profile' : profile.display_name;
   
   if (isOwnProfile) {
-    document.getElementById('settings-btn-wrapper').innerHTML = `<div class="settings-btn" onclick="window.location.href='profile-settings.html'">⚙️</div>`;
-    document.getElementById('profile-action-btn').innerHTML = `<button class="edit-btn" onclick="window.location.href='profile-settings.html'">Edit Profile</button>`;
+    document.getElementById('settings-btn-wrapper').innerHTML = `<div class="settings-btn" onclick="window.location.href='/profile-settings'">⚙️</div>`;
+    document.getElementById('profile-action-btn').innerHTML = `<button class="edit-btn" onclick="window.location.href='/profile-settings'">Edit Profile</button>`;
     document.getElementById('avatar-el').style.cursor = 'pointer';
-    document.getElementById('avatar-el').onclick = () => window.location.href='profile-settings.html';
+    document.getElementById('avatar-el').onclick = () => window.location.href='/profile-settings';
     document.getElementById('posts-tab').textContent = '📸 My Posts';
     document.getElementById('events-tab').textContent = '🎟 My Events';
     document.getElementById('fab-wrapper').innerHTML = `<button class="fab" onclick="openPostModal()" title="Add memory">📷</button>`;
@@ -269,7 +269,7 @@ async function checkFollowing(userId) {
 
 async function toggleFollow(userId) {
   if (!currentUser) {
-    window.location.href = 'signin.html';
+    window.location.href = '/signin';
     return;
   }
   
@@ -346,7 +346,7 @@ async function renderAttended(userId, isOwnProfile) {
     document.getElementById('stat-events').textContent = count || 0;
     if (!attended?.length) {
       if(isOwnProfile) {
-        el.innerHTML = `<div class="empty"><div class="empty-ico">🎟</div><div class="empty-title">No events attended yet</div><div class="empty-sub">When you buy tickets or RSVP, your events appear here.</div><button class="empty-btn" onclick="window.location.href='index.html'">Browse Events</button></div>`;
+        el.innerHTML = `<div class="empty"><div class="empty-ico">🎟</div><div class="empty-title">No events attended yet</div><div class="empty-sub">When you buy tickets or RSVP, your events appear here.</div><button class="empty-btn" onclick="window.location.href='/'">Browse Events</button></div>`;
       } else {
         el.innerHTML = '<div class="empty"><div class="empty-ico">🎟</div><div class="empty-title">No events attended yet</div></div>';
       }
@@ -355,7 +355,7 @@ async function renderAttended(userId, isOwnProfile) {
     el.innerHTML = attended.map(a => {
       const ev = a.events || {};
       return `
-        <div class="ev-card" onclick="window.location.href='index.html?event=${ev.id}'">
+        <div class="ev-card" onclick="window.location.href='/?eid=${ev.id}'">
           <div class="ev-thumb">${ev.image_url ? `<img src="${escHtml(ev.image_url)}" loading="lazy"/>` : '🎶'}</div>
           <div class="ev-info">
             <div class="ev-name">${escHtml(ev.name || 'Event')}</div>

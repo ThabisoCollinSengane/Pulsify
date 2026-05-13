@@ -35,11 +35,11 @@ function clearUser()  { localStorage.removeItem('p_user'); localStorage.removeIt
 function isLoggedIn() { const u=getUser(); return !!(u&&u.id); }
 function isOrganizer(){ return ['organizer','business','admin'].includes(getUser()?.role); }
 function isAdmin()    { return getUser()?.role === 'admin'; }
-function requireAuth(r='signin.html'){ if(!isLoggedIn()){window.location.href=r;return false;} return true; }
+function requireAuth(r='/signin'){ if(!isLoggedIn()){window.location.href=r;return false;} return true; }
 
 function logout() {
   clearUser();
-  window.location.href = 'signin.html';
+  window.location.href = '/signin';
 }
 
 /* ── Generic fetch with fallback ─────────────────────────── */

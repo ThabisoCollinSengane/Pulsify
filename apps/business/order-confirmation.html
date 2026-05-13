@@ -96,7 +96,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <body>
 <div class="wrap">
   <div class="top-nav">
-    <a class="logo" href="index.html"><span class="dot"></span>PULSIFY</a>
+    <a class="logo" href="/"><span class="dot"></span>PULSIFY</a>
   </div>
   <div id="content"></div>
 </div>
@@ -185,8 +185,8 @@ function renderConfirmation(o) {
 
   <div class="actions">
     ${bizWA ? `<a class="btn-wa" href="https://wa.me/27${bizWA.slice(-9)}?text=${waMsg}" target="_blank">💬 WhatsApp the Business</a>` : ''}
-    <a class="btn-main" href="index.html">🏠 Back to Pulsify Home</a>
-    <a class="btn-sec" href="/business-menu.html?id=${xe(o.bizId || '')}">← Back to Menu</a>
+    <a class="btn-main" href="/">🏠 Back to Pulsify Home</a>
+    <a class="btn-sec" href="/business-menu?id=${xe(o.bizId || '')}">← Back to Menu</a>
   </div>`;
 
   // Generate real QR code containing the full order_ref for scanner
@@ -205,7 +205,7 @@ function renderError() {
       <div style="font-size:4rem;margin-bottom:16px">🤔</div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;margin-bottom:8px">No Order Found</div>
       <div style="font-size:.84rem;color:var(--mu);line-height:1.6;margin-bottom:24px">We couldn't find your order details. It may have been cleared or the link expired.</div>
-      <a href="index.html" style="background:var(--or);color:#fff;border:none;padding:12px 28px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block">Back to Pulsify</a>
+      <a href="/" style="background:var(--or);color:#fff;border:none;padding:12px 28px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block">Back to Pulsify</a>
     </div>`;
 }
 
