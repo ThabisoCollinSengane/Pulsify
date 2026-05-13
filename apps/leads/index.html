@@ -108,13 +108,19 @@ body{padding:20px;padding-top:80px}
 .auth-btn:active{opacity:.85}.auth-btn:disabled{opacity:.4;cursor:not-allowed}
 .auth-err{background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.3);border-radius:10px;padding:10px 14px;font-size:.78rem;color:var(--pk);margin-bottom:14px;display:none}
 .auth-err.show{display:block}
+.google-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#3c4043;border:1px solid #dadce0;border-radius:50px;padding:11px 16px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;transition:box-shadow .2s;margin-bottom:14px}
+.google-btn:hover{box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.google-btn:active{opacity:.9}
+.google-icon{width:18px;height:18px;flex-shrink:0}
+.or-divider{display:flex;align-items:center;gap:10px;color:var(--mu);font-size:.7rem;margin:6px 0 14px;font-family:'Syne',sans-serif;letter-spacing:.15em}
+.or-divider::before,.or-divider::after{content:'';flex:1;height:1px;background:var(--border)}
 </style>
 </head>
 <body>
 
 <div class="tb">
   <a href="/" class="logo"><span class="dot"></span>PULSIFY</a>
-  <button class="back" onclick="window.location.href='index.html'">← Back to Dashboard</button>
+  <button class="back" onclick="window.location.href='/admin'">← Back to Dashboard</button>
 </div>
 
 <div style="max-width:1400px;margin:0 auto">
@@ -228,6 +234,11 @@ body{padding:20px;padding-top:80px}
     <div class="auth-title">Sign In</div>
     <div class="auth-desc">Lead Management is restricted to authorised team members.</div>
     <div class="auth-err" id="auth-err"></div>
+    <button class="google-btn" onclick="signInWithGoogle()">
+      <svg class="google-icon" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+    <div class="or-divider">or</div>
     <label class="auth-lbl">Email</label>
     <input id="auth-email" class="auth-inp" type="email" placeholder="you@example.com" autocomplete="email"/>
     <label class="auth-lbl">Password</label>
@@ -290,13 +301,31 @@ async function doSignIn() {
   }
 }
 
-function checkAuth() {
-  const token = getToken();
-  if (token) {
+async function signInWithGoogle() {
+  const errEl = document.getElementById('auth-err');
+  try {
+    const { error } = await sbAuth.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/leads' }
+    });
+    if (error) { errEl.textContent = error.message; errEl.className = 'auth-err show'; }
+  } catch(e) {
+    errEl.textContent = 'Google sign-in failed: ' + e.message;
+    errEl.className = 'auth-err show';
+  }
+}
+
+async function checkAuth() {
+  const { data: { session } } = await sbAuth.auth.getSession();
+  if (session?.access_token) {
+    localStorage.setItem('p_token', session.access_token);
     document.getElementById('auth-gate').style.display = 'none';
     loadLeads();
+    return;
   }
-  // else gate stays visible
+  // No live Supabase session — clear stale token, force sign-in
+  localStorage.removeItem('p_token');
+  sessionStorage.removeItem('p_token');
 }
 checkAuth();
 
@@ -349,15 +378,30 @@ function buildParams() {
 async function loadLeads() {
   document.getElementById('leads-container').innerHTML = '<div class="loading">Loading leads…</div>';
   try {
-    const res  = await fetch(`${API}/leads?${buildParams()}`, { headers: authHeaders() });
-    const json = await res.json();
-    if (!res.ok) { document.getElementById('leads-container').innerHTML = `<div class="loading">${json.error || 'Error loading leads'}</div>`; return; }
+    const limit = 20;
+    const offset = (currentPage - 1) * limit;
+    const params = new URLSearchParams({ page: currentPage, limit, status: currentStatus || 'all' });
+    const prov = document.getElementById('filter-province').value;
+    const cat  = document.getElementById('filter-category').value;
+    const src  = document.getElementById('filter-source').value;
+    const srch = document.getElementById('search-input').value.trim();
+    if (prov && prov !== 'all') params.append('province', prov);
+    if (cat  && cat  !== 'all') params.append('category', cat);
+    if (src  && src  !== 'all') params.append('source', src);
+    if (srch) params.append('search', srch);
 
-    updateStats(json.stats || {});
-    renderTable(json.leads || []);
-    renderPagination(json.total || 0, json.limit || 20);
+    const r = await fetch(`/api/leads?${params}`, { headers: authHeaders() });
+    if (!r.ok) {
+      const errText = await r.text();
+      document.getElementById('leads-container').innerHTML = `<div class="loading">API ${r.status}: ${errText}</div>`;
+      return;
+    }
+    const { leads, total, stats } = await r.json();
+    updateStats(stats || { total: 0, new: 0, contacted: 0, converted: 0, ignored: 0 });
+    renderTable(leads || []);
+    renderPagination(total || 0, limit);
   } catch (e) {
-    document.getElementById('leads-container').innerHTML = '<div class="loading">Failed to load leads</div>';
+    document.getElementById('leads-container').innerHTML = `<div class="loading">Failed to load leads: ${e.message}</div>`;
   }
 }
 
@@ -476,9 +520,9 @@ function openLead(id) {
 function closeModal() { document.getElementById('lead-modal').classList.remove('open'); activeLead = null; }
 
 async function updateStatus(id, status) {
-  const res = await fetch(`${API}/leads/${id}`, { method:'PATCH', headers: authHeaders(), body: JSON.stringify({ status }) });
-  if (res.ok) { toast('Status updated'); if (window._leadsCache?.[id]) window._leadsCache[id].status = status; loadLeads(); }
-  else toast('Failed to update status', false);
+  const r = await fetch(`/api/leads/${id}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ status }) });
+  if (r.ok) { toast('Status updated'); if (window._leadsCache?.[id]) window._leadsCache[id].status = status; loadLeads(); }
+  else { const err = await r.text(); toast('Failed to update status: ' + err, false); }
 }
 
 async function addNote(id) {
@@ -487,9 +531,9 @@ async function addNote(id) {
   const lead  = (window._leadsCache||{})[id];
   const notes = Array.isArray(lead?.notes) ? lead.notes : [];
   notes.push({ text, date: new Date().toLocaleDateString() });
-  const res = await fetch(`${API}/leads/${id}`, { method:'PATCH', headers: authHeaders(), body: JSON.stringify({ notes }) });
-  if (res.ok) { toast('Note added'); document.getElementById('note-input').value = ''; openLead(id); }
-  else toast('Failed to save note', false);
+  const r = await fetch(`/api/leads/${id}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ notes }) });
+  if (r.ok) { toast('Note added'); document.getElementById('note-input').value = ''; openLead(id); }
+  else { const err = await r.text(); toast('Failed to save note: ' + err, false); }
 }
 
 // ── Email modal ──────────────────────────────────────────────────────────────

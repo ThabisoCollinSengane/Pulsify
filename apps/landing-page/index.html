@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
 <meta name="description" content="Pulsify — Feel the Vibe 🇿🇦 South Africa's live event discovery platform"/>
-<meta name="build-version" content="v2.0.1-20260506"/>
+<meta name="build-version" content="v2.2.0-20260513"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
 <title>Pulsify — Feel the Vibe 🇿🇦</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -317,21 +320,21 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 #map-legend-body{transition:all .25s}
 /* Enhanced glowing marker */
 .mp-dot{
-  width:28px;
-  height:28px;
+  width:36px;
+  height:36px;
   border-radius:50%;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:.75rem;
-  border:2px solid rgba(255,255,255,.3);
+  font-size:.9rem;
+  border:2.5px solid rgba(255,255,255,.45);
   cursor:pointer;
   position:relative;
-  transition:all .3s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change:transform;
-  backdrop-filter:blur(4px);
+  transition:box-shadow .2s, filter .2s;
+  backdrop-filter:blur(6px);
 }
-.mp-dot:active{transform:scale(1.15)}
+.mp-dot:active{filter:brightness(1.3) saturate(1.4)}
+.mp-dot-ev{width:42px;height:42px;font-size:1rem;border-width:3px}
 .mp-ring{
   position:absolute;
   inset:-8px;
@@ -356,7 +359,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   <div class="top-r">
     <button class="back" id="back-btn" onclick="goBack()">← Back</button>
     <div class="ib" id="notif-btn" onclick="openNotifPanel()">🔔<span class="nd" id="notif-dot"></span></div>
-    <button class="sb" id="auth-btn" onclick="window.location.href='signin.html'">Sign In</button>
+    <button class="sb" id="auth-btn" onclick="window.location.href='/signin'">Sign In</button>
   </div>
 </header>
 
@@ -416,7 +419,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     </div>
     <div class="sl"><span>🏆 Top Spots</span><a onclick="openBizPage();return false">See all →</a></div>
     <div class="hs" id="frontline-row"><div class="skel" style="width:150px;height:120px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:150px;height:120px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:150px;height:120px;flex-shrink:0;border-radius:18px"></div></div>
-    <div class="sl"><span id="feed-lbl">🔥 Upcoming Events</span><a onclick="showTab('map');initMap();return false">View Map →</a></div>
+    <div id="featured-weekend" style="display:none">
+      <div class="sl"><span>⚡ Featured This Weekend</span></div>
+      <div id="featured-weekend-cards"></div>
+    </div>
+    <div class="sl"><span id="feed-lbl">🔥 Upcoming Events</span><a href="/map">View Map →</a></div>
     <div id="events-feed"></div>
     <div class="pg" id="feed-pg" style="display:none">
       <button class="pb" id="pg-prev" onclick="changePage(-1)" disabled>← Prev</button>
@@ -438,7 +445,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     <button class="chip" onclick="setDiscCat(this,'hotel')">🏨 Hotels</button>
     <button class="chip" onclick="setDiscCat(this,'bnb')">🏡 BnB</button>
   </div>
-  <div class="sl"><span>📍 Places near you</span><a onclick="showTab('map');initMap();return false">View map →</a></div>
+  <div class="sl"><span>📍 Places near you</span><a href="/map">View map →</a></div>
   <div class="hs" id="disc-biz-row"></div>
   <div class="sl"><span>🎉 Events</span><a onclick="openFAQ()" style="cursor:pointer">❓ Help & FAQ</a></div>
   <div class="dg2" id="disc-events"></div>
@@ -542,15 +549,15 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 16px;border:3px solid rgba(255,255,255,.1)">😊</div>
     <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;margin-bottom:6px">Sign In to Pulsify</div>
     <div style="font-size:.82rem;color:var(--mu);margin-bottom:24px">Access your tickets, saves &amp; squad</div>
-    <button class="fmb" onclick="window.location.href='signin.html'" style="border-radius:50px;padding:13px;letter-spacing:.05em;margin-bottom:10px">Sign In</button>
-    <div style="font-size:.78rem;color:var(--mu)">No account? <a href="create-account.html" style="color:var(--or);font-weight:700;text-decoration:none">Sign up free →</a></div>
+    <button class="fmb" onclick="window.location.href='/signin'" style="border-radius:50px;padding:13px;letter-spacing:.05em;margin-bottom:10px">Sign In</button>
+    <div style="font-size:.78rem;color:var(--mu)">No account? <a href="/create-account" style="color:var(--or);font-weight:700;text-decoration:none">Sign up free →</a></div>
   </div>
   <div id="prof-in" style="display:none">
     <div style="height:90px;background:linear-gradient(135deg,rgba(176,38,255,.3),rgba(255,92,0,.2));position:relative"></div>
     <div style="padding:0 16px;margin-top:-40px;margin-bottom:12px;display:flex;align-items:flex-end;justify-content:space-between">
       <div id="profile-av" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:2rem;border:3px solid var(--bg);overflow:hidden;flex-shrink:0">😊</div>
       <div style="display:flex;gap:8px;padding-bottom:6px">
-        <button onclick="window.location.href='profile-settings.html'" style="background:var(--surf);border:1px solid var(--border2);border-radius:50px;padding:7px 14px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu2);cursor:pointer">⚙️ Settings</button>
+        <button onclick="window.location.href='/profile-settings'" style="background:var(--surf);border:1px solid var(--border2);border-radius:50px;padding:7px 14px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu2);cursor:pointer">⚙️ Settings</button>
       </div>
     </div>
     <div style="padding:0 16px 6px">
@@ -563,11 +570,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
       <div class="vs"><div class="vn" id="ps-posts">0</div><div class="vl">Posts</div></div>
     </div>
     <div style="padding:8px 14px">
-      <button onclick="window.location.href='feeds.html'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <button onclick="window.location.href='/feeds'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">📰</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Social Feed</div><div style="font-size:.68rem;color:var(--mu)">Posts from people you follow</div></div></div>
         <span style="color:var(--or);font-size:.8rem">→</span>
       </button>
-      <button onclick="window.location.href='user-profile.html'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <button onclick="window.location.href='/user-profile'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">👤</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">My Profile &amp; Posts</div><div style="font-size:.68rem;color:var(--mu)">Your memories and events attended</div></div></div>
         <span style="color:var(--or);font-size:.8rem">→</span>
       </button>
@@ -575,7 +582,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
         <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">🎟</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">My Bookings</div><div style="font-size:.68rem;color:var(--mu)">Tickets and QR codes</div></div></div>
         <span style="color:var(--or);font-size:.8rem">→</span>
       </button>
-      <button onclick="window.location.href='business-login.html'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <button onclick="window.location.href='/business'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">🏪</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Business Dashboard</div><div style="font-size:.68rem;color:var(--mu)">Manage your venue or event page</div></div></div>
         <span style="color:var(--or);font-size:.8rem">→</span>
       </button>
@@ -593,7 +600,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 <nav class="bn">
   <button class="bb active" data-tab="home" onclick="showTab('home')"><svg viewBox="0 0 24 24"><path d="M12 3C12 3 4 9.5 4 15a8 8 0 0016 0C20 9.5 12 3 12 3Z"/><path d="M12 10v5M9.5 13h5"/></svg><span class="bl">Home</span></button>
   <button class="bb" data-tab="discover" onclick="showTab('discover')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"/></svg><span class="bl">Discover</span></button>
-  <button class="bb" data-tab="map" onclick="showTab('map');initMap()"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3M9 20V7m6 13l5.447-2.724A1 1 0 0021 16.382V5.618a1 1 0 00-1.447-.894L15 7m0 13V7M9 7l6-3"/></svg><span class="bl">Map</span></button>
+  <button class="bb" data-tab="map" onclick="window.location.href='/map'"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3M9 20V7m6 13l5.447-2.724A1 1 0 0021 16.382V5.618a1 1 0 00-1.447-.894L15 7m0 13V7M9 7l6-3"/></svg><span class="bl">Map</span></button>
   <button class="bb" data-tab="tickets" onclick="showTab('tickets')"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M16 7v-.5a3.5 3.5 0 00-7 0V7M16 17v.5a3.5 3.5 0 01-7 0V17"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span class="bl">Bookings</span></button>
   <button class="bb" data-tab="squad" onclick="showTab('squad')"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M18 20c0-2.2-1.3-4.1-3-5"/></svg><span class="bl">Friends</span></button>
   <button class="bb" data-tab="profile" onclick="showTab('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg><span class="bl">Profile</span></button>
@@ -759,6 +766,29 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 </div>
 
 <!-- TICKET CONFIRMATION MODAL -->
+<div id="report-overlay" onclick="if(event.target===this)closeReportModal()" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);align-items:flex-end;justify-content:center">
+  <div style="width:100%;max-width:480px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);padding:20px 20px 32px;animation:su .3s ease">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem">🚩 Report Event</div>
+      <button onclick="closeReportModal()" style="background:rgba(255,255,255,.06);border:none;color:var(--tx);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.9rem">✕</button>
+    </div>
+    <div id="report-msg" style="display:none;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px"></div>
+    <div style="font-size:.76rem;color:var(--mu);margin-bottom:6px">Reason *</div>
+    <select id="report-reason" style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--tx);font-size:.84rem;margin-bottom:12px;outline:none">
+      <option value="">— Select a reason —</option>
+      <option value="fake_event">🎭 Fake or misleading event</option>
+      <option value="stolen_content">📋 Stolen event info / images</option>
+      <option value="i_am_owner">👤 I am the owner of this event</option>
+      <option value="doesnt_exist">❌ This event no longer exists</option>
+      <option value="inappropriate">⚠️ Inappropriate content</option>
+      <option value="other">💬 Other</option>
+    </select>
+    <div style="font-size:.76rem;color:var(--mu);margin-bottom:6px">Additional details <span style="color:var(--mu)">(optional)</span></div>
+    <textarea id="report-detail" rows="3" placeholder="Tell us more..." style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--tx);font-size:.84rem;resize:none;outline:none;box-sizing:border-box"></textarea>
+    <button id="report-submit-btn" onclick="submitReport()" style="width:100%;margin-top:14px;padding:13px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Submit Report</button>
+  </div>
+</div>
+
 <div id="ticket-confirm-modal" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.85);backdrop-filter:blur(14px);align-items:center;justify-content:center;padding:20px">
   <div style="width:100%;max-width:360px;background:var(--bg2);border-radius:22px;border:1px solid rgba(255,255,255,.12);overflow:hidden;animation:su .3s ease">
     <div style="background:linear-gradient(135deg,#B026FF,#FF5C00);padding:20px;text-align:center">
@@ -813,9 +843,13 @@ let activeEvId     = null;
 let searchTimer    = null;
 let sbClient       = null;
 let currentUser    = null;
-let savedEv        = JSON.parse(localStorage.getItem('p_sev')   || '[]');
-let savedBz        = JSON.parse(localStorage.getItem('p_sbiz')  || '[]');
-let vibes          = JSON.parse(localStorage.getItem('p_vibes') || '[]');
+function safeParse(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); }
+  catch(e) { console.warn('[localStorage] corrupt key, resetting:', key); localStorage.removeItem(key); return fallback; }
+}
+let savedEv        = safeParse('p_sev',   []);
+let savedBz        = safeParse('p_sbiz',  []);
+let vibes          = safeParse('p_vibes', []);
 let miniMaps       = {};
 let activeComments = [];
 let eventsForMap   = [];
@@ -835,6 +869,15 @@ const PROV_CITY = {
 
 /* ── UTILS ── */
 function x(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function firstImg(imageUrl) {
+  if (!imageUrl) return null;
+  if (imageUrl.startsWith('[')) { try { const arr = JSON.parse(imageUrl); return arr[0] || null; } catch(e) {} }
+  return imageUrl;
+}
+function imgCount(imageUrl) {
+  if (!imageUrl || !imageUrl.startsWith('[')) return 1;
+  try { return JSON.parse(imageUrl).length; } catch(e) { return 1; }
+}
 function fn(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n || 0); }
 function fdate(dt) {
   if (!dt) return '';
@@ -894,13 +937,14 @@ function getSB() {
 }
 
 /* ── NAVIGATION ── */
-function showTab(name) {
+function showTab(name, _noPush) {
   prevTab = curTab; curTab = name;
   document.querySelectorAll('.panel').forEach(p => { p.classList.remove('active'); p.style.display = ''; });
   document.querySelectorAll('.bb').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   const panel = document.getElementById('tab-' + name);
   if (panel) { panel.classList.add('active'); panel.style.display = name === 'home' ? 'flex' : 'block'; panel.scrollTop = 0; }
   document.getElementById('back-btn').classList.remove('show');
+  if (!_noPush) history.pushState({ tab: name, detail: false }, '');
   setTimeout(triggerRev, 80);
   if (name === 'squad')   renderSquad();
   if (name === 'tickets') renderBookings();
@@ -908,16 +952,27 @@ function showTab(name) {
   if (name === 'profile') renderProfile();
   if (name === 'map' && mapInited && mapObj) setTimeout(() => mapObj.resize(), 50);
 }
-function showDetailTab(name) {
+function showDetailTab(name, _noPush) {
   prevTab = curTab; curTab = name;
   document.querySelectorAll('.panel').forEach(p => { p.classList.remove('active'); p.style.display = ''; });
   document.querySelectorAll('.bb').forEach(b => b.classList.remove('active'));
   const panel = document.getElementById('tab-' + name);
   if (panel) { panel.classList.add('active'); panel.style.display = 'block'; panel.scrollTop = 0; }
   document.getElementById('back-btn').classList.add('show');
+  if (!_noPush) history.pushState({ tab: name, detail: true }, '');
 }
-function goBack() { if (prevTab && prevTab !== curTab) showTab(prevTab); else showTab('home'); }
+function goBack() { history.back(); }
 function goHome() { showTab('home'); }
+
+window.addEventListener('popstate', e => {
+  const s = e.state;
+  if (s?.tab) {
+    if (s.detail) showDetailTab(s.tab, true);
+    else showTab(s.tab, true);
+  } else {
+    showTab('home', true);
+  }
+});
 
 /* ── SKELETON LOADERS ── */
 function feedSkeleton() {
@@ -939,28 +994,36 @@ function bizSkeleton() {
 /* ══════════════════════════════════════════════════
    LIVE API — EVENTS
 ══════════════════════════════════════════════════ */
+let _feedReqId = 0;
 async function loadFeed(resetPage = false) {
   if (resetPage) feedPage = 1;
-  document.getElementById('events-feed').innerHTML = feedSkeleton();
+  const myReq = ++_feedReqId;
+  const feedEl = document.getElementById('events-feed');
+  feedEl.innerHTML = feedSkeleton();
   document.getElementById('feed-pg').style.display = 'none';
 
   try {
-    const params = new URLSearchParams({ page: feedPage, limit: 10 });
-    if (feedCity  && feedCity  !== 'all') params.set('city',  feedCity);
-    if (feedGenre && feedGenre !== 'all') params.set('genre', feedGenre);
-
-    const res  = await fetch(API + '/events?' + params);
-    const data = await res.json();
-
-    if (!res.ok) throw new Error(data.error || 'API error');
-
-    const events = data.events || [];
-    feedTotalPages = data.total_pages || 1;
-
-    document.getElementById('feed-lbl').textContent = '🔥 ' + (data.total || events.length) + ' Upcoming Events';
+    const sb = getSB();
+    if (!sb) throw new Error('Supabase SDK not loaded');
+    const limit = 10, offset = (feedPage - 1) * limit;
+    const today = new Date().toISOString().split('T')[0];
+    let q = sb.from('events')
+      .select('id,name,date_local,time_local,venue_name,venue_city,venue_lat,venue_lon,price_min,is_free,image_url,genre,hype_score,like_count,comment_count,is_frontline,frontline_rank,external_url,source,status,description,lineup,organiser_name', { count: 'exact' })
+      .gte('date_local', today)
+      .order('date_local', { ascending: true })
+      .range(offset, offset + limit - 1);
+    if (feedCity  && feedCity  !== 'all') q = q.ilike('venue_city', `%${feedCity}%`);
+    if (feedGenre === 'free') q = q.eq('is_free', true);
+    else if (feedGenre && feedGenre !== 'all') q = q.ilike('genre', `%${feedGenre}%`);
+    const { data: rawEvents, error, count } = await q;
+    if (myReq !== _feedReqId) return;          // a newer request started — drop this result
+    if (error) throw new Error('Supabase: ' + error.message);
+    const events = rawEvents || [];
+    feedTotalPages = Math.ceil((count || 0) / limit) || 1;
+    document.getElementById('feed-lbl').textContent = '🔥 ' + (count || events.length) + ' Upcoming Events';
 
     if (events.length === 0) {
-      document.getElementById('events-feed').innerHTML = `
+      feedEl.innerHTML = `
         <div class="no-results">
           <div class="no-results-ico">🎟</div>
           <div class="no-results-title">No events found</div>
@@ -970,18 +1033,65 @@ async function loadFeed(resetPage = false) {
       return;
     }
 
-    document.getElementById('events-feed').innerHTML = events.map((ev, i) => buildCard(ev, i)).join('');
+    // Load promotions in parallel with rendering (fire-and-forget, doesn't block)
+    const promoPromise = feedPage === 1 ? loadPromotions() : Promise.resolve({ featured: [], injected: [] });
+
+    // Render cards as already-revealed so they're visible even if IntersectionObserver misses them
+    const cards = events.map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"'));
+    feedEl.innerHTML = cards.join('');
     updatePagination();
     triggerRev();
-    document.querySelector('.hi')?.scrollTo({ top: 0, behavior: 'smooth' });
 
     // Cache events for map
     eventsForMap = [...(eventsForMap.filter(e => !events.find(n => n.id === e.id))), ...events];
 
+    // Wire promotions once resolved
+    if (feedPage === 1) {
+      promoPromise.then(({ featured = [], injected = [] }) => {
+        renderFeaturedWeekend(featured);
+        if (injected.length) feedEl.innerHTML = injectPromos(cards, injected);
+      });
+      loadQuicketEvents(feedCity, feedGenre);
+    }
+
   } catch(err) {
+    if (myReq !== _feedReqId) return;
     console.error('[Feed]', err);
-    document.getElementById('events-feed').innerHTML = `<div class="api-error">⚠️ Could not load events. Check your connection.</div>`;
+    feedEl.innerHTML = `<div class="api-error" style="text-align:center;padding:32px 16px">
+      <div style="font-size:2rem;margin-bottom:12px">⚠️</div>
+      <div style="font-weight:700;margin-bottom:6px">Could not load events</div>
+      <div style="font-size:.75rem;color:var(--mu);margin-bottom:16px;word-break:break-all">${err.message || 'Network error'}</div>
+      <button onclick="loadFeed(true)" style="background:var(--or);color:#fff;border:none;border-radius:24px;padding:10px 28px;font-size:.85rem;font-weight:700;cursor:pointer">Try Again</button>
+    </div>`;
   }
+}
+
+async function loadQuicketEvents(city, genre) {
+  const container = document.getElementById('events-feed');
+  if (!container) return;
+  try {
+    const params = new URLSearchParams({ city: city || 'all', genre: genre || 'all', page: '1' });
+    const resp = await fetch('/api/quicket-events?' + params);
+    if (!resp.ok) {
+      const err = await resp.text();
+      console.warn('[Quicket] API error', resp.status, err);
+      return;
+    }
+    const { events } = await resp.json();
+    console.log('[Quicket] Loaded', events?.length || 0, 'events');
+    if (!events?.length) return;
+
+    // Filter out any that are already shown
+    const existingIds = new Set([...container.querySelectorAll('[data-evid]')].map(el => el.dataset.evid));
+    const fresh = events.filter(e => !existingIds.has(e.id));
+    if (!fresh.length) return;
+
+    const section = document.createElement('div');
+    section.innerHTML = `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);padding:16px 0 8px;display:flex;align-items:center;gap:8px"><img src="https://www.quicket.co.za/favicon.ico" width="14" height="14" style="border-radius:3px" onerror="this.style.display='none'"/>More events from Quicket</div>` +
+      fresh.slice(0, 30).map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
+    container.appendChild(section);
+    eventsForMap = [...eventsForMap, ...fresh];
+  } catch(e) { /* Quicket unavailable — silently skip */ }
 }
 
 function buildCard(ev, idx) {
@@ -1025,6 +1135,76 @@ function buildCard(ev, idx) {
   </div>`;
 }
 
+/* ══════════════════════════════════════════════════
+   NATIVE PROMOTIONS
+══════════════════════════════════════════════════ */
+const ADS_ENABLED = false;
+let _cachedPromos = null;
+
+async function loadPromotions() {
+  if (!ADS_ENABLED) return { featured: [], injected: [] };
+  try {
+    const params = new URLSearchParams({ city: feedCity || '', genre: feedGenre || '' });
+    const r = await fetch('/api/promotions?' + params);
+    if (!r.ok) return { featured: [], injected: [] };
+    _cachedPromos = await r.json();
+    return _cachedPromos;
+  } catch(e) { return { featured: [], injected: [] }; }
+}
+
+function buildPromoCard(promo) {
+  const iF  = promo.is_free;
+  const pr  = iF ? 'FREE' : (promo.price_min ? 'R' + promo.price_min : 'TBA');
+  const bg  = gg(promo.genre);
+  const emo = ge(promo.genre);
+  const hp  = promo.hype_score ?? 70;
+  const href = promo.external_url ? `href="${x(promo.external_url)}" target="_blank" rel="noopener"` : '';
+  const click = promo.external_url ? `window.open('${x(promo.external_url)}','_blank','noopener')` : '';
+  const sponsoredBadge = '<span class="fbg" style="background:rgba(176,38,255,.08);color:rgba(176,38,255,.55);border:1px solid rgba(176,38,255,.18);font-size:.56rem;letter-spacing:.06em">SPONSORED</span>';
+  return `<div class="fc rv in" onclick="${click}">
+    <div class="fh"><div class="fa" style="background:${bg}">${emo}</div>
+      <div style="flex:1;min-width:0"><div class="fo">${x(promo.organiser_name || 'Promoted')}</div>
+      <div class="fl">📍 ${x(promo.venue_city || '')} · ${fdt(promo.date_local, promo.time_local)}</div></div>${sponsoredBadge}</div>
+    <div class="fb" style="background:transparent">
+      <img src="${x(promo.image_url || '')}" loading="lazy" onerror="this.style.display='none'"/>
+      <div class="fg"><div class="ft2">${x(promo.title)}</div>
+        <div class="fp ${iF ? 'fr' : ''}">${pr}</div></div>
+    </div>
+    <div class="fd">
+      <div class="fm"><span class="fct">📍 ${x(promo.venue_city || '')}</span><span class="fdt"></span><span class="fda">${fdt(promo.date_local, promo.time_local)}</span></div>
+      <div class="fv">${x(promo.venue_name || '')} · ${x(promo.genre || '')}</div>
+      <div class="hr"><span>Hype Meter</span><span>🔥 ${hp}%</span></div>
+      <div class="hb"><div class="hf" style="width:${hp}%"></div></div>
+    </div>
+    <div class="fac" onclick="event.stopPropagation()">
+      <button class="ab" onclick="shareIt('${x(promo.title)}')"><span class="ai">🔗</span></button>
+      ${promo.external_url ? `<a class="tb2 ${iF ? 'fr' : ''}" href="${x(promo.external_url)}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">${iF ? 'RSVP Free' : 'Book Now'}</a>` : ''}
+    </div>
+  </div>`;
+}
+
+function injectPromos(cardArray, pool) {
+  if (!pool.length) return cardArray.join('');
+  const out = [];
+  let injected = 0;
+  cardArray.forEach((card, i) => {
+    out.push(card);
+    if ((i + 1) % 5 === 0 && injected < 2 && injected < pool.length) {
+      out.push(buildPromoCard(pool[injected++]));
+    }
+  });
+  return out.join('');
+}
+
+function renderFeaturedWeekend(featured) {
+  const section = document.getElementById('featured-weekend');
+  const container = document.getElementById('featured-weekend-cards');
+  if (!section || !container) return;
+  if (!featured.length) { section.style.display = 'none'; return; }
+  container.innerHTML = featured.slice(0, 5).map(p => buildPromoCard(p)).join('');
+  section.style.display = 'block';
+}
+
 function updatePagination() {
   const pg = document.getElementById('feed-pg');
   if (feedTotalPages > 1) {
@@ -1060,11 +1240,16 @@ function handleSearch(val) {
   if (!val.trim()) return;
   searchTimer = setTimeout(async () => {
     try {
-      const res = await fetch(API + '/events/search?q=' + encodeURIComponent(val));
-      const data = await res.json();
-      if (data.results?.length) {
-        document.getElementById('events-feed').innerHTML = data.results.map((ev, i) => buildCard(ev, i)).join('');
-        document.getElementById('feed-lbl').textContent = '🔍 ' + data.results.length + ' results';
+      const sb = getSB();
+      const today = new Date().toISOString().split('T')[0];
+      const { data: results } = await sb.from('events')
+        .select('id,name,date_local,time_local,venue_name,venue_city,price_min,is_free,image_url,genre,hype_score,like_count,comment_count,is_frontline,frontline_rank,source,organiser_name')
+        .gte('date_local', today)
+        .or(`name.ilike.%${val}%,venue_city.ilike.%${val}%,genre.ilike.%${val}%,venue_name.ilike.%${val}%`)
+        .order('hype_score', { ascending: false, nullsFirst: false }).limit(20);
+      if (results?.length) {
+        document.getElementById('events-feed').innerHTML = results.map((ev, i) => buildCard(ev, i)).join('');
+        document.getElementById('feed-lbl').textContent = '🔍 ' + results.length + ' results';
         triggerRev();
       }
     } catch(e) {}
@@ -1077,9 +1262,16 @@ function handleSearch(val) {
 async function loadFrontline() {
   document.getElementById('frontline-row').innerHTML = bizSkeleton();
   try {
-    const res  = await fetch(API + '/businesses?limit=6' + (feedCity !== 'all' ? '&city=' + feedCity : ''));
-    const data = await res.json();
-    const bizs = data.businesses || [];
+    const sb = getSB();
+    let bq = sb.from('businesses')
+      .select('id,name,category,suburb,city,lat,lon,rating,review_count,price_range,cover_image_url,is_frontline,frontline_rank,tagline')
+      .order('is_frontline', { ascending: false })
+      .order('rating', { ascending: false, nullsFirst: false })
+      .limit(6);
+    if (feedCity && feedCity !== 'all') bq = bq.ilike('city', `%${feedCity}%`);
+    const { data: rawBizs, error: bizErr } = await bq;
+    if (bizErr) throw new Error(bizErr.message);
+    const bizs = rawBizs || [];
     bizForMap  = bizs;
     document.getElementById('frontline-row').innerHTML = bizs.map(b => buildBizCard(b)).join('') + `
       <div class="bc" onclick="showTab('discover')" style="background:rgba(255,92,0,.06);border:1.5px dashed rgba(255,92,0,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-width:130px">
@@ -1087,7 +1279,7 @@ async function loadFrontline() {
         <span style="font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--or);text-align:center;padding:0 8px">Show More</span>
       </div>`;
   } catch(e) {
-    document.getElementById('frontline-row').innerHTML = '<div style="padding:14px;color:var(--mu);font-size:.78rem">Could not load places.</div>';
+    document.getElementById('frontline-row').innerHTML = `<div style="padding:14px;color:var(--mu);font-size:.78rem">Could not load places: ${e.message}</div>`;
   }
 }
 
@@ -1116,13 +1308,23 @@ async function openEv(evId) {
   showDetailTab('event-detail');
 
   try {
-    const res = await fetch(API + '/events/' + evId);
-    const { event: ev, tiers = [], photos = [] } = await res.json();
-    if (!ev) throw new Error('Not found');
+    const sb = getSB();
+    const [{ data: ev, error: evErr }, { data: evTiers }, { data: evPhotos }] = await Promise.all([
+      sb.from('events').select('*').eq('id', evId).single(),
+      sb.from('ticket_tiers').select('*').eq('event_id', evId).order('sort_order'),
+      sb.from('event_photos').select('*').eq('event_id', evId).order('created_at', { ascending: false }).limit(12),
+    ]);
+    if (evErr || !ev) throw new Error('Not found');
+    const tiers = evTiers || [], photos = evPhotos || [];
 
     selTier = tiers[0] || null; selQty = 1;
-    const iF = ev.is_free, bg = gg(ev.genre), emo = ge(ev.genre), hp = ev.hype_score ?? 70;
+    const iF = ev.is_free, bg = gg(ev.genre), emo = ge(ev.genre);
     const lc = ev.like_count || 0, cc = ev.comment_count || 0;
+    const totalCap = tiers.reduce((s, t) => s + (t.capacity || 0), 0) || ev.capacity || 0;
+    const sold = tiers.reduce((s, t) => s + (t.sold || 0), 0) || ev.tickets_sold || ev.attendance_count || 0;
+    const vibe = Math.min(100, Math.round((sold / Math.max(totalCap, 1)) * 60 + Math.min(lc / 5, 40)));
+    const vibeLabel = vibe >= 81 ? 'FULL SEND 💥' : vibe >= 61 ? 'Lit 🔥' : vibe >= 41 ? 'Vibing 🎵' : vibe >= 21 ? 'Warming Up 🌡️' : 'Chill 😴';
+    const vibeColor = vibe >= 81 ? '#FF2D78' : vibe >= 61 ? '#FF5C00' : vibe >= 41 ? '#C6FF4A' : vibe >= 21 ? '#00E5FF' : '#666';
     const lineup = Array.isArray(ev.lineup) ? ev.lineup : (ev.lineup ? JSON.parse(ev.lineup) : []);
 
     let tkHTML = '';
@@ -1150,7 +1352,7 @@ async function openEv(evId) {
         <div style="text-align:center;font-size:.66rem;color:var(--mu);margin-top:8px">🔒 Secured by Paystack · No card data stored</div>
       </div>`;
     } else if (ev.external_url) {
-      const srcLabel = { eventbrite:'Eventbrite', ticketmaster:'Ticketmaster' }[ev.source] || 'Ticket Partner';
+      const srcLabel = { eventbrite:'Eventbrite', ticketmaster:'Ticketmaster', quicket:'Quicket' }[ev.source] || 'Ticket Partner';
       tkHTML = `<div class="tkb"><div class="tkt2">🎟 Get Tickets</div>
         <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:14px">
           <div style="font-size:.78rem;color:var(--mu2);margin-bottom:6px">Listed on <strong style="color:var(--tx)">${srcLabel}</strong></div>
@@ -1181,6 +1383,7 @@ async function openEv(evId) {
         <button class="rb" onclick="this.classList.toggle('act');showToast('RSVP confirmed! See you there 🎉','ok')"><span class="ri">${iF ? '✅' : '🎟'}</span><span class="rl">${fn(ev.attendance_count || 0)}</span></button>
         <button class="rb" onclick="toggleSave('ev','${x(ev.id)}',this)"><span class="ri">${savedEv.includes(ev.id) ? '🔖' : '🏷'}</span><span class="rl">Save</span></button>
         <button class="rb" onclick="shareIt('${x(ev.name)}')"><span class="ri">🔗</span><span class="rl">Share</span></button>
+        <button class="rb" onclick="openReportModal('${x(ev.id)}','${x(ev.name).replace(/'/g,'\\\'')}')"><span class="ri">🚩</span><span class="rl">Report</span></button>
       </div>
       <div class="db">
         <div class="ig">
@@ -1192,9 +1395,12 @@ async function openEv(evId) {
           ${ev.age_restriction ? `<div class="ib2"><div class="il">Age</div><div class="iv" style="font-size:.78rem">${x(ev.age_restriction)}</div></div>` : ''}
         </div>
         <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:18px">
-          <div class="hr"><span>🔥 Hype Meter</span><span>${hp}%</span></div>
-          <div class="hb"><div class="hf" style="width:${hp}%"></div></div>
-          <div style="font-size:.76rem;color:var(--mu)">${fn(ev.attendance_count || 0)} people going</div>
+          <div class="hr"><span>⚡ Vibe Meter</span><span style="color:${vibeColor};font-family:'Bebas Neue',sans-serif;font-size:1rem">${vibeLabel}</span></div>
+          <div class="hb" style="margin:8px 0"><div class="hf" style="width:${vibe}%;background:linear-gradient(90deg,${vibeColor},${vibeColor}88)"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--mu)">
+            <span>${fn(sold)} ${totalCap ? 'of ' + fn(totalCap) + ' tickets' : 'going'}</span>
+            <span>${fn(lc)} likes · ${vibe}% vibe</span>
+          </div>
         </div>
         ${ev.description ? `<div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:18px"><div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">About</div><div style="font-size:.82rem;line-height:1.65;color:var(--mu2)">${x(ev.description)}</div></div>` : ''}
         ${tkHTML}
@@ -1282,9 +1488,9 @@ async function openBiz(bizId) {
   showDetailTab('biz-detail');
 
   try {
-    const res = await fetch(API + '/businesses/' + bizId);
-    const { business: b } = await res.json();
-    if (!b) throw new Error('Not found');
+    const sb = getSB();
+    const { data: b, error: bizErr } = await sb.from('businesses').select('*').eq('id', bizId).single();
+    if (bizErr || !b) throw new Error('Not found');
 
     const emo  = ce(b.category);
     const stars = '★'.repeat(Math.round(b.rating || 0)) + '☆'.repeat(5 - Math.round(b.rating || 0));
@@ -1347,19 +1553,23 @@ let discLoaded = false;
 async function loadDiscover(cat) {
   if (!cat) cat = discCat;
   try {
-    const params = new URLSearchParams({ show_all: 'true', limit: '20' });
-    if (cat && cat !== 'all') params.set('category', cat);
-    if (feedCity && feedCity !== 'all') params.set('city', feedCity);
-    const [bizRes, evRes] = await Promise.all([
-      fetch(API + '/businesses?' + params),
-      fetch(API + '/events?limit=20'),
-    ]);
-    const bizData = await bizRes.json();
-    const evData  = await evRes.json();
+    const sb = getSB();
+    const today = new Date().toISOString().split('T')[0];
+    let bq = sb.from('businesses')
+      .select('id,name,category,suburb,city,lat,lon,rating,review_count,price_range,cover_image_url,is_frontline,frontline_rank,tagline')
+      .order('is_frontline', { ascending: false })
+      .order('rating', { ascending: false, nullsFirst: false }).limit(20);
+    if (cat && cat !== 'all') bq = bq.eq('category', cat);
+    if (feedCity && feedCity !== 'all') bq = bq.ilike('city', `%${feedCity}%`);
+    let eq = sb.from('events')
+      .select('id,name,date_local,image_url,genre,is_free,price_min,hype_score,venue_city')
+      .gte('date_local', today)
+      .order('hype_score', { ascending: false, nullsFirst: false }).limit(20);
+    const [{ data: bizList }, { data: evList }] = await Promise.all([bq, eq]);
     const dr = document.getElementById('disc-biz-row');
-    if (dr) dr.innerHTML = (bizData.businesses || []).map(b => buildBizCard(b)).join('');
+    if (dr) dr.innerHTML = (bizList || []).map(b => buildBizCard(b)).join('');
     const de = document.getElementById('disc-events');
-    if (de) de.innerHTML = (evData.events || []).map(ev => `
+    if (de) de.innerHTML = (evList || []).map(ev => `
       <div class="de" onclick="openEv('${ev.id}')">
         <div class="det" style="background:${gg(ev.genre)}">${ev.image_url ? `<img src="${ev.image_url}" loading="lazy" onerror="this.style.display='none'"/>` : ge(ev.genre)}<span class="ddb">${fdate(ev.date_local)}</span></div>
         <div class="deb"><div class="den">${x(ev.name)}</div><div class="dec">${x(ev.venue_city)}</div>
@@ -1388,16 +1598,15 @@ function initMap() {
   mapboxgl.accessToken = MAPBOX_TOKEN;
   mapObj = new mapboxgl.Map({
     container: 'mc',
-    style: 'mapbox://styles/mapbox/dark-v11',
-    center: [30.9753, -29.8587], // Durban center
-    zoom: 9,
-    minZoom: 6,
+    style: 'mapbox://styles/mapbox/navigation-night-v1',
+    center: [30.9753, -29.8587], // Durban, KZN
+    zoom: 10,
+    minZoom: 5,
     maxZoom: 18,
     dragRotate: false,
     pitchWithRotate: false,
     touchPitch: false,
-    // Restrict map bounds to South Africa
-    maxBounds: [[16.45, -34.85], [32.95, -22.12]]
+    maxBounds: [[14, -36], [34, -20]]
   });
   mapObj.touchZoomRotate.disableRotation();
   
@@ -1433,9 +1642,11 @@ function initMap() {
     addPulseAnimation();
   });
   
-  mapObj.on('click', () => closeMapPanel());
-  
-  // Smooth zoom on scroll
+  // Close panel on map tap — but NOT if a marker was just tapped
+  let _markerJustTapped = false;
+  mapObj.on('click', () => { if (_markerJustTapped) { _markerJustTapped = false; return; } closeMapPanel(); });
+  window._mapMarkerTapped = () => { _markerJustTapped = true; };
+
   mapObj.scrollZoom.setWheelZoomRate(1/200);
 }
 
@@ -1503,20 +1714,16 @@ function placeMapMarkers() {
     const isEv = type === 'event';
 
     const el = document.createElement('div');
-    el.className = 'mp-dot';
-    
-    // Enhanced styling with gradient and better shadows
+    el.className = isEv ? 'mp-dot mp-dot-ev' : 'mp-dot';
     el.style.cssText = `
       background: ${s.grad || s.bg};
       color: ${s.dark ? '#000' : '#fff'};
-      box-shadow: 
-        0 0 ${isEv ? 24 : 16}px rgba(${s.sh}, ${isEv ? 0.8 : 0.5}),
-        0 4px 12px rgba(0,0,0,0.8),
-        inset 0 1px 0 rgba(255,255,255,0.3);
-      width: ${isEv ? 32 : 28}px;
-      height: ${isEv ? 32 : 28}px;
-      border: 2px solid rgba(255,255,255,${isEv ? 0.4 : 0.2});
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow:
+        0 0 ${isEv ? 28 : 18}px rgba(${s.sh}, ${isEv ? 0.9 : 0.6}),
+        0 0 ${isEv ? 56 : 32}px rgba(${s.sh}, ${isEv ? 0.35 : 0.2}),
+        0 4px 14px rgba(0,0,0,0.9),
+        inset 0 1px 0 rgba(255,255,255,0.4);
+      transition: box-shadow 0.2s, filter 0.2s;
     `;
     el.textContent = s.ico;
     el.style.fontSize = isEv ? '.85rem' : '.75rem';
@@ -1537,20 +1744,20 @@ function placeMapMarkers() {
       el.appendChild(ring);
     }
 
-    // Hover effect
+    // Hover effect — only change shadow (NEVER touch transform — Mapbox uses transform for positioning)
     el.addEventListener('mouseenter', () => {
-      el.style.transform = 'scale(1.25)';
       el.style.zIndex = '1000';
+      el.style.filter = 'brightness(1.15)';
       el.style.boxShadow = `
         0 0 ${isEv ? 32 : 24}px rgba(${s.sh}, 1),
         0 6px 20px rgba(0,0,0,0.9),
         inset 0 1px 0 rgba(255,255,255,0.5)
       `;
     });
-    
+
     el.addEventListener('mouseleave', () => {
-      el.style.transform = 'scale(1)';
       el.style.zIndex = '';
+      el.style.filter = '';
       el.style.boxShadow = `
         0 0 ${isEv ? 24 : 16}px rgba(${s.sh}, ${isEv ? 0.8 : 0.5}),
         0 4px 12px rgba(0,0,0,0.8),
@@ -1560,17 +1767,22 @@ function placeMapMarkers() {
 
     el.addEventListener('click', e => {
       e.stopPropagation();
+      if (window._mapMarkerTapped) window._mapMarkerTapped();
       showMapPanel(item, type, s);
     });
 
     mapMarkers.push(new mapboxgl.Marker({element: el, anchor: 'center'}).setLngLat([lon, lat]).addTo(mapObj));
   });
   
-  // Auto-fit bounds if markers exist
-  if (mapMarkers.length > 0) {
+  // Only auto-fit if markers are within KZN/eastern SA (not ocean strays)
+  const kznMarkers = mapMarkers.filter(m => {
+    const ll = m.getLngLat();
+    return ll.lng >= 28.5 && ll.lng <= 32.5 && ll.lat >= -31 && ll.lat <= -27;
+  });
+  if (kznMarkers.length > 0) {
     const bounds = new mapboxgl.LngLatBounds();
-    mapMarkers.forEach(m => bounds.extend(m.getLngLat()));
-    mapObj.fitBounds(bounds, { padding: 80, maxZoom: 13, duration: 1000 });
+    kznMarkers.forEach(m => bounds.extend(m.getLngLat()));
+    mapObj.fitBounds(bounds, { padding: 100, maxZoom: 12, duration: 1200 });
   }
 }
 
@@ -1750,7 +1962,7 @@ function renderProfile() {
 
   if (!loggedIn) {
     const ab = document.getElementById('auth-btn');
-    if (ab) { ab.textContent = 'Sign In'; ab.onclick = () => window.location.href = 'signin.html'; }
+    if (ab) { ab.textContent = 'Sign In'; ab.onclick = () => window.location.href = '/signin'; }
     return;
   }
 
@@ -1777,18 +1989,15 @@ function renderProfile() {
 
   // Sign out
   const soBtn = document.getElementById('signout-btn');
-  if (soBtn) soBtn.onclick = () => {
-    localStorage.removeItem('p_user');
-    localStorage.removeItem('p_profile');
-    localStorage.removeItem('p_token');
-    currentUser = null;
-    renderProfile();
-    showToast('Signed out');
+  if (soBtn) soBtn.onclick = async () => {
+    try { const sb2 = getSB(); if (sb2) await sb2.auth.signOut(); } catch(e) {}
+    ['p_user','p_profile','p_token','p_sev','p_sbiz'].forEach(k => localStorage.removeItem(k));
+    window.location.href = '/signin';
   };
 
   // Top-right button → Feed
   const ab = document.getElementById('auth-btn');
-  if (ab) { ab.textContent = 'Feed'; ab.onclick = () => window.location.href = 'feeds.html'; }
+  if (ab) { ab.textContent = 'Feed'; ab.onclick = () => window.location.href = '/feeds'; }
 
   currentUser = sess;
 }
@@ -1801,11 +2010,77 @@ function renderBookings() {
   if (bl) bl.innerHTML = `<div class="no-results"><div class="no-results-ico">🎟</div><div class="no-results-title">No bookings yet</div><div class="no-results-sub">Your tickets appear here with QR codes for entry.</div><button class="no-results-btn" onclick="showTab('home')">Browse Events</button></div>`;
   renderSaved();
 }
-function renderSaved() {
+async function renderSaved() {
   const el = document.getElementById('sev-list');
-  if (el) el.innerHTML = savedEv.length ? '<div style="padding:8px 0;color:var(--mu);font-size:.82rem">' + savedEv.length + ' saved events — tap to view</div>' : `<div class="no-results"><div class="no-results-ico">🔖</div><div class="no-results-title">No saved events</div><div class="no-results-sub">Tap 🏷 on any event to save it here.</div><button class="no-results-btn" onclick="showTab('home')">Browse Events</button></div>`;
   const bl = document.getElementById('sbiz-list');
-  if (bl) bl.innerHTML = savedBz.length ? '<div style="padding:8px 0;color:var(--mu);font-size:.82rem">' + savedBz.length + ' saved places — tap to view</div>' : `<div class="no-results"><div class="no-results-ico">🏠</div><div class="no-results-title">No saved places</div><div class="no-results-sub">Tap 🏷 on any business card to save it.</div><button class="no-results-btn" onclick="showTab('discover')">Browse Places</button></div>`;
+  const sb = getSB();
+
+  /* ── Saved Events ── */
+  if (el) {
+    if (!savedEv.length) {
+      el.innerHTML = `<div class="no-results"><div class="no-results-ico">🔖</div><div class="no-results-title">No saved events</div><div class="no-results-sub">Tap 🏷 on any event to save it here.</div><button class="no-results-btn" onclick="showTab('home')">Browse Events</button></div>`;
+    } else {
+      el.innerHTML = '<div style="padding:14px 16px 8px;font-size:.78rem;color:var(--mu)">Loading saved events…</div>';
+      try {
+        const { data } = await sb.from('events')
+          .select('id,name,date_local,time_local,venue_name,venue_city,image_url,genre,is_free,price_min,hype_score,like_count,comment_count,organiser_name')
+          .in('id', savedEv).limit(30);
+        if (data?.length) {
+          el.innerHTML = data.map(ev => {
+            const pr = ev.is_free ? '<span style="color:var(--li)">FREE</span>' : ev.price_min ? `R${ev.price_min}` : 'R—';
+            const img = ev.image_url || '';
+            return `<div style="display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer" onclick="openEv('${x(ev.id)}')">
+              <div style="width:52px;height:52px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--surf2)">
+                ${img ? `<img src="${x(img)}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'"/>` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.2rem">${ge(ev.genre)}</div>`}
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(ev.name)}</div>
+                <div style="font-size:.7rem;color:var(--mu);margin-top:2px">📍 ${x(ev.venue_city||'')} · ${fdate(ev.date_local)}</div>
+                <div style="font-size:.72rem;color:var(--or);margin-top:2px;font-family:'Syne',sans-serif;font-weight:700">${pr}</div>
+              </div>
+              <button style="background:none;border:none;font-size:1rem;cursor:pointer;color:var(--or);padding:4px" onclick="event.stopPropagation();toggleSave('ev','${x(ev.id)}',this)"><span class="ai">🔖</span></button>
+            </div>`;
+          }).join('');
+        } else {
+          el.innerHTML = `<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu)">${savedEv.length} saved event(s) — details currently unavailable</div>`;
+        }
+      } catch(e) {
+        el.innerHTML = `<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu)">${savedEv.length} saved event(s)</div>`;
+      }
+    }
+  }
+
+  /* ── Saved Places ── */
+  if (bl) {
+    if (!savedBz.length) {
+      bl.innerHTML = `<div class="no-results"><div class="no-results-ico">🏠</div><div class="no-results-title">No saved places</div><div class="no-results-sub">Tap 🏷 on any business card to save it.</div><button class="no-results-btn" onclick="showTab('discover')">Browse Places</button></div>`;
+    } else {
+      bl.innerHTML = '<div style="padding:14px 16px 8px;font-size:.78rem;color:var(--mu)">Loading saved places…</div>';
+      try {
+        const { data } = await sb.from('businesses')
+          .select('id,name,category,city,suburb,cover_image_url,rating,review_count,tagline')
+          .in('id', savedBz).limit(30);
+        if (data?.length) {
+          bl.innerHTML = data.map(b => `
+            <div style="display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer" onclick="openBiz('${x(b.id)}')">
+              <div style="width:52px;height:52px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--surf2)">
+                ${b.cover_image_url ? `<img src="${x(b.cover_image_url)}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'"/>` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.2rem">${ce(b.category)}</div>`}
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(b.name)}</div>
+                <div style="font-size:.7rem;color:var(--mu);margin-top:2px">${x(b.category||'')}${b.city ? ' · ' + x(b.city) : ''}</div>
+                ${b.rating ? `<div style="font-size:.7rem;color:#FFB800;margin-top:2px">★ ${b.rating} <span style="color:var(--mu)">(${b.review_count||0})</span></div>` : ''}
+              </div>
+              <button style="background:none;border:none;font-size:1rem;cursor:pointer;color:var(--or);padding:4px" onclick="event.stopPropagation();toggleSave('biz','${x(b.id)}',this)"><span class="ai">🔖</span></button>
+            </div>`).join('');
+        } else {
+          bl.innerHTML = `<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu)">${savedBz.length} saved place(s) — details currently unavailable</div>`;
+        }
+      } catch(e) {
+        bl.innerHTML = `<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu)">${savedBz.length} saved place(s)</div>`;
+      }
+    }
+  }
 }
 function switchST(tab, paneId) { tab.closest('.stbs').querySelectorAll('.stb').forEach(t => t.classList.remove('active')); tab.classList.add('active'); document.querySelectorAll('.sp').forEach(p => p.classList.remove('active')); document.getElementById(paneId)?.classList.add('active'); renderSaved(); }
 
@@ -1959,7 +2234,7 @@ async function searchUsers(query) {
   if (!query || query.trim().length < 2) { el.innerHTML = ''; return; }
   const sb = getSB();
   if (!sb) {
-    el.innerHTML = '<div style="padding:12px 16px;font-size:.78rem;color:var(--mu)">Sign in to search. <a href="signin.html" style="color:var(--or)">Sign in →</a></div>';
+    el.innerHTML = '<div style="padding:12px 16px;font-size:.78rem;color:var(--mu)">Sign in to search. <a href="/signin" style="color:var(--or)">Sign in →</a></div>';
     return;
   }
   el.innerHTML = '<div style="padding:10px 16px;font-size:.75rem;color:var(--mu)">Searching…</div>';
@@ -1999,21 +2274,17 @@ async function searchUsers(query) {
 }
 
 async function toggleFollow(targetId, btn) {
-  if (!currentUser) { showToast('Sign in to follow'); window.location.href='signin.html'; return; }
+  if (!currentUser) { showToast('Sign in to follow'); window.location.href='/signin'; return; }
   const isF = btn.classList.contains('cd');
   btn.disabled = true;
-  const token = localStorage.getItem('p_token') || '';
+  const sb = getSB();
   try {
-    const res = await fetch('/api/follows', {
-      method: isF ? 'DELETE' : 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ following_id: targetId }),
-    });
-    if (!res.ok) throw new Error((await res.json()).error || 'Failed');
     if (isF) {
+      await sb.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', targetId);
       _squadFollowing.delete(targetId);
       btn.className='vb cn'; btn.textContent='+ Follow'; showToast('Unfollowed');
     } else {
+      await sb.from('follows').insert({ follower_id: currentUser.id, following_id: targetId });
       _squadFollowing.add(targetId);
       btn.className='vb cd'; btn.textContent='✓ Following'; showToast('🔥 Following!');
     }
@@ -2028,12 +2299,13 @@ async function renderSquad() {
 
   el.innerHTML = '<div style="padding:12px 16px;font-size:.78rem;color:var(--mu)">Loading…</div>';
 
-  // currentUser may not be set yet if auth is still resolving — fetch from session
-  if (!currentUser && sb) {
+  // Always verify a live Supabase session — localStorage p_user may be stale/expired
+  if (sb) {
     try {
       const { data: { user } } = await sb.auth.getUser();
       if (user) currentUser = user;
-    } catch(e) {}
+      else currentUser = null;
+    } catch(e) { currentUser = null; }
   }
 
   if (!currentUser || !sb) {
@@ -2076,7 +2348,10 @@ async function renderSquad() {
       '</div>';
     }).join('');
   } catch(e) {
-    el.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Could not load friends: ' + x(e.message) + '</div>';
+    const msg = (e.message||'').includes('permission denied')
+      ? 'Sign in to see your friends.'
+      : 'Could not load friends. Try again.';
+    el.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">' + msg + '</div>';
     console.error('renderSquad error:', e);
   }
 }
@@ -2199,17 +2474,22 @@ async function openProfile(userId) {
   ov.style.display = 'flex';
   body.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div>';
   try {
-    const res = await fetch('/api/profiles/' + userId);
-    if (!res.ok) throw new Error('Profile not found');
-    const data = await res.json();
-    const profile = data.profile || {};
-    const posts_count = data.posts_count || 0;
-    const followers_count = data.followers_count || 0;
-    const following_count = data.following_count || 0;
-    const recent_posts = data.recent_posts || [];
     const sb = getSB();
+    if (!sb) throw new Error('Supabase not loaded');
+    const [{ data: profile, error: pErr }, { count: postsCnt }, { count: followersCnt }, { count: followingCnt }, { data: recent }] = await Promise.all([
+      sb.from('profiles').select('id,username,display_name,avatar_url,role,bio,city,genres').eq('id', userId).maybeSingle(),
+      sb.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+      sb.from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', userId),
+      sb.from('follows').select('following_id', { count: 'exact', head: true }).eq('follower_id', userId),
+      sb.from('posts').select('id,image_url,caption,created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(6),
+    ]);
+    if (pErr || !profile) throw new Error(pErr?.message || 'Profile not found');
+    const posts_count = postsCnt || 0;
+    const followers_count = followersCnt || 0;
+    const following_count = followingCnt || 0;
+    const recent_posts = recent || [];
     let isFollowing = false;
-    if (sb && currentUser) {
+    if (currentUser) {
       const { data: fw } = await sb.from('follows').select('follower_id').eq('follower_id', currentUser.id).eq('following_id', userId).maybeSingle();
       isFollowing = !!fw;
     }
@@ -2224,7 +2504,7 @@ async function openProfile(userId) {
 
     const postsHtml = recent_posts.length ? recent_posts.map(p => `
       <div style="border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surf);margin-bottom:10px">
-        ${p.image_url ? `<div style="width:100%;aspect-ratio:1;background:#000;overflow:hidden"><img src="${x(p.image_url)}" style="width:100%;height:100%;object-fit:cover" loading="lazy"/></div>` : ''}
+        ${firstImg(p.image_url) ? `<div style="position:relative;width:100%;aspect-ratio:1;background:#000;overflow:hidden"><img src="${x(firstImg(p.image_url))}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'"/>${imgCount(p.image_url)>1?`<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.7);color:#fff;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;padding:3px 8px;border-radius:50px">📷 ${imgCount(p.image_url)}</span>`:''}</div>` : ''}
         ${p.caption ? `<div style="padding:10px 12px;font-size:.82rem;color:var(--tx);line-height:1.45">${x(p.caption)}</div>` : ''}
         <div style="padding:6px 12px 10px;font-size:.62rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.08em;text-transform:uppercase">${timeAgoShort(p.created_at)}</div>
       </div>
@@ -2242,7 +2522,7 @@ async function openProfile(userId) {
         </div>
         <div style="display:flex;gap:8px;padding-bottom:6px">
           ${currentUser && currentUser.id !== userId ? `<button id="po-follow-btn" onclick="toggleFollowOverlay('${x(userId)}')" style="background:${isFollowing?'transparent':'linear-gradient(135deg,#B026FF,#FF5C00)'};border:${isFollowing?'1px solid var(--border2)':'none'};color:${isFollowing?'var(--mu2)':'#fff'};padding:9px 20px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;cursor:pointer">${isFollowing?'✓ Following':'+ Follow'}</button>` : ''}
-          <button onclick="closeProfOverlay();window.location.href='user-profile.html?id=${x(userId)}'" style="background:var(--surf);border:1px solid var(--border2);color:var(--mu2);padding:9px 14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">Full Profile →</button>
+          <button onclick="closeProfOverlay();window.location.href='/user-profile?id=${x(userId)}'" style="background:var(--surf);border:1px solid var(--border2);color:var(--mu2);padding:9px 14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">Full Profile →</button>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
@@ -2272,18 +2552,14 @@ async function toggleFollowOverlay(targetId) {
   const btn = document.getElementById('po-follow-btn');
   const isF = btn && btn.textContent.includes('Following');
   if (btn) btn.disabled = true;
-  const token = localStorage.getItem('p_token') || '';
+  const sb = getSB();
   try {
-    const res = await fetch('/api/follows', {
-      method: isF ? 'DELETE' : 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ following_id: targetId }),
-    });
-    if (!res.ok) throw new Error((await res.json()).error || 'Failed');
     if (isF) {
+      await sb.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', targetId);
       if (btn) { btn.textContent = '+ Follow'; btn.style.background = 'linear-gradient(135deg,#B026FF,#FF5C00)'; btn.style.border = 'none'; btn.style.color = '#fff'; }
       showToast('Unfollowed');
     } else {
+      await sb.from('follows').insert({ follower_id: currentUser.id, following_id: targetId });
       if (btn) { btn.textContent = '✓ Following'; btn.style.background = 'transparent'; btn.style.border = '1px solid var(--border2)'; btn.style.color = 'var(--mu2)'; }
       showToast('🔥 Following!');
     }
@@ -2337,7 +2613,7 @@ async function initSupabaseSession() {
       localStorage.setItem('p_token', session.access_token);
     }
     const btn = document.getElementById('auth-btn');
-    if (btn) { btn.textContent='Feed'; btn.onclick=()=>window.location.href='feeds.html'; }
+    if (btn) { btn.textContent='Feed'; btn.onclick=()=>window.location.href='/feeds'; }
     currentUser = session.user;
     renderProfile();
   } catch(e) { console.warn('initSupabaseSession:', e.message); }
@@ -2345,10 +2621,39 @@ async function initSupabaseSession() {
   sb.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
       try {
+        localStorage.setItem('p_token', session.access_token);
+
+        // Email confirmation flow: create profile from pending data then redirect
+        let pending = null;
+        try { pending = JSON.parse(localStorage.getItem('p_pending_profile') || 'null'); } catch(e) {}
+        if (pending) {
+          try {
+            const r = await fetch('/api/auth/profile', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+              body: JSON.stringify({ profile: pending })
+            });
+            const d = await r.json().catch(() => ({}));
+            const profile = d.profile || pending;
+            localStorage.setItem('p_user', JSON.stringify({
+              id: session.user.id, email: session.user.email,
+              display_name: profile.display_name || session.user.email?.split('@')[0],
+              role: profile.role || 'user'
+            }));
+            localStorage.setItem('p_profile', JSON.stringify(profile));
+          } catch(e) {}
+          localStorage.removeItem('p_pending_profile');
+          const role = pending.role || 'user';
+          const dest = role === 'organizer' ? '/organizer' : role === 'business' ? '/business' : '/feeds';
+          window.location.href = dest;
+          return;
+        }
+
+        // Existing user (e.g. Google OAuth callback)
         const { data: prof } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
         const role = prof?.role || 'user';
-        if (role === 'organizer') { window.location.href = 'organizer-dashboard.html'; return; }
-        if (role === 'business')  { window.location.href = 'business-dashboard.html';  return; }
+        if (role === 'organizer') { window.location.href = '/organizer'; return; }
+        if (role === 'business')  { window.location.href = '/business';  return; }
       } catch(e) {}
     }
   });
@@ -2365,15 +2670,22 @@ document.addEventListener('DOMContentLoaded', initSupabaseSession);
     var s = JSON.parse(localStorage.getItem('p_user'));
     if (s && s.id) {
       var btn = document.getElementById('auth-btn');
-      if (btn) { btn.textContent = 'Feed'; btn.onclick = function(){ window.location.href='feeds.html'; }; }
+      if (btn) { btn.textContent = 'Feed'; btn.onclick = function(){ window.location.href='/feeds'; }; }
     }
   } catch(e) {}
 })();
 window.addEventListener('DOMContentLoaded', () => {
+  history.replaceState({ tab: 'home', detail: false }, '');
   // Load live data immediately
   loadFeed(true);
   loadFrontline();
   triggerRev();
+
+  // Deep-link from /map: ?eid=xxx or ?bid=xxx
+  const _qp = new URLSearchParams(location.search);
+  const _eid = _qp.get('eid'), _bid = _qp.get('bid');
+  if (_eid) setTimeout(() => openEv(_eid), 400);
+  else if (_bid) setTimeout(() => openBiz(_bid), 400);
 
   // Check auth state + notification dot
   const sb = getSB();
@@ -2396,10 +2708,42 @@ window.addEventListener('DOMContentLoaded', () => {
             if (d) d.style.display = 'block';
           })
           .subscribe();
+
+        // Register service worker + subscribe to web push
+        _registerPush(user);
       }
     });
   }
 });
+
+async function _registerPush(user) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) return; // already subscribed
+    const { key } = await fetch('/api/push/vapid-public-key').then(r => r.json());
+    if (!key) return; // VAPID not configured
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: _urlB64ToUint8(key),
+    });
+    const { data: { session } } = await getSB().auth.getSession();
+    if (!session) return;
+    const pf = JSON.parse(localStorage.getItem('p_profile') || '{}');
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ subscription: sub, city: pf.city || null, genres: pf.genres || [] }),
+    });
+  } catch(e) { /* push not supported or denied — silent fail */ }
+}
+
+function _urlB64ToUint8(b64) {
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(raw, c => c.charCodeAt(0));
+}
 
 /* ── BUSINESSES FULL PAGE ── */
 let _bizPageData = [];
@@ -2420,9 +2764,12 @@ async function openBizPage() {
   const grid = document.getElementById('bp-grid');
   if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--mu)">Loading…</div>';
   try {
-    const res  = await fetch(API + '/businesses?show_all=true&limit=50');
-    const data = await res.json();
-    _bizPageData = data.businesses || [];
+    const sb = getSB();
+    const { data: bizAll } = await sb.from('businesses')
+      .select('id,name,category,suburb,city,lat,lon,rating,review_count,price_range,cover_image_url,is_frontline,frontline_rank,tagline,description,phone,website,is_verified')
+      .order('is_frontline', { ascending: false })
+      .order('rating', { ascending: false, nullsFirst: false }).limit(50);
+    _bizPageData = bizAll || [];
     _renderBizPage();
   } catch(e) {
     if (grid) grid.innerHTML = '<div style="grid-column:1/-1;padding:30px;text-align:center;color:var(--mu)">Could not load. Check connection.</div>';
@@ -2465,6 +2812,59 @@ function _renderBizPage() {
         </div>
       </div>
     </div>`).join('');
+}
+
+/* ══════════════════════════════════════════════════
+   REPORT EVENT
+══════════════════════════════════════════════════ */
+let _reportEvId = null, _reportEvName = null;
+
+function openReportModal(evId, evName) {
+  _reportEvId = evId; _reportEvName = evName;
+  document.getElementById('report-reason').value = '';
+  document.getElementById('report-detail').value = '';
+  const msg = document.getElementById('report-msg');
+  msg.style.display = 'none';
+  document.getElementById('report-submit-btn').disabled = false;
+  document.getElementById('report-submit-btn').textContent = 'Submit Report';
+  const ov = document.getElementById('report-overlay');
+  ov.style.display = 'flex';
+}
+
+function closeReportModal() {
+  document.getElementById('report-overlay').style.display = 'none';
+  _reportEvId = null; _reportEvName = null;
+}
+
+async function submitReport() {
+  const reason = document.getElementById('report-reason').value;
+  const detail = document.getElementById('report-detail').value.trim();
+  const msg = document.getElementById('report-msg');
+  if (!reason) {
+    msg.style.cssText = 'display:block;background:rgba(255,45,120,.12);color:#FF2D78;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px';
+    msg.textContent = 'Please select a reason.';
+    return;
+  }
+  const btn = document.getElementById('report-submit-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const { data: { session } } = await getSB().auth.getSession();
+    const headers = { 'Content-Type': 'application/json' };
+    if (session) headers['Authorization'] = 'Bearer ' + session.access_token;
+    const r = await fetch('/api/report-event', {
+      method: 'POST', headers,
+      body: JSON.stringify({ event_id: _reportEvId, event_name: _reportEvName, reason, detail: detail || null }),
+    });
+    if (!r.ok) throw new Error((await r.json()).error || 'Failed');
+    msg.style.cssText = 'display:block;background:rgba(198,255,74,.1);color:#C6FF4A;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px';
+    msg.textContent = '✅ Report submitted. Our team will review it shortly.';
+    btn.textContent = 'Reported';
+    setTimeout(closeReportModal, 2000);
+  } catch(e) {
+    msg.style.cssText = 'display:block;background:rgba(255,45,120,.12);color:#FF2D78;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px';
+    msg.textContent = e.message || 'Failed to submit. Please try again.';
+    btn.disabled = false; btn.textContent = 'Submit Report';
+  }
 }
 
 </script>

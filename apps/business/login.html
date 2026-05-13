@@ -48,7 +48,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 </head>
 <body>
 <div class="wrap">
-  <a href="index.html" class="logo"><span class="dot"></span>PULSIFY</a>
+  <a href="/" class="logo"><span class="dot"></span>PULSIFY</a>
   <div class="sub-logo">Business Portal</div>
 
   <div class="card">
@@ -140,7 +140,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     </div>
   </div>
 
-  <div class="home-link"><a href="index.html">← Back to Pulsify Home</a></div>
+  <div class="home-link"><a href="/">← Back to Pulsify Home</a></div>
 </div>
 
 <script>
@@ -152,13 +152,24 @@ const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 (async () => {
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
-    redirectByRole();
+    // Always re-sync profile on page load — localStorage may be stale or missing
+    try {
+      const res = await fetch('/api/auth/ensure-business-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      });
+      const { profile, error } = await res.json();
+      if (res.ok && profile) {
+        await saveConfirmedProfile(session, profile);
+        redirectByRole();
+      }
+    } catch (e) { /* ignore — user stays on login page */ }
   }
 })();
 
-// Listen for auth events (e.g., redirect from Google)
+// Listen for auth events from Google OAuth only (email login handled by doLogin)
 sb.auth.onAuthStateChange(async (event, session) => {
-  if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+  if (event === 'SIGNED_IN' && session && session.user.app_metadata?.provider !== 'email') {
     try {
       const res = await fetch('/api/auth/ensure-business-profile', {
         method: 'POST',
@@ -166,7 +177,6 @@ sb.auth.onAuthStateChange(async (event, session) => {
       });
       const { profile, error } = await res.json();
       if (!res.ok) throw new Error(error || 'Failed to sync business profile.');
-      
       await saveConfirmedProfile(session, profile);
       redirectByRole();
     } catch (e) {
@@ -184,9 +194,9 @@ function redirectByRole() {
   const currentPage = window.location.pathname.split('/').pop();
 
   if (role === 'organizer') {
-    if (currentPage !== 'organizer-dashboard.html') window.location.href = 'organizer-dashboard.html';
+    window.location.href = '/organizer';
   } else if (role === 'business' || role === 'admin') {
-    if (currentPage !== 'business-dashboard.html') window.location.href = 'business-dashboard.html';
+    window.location.href = '/business';
   }
 }
 
@@ -304,7 +314,7 @@ async function doRegister() {
       const session = { id: d.user.id, email, name, type, city, province, phone, role: 'business' };
       localStorage.setItem('biz_session', JSON.stringify(session));
       showMsg('reg-msg', '✅ Account created! Redirecting…', 'ok');
-      setTimeout(() => window.location.href = 'business-dashboard.html', 800);
+      setTimeout(() => window.location.href = '/business', 800);
     } else {
       throw new Error('No session token returned.');
     }

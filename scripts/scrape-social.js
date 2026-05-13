@@ -3,9 +3,25 @@
 // Requires: APIFY_TOKEN, SUPABASE_URL, SUPABASE_SERVICE_KEY env vars.
 'use strict';
 const https   = require('https');
+const fs      = require('fs');
+const path    = require('path');
 const { createClient } = require('@supabase/supabase-js');
 
+// Load .env (no dotenv dependency — read once at startup)
+(function loadEnv() {
+  const envPath = path.join(__dirname, '..', '.env');
+  if (!fs.existsSync(envPath)) return;
+  for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
+    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+  }
+})();
+
 const APIFY_TOKEN = process.env.APIFY_TOKEN;
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY in environment / .env');
+  process.exit(1);
+}
 const sb = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY,
@@ -17,8 +33,8 @@ const INGEST_KEY = process.env.INGEST_SECRET;
 
 // Apify actor IDs for each platform
 const ACTORS = {
-  instagram: 'apify/instagram-hashtag-scraper',
-  tiktok:    'clockworks/free-tiktok-scraper',
+  instagram: 'apify/instagram-scraper',
+  tiktok:    'clockworks/tiktok-scraper',
   facebook:  'apify/facebook-pages-scraper',
 };
 
@@ -105,16 +121,21 @@ function normalise(item, source) {
 }
 
 async function runActor(platform, actorId, input) {
-  console.log(`\n🚀 Starting ${platform} actor…`);
-  const { data: run } = await apifyPost(`/v2/acts/${actorId}/runs?token=${APIFY_TOKEN}`, input);
-  if (!run?.id) { console.warn(`  Failed to start ${platform} actor`); return []; }
+  console.log(`\n🚀 Starting ${platform} actor (${actorId})…`);
+  const resp = await apifyPost(`/v2/acts/${actorId}/runs?token=${APIFY_TOKEN}`, input);
+  const run = resp?.data;
+  if (!run?.id) {
+    console.warn(`  Failed to start ${platform} actor`);
+    console.warn(`  Apify response:`, JSON.stringify(resp, null, 2));
+    return [];
+  }
 
   console.log(`  Run ID: ${run.id} — waiting…`);
   const finished = await waitForRun(run.id);
   if (!finished || finished.status !== 'SUCCEEDED') { console.warn(`  ${platform} run did not succeed (${finished?.status})`); return []; }
 
-  const { items } = await apifyGet(`/v2/datasets/${finished.defaultDatasetId}/items?format=json&clean=true`);
-  return items || [];
+  const result = await apifyGet(`/v2/datasets/${finished.defaultDatasetId}/items?format=json&clean=true`);
+  return result?.items || [];
 }
 
 async function ingestLeads(leads) {
@@ -137,13 +158,13 @@ async function run() {
 
   // ── Instagram ──────────────────────────────────────────────────────────────
   const igRaw = await runActor('instagram', ACTORS.instagram, {
-    hashtags: SEARCHES.instagram, resultsLimit: 50,
+    hashtags: SEARCHES.instagram, resultsType: 'posts', resultsLimit: 50,
   });
   await ingestLeads(igRaw.map(i => normalise(i, 'instagram')).filter(Boolean));
 
   // ── TikTok ─────────────────────────────────────────────────────────────────
   const ttRaw = await runActor('tiktok', ACTORS.tiktok, {
-    hashtags: SEARCHES.tiktok, resultsPerPage: 30,
+    hashtags: SEARCHES.tiktok, maxVideos: 30,
   });
   await ingestLeads(ttRaw.map(i => normalise(i, 'tiktok')).filter(Boolean));
 

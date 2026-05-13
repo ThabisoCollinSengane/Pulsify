@@ -97,7 +97,7 @@ textarea.inp{resize:none;height:78px;line-height:1.5}
     <input type="file" id="av-file" accept="image/*" style="display:none" onchange="handleAvatar(this)"/>
     <div class="av-name" id="av-name">Your Name</div>
     <div class="av-handle" id="av-handle">@handle</div>
-    <button class="av-btn" onclick="window.location.href='user-profile.html'">View Profile →</button>
+    <button class="av-btn" onclick="window.location.href='/user-profile'">View Profile →</button>
   </div>
 
   <div class="sec">
@@ -188,7 +188,7 @@ let selectedGenres = new Set();
 
 async function loadData() {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) { window.location.href = 'signin.html'; return; }
+  if (!session) { window.location.href = '/signin'; return; }
   currentUser = session.user;
   const { data: profile } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
   currentProfile = profile || {};
@@ -314,8 +314,8 @@ async function saveAll() {
   showToast('✅ All changes saved!', 'ok');
 }
 
-async function logout() { await sb.auth.signOut(); localStorage.clear(); window.location.href = 'signin.html'; }
-async function deleteAccount() { if (!confirm('Delete your account? This cannot be undone.')) return; const { error } = await sb.auth.admin.deleteUser(currentUser.id); if (error) showToast(error.message, 'err'); else { localStorage.clear(); window.location.href = 'signin.html'; } }
+async function logout() { await sb.auth.signOut(); localStorage.clear(); window.location.href = '/signin'; }
+async function deleteAccount() { if (!confirm('Delete your account? This cannot be undone.')) return; const { error } = await sb.auth.admin.deleteUser(currentUser.id); if (error) showToast(error.message, 'err'); else { localStorage.clear(); window.location.href = '/signin'; } }
 function showToast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast ' + type + ' show'; setTimeout(() => t.classList.remove('show'), 3000); }
 
 loadData();

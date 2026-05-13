@@ -4,14 +4,19 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
+<meta name="build-version" content="v2.1.0-20260513"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
 <title>Organizer Dashboard — Pulsify</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0;--bh:70px}
 html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
-body{padding-bottom:calc(var(--bh)+20px)}
+body{padding-bottom:calc(var(--bh)+56px)}
 .tb{position:fixed;top:0;left:0;right:0;height:58px;z-index:800;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:rgba(5,8,15,.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
 .logo{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.06em;display:flex;align-items:center;gap:8px;color:var(--tx)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--or);box-shadow:0 0 12px var(--or);animation:p 2s ease-in-out infinite}
@@ -55,6 +60,22 @@ select.inp option{background:#0D1424}
 .bb.active svg{stroke:var(--or)}
 .bl{font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);transition:color .2s}
 .bb.active .bl{color:var(--or)}
+/* ── SETTINGS ── */
+.setting-card{background:var(--surf2);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:10px}
+.setting-card-row{display:flex;align-items:center;justify-content:space-between}
+.setting-card-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.faq-item{border:1px solid var(--border);border-radius:12px;margin-bottom:8px;overflow:hidden}
+.faq-q{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.faq-q .faq-arr{transition:transform .2s;flex-shrink:0;color:var(--mu)}
+.faq-item.open .faq-q .faq-arr{transform:rotate(180deg)}
+.faq-a{display:none;padding:0 14px 12px;font-size:.78rem;color:var(--mu);line-height:1.6}
+.faq-item.open .faq-a{display:block}
+.msg{padding:10px 14px;border-radius:10px;font-size:.78rem;margin-bottom:12px;display:none;line-height:1.5}
+.msg.show{display:block}
+.msg-ok{background:rgba(198,255,74,.08);border:1px solid rgba(198,255,74,.25);color:var(--li)}
+.msg-err{background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);color:var(--pk)}
+.btn-sec{background:var(--surf);border:1.5px solid var(--border2);border-radius:50px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;padding:9px 16px;cursor:pointer;transition:all .2s}
+.section-label{font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:8px;margin-top:14px}
 .toast{position:fixed;bottom:calc(var(--bh)+16px);left:50%;transform:translateX(-50%) translateY(12px);background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 22px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--tx);z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.ok{border-color:rgba(198,255,74,.4);color:var(--li)}
@@ -86,6 +107,7 @@ select.inp option{background:#0D1424}
 </div>
 
 <div class="main">
+  <div id="org-sub-banner" style="display:none;margin:0 0 14px;padding:12px 16px;border-radius:14px;font-size:.78rem;line-height:1.5"></div>
   <div class="hero">
     <div class="hero-name" id="org-name">Loading…</div>
     <div class="hero-sub" id="org-handle">@handle · Event Organizer</div>
@@ -97,10 +119,13 @@ select.inp option{background:#0D1424}
     <div class="stat-card"><div class="stat-n" id="stat-events">0</div><div class="stat-l">Events</div></div>
   </div>
 
-  <div class="tabs">
-    <div class="tab active" onclick="switchTab(this,'pane-post')">📢 New Post</div>
-    <div class="tab" onclick="switchTab(this,'pane-event')">🎟 New Event</div>
-    <div class="tab" onclick="switchTab(this,'pane-myposts')">📋 My Posts</div>
+  <div class="tabs" style="flex-wrap:wrap;gap:3px">
+    <div class="tab active" onclick="switchTab(this,'pane-post')">📢 Post</div>
+    <div class="tab" onclick="switchTab(this,'pane-event')">🎟 Event</div>
+    <div class="tab" onclick="switchTab(this,'pane-myposts')">📋 Posts</div>
+    <div class="tab" onclick="switchTab(this,'pane-scan')">📷 Scan</div>
+    <div class="tab" onclick="switchTab(this,'pane-promote')">🚀 Promote</div>
+    <div class="tab" onclick="switchTab(this,'pane-settings')">⚙️ Settings</div>
   </div>
 
   <div class="pane active" id="pane-post">
@@ -108,12 +133,16 @@ select.inp option{background:#0D1424}
       <div class="card-body">
         <div class="img-drop" id="img-drop" onclick="document.getElementById('post-img').click()">
           <span style="font-size:1.8rem">🖼</span>
-          <span style="font-size:.78rem;color:var(--mu)">Tap to add an image (optional)</span>
+          <span id="org-img-hint" style="font-size:.78rem;color:var(--mu)">Tap to add up to 5 photos</span>
         </div>
-        <input type="file" id="post-img" accept="image/*" style="display:none" onchange="previewImg(this)"/>
+        <input type="file" id="post-img" accept="image/*" multiple style="display:none" onchange="previewImgs(this)"/>
+        <div id="org-img-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:8px"></div>
         <textarea class="inp" id="post-caption" placeholder="Write your update, promo or announcement…" maxlength="1000"></textarea>
         <input class="inp" id="post-event-tag" placeholder="Tag an event name (optional)"/>
-        <button class="btn-primary" id="post-btn" onclick="submitPost()">Publish to Feed 🚀</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn-sec" style="flex:1" onclick="previewOrgPost()">👁 Preview</button>
+          <button class="btn-primary" id="post-btn" style="flex:2" onclick="submitPost()">Publish 🚀</button>
+        </div>
       </div>
     </div>
   </div>
@@ -123,8 +152,14 @@ select.inp option{background:#0D1424}
       <div class="card-body">
         <input class="inp" id="ev-name" placeholder="Event name *"/>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <input class="inp" id="ev-date" type="date" style="color-scheme:dark;margin-bottom:0"/>
-          <input class="inp" id="ev-time" type="time" style="color-scheme:dark;margin-bottom:0"/>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:5px">Date *</div>
+            <input class="inp" id="ev-date" type="date" style="color-scheme:dark;margin-bottom:0;width:100%"/>
+          </div>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:5px">Time</div>
+            <input class="inp" id="ev-time" type="time" style="color-scheme:dark;margin-bottom:0;width:100%"/>
+          </div>
         </div>
         <div style="height:10px"></div>
         <input class="inp" id="ev-venue" placeholder="Venue name *"/>
@@ -156,6 +191,114 @@ select.inp option{background:#0D1424}
       <div class="empty">Loading your posts…</div>
     </div>
   </div>
+
+  <!-- ══ PROMOTE ══ -->
+  <div class="pane" id="pane-promote">
+    <div class="card">
+      <div class="card-body">
+        <div class="section-label">🚀 Promote Your Event</div>
+        <div style="font-size:.76rem;color:var(--mu);margin-bottom:14px;line-height:1.5">Your promotion will appear in the "Featured This Weekend" section or injected into the event feed. All promotions are reviewed before going live.</div>
+
+        <div id="promo-msg-org" style="display:none;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px"></div>
+
+        <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Pick an event to promote</div>
+        <select class="inp" id="promo-event-sel" onchange="onPromoEventSelect()" style="margin-bottom:10px">
+          <option value="">— Select one of your events —</option>
+        </select>
+
+        <div id="promo-event-preview" style="display:none;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;font-size:.78rem"></div>
+
+        <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Placement *</div>
+        <select class="inp" id="promo-placement" style="margin-bottom:10px">
+          <option value="featured_weekend">⚡ Featured This Weekend (top of feed)</option>
+          <option value="feed_inject">📌 Feed Inject (between events)</option>
+          <option value="both">✨ Both</option>
+        </select>
+
+        <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Duration *</div>
+        <select class="inp" id="promo-duration" style="margin-bottom:10px">
+          <option value="7">7 days</option>
+          <option value="14">14 days</option>
+          <option value="30">30 days</option>
+        </select>
+
+        <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Target cities <span style="color:var(--mu)">(leave blank = all cities)</span></div>
+        <input class="inp" id="promo-cities" placeholder="e.g. Durban, Johannesburg" style="margin-bottom:10px"/>
+
+        <button class="btn-primary" id="promo-btn-org" onclick="submitOrgPromo()" style="width:100%">Submit for Review 🚀</button>
+
+        <div style="margin-top:20px">
+          <div class="section-label">Your Promotions</div>
+          <div id="promo-mine-org"><div style="padding:20px 0;text-align:center;color:var(--mu);font-size:.8rem">Loading…</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pane" id="pane-settings">
+    <div class="card">
+      <div class="card-body" style="padding-bottom:0">
+
+        <!-- Verify Profile -->
+        <div class="section-label">Account</div>
+        <div class="setting-card">
+          <div class="setting-card-row">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="setting-card-icon" style="background:linear-gradient(135deg,rgba(198,255,74,.15),rgba(176,38,255,.15));border:1px solid rgba(198,255,74,.25)">🏆</div>
+              <div>
+                <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Verify Profile</div>
+                <div id="org-verif-status" style="font-size:.68rem;color:var(--mu)">Not verified</div>
+              </div>
+            </div>
+            <button class="btn-sec" id="org-verif-btn" style="padding:6px 12px;font-size:.72rem" onclick="openOrgSheet('org-verify-sheet')">Apply →</button>
+          </div>
+          <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Get a ✅ verified badge. Takes <strong>1–3 business days</strong> after submission.</div>
+        </div>
+
+        <!-- Payment Method -->
+        <div class="setting-card">
+          <div class="setting-card-row">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="setting-card-icon" style="background:linear-gradient(135deg,rgba(0,229,255,.15),rgba(176,38,255,.1));border:1px solid rgba(0,229,255,.2)">💳</div>
+              <div>
+                <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Payment Method</div>
+                <div id="org-payment-status" style="font-size:.68rem;color:var(--mu)">No payment method added</div>
+              </div>
+            </div>
+            <button class="btn-sec" id="org-payment-btn" style="padding:6px 12px;font-size:.72rem" onclick="openOrgSheet('org-payment-sheet')">Add →</button>
+          </div>
+          <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Add bank account to receive payouts from ticket sales.</div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="section-label" style="margin-top:4px">FAQ & Support</div>
+        <div id="faq-org"></div>
+        <div style="margin-top:14px;text-align:center">
+          <a href="mailto:support@pulsify.co.za" style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;color:var(--or);text-decoration:none">✉️ Contact Support</a>
+        </div>
+        <div style="margin-top:16px;padding-bottom:24px;text-align:center">
+          <button onclick="doLogout()" style="background:rgba(255,45,120,.1);border:1.5px solid rgba(255,45,120,.3);border-radius:50px;padding:10px 32px;color:#FF2D78;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;width:100%;max-width:260px">🚪 Sign Out</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pane" id="pane-scan">
+    <div class="card">
+      <div class="card-body">
+        <div class="section-label" style="margin-top:0">Event</div>
+        <select class="inp" id="scan-event-sel" onchange="loadScanStats()">
+          <option value="">All my events</option>
+        </select>
+        <div id="scan-stats" style="display:flex;gap:8px;margin-bottom:14px"></div>
+        <button class="btn-primary" onclick="openOrgQrScanner()">📷 Scan Ticket at Door</button>
+      </div>
+    </div>
+    <div class="section-label">Recent Check-ins</div>
+    <div id="scan-checkins" class="card">
+      <div class="empty">Select an event to see check-ins</div>
+    </div>
+  </div>
 </div>
 
 <nav class="bn">
@@ -167,11 +310,144 @@ select.inp option{background:#0D1424}
     <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M16 7v-.5a3.5 3.5 0 00-7 0V7"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
     <span class="bl">Dashboard</span>
   </button>
-  <button class="bb" onclick="window.location.href='user-profile.html'">
+  <button class="bb" onclick="window.location.href='/user-profile'">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
     <span class="bl">Profile</span>
   </button>
 </nav>
+
+<!-- ORG VERIFY SHEET -->
+<div class="sn-overlay" id="org-verify-sheet" onclick="if(event.target===this)closeOrgSheet('org-verify-sheet')">
+  <div class="sn-sheet" style="max-height:92vh">
+    <div class="sn-handle"></div>
+    <div class="sn-head"><div class="sn-title">Verify Profile</div><button class="sn-close" onclick="closeOrgSheet('org-verify-sheet')">✕</button></div>
+    <div class="sn-body" style="padding-bottom:32px">
+      <div style="background:rgba(176,38,255,.08);border:1px solid rgba(176,38,255,.2);border-radius:10px;padding:10px 14px;font-size:.76rem;color:var(--mu);line-height:1.5;margin:14px 0">⏱ Verification takes <strong style="color:var(--tx)">1–3 business days</strong>. You'll be notified once reviewed.</div>
+      <div id="org-verif-msg" class="msg"></div>
+      <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Is your organisation registered? *</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button id="org-reg-yes" class="btn-sec" style="flex:1;padding:10px;font-size:.78rem" onclick="setOrgRegistered(true)">✅ Yes, registered</button>
+        <button id="org-reg-no" class="btn-sec" style="flex:1;padding:10px;font-size:.78rem" onclick="setOrgRegistered(false)">Informal / Individual</button>
+      </div>
+      <div id="org-registered-fields" style="display:none">
+        <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Company / Organisation Name *</div>
+        <input class="inp" id="ovf-company" style="width:100%;margin-bottom:10px" placeholder="e.g. Events SA (Pty) Ltd"/>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Reg. Number</div>
+            <input class="inp" id="ovf-reg" style="width:100%" placeholder="CIPC / CK number"/>
+          </div>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Entity Type</div>
+            <select class="inp" id="ovf-entity" style="width:100%;background:var(--bg2);color:var(--tx)">
+              <option>(Pty) Ltd</option><option>CC</option><option>Non-Profit</option><option>Partnership</option><option>Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Contact Person Name *</div>
+      <input class="inp" id="ovf-contact" style="width:100%;margin-bottom:10px" placeholder="Full name"/>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">SA ID Number *</div>
+          <input class="inp" id="ovf-id" style="width:100%" placeholder="13-digit ID" inputmode="numeric"/>
+        </div>
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Phone *</div>
+          <input class="inp" id="ovf-phone" style="width:100%" type="tel" placeholder="+27…"/>
+        </div>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Address *</div>
+      <input class="inp" id="ovf-address" style="width:100%;margin-bottom:10px" placeholder="Physical business address"/>
+      <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">About Your Events *</div>
+      <textarea class="inp" id="ovf-desc" style="width:100%;min-height:80px;margin-bottom:14px;resize:vertical" placeholder="What kind of events do you organise?"></textarea>
+      <button class="btn-primary" style="width:100%" onclick="submitOrgVerification()">Submit for Verification 🏆</button>
+    </div>
+  </div>
+</div>
+
+<!-- ORG PAYMENT SHEET -->
+<div class="sn-overlay" id="org-payment-sheet" onclick="if(event.target===this)closeOrgSheet('org-payment-sheet')">
+  <div class="sn-sheet">
+    <div class="sn-handle"></div>
+    <div class="sn-head"><div class="sn-title">Payment Method</div><button class="sn-close" onclick="closeOrgSheet('org-payment-sheet')">✕</button></div>
+    <div class="sn-body" style="padding-bottom:32px">
+      <div style="background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:10px 14px;font-size:.76rem;color:var(--mu);margin:14px 0">💳 Banking details stored securely for ticket payout processing.</div>
+      <div id="org-payment-msg" class="msg"></div>
+      <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Bank Name *</div>
+      <select class="inp" id="opm-bank" style="width:100%;background:var(--bg2);color:var(--tx);margin-bottom:10px">
+        <option value="">Select bank…</option>
+        <option>Absa</option><option>Capitec</option><option>FNB</option>
+        <option>Nedbank</option><option>Standard Bank</option><option>Investec</option>
+        <option>TymeBank</option><option>African Bank</option><option>Other</option>
+      </select>
+      <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Account Holder Name *</div>
+      <input class="inp" id="opm-name" style="width:100%;margin-bottom:10px" placeholder="Name as on bank account"/>
+      <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Account Number *</div>
+      <input class="inp" id="opm-account" style="width:100%;margin-bottom:10px" inputmode="numeric" placeholder="Account number"/>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Account Type *</div>
+          <select class="inp" id="opm-type" style="width:100%;background:var(--bg2);color:var(--tx)">
+            <option value="">Select…</option><option>Current / Cheque</option><option>Savings</option><option>Transmission</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Branch Code</div>
+          <input class="inp" id="opm-branch" style="width:100%" inputmode="numeric" placeholder="6-digit code"/>
+        </div>
+      </div>
+      <button class="btn-primary" style="width:100%" onclick="submitOrgPayment()">Save Payment Method 💳</button>
+    </div>
+  </div>
+</div>
+
+<!-- ORG POST PREVIEW SHEET -->
+<div class="sn-overlay" id="org-preview-sheet" onclick="if(event.target===this)closeOrgSheet('org-preview-sheet')">
+  <div class="sn-sheet">
+    <div class="sn-handle"></div>
+    <div class="sn-head"><div class="sn-title">Preview Post</div><button class="sn-close" onclick="closeOrgSheet('org-preview-sheet')">✕</button></div>
+    <div class="sn-body" style="padding-bottom:32px">
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">How it'll appear in the feed</div>
+      <div style="background:var(--surf2);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+        <div id="org-preview-imgs" style="display:grid;gap:2px"></div>
+        <div style="padding:12px 14px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0">🎪</div>
+            <div>
+              <div style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700" id="org-preview-name">Organizer</div>
+              <div style="font-size:.65rem;color:var(--mu)">Just now</div>
+            </div>
+          </div>
+          <div style="font-size:.84rem;line-height:1.5;color:var(--tx);white-space:pre-wrap" id="org-preview-caption"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn-sec" style="flex:1" onclick="closeOrgSheet('org-preview-sheet')">← Edit</button>
+        <button class="btn-primary" style="flex:2" onclick="closeOrgSheet('org-preview-sheet');submitPost()">Publish 🚀</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ORG QR SCANNER -->
+<div class="sn-overlay" id="org-qr-overlay" onclick="if(event.target===this)closeOrgQrScanner()">
+  <div class="sn-sheet" style="max-height:92vh">
+    <div class="sn-handle"></div>
+    <div class="sn-head"><div class="sn-title">📷 Scan Ticket</div><button class="sn-close" onclick="closeOrgQrScanner()">✕</button></div>
+    <div class="sn-body">
+      <p style="font-size:.78rem;color:var(--mu);margin-bottom:14px">Point the camera at the attendee's ticket QR code.</p>
+      <div style="position:relative;border-radius:16px;overflow:hidden;background:#000;margin-bottom:14px">
+        <video id="org-qr-video" autoplay playsinline muted style="width:100%;display:block;border-radius:16px;min-height:200px;object-fit:cover"></video>
+        <canvas id="org-qr-canvas" style="display:none"></canvas>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+          <div style="width:200px;height:200px;border:2px solid var(--or);border-radius:16px;box-shadow:0 0 0 2000px rgba(0,0,0,.45)"></div>
+        </div>
+      </div>
+      <div id="org-qr-result"></div>
+    </div>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -183,36 +459,217 @@ const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 let currentUser = null;
 let currentProfile = null;
 let _token = null;
-let _imgFile = null;
+let _imgFiles = [];
+
+// ── Org sheet helpers ─────────────────────────────────────────
+function openOrgSheet(id)  { const el = document.getElementById(id); if (el) el.classList.add('open'); }
+function closeOrgSheet(id) { const el = document.getElementById(id); if (el) el.classList.remove('open'); }
+
+// ── Org FAQ ───────────────────────────────────────────────────
+const ORG_FAQ = [
+  { q: 'How do I get a verified badge?', a: 'Go to Settings → Verify Profile, complete the form. Takes 1–3 business days to review.' },
+  { q: 'How do I earn from my events?', a: 'Add a payment method in Settings. Payouts from ticket sales are processed weekly.' },
+  { q: 'Can I edit an event after posting?', a: 'Yes — go to My Posts, find the event card, and tap Edit.' },
+  { q: 'How do I reach more people?', a: 'Tag your events with a genre and city. Verified organisers get boosted placement in the discover feed.' },
+  { q: 'What genres are supported?', a: 'Amapiano, Gqom, Hip Hop, House, Afrobeats, Maskandi, Jazz, Gospel, Rock, Sport, Comedy, and more.' },
+  { q: 'How long does verification take?', a: '1–3 business days. You\'ll receive a notification once your application is reviewed.' },
+];
+function renderOrgFAQ() {
+  const el = document.getElementById('faq-org');
+  if (!el) return;
+  el.innerHTML = ORG_FAQ.map((f, i) => `
+    <div class="faq-item" id="ofaq-${i}">
+      <div class="faq-q" onclick="document.getElementById('ofaq-${i}').classList.toggle('open')">
+        <span>${f.q}</span><span class="faq-arr">▾</span>
+      </div>
+      <div class="faq-a">${f.a}</div>
+    </div>`).join('');
+}
+
+// ── Org registered toggle ────────────────────────────────────
+let _orgIsRegistered = false;
+function setOrgRegistered(val) {
+  _orgIsRegistered = val;
+  document.getElementById('org-registered-fields').style.display = val ? 'block' : 'none';
+  document.getElementById('org-reg-yes').style.background = val ? 'rgba(198,255,74,.15)' : '';
+  document.getElementById('org-reg-yes').style.borderColor = val ? 'rgba(198,255,74,.4)' : '';
+  document.getElementById('org-reg-no').style.background  = !val ? 'rgba(0,229,255,.12)' : '';
+  document.getElementById('org-reg-no').style.borderColor = !val ? 'rgba(0,229,255,.3)' : '';
+}
+
+// ── Org Verification ─────────────────────────────────────────
+function showOrgMsg(id, text, type) { const el = document.getElementById(id); if (!el) return; el.textContent = text; el.className = 'msg show msg-' + type; }
+
+function loadOrgSettingsStatus() {
+  try {
+    const verif = JSON.parse(localStorage.getItem('org_verif') || '{}');
+    if (verif.status) {
+      const labels = { pending: '⏳ Pending review', approved: '✅ Verified', rejected: '❌ Not approved' };
+      const el = document.getElementById('org-verif-status');
+      if (el) el.textContent = labels[verif.status] || 'Not verified';
+      const btn = document.getElementById('org-verif-btn');
+      if (btn && verif.status !== 'rejected') { btn.textContent = verif.status === 'approved' ? '✅ Verified' : '⏳ Pending'; btn.disabled = true; }
+    }
+    const pm = JSON.parse(localStorage.getItem('org_payment') || '{}');
+    if (pm.bank) {
+      const el = document.getElementById('org-payment-status');
+      if (el) el.textContent = `${pm.bank} ••••${(pm.account||'').slice(-4)}`;
+      const btn = document.getElementById('org-payment-btn');
+      if (btn) btn.textContent = 'Edit →';
+    }
+  } catch(e) {}
+}
+
+async function submitOrgVerification() {
+  const contact = document.getElementById('ovf-contact').value.trim();
+  const idNum   = document.getElementById('ovf-id').value.trim();
+  const phone   = document.getElementById('ovf-phone').value.trim();
+  const address = document.getElementById('ovf-address').value.trim();
+  const desc    = document.getElementById('ovf-desc').value.trim();
+  if (!contact || !idNum || !phone || !address || !desc) {
+    showOrgMsg('org-verif-msg', 'Please fill in all required fields.', 'err'); return;
+  }
+  const payload = {
+    is_registered: _orgIsRegistered,
+    company: _orgIsRegistered ? document.getElementById('ovf-company').value.trim() : '',
+    reg_num: _orgIsRegistered ? document.getElementById('ovf-reg').value.trim() : '',
+    entity:  _orgIsRegistered ? document.getElementById('ovf-entity').value : '',
+    contact, id_number: idNum, phone, address, description: desc,
+    business_name: currentProfile?.display_name || '',
+    submitted_at: new Date().toISOString(),
+  };
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      await fetch('/api/verify-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+        body: JSON.stringify(payload),
+      });
+    }
+  } catch(e) { console.warn('[verif]', e); }
+  localStorage.setItem('org_verif', JSON.stringify({ status: 'pending', ...payload }));
+  showOrgMsg('org-verif-msg', '✅ Submitted! We\'ll review within 1–3 business days.', 'ok');
+  loadOrgSettingsStatus();
+  setTimeout(() => closeOrgSheet('org-verify-sheet'), 2200);
+}
+
+function submitOrgPayment() {
+  const bank    = document.getElementById('opm-bank').value;
+  const name    = document.getElementById('opm-name').value.trim();
+  const account = document.getElementById('opm-account').value.trim();
+  const type    = document.getElementById('opm-type').value;
+  if (!bank || !name || !account || !type) {
+    showOrgMsg('org-payment-msg', 'Please fill in all required fields.', 'err'); return;
+  }
+  const pm = { bank, name, account, type, branch: document.getElementById('opm-branch').value.trim() };
+  localStorage.setItem('org_payment', JSON.stringify(pm));
+  showOrgMsg('org-payment-msg', '✅ Payment method saved.', 'ok');
+  loadOrgSettingsStatus();
+  setTimeout(() => closeOrgSheet('org-payment-sheet'), 1800);
+}
+
+// ── Post Preview ──────────────────────────────────────────────
+function previewOrgPost() {
+  const cap = document.getElementById('post-caption').value.trim();
+  if (!cap && !_imgFiles.length) { toast('Add a caption or image first', 'err'); return; }
+  const imgArea = document.getElementById('org-preview-imgs');
+  if (imgArea) {
+    if (_imgFiles.length) {
+      const cols = Math.min(_imgFiles.length, 3);
+      imgArea.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      imgArea.innerHTML = '';
+      _imgFiles.slice(0, 3).forEach(f => {
+        const div = document.createElement('div');
+        div.style.cssText = 'aspect-ratio:1;overflow:hidden;background:#000';
+        const img = document.createElement('img');
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+        const rd = new FileReader(); rd.onload = e => { img.src = e.target.result; }; rd.readAsDataURL(f);
+        div.appendChild(img); imgArea.appendChild(div);
+      });
+    } else { imgArea.innerHTML = ''; }
+  }
+  const nameEl = document.getElementById('org-preview-name');
+  if (nameEl) nameEl.textContent = currentProfile?.display_name || 'Organizer';
+  const capEl = document.getElementById('org-preview-caption');
+  if (capEl) capEl.textContent = cap;
+  openOrgSheet('org-preview-sheet');
+}
 
 function x(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function toast(m, t='') { const el=document.getElementById('toast'); el.textContent=m; el.className='toast '+t+' show'; setTimeout(()=>el.classList.remove('show'),3500); }
 
-function switchTab(btn, paneId) {
+function showOrgSubBanner(profile) {
+  const banner = document.getElementById('org-sub-banner');
+  if (!banner) return;
+  const subType = profile.subscription_type || 'free';
+  const trialExpires = profile.trial_expires_at ? new Date(profile.trial_expires_at) : null;
+  const daysLeft = trialExpires ? Math.ceil((trialExpires - Date.now()) / 86400000) : null;
+
+  if (subType === 'trial' && daysLeft !== null && daysLeft > 0 && daysLeft <= 7) {
+    banner.style.cssText = 'display:block;margin:0 0 14px;padding:12px 16px;border-radius:14px;font-size:.78rem;line-height:1.5;background:rgba(255,184,0,.1);border:1px solid rgba(255,184,0,.3);color:#FFB800';
+    banner.innerHTML = `⏰ <strong>Trial expires in ${daysLeft} day${daysLeft===1?'':'s'}</strong> — events will require admin approval after expiry. <a href="mailto:support@pulsify.co.za" style="color:#FFB800;font-weight:700">Upgrade →</a>`;
+  } else if (subType === 'trial' && daysLeft !== null && daysLeft <= 0) {
+    banner.style.cssText = 'display:block;margin:0 0 14px;padding:12px 16px;border-radius:14px;font-size:.78rem;line-height:1.5;background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);color:#FF2D78';
+    banner.innerHTML = `🚫 <strong>Your trial has expired.</strong> New events require admin approval. <a href="mailto:support@pulsify.co.za" style="color:#FF2D78;font-weight:700">Upgrade to Premium →</a>`;
+  } else if (subType === 'premium') {
+    banner.style.cssText = 'display:block;margin:0 0 14px;padding:12px 16px;border-radius:14px;font-size:.78rem;line-height:1.5;background:rgba(176,38,255,.08);border:1px solid rgba(176,38,255,.2);color:#B026FF';
+    banner.innerHTML = `💎 <strong>Premium organizer.</strong> Your events go live instantly without admin approval.`;
+  }
+}
+
+function switchTab(btn, paneId, _noPush) {
+  if (paneId !== 'pane-scan') closeOrgQrScanner();
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById(paneId).classList.add('active');
+  if (!_noPush) history.pushState({ pane: paneId }, '');
   if (paneId === 'pane-myposts') loadMyPosts();
+  if (paneId === 'pane-promote') { loadOrgPromoEvents(); loadMyOrgPromos(); }
+  if (paneId === 'pane-scan') {
+    const sel = document.getElementById('scan-event-sel');
+    if (sel.options.length <= 1) loadScanEvents(); else loadScanStats();
+  }
 }
+
+async function doLogout() {
+  try { await sb.auth.signOut(); } catch(e) {}
+  ['p_user','p_profile','p_token','p_sev','p_sbiz'].forEach(k => localStorage.removeItem(k));
+  window.location.href = '/signin';
+}
+
+window.addEventListener('popstate', e => {
+  const pane = e.state?.pane;
+  if (pane) {
+    const btn = document.querySelector(`.tab[onclick*="${pane}"]`);
+    if (btn) { switchTab(btn, pane, true); return; }
+  }
+  window.location.href = '/organizer';
+});
 
 async function init() {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) { window.location.href = 'signin.html'; return; }
+  if (!session) { window.location.href = '/signin'; return; }
   currentUser = session.user;
   _token = session.access_token;
 
-  const { data: profile } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  const { data: profile, error: profErr } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
   currentProfile = profile || {};
 
-  if (!['organizer','admin'].includes(currentProfile.role)) {
+  // If RLS blocks the profile read, fall back to localStorage role rather than kicking user out
+  const localRole = (() => { try { return JSON.parse(localStorage.getItem('p_user') || '{}').role; } catch(e) { return null; } })();
+  const effectiveRole = currentProfile.role || localRole;
+
+  if (!['organizer','admin'].includes(effectiveRole)) {
     toast('This dashboard is for organizers only', 'err');
-    setTimeout(() => window.location.href = '/', 2000);
+    setTimeout(() => window.location.href = '/signin', 2000);
     return;
   }
 
   document.getElementById('org-name').textContent = currentProfile.display_name || currentUser.email?.split('@')[0] || 'Organizer';
   document.getElementById('org-handle').textContent = '@' + (currentProfile.username || 'organizer') + ' · Event Organizer';
+  showOrgSubBanner(currentProfile);
 
   const [{ count: postsCount }, { count: followersCount }, { count: eventsCount }] = await Promise.all([
     sb.from('posts').select('*', {count:'exact',head:true}).eq('user_id', currentUser.id),
@@ -225,35 +682,50 @@ async function init() {
   document.getElementById('stat-events').textContent = eventsCount || 0;
 }
 
-function previewImg(input) {
-  if (!input.files?.[0]) return;
-  _imgFile = input.files[0];
-  const reader = new FileReader();
-  reader.onload = e => {
-    const drop = document.getElementById('img-drop');
-    drop.innerHTML = '<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover;border-radius:10px"/>';
-  };
-  reader.readAsDataURL(_imgFile);
+function previewImgs(input) {
+  _imgFiles = Array.from(input.files || []).slice(0, 5);
+  const grid = document.getElementById('org-img-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  _imgFiles.forEach((f, i) => {
+    const cell = document.createElement('div');
+    cell.style.cssText = 'position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#111';
+    const img = document.createElement('img');
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+    const rd = new FileReader(); rd.onload = e => { img.src = e.target.result; }; rd.readAsDataURL(f);
+    const rm = document.createElement('button');
+    rm.textContent = '✕';
+    rm.style.cssText = 'position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.6rem;cursor:pointer;padding:0;line-height:1';
+    rm.onclick = (ev) => { ev.stopPropagation(); _imgFiles.splice(i, 1); previewImgs({ files: _imgFiles }); };
+    cell.appendChild(img); cell.appendChild(rm);
+    grid.appendChild(cell);
+  });
+  const hint = document.getElementById('org-img-hint');
+  if (hint) hint.textContent = _imgFiles.length ? `${_imgFiles.length} photo${_imgFiles.length>1?'s':''} selected` : 'Tap to add up to 5 photos';
 }
 
 async function submitPost() {
   const caption = document.getElementById('post-caption').value.trim();
   const evTag   = document.getElementById('post-event-tag').value.trim();
-  if (!caption && !_imgFile) return toast('Add a caption or image to post', 'err');
+  if (!caption && !_imgFiles.length) return toast('Add a caption or image to post', 'err');
 
   const btn = document.getElementById('post-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Publishing…';
 
   try {
     let imageUrl = null;
-    if (_imgFile) {
-      const ext  = _imgFile.name.split('.').pop() || 'jpg';
-      const path = currentUser.id + '/' + Date.now() + '.' + ext;
-      const { error: upErr } = await sb.storage.from('post-images').upload(path, _imgFile, { upsert: false });
-      if (!upErr) {
-        const { data: { publicUrl } } = sb.storage.from('post-images').getPublicUrl(path);
-        imageUrl = publicUrl;
+    if (_imgFiles.length) {
+      const urls = [];
+      for (const file of _imgFiles) {
+        const ext  = file.name.split('.').pop() || 'jpg';
+        const path = currentUser.id + '/' + Date.now() + '_' + Math.random().toString(36).slice(2,7) + '.' + ext;
+        const { error: upErr } = await sb.storage.from('post-images').upload(path, file, { upsert: false });
+        if (!upErr) {
+          const { data: { publicUrl } } = sb.storage.from('post-images').getPublicUrl(path);
+          urls.push(publicUrl);
+        }
       }
+      imageUrl = urls.length === 1 ? urls[0] : urls.length > 1 ? JSON.stringify(urls) : null;
     }
 
     const res = await fetch('/api/posts', {
@@ -261,19 +733,23 @@ async function submitPost() {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token },
       body: JSON.stringify({ caption, image_url: imageUrl, event_name: evTag || null, post_type: 'organizer' })
     });
-    const data = await res.json();
+    const _txt = await res.text();
+    let data = {}; try { data = JSON.parse(_txt); } catch(e) {}
     if (!res.ok) throw new Error(data.error || 'Post failed');
 
     toast('🔥 Published to feed!', 'ok');
     document.getElementById('post-caption').value = '';
     document.getElementById('post-event-tag').value = '';
-    document.getElementById('img-drop').innerHTML = '<span style="font-size:1.8rem">🖼</span><span style="font-size:.78rem;color:var(--mu)">Tap to add an image (optional)</span>';
-    _imgFile = null;
+    const orgGrid = document.getElementById('org-img-grid');
+    if (orgGrid) orgGrid.innerHTML = '';
+    const orgHint = document.getElementById('org-img-hint');
+    if (orgHint) orgHint.textContent = 'Tap to add up to 5 photos';
+    _imgFiles = [];
     document.getElementById('stat-posts').textContent = parseInt(document.getElementById('stat-posts').textContent||0)+1;
   } catch(e) {
     toast('Error: ' + e.message, 'err');
   }
-  btn.disabled = false; btn.textContent = 'Publish to Feed ��';
+  btn.disabled = false; btn.textContent = 'Publish 🚀';
 }
 
 async function submitEvent() {
@@ -296,14 +772,14 @@ async function submitEvent() {
 
   try {
     const eventId = 'org_' + currentUser.id.slice(0,8) + '_' + Date.now();
-    const dateLocal = date + (time ? 'T'+time+':00' : 'T20:00:00');
 
     const { error } = await sb.from('events').insert({
       id: eventId,
       name,
-      date_local: dateLocal,
+      date_local: date,
+      time_local: time || null,
       venue_name: venue,
-      city,
+      venue_city: city,
       province: currentProfile.province || null,
       genre: genre || 'other',
       description: desc || null,
@@ -314,6 +790,7 @@ async function submitEvent() {
       organiser_id: currentUser.id,
       is_active: true,
       source: 'organizer',
+      approved: currentProfile?.subscription_type === 'premium' || currentProfile?.subscription_type === 'trial',
     });
     if (error) throw new Error(error.message);
 
@@ -328,7 +805,8 @@ async function submitEvent() {
       })
     }).catch(() => {});
 
-    toast('🎉 Event created and posted to feed!', 'ok');
+    const isPremium = currentProfile?.subscription_type === 'premium' || currentProfile?.subscription_type === 'trial';
+    toast(isPremium ? '🎉 Event created and posted to feed!' : '🎉 Event submitted — pending admin approval before it goes live.', 'ok');
     document.getElementById('ev-name').value = '';
     document.getElementById('ev-date').value = '';
     document.getElementById('ev-time').value = '';
@@ -410,6 +888,268 @@ async function openSNPanel() {
 }
 function closeSNPanel() { document.getElementById('sn-overlay').classList.remove('open'); }
 
+// ════════════════════════════════════════════════════════════
+//  ORG QR TICKET SCANNER
+// ════════════════════════════════════════════════════════════
+function xe(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+let _oqrStream = null, _oqrFrame = null, _oqrDone = false;
+
+async function loadScanEvents() {
+  const sel = document.getElementById('scan-event-sel');
+  if (sel.options.length > 1) { loadScanStats(); return; }
+  try {
+    const { data: evs } = await sb.from('events')
+      .select('id,name,date_local').eq('organiser_id', currentUser.id)
+      .order('date_local', { ascending: false }).limit(50);
+    (evs || []).forEach(ev => {
+      const o = document.createElement('option');
+      o.value = ev.id;
+      o.textContent = ev.name + ' — ' + ev.date_local;
+      sel.appendChild(o);
+    });
+  } catch(e) {}
+  loadScanStats();
+}
+
+async function loadScanStats() {
+  const evId  = document.getElementById('scan-event-sel').value;
+  const stats = document.getElementById('scan-stats');
+  const list  = document.getElementById('scan-checkins');
+  if (!evId) {
+    stats.innerHTML = '';
+    list.innerHTML  = '<div class="empty">Select an event to see check-ins</div>';
+    return;
+  }
+  stats.innerHTML = '<div style="color:var(--mu);font-size:.78rem">Loading…</div>';
+  list.innerHTML  = '<div class="empty">Loading…</div>';
+  try {
+    const { data: bookings } = await sb.from('bookings')
+      .select('id,checked_in,checked_in_at,buyer_name,quantity')
+      .eq('event_id', evId).eq('status', 'confirmed')
+      .order('checked_in_at', { ascending: false, nullsFirst: false });
+    const all     = bookings || [];
+    const checked = all.filter(b => b.checked_in).length;
+    stats.innerHTML = `
+      <div style="flex:1;background:rgba(198,255,74,.07);border:1px solid rgba(198,255,74,.2);border-radius:12px;padding:12px;text-align:center">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--li);line-height:1">${checked}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;margin-top:4px">Checked In</div>
+      </div>
+      <div style="flex:1;background:rgba(255,92,0,.07);border:1px solid rgba(255,92,0,.2);border-radius:12px;padding:12px;text-align:center">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--or);line-height:1">${all.length}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;margin-top:4px">Total Tickets</div>
+      </div>`;
+    const recent = all.filter(b => b.checked_in).slice(0, 20);
+    list.innerHTML = recent.length
+      ? recent.map(b => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border)">
+            <div>
+              <div style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700">${xe(b.buyer_name)}</div>
+              <div style="font-size:.68rem;color:var(--mu)">${b.quantity} ticket${b.quantity>1?'s':''} · ${b.checked_in_at ? new Date(b.checked_in_at).toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'}) : ''}</div>
+            </div>
+            <span style="color:var(--li);font-size:.78rem">✅</span>
+          </div>`).join('')
+      : '<div class="empty">No check-ins yet</div>';
+  } catch(e) {
+    stats.innerHTML = '';
+    list.innerHTML = '<div class="empty" style="color:var(--pk)">Failed to load</div>';
+  }
+}
+
+async function openOrgQrScanner() {
+  _oqrDone = false;
+  document.getElementById('org-qr-result').innerHTML = '';
+  openOrgSheet('org-qr-overlay');
+  try {
+    _oqrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const vid = document.getElementById('org-qr-video');
+    vid.srcObject = _oqrStream;
+    vid.addEventListener('loadedmetadata', () => { vid.play(); _oqrScanLoop(); }, { once: true });
+  } catch(e) {
+    const blocked = e.name === 'NotAllowedError' || e.name === 'SecurityError';
+    const msg = blocked
+      ? 'Camera blocked. Close any floating app windows or bubbles (e.g. chat heads, screen recorders) then tap Try Again.'
+      : 'Camera error: ' + xe(e.message);
+    document.getElementById('org-qr-result').innerHTML = `<div style="color:var(--pk);font-size:.8rem;text-align:center;padding:16px;line-height:1.5">${msg}<br/><br/><button class="btn-sec" style="margin-top:4px" onclick="openOrgQrScanner()">Try Again</button></div>`;
+  }
+}
+
+function _oqrScanLoop() {
+  if (_oqrDone) return;
+  const vid = document.getElementById('org-qr-video');
+  const cvs = document.getElementById('org-qr-canvas');
+  if (!vid || !vid.videoWidth) { _oqrFrame = requestAnimationFrame(_oqrScanLoop); return; }
+  cvs.width = vid.videoWidth; cvs.height = vid.videoHeight;
+  const ctx = cvs.getContext('2d');
+  ctx.drawImage(vid, 0, 0);
+  const img  = ctx.getImageData(0, 0, cvs.width, cvs.height);
+  const code = window.jsQR && window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+  if (code?.data) { _oqrDone = true; _handleOrgQrResult(code.data); }
+  else { _oqrFrame = requestAnimationFrame(_oqrScanLoop); }
+}
+
+function _scanAgainBtn(label) {
+  return `<button class="btn-sec" style="margin-top:12px;width:100%" onclick="_oqrDone=false;document.getElementById('org-qr-result').innerHTML='';_oqrScanLoop()">${label||'Scan Another'}</button>`;
+}
+
+async function _handleOrgQrResult(qrData) {
+  const res = document.getElementById('org-qr-result');
+  res.innerHTML = '<div style="text-align:center;color:var(--mu);font-size:.8rem;padding:8px">Validating…</div>';
+  try {
+    const r = await fetch('/api/validate-ticket', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token },
+      body: JSON.stringify({ qr_data: qrData }),
+    });
+    const d = await r.json();
+    if (r.status === 409) {
+      res.innerHTML = `<div style="background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.3);border-radius:14px;padding:16px;text-align:center">
+        <div style="font-size:2rem;margin-bottom:8px">⚠️</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--or);margin-bottom:6px">Already Checked In</div>
+        <div style="font-size:.78rem;color:var(--mu2)">${xe(d.booking?.buyer_name||'')}</div>
+        <div style="font-size:.72rem;color:var(--mu);margin-top:4px">at ${d.checked_in_at ? new Date(d.checked_in_at).toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'}) : '—'}</div>
+        ${_scanAgainBtn()}</div>`;
+      return;
+    }
+    if (!r.ok) {
+      res.innerHTML = `<div style="background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.3);border-radius:14px;padding:16px;text-align:center">
+        <div style="font-size:2rem;margin-bottom:8px">❌</div>
+        <div style="font-size:.84rem;color:var(--pk)">${xe(d.error||'Invalid ticket')}</div>
+        ${_scanAgainBtn('Try Again')}</div>`;
+      return;
+    }
+    res.innerHTML = `<div style="background:rgba(198,255,74,.09);border:1px solid rgba(198,255,74,.3);border-radius:14px;padding:16px;text-align:center">
+      <div style="font-size:2.5rem;margin-bottom:8px">🎉</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:var(--li);margin-bottom:6px">Valid Ticket!</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;margin-bottom:4px">${xe(d.buyer_name)}</div>
+      ${d.tier_name ? `<div style="font-size:.76rem;color:var(--mu2);margin-bottom:2px">${xe(d.tier_name)}</div>` : ''}
+      <div style="font-size:.76rem;color:var(--mu2);margin-bottom:4px">${xe(d.event_name||'')} · ${d.quantity} ticket${d.quantity>1?'s':''}</div>
+      <div style="font-size:.7rem;color:var(--mu)">${xe(d.booking_ref)}</div>
+      <button class="btn-primary" style="margin-top:14px;width:100%" onclick="_oqrDone=false;document.getElementById('org-qr-result').innerHTML='';_oqrScanLoop()">✅ Scan Next</button>
+    </div>`;
+    toast('✅ ' + xe(d.buyer_name) + ' checked in!', 'ok');
+    loadScanStats();
+  } catch(e) {
+    res.innerHTML = `<div style="color:var(--pk);font-size:.8rem;text-align:center;padding:16px">Error: ${xe(e.message)}<br>${_scanAgainBtn('Retry')}</div>`;
+  }
+}
+
+function closeOrgQrScanner() {
+  _oqrDone = true;
+  if (_oqrFrame) { cancelAnimationFrame(_oqrFrame); _oqrFrame = null; }
+  if (_oqrStream) { _oqrStream.getTracks().forEach(t => t.stop()); _oqrStream = null; }
+  const vid = document.getElementById('org-qr-video');
+  if (vid) vid.srcObject = null;
+  closeOrgSheet('org-qr-overlay');
+}
+
+/* ══════════════════════════════════════════════════
+   PROMOTIONS — ORGANIZER
+══════════════════════════════════════════════════ */
+async function loadOrgPromoEvents() {
+  const sel = document.getElementById('promo-event-sel');
+  if (!sel || sel.options.length > 1) return;
+  const { data } = await sb.from('events')
+    .select('id,name,date_local,venue_city,image_url,genre,price_min,is_free,organiser_name')
+    .eq('organiser_id', currentUser.id)
+    .order('date_local', { ascending: false })
+    .limit(30);
+  (data || []).forEach(ev => {
+    const opt = document.createElement('option');
+    opt.value = ev.id;
+    opt.dataset.ev = JSON.stringify(ev);
+    opt.textContent = ev.name + ' — ' + ev.date_local;
+    sel.appendChild(opt);
+  });
+}
+
+function onPromoEventSelect() {
+  const sel = document.getElementById('promo-event-sel');
+  const prev = document.getElementById('promo-event-preview');
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt.dataset.ev) { prev.style.display = 'none'; return; }
+  const ev = JSON.parse(opt.dataset.ev);
+  prev.style.display = 'block';
+  prev.innerHTML = `<div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:2px">${xe(ev.name)}</div>
+    <div style="color:var(--mu)">📍 ${xe(ev.venue_city)} · ${ev.date_local}</div>
+    <div style="color:var(--or);margin-top:2px">${ev.is_free ? 'FREE' : 'R'+(ev.price_min||'TBA')} · ${xe(ev.genre||'')}</div>`;
+}
+
+function _promoMsg(el, text, ok) {
+  el.style.cssText = 'display:block;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px;background:' +
+    (ok ? 'rgba(198,255,74,.1);color:#C6FF4A' : 'rgba(255,45,120,.12);color:#FF2D78');
+  el.textContent = text;
+}
+
+async function submitOrgPromo() {
+  const sel = document.getElementById('promo-event-sel');
+  const placement = document.getElementById('promo-placement').value;
+  const duration  = document.getElementById('promo-duration').value;
+  const cities    = document.getElementById('promo-cities').value.trim();
+  const msg       = document.getElementById('promo-msg-org');
+  const btn       = document.getElementById('promo-btn-org');
+
+  if (!sel.value) return _promoMsg(msg, 'Please select an event.', false);
+  const opt = sel.options[sel.selectedIndex];
+  const ev  = JSON.parse(opt.dataset.ev || '{}');
+
+  btn.disabled = true; btn.textContent = 'Submitting…';
+  try {
+    const cityTargets = cities ? cities.split(',').map(c => c.trim()).filter(Boolean) : [];
+    const r = await fetch('/api/promotions/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token },
+      body: JSON.stringify({
+        title: ev.name, organiser_name: ev.organiser_name,
+        venue_city: ev.venue_city, date_local: ev.date_local,
+        price_min: ev.price_min, is_free: ev.is_free,
+        image_url: ev.image_url, genre: ev.genre,
+        external_url: window.location.origin + '/?eid=' + encodeURIComponent(ev.id),
+        event_id: ev.id, placement, duration_days: parseInt(duration),
+        city_targets: cityTargets, genre_targets: [],
+      }),
+    });
+    const json = await r.json();
+    if (!r.ok) throw new Error(json.error);
+    _promoMsg(msg, '✅ Submitted! Admin will review and activate your promotion.', true);
+    sel.value = '';
+    document.getElementById('promo-event-preview').style.display = 'none';
+    loadMyOrgPromos();
+  } catch(e) {
+    _promoMsg(msg, e.message, false);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Submit for Review 🚀';
+  }
+}
+
+async function loadMyOrgPromos() {
+  const el = document.getElementById('promo-mine-org');
+  if (!el) return;
+  try {
+    const r = await fetch('/api/promotions/mine', { headers: { 'Authorization': 'Bearer ' + _token } });
+    const { promotions } = await r.json();
+    if (!promotions?.length) { el.innerHTML = '<div style="padding:16px 0;text-align:center;color:var(--mu);font-size:.8rem">No promotions yet.</div>'; return; }
+    el.innerHTML = promotions.map(p => `
+      <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.84rem">${xe(p.title)}</div>
+          <span style="flex-shrink:0;padding:2px 8px;border-radius:50px;font-size:.62rem;font-family:'Syne',sans-serif;font-weight:700;background:${p.is_active ? 'rgba(198,255,74,.12)' : 'rgba(255,92,0,.12)'};color:${p.is_active ? '#C6FF4A' : 'var(--or)'}">${p.is_active ? 'LIVE' : 'Pending'}</span>
+        </div>
+        <div style="font-size:.72rem;color:var(--mu);margin-top:4px">${p.placement} · ${p.ends_at ? 'Ends ' + p.ends_at.slice(0,10) : 'No end date'}</div>
+        <button onclick="deleteOrgPromo('${p.id}',this)" style="margin-top:8px;background:rgba(255,45,120,.1);color:#FF2D78;border:none;border-radius:8px;padding:4px 12px;font-size:.7rem;cursor:pointer">Delete</button>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<div style="color:var(--pk);font-size:.8rem;padding:8px">Failed to load</div>'; }
+}
+
+async function deleteOrgPromo(id, btn) {
+  btn.disabled = true; btn.textContent = '…';
+  const r = await fetch('/api/promotions/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + _token } });
+  if (r.ok) loadMyOrgPromos(); else { btn.disabled = false; btn.textContent = 'Delete'; }
+}
+
+renderOrgFAQ();
+loadOrgSettingsStatus();
+history.replaceState({ pane: 'pane-post' }, '');
 init().then(() => initNotifBell());
 </script>
 

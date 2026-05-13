@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<title>Pulsify Diagnostic</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+body{font-family:monospace;background:#000;color:#0f0;padding:20px;font-size:13px}
+h2{color:#ff0;margin-top:20px}
+.ok{color:#0f0}.err{color:#f44}.warn{color:#ff0}.info{color:#0cf}
+pre{background:#111;padding:10px;border:1px solid #333;overflow-x:auto;white-space:pre-wrap;word-break:break-all}
+</style>
+</head>
+<body>
+<h1>🔬 Pulsify Diagnostic</h1>
+<div id="out">Running tests…</div>
+<script>
+const SUPA_URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
+const out = document.getElementById('out');
+function log(html) { out.innerHTML += html + '<br>'; }
+function section(t) { log(`<h2>${t}</h2>`); }
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, rej) => setTimeout(() => rej(new Error(`Timed out after ${ms}ms`)), ms))
+  ]);
+}
+
+(async () => {
+  out.innerHTML = '';
+
+  // Run version check FIRST — most important, independent of Supabase SDK
+  section('1. Landing page version');
+  try {
+    const r = await withTimeout(fetch('/', { cache: 'no-store' }), 5000);
+    const html = await r.text();
+    const m = html.match(/build-version[^>]*content="([^"]+)"/);
+    if (m) {
+      const v = m[1];
+      const isNew = v >= 'v2.2.0';
+      log(`<span class="${isNew ? 'ok' : 'err'}">${isNew ? '✓' : '✗'} index.html version: ${v}${isNew ? ' — NEW CODE deployed ✓' : ' — OLD CODE still deployed! Redeploy needed.'}</span>`);
+    } else {
+      log(`<span class="err">✗ No build-version found — OLD CODE deployed. Run git pull then redeploy.</span>`);
+    }
+  } catch(e) { log(`<span class="err">Could not fetch landing page: ${e.message}</span>`); }
+
+  section('2. SDK loaded');
+  log(window.supabase ? '<span class="ok">✓ Supabase SDK loaded</span>' : '<span class="err">✗ SDK NOT loaded</span>');
+
+  section('3. Direct REST query (fetch, no SDK)');
+  try {
+    const r = await withTimeout(fetch(`${SUPA_URL}/rest/v1/events?select=id,name&limit=1`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    }), 8000);
+    const txt = await r.text();
+    log(`<span class="${r.ok ? 'ok' : 'err'}">HTTP ${r.status}</span>`);
+    log(`<pre>${txt.slice(0, 300)}</pre>`);
+  } catch (e) {
+    log(`<span class="err">✗ ${e.message}</span>`);
+  }
+
+  section('4. SDK createClient test');
+  try {
+    const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
+      realtime: { params: { eventsPerSecond: 1 } }
+    });
+    const { data, error, count } = await withTimeout(
+      sb.from('events').select('id,name', { count: 'exact' }).limit(2),
+      10000
+    );
+    if (error) log(`<span class="err">✗ ${error.message}</span>`);
+    else log(`<span class="ok">✓ SDK works — ${count} events total. Sample: ${data.map(e=>e.name).join(', ')}</span>`);
+  } catch (e) { log(`<span class="err">✗ ${e.message}</span>`); }
+
+  section('5. Deployment info');
+  log(`<span class="info">Loaded at: ${new Date().toISOString()}</span>`);
+  log(`<span class="info">Origin: ${window.location.origin}</span>`);
+  log(`<span class="info">UA: ${navigator.userAgent.slice(0,80)}</span>`);
+})();
+</script>
+</body>
+</html>
