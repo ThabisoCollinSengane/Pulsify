@@ -7,6 +7,7 @@
 <title>Organizer Dashboard — Pulsify</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0;--bh:70px}
@@ -114,10 +115,11 @@ select.inp option{background:#0D1424}
     <div class="stat-card"><div class="stat-n" id="stat-events">0</div><div class="stat-l">Events</div></div>
   </div>
 
-  <div class="tabs">
-    <div class="tab active" onclick="switchTab(this,'pane-post')">📢 New Post</div>
-    <div class="tab" onclick="switchTab(this,'pane-event')">🎟 New Event</div>
-    <div class="tab" onclick="switchTab(this,'pane-myposts')">📋 My Posts</div>
+  <div class="tabs" style="flex-wrap:wrap;gap:3px">
+    <div class="tab active" onclick="switchTab(this,'pane-post')">📢 Post</div>
+    <div class="tab" onclick="switchTab(this,'pane-event')">🎟 Event</div>
+    <div class="tab" onclick="switchTab(this,'pane-myposts')">📋 Posts</div>
+    <div class="tab" onclick="switchTab(this,'pane-scan')">📷 Scan</div>
     <div class="tab" onclick="switchTab(this,'pane-settings')">⚙️ Settings</div>
   </div>
 
@@ -227,6 +229,23 @@ select.inp option{background:#0D1424}
           <a href="mailto:support@pulsify.co.za" style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;color:var(--or);text-decoration:none">✉️ Contact Support</a>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div class="pane" id="pane-scan">
+    <div class="card">
+      <div class="card-body">
+        <div class="section-label" style="margin-top:0">Event</div>
+        <select class="inp" id="scan-event-sel" onchange="loadScanStats()">
+          <option value="">All my events</option>
+        </select>
+        <div id="scan-stats" style="display:flex;gap:8px;margin-bottom:14px"></div>
+        <button class="btn-primary" onclick="openOrgQrScanner()">📷 Scan Ticket at Door</button>
+      </div>
+    </div>
+    <div class="section-label">Recent Check-ins</div>
+    <div id="scan-checkins" class="card">
+      <div class="empty">Select an event to see check-ins</div>
     </div>
   </div>
 </div>
@@ -356,6 +375,25 @@ select.inp option{background:#0D1424}
         <button class="btn-sec" style="flex:1" onclick="closeOrgSheet('org-preview-sheet')">← Edit</button>
         <button class="btn-primary" style="flex:2" onclick="closeOrgSheet('org-preview-sheet');submitPost()">Publish 🚀</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ORG QR SCANNER -->
+<div class="sn-overlay" id="org-qr-overlay" onclick="if(event.target===this)closeOrgQrScanner()">
+  <div class="sn-sheet" style="max-height:92vh">
+    <div class="sn-handle"></div>
+    <div class="sn-head"><div class="sn-title">📷 Scan Ticket</div><button class="sn-close" onclick="closeOrgQrScanner()">✕</button></div>
+    <div class="sn-body">
+      <p style="font-size:.78rem;color:var(--mu);margin-bottom:14px">Point the camera at the attendee's ticket QR code.</p>
+      <div style="position:relative;border-radius:16px;overflow:hidden;background:#000;margin-bottom:14px">
+        <video id="org-qr-video" autoplay playsinline muted style="width:100%;display:block;border-radius:16px;min-height:200px;object-fit:cover"></video>
+        <canvas id="org-qr-canvas" style="display:none"></canvas>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+          <div style="width:200px;height:200px;border:2px solid var(--or);border-radius:16px;box-shadow:0 0 0 2000px rgba(0,0,0,.45)"></div>
+        </div>
+      </div>
+      <div id="org-qr-result"></div>
     </div>
   </div>
 </div>
@@ -530,11 +568,16 @@ function showOrgSubBanner(profile) {
 }
 
 function switchTab(btn, paneId) {
+  if (paneId !== 'pane-scan') closeOrgQrScanner();
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById(paneId).classList.add('active');
   if (paneId === 'pane-myposts') loadMyPosts();
+  if (paneId === 'pane-scan') {
+    const sel = document.getElementById('scan-event-sel');
+    if (sel.options.length <= 1) loadScanEvents(); else loadScanStats();
+  }
 }
 
 async function init() {
@@ -776,6 +819,157 @@ async function openSNPanel() {
   } catch { list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu)">Failed to load.</div>'; }
 }
 function closeSNPanel() { document.getElementById('sn-overlay').classList.remove('open'); }
+
+// ════════════════════════════════════════════════════════════
+//  ORG QR TICKET SCANNER
+// ════════════════════════════════════════════════════════════
+function xe(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+let _oqrStream = null, _oqrFrame = null, _oqrDone = false;
+
+async function loadScanEvents() {
+  const sel = document.getElementById('scan-event-sel');
+  if (sel.options.length > 1) { loadScanStats(); return; }
+  try {
+    const { data: evs } = await sb.from('events')
+      .select('id,name,date_local').eq('organiser_id', currentUser.id)
+      .order('date_local', { ascending: false }).limit(50);
+    (evs || []).forEach(ev => {
+      const o = document.createElement('option');
+      o.value = ev.id;
+      o.textContent = ev.name + ' — ' + ev.date_local;
+      sel.appendChild(o);
+    });
+  } catch(e) {}
+  loadScanStats();
+}
+
+async function loadScanStats() {
+  const evId  = document.getElementById('scan-event-sel').value;
+  const stats = document.getElementById('scan-stats');
+  const list  = document.getElementById('scan-checkins');
+  if (!evId) {
+    stats.innerHTML = '';
+    list.innerHTML  = '<div class="empty">Select an event to see check-ins</div>';
+    return;
+  }
+  stats.innerHTML = '<div style="color:var(--mu);font-size:.78rem">Loading…</div>';
+  list.innerHTML  = '<div class="empty">Loading…</div>';
+  try {
+    const { data: bookings } = await sb.from('bookings')
+      .select('id,checked_in,checked_in_at,buyer_name,quantity')
+      .eq('event_id', evId).eq('status', 'confirmed')
+      .order('checked_in_at', { ascending: false, nullsFirst: false });
+    const all     = bookings || [];
+    const checked = all.filter(b => b.checked_in).length;
+    stats.innerHTML = `
+      <div style="flex:1;background:rgba(198,255,74,.07);border:1px solid rgba(198,255,74,.2);border-radius:12px;padding:12px;text-align:center">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--li);line-height:1">${checked}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;margin-top:4px">Checked In</div>
+      </div>
+      <div style="flex:1;background:rgba(255,92,0,.07);border:1px solid rgba(255,92,0,.2);border-radius:12px;padding:12px;text-align:center">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--or);line-height:1">${all.length}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;margin-top:4px">Total Tickets</div>
+      </div>`;
+    const recent = all.filter(b => b.checked_in).slice(0, 20);
+    list.innerHTML = recent.length
+      ? recent.map(b => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border)">
+            <div>
+              <div style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700">${xe(b.buyer_name)}</div>
+              <div style="font-size:.68rem;color:var(--mu)">${b.quantity} ticket${b.quantity>1?'s':''} · ${b.checked_in_at ? new Date(b.checked_in_at).toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'}) : ''}</div>
+            </div>
+            <span style="color:var(--li);font-size:.78rem">✅</span>
+          </div>`).join('')
+      : '<div class="empty">No check-ins yet</div>';
+  } catch(e) {
+    stats.innerHTML = '';
+    list.innerHTML = '<div class="empty" style="color:var(--pk)">Failed to load</div>';
+  }
+}
+
+async function openOrgQrScanner() {
+  _oqrDone = false;
+  document.getElementById('org-qr-result').innerHTML = '';
+  openOrgSheet('org-qr-overlay');
+  try {
+    _oqrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const vid = document.getElementById('org-qr-video');
+    vid.srcObject = _oqrStream;
+    vid.addEventListener('loadedmetadata', () => { vid.play(); _oqrScanLoop(); }, { once: true });
+  } catch(e) {
+    document.getElementById('org-qr-result').innerHTML = `<div style="color:var(--pk);font-size:.8rem;text-align:center;padding:16px">Camera access denied: ${xe(e.message)}</div>`;
+  }
+}
+
+function _oqrScanLoop() {
+  if (_oqrDone) return;
+  const vid = document.getElementById('org-qr-video');
+  const cvs = document.getElementById('org-qr-canvas');
+  if (!vid || !vid.videoWidth) { _oqrFrame = requestAnimationFrame(_oqrScanLoop); return; }
+  cvs.width = vid.videoWidth; cvs.height = vid.videoHeight;
+  const ctx = cvs.getContext('2d');
+  ctx.drawImage(vid, 0, 0);
+  const img  = ctx.getImageData(0, 0, cvs.width, cvs.height);
+  const code = window.jsQR && window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+  if (code?.data) { _oqrDone = true; _handleOrgQrResult(code.data); }
+  else { _oqrFrame = requestAnimationFrame(_oqrScanLoop); }
+}
+
+function _scanAgainBtn(label) {
+  return `<button class="btn-sec" style="margin-top:12px;width:100%" onclick="_oqrDone=false;document.getElementById('org-qr-result').innerHTML='';_oqrScanLoop()">${label||'Scan Another'}</button>`;
+}
+
+async function _handleOrgQrResult(qrData) {
+  const res = document.getElementById('org-qr-result');
+  res.innerHTML = '<div style="text-align:center;color:var(--mu);font-size:.8rem;padding:8px">Validating…</div>';
+  try {
+    const r = await fetch('/api/validate-ticket', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token },
+      body: JSON.stringify({ qr_data: qrData }),
+    });
+    const d = await r.json();
+    if (r.status === 409) {
+      res.innerHTML = `<div style="background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.3);border-radius:14px;padding:16px;text-align:center">
+        <div style="font-size:2rem;margin-bottom:8px">⚠️</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--or);margin-bottom:6px">Already Checked In</div>
+        <div style="font-size:.78rem;color:var(--mu2)">${xe(d.booking?.buyer_name||'')}</div>
+        <div style="font-size:.72rem;color:var(--mu);margin-top:4px">at ${d.checked_in_at ? new Date(d.checked_in_at).toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'}) : '—'}</div>
+        ${_scanAgainBtn()}</div>`;
+      return;
+    }
+    if (!r.ok) {
+      res.innerHTML = `<div style="background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.3);border-radius:14px;padding:16px;text-align:center">
+        <div style="font-size:2rem;margin-bottom:8px">❌</div>
+        <div style="font-size:.84rem;color:var(--pk)">${xe(d.error||'Invalid ticket')}</div>
+        ${_scanAgainBtn('Try Again')}</div>`;
+      return;
+    }
+    res.innerHTML = `<div style="background:rgba(198,255,74,.09);border:1px solid rgba(198,255,74,.3);border-radius:14px;padding:16px;text-align:center">
+      <div style="font-size:2.5rem;margin-bottom:8px">🎉</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:var(--li);margin-bottom:6px">Valid Ticket!</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;margin-bottom:4px">${xe(d.buyer_name)}</div>
+      ${d.tier_name ? `<div style="font-size:.76rem;color:var(--mu2);margin-bottom:2px">${xe(d.tier_name)}</div>` : ''}
+      <div style="font-size:.76rem;color:var(--mu2);margin-bottom:4px">${xe(d.event_name||'')} · ${d.quantity} ticket${d.quantity>1?'s':''}</div>
+      <div style="font-size:.7rem;color:var(--mu)">${xe(d.booking_ref)}</div>
+      <button class="btn-primary" style="margin-top:14px;width:100%" onclick="_oqrDone=false;document.getElementById('org-qr-result').innerHTML='';_oqrScanLoop()">✅ Scan Next</button>
+    </div>`;
+    toast('✅ ' + xe(d.buyer_name) + ' checked in!', 'ok');
+    loadScanStats();
+  } catch(e) {
+    res.innerHTML = `<div style="color:var(--pk);font-size:.8rem;text-align:center;padding:16px">Error: ${xe(e.message)}<br>${_scanAgainBtn('Retry')}</div>`;
+  }
+}
+
+function closeOrgQrScanner() {
+  _oqrDone = true;
+  if (_oqrFrame) { cancelAnimationFrame(_oqrFrame); _oqrFrame = null; }
+  if (_oqrStream) { _oqrStream.getTracks().forEach(t => t.stop()); _oqrStream = null; }
+  const vid = document.getElementById('org-qr-video');
+  if (vid) vid.srcObject = null;
+  closeOrgSheet('org-qr-overlay');
+}
 
 renderOrgFAQ();
 loadOrgSettingsStatus();

@@ -359,6 +359,55 @@ module.exports = async (req, res) => {
       return res.status(200).json({ booking: data });
     }
 
+    /* ─── POST /validate-ticket ──────────────────────────── */
+    if (url === '/validate-ticket' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { user, profile } = auth;
+
+      const { qr_data } = req.body || {};
+      if (!qr_data) return res.status(400).json({ error: 'qr_data required' });
+
+      const parts = String(qr_data).split(':');
+      if (parts.length < 4 || parts[0] !== 'PULSIFY' || parts[3] !== 'VALID')
+        return res.status(400).json({ error: 'Invalid QR code' });
+
+      const booking_ref = parts[1];
+      const event_id    = parts[2];
+
+      const { data: booking } = await sb().from('bookings')
+        .select('*,events(name,date_local,venue_name,organiser_id),ticket_tiers(name)')
+        .eq('booking_ref', booking_ref).maybeSingle();
+
+      if (!booking)                         return res.status(404).json({ error: 'Ticket not found' });
+      if (booking.status !== 'confirmed')   return res.status(400).json({ error: 'Ticket is not confirmed' });
+      if (booking.event_id !== event_id)    return res.status(400).json({ error: 'QR data mismatch' });
+      if (profile.role === 'organizer' && booking.events?.organiser_id !== user.id)
+        return res.status(403).json({ error: "This ticket is for a different organizer's event" });
+
+      if (booking.checked_in)
+        return res.status(409).json({
+          error: 'Already checked in',
+          checked_in_at: booking.checked_in_at,
+          booking: { buyer_name: booking.buyer_name, booking_ref: booking.booking_ref },
+        });
+
+      await sb().from('bookings')
+        .update({ checked_in: true, checked_in_at: new Date().toISOString() })
+        .eq('id', booking.id);
+
+      return res.status(200).json({
+        success:     true,
+        booking_ref: booking.booking_ref,
+        buyer_name:  booking.buyer_name,
+        buyer_email: booking.buyer_email,
+        quantity:    booking.quantity,
+        tier_name:   booking.ticket_tiers?.name  || null,
+        event_name:  booking.events?.name        || null,
+        event_date:  booking.events?.date_local  || null,
+      });
+    }
+
     /* ─── POST /paystack/webhook ──────────────────────────── */
     if (url === '/paystack/webhook' && req.method === 'POST') {
       const sig  = req.headers['x-paystack-signature'] || '';
