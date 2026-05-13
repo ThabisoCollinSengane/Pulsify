@@ -2516,6 +2516,12 @@ window.addEventListener('DOMContentLoaded', () => {
   loadFrontline();
   triggerRev();
 
+  // Deep-link from /map: ?eid=xxx or ?bid=xxx
+  const _qp = new URLSearchParams(location.search);
+  const _eid = _qp.get('eid'), _bid = _qp.get('bid');
+  if (_eid) setTimeout(() => openEv(_eid), 400);
+  else if (_bid) setTimeout(() => openBiz(_bid), 400);
+
   // Check auth state + notification dot
   const sb = getSB();
   if (sb) {
