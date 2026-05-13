@@ -1268,6 +1268,136 @@ module.exports = async (req, res) => {
       return res.status(200).json({ featured, injected });
     }
 
+    /* ─── POST /promotions/create ────────────────────────── */
+    if (url === '/promotions/create' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { role } = auth.profile;
+      if (!['organizer','business','admin'].includes(role)) return res.status(403).json({ error: 'Organizer or business account required' });
+
+      const {
+        title, organiser_name, venue_name, venue_city, date_local, time_local,
+        price_min, is_free, image_url, genre, external_url,
+        city_targets, genre_targets, placement, duration_days, event_id,
+      } = req.body || {};
+
+      if (!title) return res.status(400).json({ error: 'title is required' });
+      if (!['featured_weekend','feed_inject','both'].includes(placement))
+        return res.status(400).json({ error: 'placement must be featured_weekend, feed_inject, or both' });
+
+      // If event_id provided, verify ownership
+      if (event_id) {
+        const { data: ev } = await sb().from('events').select('organiser_id').eq('id', event_id).single();
+        if (!ev) return res.status(404).json({ error: 'Event not found' });
+        if (role !== 'admin' && ev.organiser_id !== auth.user.id)
+          return res.status(403).json({ error: 'You do not own this event' });
+      }
+
+      const days = Math.min(Math.max(parseInt(duration_days) || 7, 1), 90);
+      const ends_at = new Date(Date.now() + days * 86400000).toISOString();
+
+      const { data: promo, error } = await sb().from('promotions').insert({
+        title, organiser_name: organiser_name || auth.profile.display_name || null,
+        venue_name: venue_name || null, venue_city: venue_city || null,
+        date_local: date_local || null, time_local: time_local || null,
+        price_min: price_min ?? null, is_free: !!is_free,
+        image_url: image_url || null, genre: genre || null,
+        external_url: external_url || null,
+        city_targets: Array.isArray(city_targets) ? city_targets : [],
+        genre_targets: Array.isArray(genre_targets) ? genre_targets : [],
+        placement, priority: 0,
+        is_active: false,  // admin must approve
+        starts_at: new Date().toISOString(), ends_at,
+        owner_id: auth.user.id, owner_role: role,
+        event_id: event_id || null,
+      }).select().single();
+
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(201).json({ promotion: promo });
+    }
+
+    /* ─── GET /promotions/mine ───────────────────────────── */
+    if (url === '/promotions/mine' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { data, error } = await sb().from('promotions')
+        .select('*').eq('owner_id', auth.user.id)
+        .order('created_at', { ascending: false });
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ promotions: data || [] });
+    }
+
+    /* ─── PATCH /promotions/:id ──────────────────────────── */
+    const promoOwnMatch = url.match(/^\/promotions\/([^/]+)$/);
+    if (promoOwnMatch && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const promoId = promoOwnMatch[1];
+      const { data: existing } = await sb().from('promotions').select('owner_id').eq('id', promoId).single();
+      if (!existing) return res.status(404).json({ error: 'Promotion not found' });
+      if (auth.profile.role !== 'admin' && existing.owner_id !== auth.user.id)
+        return res.status(403).json({ error: 'Not your promotion' });
+      const allowed = ['title','organiser_name','venue_name','venue_city','date_local','time_local',
+        'price_min','is_free','image_url','genre','external_url','city_targets','genre_targets',
+        'placement','is_active','ends_at'];
+      const updates = Object.fromEntries(Object.entries(req.body || {}).filter(([k]) => allowed.includes(k)));
+      if (!Object.keys(updates).length) return res.status(400).json({ error: 'No valid fields to update' });
+      const { data, error } = await sb().from('promotions').update(updates).eq('id', promoId).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ promotion: data });
+    }
+
+    /* ─── DELETE /promotions/:id ─────────────────────────── */
+    if (promoOwnMatch && req.method === 'DELETE') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const promoId = promoOwnMatch[1];
+      const { data: existing } = await sb().from('promotions').select('owner_id').eq('id', promoId).single();
+      if (!existing) return res.status(404).json({ error: 'Promotion not found' });
+      if (auth.profile.role !== 'admin' && existing.owner_id !== auth.user.id)
+        return res.status(403).json({ error: 'Not your promotion' });
+      const { error } = await sb().from('promotions').delete().eq('id', promoId);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ ok: true });
+    }
+
+    /* ─── GET /admin/promotions ──────────────────────────── */
+    if (url === '/admin/promotions' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const statusFilter = q.status || 'pending';
+      let query = sb().from('promotions').select('*').order('created_at', { ascending: false });
+      if (statusFilter === 'pending')  query = query.eq('is_active', false);
+      else if (statusFilter === 'active') query = query.eq('is_active', true);
+      const { data, error } = await query;
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ promotions: data || [] });
+    }
+
+    /* ─── PATCH /admin/promotions/:id ────────────────────── */
+    const adminPromoMatch = url.match(/^\/admin\/promotions\/([^/]+)$/);
+    if (adminPromoMatch && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const { is_active, priority, placement } = req.body || {};
+      const updates = {};
+      if (is_active !== undefined) updates.is_active = is_active;
+      if (priority  !== undefined) updates.priority  = parseInt(priority);
+      if (placement !== undefined) updates.placement = placement;
+      const { data, error } = await sb().from('promotions').update(updates).eq('id', adminPromoMatch[1]).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ promotion: data });
+    }
+
+    /* ─── DELETE /admin/promotions/:id ───────────────────── */
+    if (adminPromoMatch && req.method === 'DELETE') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const { error } = await sb().from('promotions').delete().eq('id', adminPromoMatch[1]);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ ok: true });
+    }
+
     /* ─── POST /report-event ────────────────────────────── */
     if (url === '/report-event' && req.method === 'POST') {
       const token  = (req.headers.authorization || '').replace('Bearer ', '').trim();

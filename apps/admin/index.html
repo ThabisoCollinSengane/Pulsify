@@ -148,6 +148,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="tab-btn" onclick="switchTab('banners')">🖼 Banners</div>
     <div class="tab-btn" onclick="switchTab('notifications')">🔔 Notify</div>
     <div class="tab-btn" onclick="switchTab('reports')">🚩 Reports</div>
+    <div class="tab-btn" onclick="switchTab('promotions')">🚀 Promotions</div>
     <div class="tab-btn" onclick="switchTab('system')">⚙️ System</div>
   </div>
 
@@ -524,6 +525,35 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div id="reports-list"><div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div></div>
   </div>
 
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: PROMOTIONS -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <div id="tab-promotions" class="tab-content">
+    <div style="margin-bottom:20px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Promotions</div>
+      <div style="font-size:.82rem;color:var(--mu2)">Review, approve and manage promoted content</div>
+    </div>
+
+    <!-- KPI bar -->
+    <div class="stats-bar" style="margin-bottom:20px">
+      <div class="stat"><div class="stat-n warn-n" id="promo-kpi-pending">—</div><div class="stat-l">Pending</div></div>
+      <div class="stat"><div class="stat-n ok-n" id="promo-kpi-active">—</div><div class="stat-l">Live</div></div>
+      <div class="stat"><div class="stat-n" id="promo-kpi-featured">—</div><div class="stat-l">Featured</div></div>
+      <div class="stat"><div class="stat-n" id="promo-kpi-inject">—</div><div class="stat-l">Feed Inject</div></div>
+    </div>
+
+    <div class="search-row">
+      <select class="inp" id="promo-admin-filter" onchange="loadAdminPromos()" style="max-width:180px">
+        <option value="pending">⏳ Pending Review</option>
+        <option value="active">✅ Active / Live</option>
+        <option value="all">All</option>
+      </select>
+      <button class="btn btn-surf" onclick="loadAdminPromos()">↺ Refresh</button>
+    </div>
+    <div id="msg-promotions" class="msg"></div>
+    <div id="promotions-list"><div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div></div>
+  </div>
+
   <div id="tab-system" class="tab-content">
     <div style="margin-bottom:20px">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">System Settings</div>
@@ -624,6 +654,7 @@ function switchTab(tab) {
   else if (tab === 'banners') loadBanners();
   else if (tab === 'notifications') loadNotifHistory();
   else if (tab === 'reports') loadReports();
+  else if (tab === 'promotions') loadAdminPromos();
 }
 
 async function signOutAdmin() { await sb.auth.signOut(); location.reload(); }
@@ -1559,6 +1590,119 @@ async function updateReport(id, status) {
 }
 
 checkSession();
+
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+/* ADMIN PROMOTIONS */
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+const PLACEMENT_LABELS = {
+  featured_weekend: '⚡ Featured Weekend',
+  feed_inject:      '📌 Feed Inject',
+  both:             '✨ Both',
+};
+
+async function loadAdminPromos() {
+  const el = document.getElementById('promotions-list');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div>';
+  const filter = document.getElementById('promo-admin-filter')?.value || 'pending';
+  try {
+    const r = await fetch(`/api/admin/promotions?status=${filter}`, { headers: { Authorization: 'Bearer ' + adminToken } });
+    const json = await r.json();
+    if (!r.ok) { el.innerHTML = `<div style="padding:20px;color:var(--pk)">${escHtml(json.error)}</div>`; return; }
+    const promos = json.promotions || [];
+
+    // Update KPIs (only when loading all)
+    const all = filter === 'all' ? promos : null;
+    if (all) {
+      document.getElementById('promo-kpi-pending').textContent  = all.filter(p => !p.is_active).length;
+      document.getElementById('promo-kpi-active').textContent   = all.filter(p =>  p.is_active).length;
+      document.getElementById('promo-kpi-featured').textContent = all.filter(p => p.is_active && (p.placement === 'featured_weekend' || p.placement === 'both')).length;
+      document.getElementById('promo-kpi-inject').textContent   = all.filter(p => p.is_active && (p.placement === 'feed_inject'      || p.placement === 'both')).length;
+    }
+
+    if (!promos.length) {
+      el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">No promotions found.</div>';
+      return;
+    }
+
+    el.innerHTML = promos.map(p => `
+      <div style="background:var(--surf);border:1px solid var(--border2);border-radius:14px;margin-bottom:12px;overflow:hidden">
+        <div style="display:flex;gap:12px;padding:14px">
+          ${p.image_url ? `<img src="${escHtml(p.image_url)}" style="width:64px;height:64px;border-radius:10px;object-fit:cover;flex-shrink:0" onerror="this.style.display='none'"/>` : ''}
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px">
+              <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem">${escHtml(p.title)}</div>
+              <span style="flex-shrink:0;padding:2px 10px;border-radius:50px;font-size:.64rem;font-family:'Syne',sans-serif;font-weight:700;background:${p.is_active ? 'rgba(198,255,74,.15)' : 'rgba(255,92,0,.15)'};color:${p.is_active ? '#C6FF4A' : 'var(--or)'}">${p.is_active ? 'LIVE' : 'Pending'}</span>
+            </div>
+            <div style="font-size:.74rem;color:var(--mu2);margin-bottom:2px">${escHtml(p.organiser_name || '')}${p.venue_city ? ' · 📍 ' + escHtml(p.venue_city) : ''}</div>
+            <div style="font-size:.72rem;color:var(--mu)">${PLACEMENT_LABELS[p.placement] || p.placement} · Priority ${p.priority}</div>
+            ${p.ends_at ? `<div style="font-size:.68rem;color:var(--mu);margin-top:2px">Ends ${p.ends_at.slice(0,10)}</div>` : ''}
+            ${p.city_targets?.length ? `<div style="font-size:.68rem;color:var(--cy);margin-top:2px">📍 ${p.city_targets.join(', ')}</div>` : ''}
+            ${p.owner_role ? `<div style="font-size:.66rem;color:var(--mu);margin-top:2px">Submitted by: ${escHtml(p.owner_role)}</div>` : ''}
+          </div>
+        </div>
+
+        <div style="display:flex;gap:6px;padding:10px 14px;border-top:1px solid var(--border);flex-wrap:wrap;align-items:center">
+          ${!p.is_active
+            ? `<button class="btn btn-li" style="flex:1;min-width:80px;padding:6px 0;font-size:.72rem" onclick="approvePromo('${p.id}')">✅ Approve</button>`
+            : `<button class="btn btn-surf" style="flex:1;min-width:80px;padding:6px 0;font-size:.72rem" onclick="pausePromo('${p.id}')">⏸ Pause</button>`}
+          <div style="display:flex;align-items:center;gap:4px;flex:1;min-width:100px">
+            <span style="font-size:.7rem;color:var(--mu);white-space:nowrap">Priority</span>
+            <input type="number" value="${p.priority}" min="0" max="100" id="prio-${p.id}"
+              style="width:52px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:4px 8px;color:var(--tx);font-size:.78rem;text-align:center"/>
+            <button class="btn btn-cy" style="padding:4px 10px;font-size:.7rem" onclick="setPromoPriority('${p.id}')">Set</button>
+          </div>
+          <select id="place-${p.id}" style="flex:1;min-width:120px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:5px 8px;color:var(--tx);font-size:.72rem" onchange="setPromoPlacement('${p.id}',this.value)">
+            <option value="featured_weekend" ${p.placement==='featured_weekend'?'selected':''}>⚡ Featured</option>
+            <option value="feed_inject"      ${p.placement==='feed_inject'     ?'selected':''}>📌 Feed Inject</option>
+            <option value="both"             ${p.placement==='both'            ?'selected':''}>✨ Both</option>
+          </select>
+          <button class="btn btn-pk" style="padding:6px 10px;font-size:.72rem" onclick="deleteAdminPromo('${p.id}')">🗑</button>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    el.innerHTML = `<div style="padding:20px;color:var(--pk)">${escHtml(e.message)}</div>`;
+  }
+}
+
+async function approvePromo(id) {
+  await _patchAdminPromo(id, { is_active: true });
+}
+async function pausePromo(id) {
+  await _patchAdminPromo(id, { is_active: false });
+}
+async function setPromoPriority(id) {
+  const val = parseInt(document.getElementById('prio-' + id)?.value) || 0;
+  await _patchAdminPromo(id, { priority: val });
+}
+async function setPromoPlacement(id, placement) {
+  await _patchAdminPromo(id, { placement });
+}
+async function _patchAdminPromo(id, body) {
+  try {
+    const r = await fetch(`/api/admin/promotions/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error((await r.json()).error);
+    loadAdminPromos();
+  } catch(e) {
+    const msg = document.getElementById('msg-promotions');
+    if (msg) { msg.textContent = e.message; msg.className = 'msg show msg-err'; setTimeout(() => msg.classList.remove('show'), 4000); }
+  }
+}
+async function deleteAdminPromo(id) {
+  if (!confirm('Delete this promotion permanently?')) return;
+  try {
+    const r = await fetch(`/api/admin/promotions/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + adminToken } });
+    if (!r.ok) throw new Error((await r.json()).error);
+    loadAdminPromos();
+  } catch(e) {
+    const msg = document.getElementById('msg-promotions');
+    if (msg) { msg.textContent = e.message; msg.className = 'msg show msg-err'; setTimeout(() => msg.classList.remove('show'), 4000); }
+  }
+}
 </script>
 </body>
 </html>

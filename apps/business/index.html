@@ -205,6 +205,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
   <button class="bb" data-tab="menu-mgr" onclick="showTab('menu-mgr')"><span class="bb-ico">🍽️</span><span class="bb-lbl">Menu</span></button>
   <button class="bb" data-tab="orders" onclick="showTab('orders')"><span class="bb-ico">📦</span><span class="bb-lbl">Orders</span><span class="bb-badge" id="orders-badge">0</span></button>
   <button class="bb" data-tab="analytics" onclick="showTab('analytics')"><span class="bb-ico">📊</span><span class="bb-lbl">Analytics</span></button>
+  <button class="bb" data-tab="promote" onclick="showTab('promote')"><span class="bb-ico">🚀</span><span class="bb-lbl">Promote</span></button>
   <button class="bb" data-tab="profile" onclick="showTab('profile')"><span class="bb-ico">⚙️</span><span class="bb-lbl">Profile</span></button>
 </nav>
 
@@ -291,6 +292,53 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
       <thead><tr><th>Order ID</th><th>Customer</th><th>Items</th><th>Total</th><th>Pickup</th><th>Status</th></tr></thead>
       <tbody id="orders-tbody"></tbody>
     </table>
+  </div>
+</div>
+
+<!-- ══ PROMOTE ══ -->
+<div class="panel" id="tab-promote">
+  <div class="sec-head">
+    <div><div class="sec-title">Promote Your Business</div><div class="sec-sub">Get featured in the event feed</div></div>
+  </div>
+  <div style="padding:0 14px 80px">
+    <div style="font-size:.78rem;color:var(--mu);margin-bottom:16px;line-height:1.6">Your promotion appears in the "Featured This Weekend" section or injected into the homepage feed. All promotions are reviewed by our team before going live.</div>
+
+    <div id="promo-msg-biz" style="display:none;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:14px"></div>
+
+    <div class="section-label">Create Promotion</div>
+
+    <label class="ff-label">Headline *</label>
+    <input class="ff" id="biz-promo-title" placeholder="e.g. Friday Night Vibes at Smokey's"/>
+
+    <label class="ff-label">City / Area *</label>
+    <input class="ff" id="biz-promo-city" placeholder="e.g. Durban"/>
+
+    <label class="ff-label">Link (optional)</label>
+    <input class="ff" id="biz-promo-url" type="url" placeholder="https://… or leave blank for your menu"/>
+
+    <label class="ff-label">Placement *</label>
+    <select class="ff" id="biz-promo-placement">
+      <option value="featured_weekend">⚡ Featured This Weekend</option>
+      <option value="feed_inject">📌 Feed Inject</option>
+      <option value="both">✨ Both</option>
+    </select>
+
+    <label class="ff-label">Duration *</label>
+    <select class="ff" id="biz-promo-duration">
+      <option value="7">7 days</option>
+      <option value="14">14 days</option>
+      <option value="30">30 days</option>
+    </select>
+
+    <label class="ff-label">Target cities <span style="color:var(--mu);font-size:.68rem">(comma-separated, blank = everywhere)</span></label>
+    <input class="ff" id="biz-promo-cities" placeholder="e.g. Durban, Pietermaritzburg"/>
+
+    <button class="btn-primary" id="biz-promo-btn" onclick="submitBizPromo()" style="width:100%;margin-top:6px">Submit for Review 🚀</button>
+
+    <div style="margin-top:24px">
+      <div class="section-label">Your Promotions</div>
+      <div id="biz-promo-mine"><div style="padding:20px 0;text-align:center;color:var(--mu);font-size:.8rem">Loading…</div></div>
+    </div>
   </div>
 </div>
 
@@ -821,6 +869,7 @@ function showTab(name) {
   const p = document.getElementById('tab-' + name);
   if (p) { p.classList.add('active'); p.scrollTop = 0; }
   if (name === 'analytics') renderAnalytics();
+  if (name === 'promote')   loadBizPromotions();
 }
 function openSheet(id)  { document.getElementById(id).classList.add('open'); }
 function closeSheet(id) { document.getElementById(id).classList.remove('open'); }
@@ -1810,6 +1859,100 @@ function closeQrScanner() {
   const video = document.getElementById('qr-video');
   video.srcObject = null;
   document.getElementById('qr-overlay').style.display = 'none';
+}
+
+// ════════════════════════════════════════════════════════════
+//  PROMOTIONS — BUSINESS
+// ════════════════════════════════════════════════════════════
+function _bizPromoMsg(text, ok) {
+  const el = document.getElementById('promo-msg-biz');
+  el.style.cssText = 'display:block;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:14px;background:' +
+    (ok ? 'rgba(198,255,74,.1);color:#C6FF4A' : 'rgba(255,45,120,.12);color:#FF2D78');
+  el.textContent = text;
+}
+
+async function submitBizPromo() {
+  const title     = document.getElementById('biz-promo-title').value.trim();
+  const city      = document.getElementById('biz-promo-city').value.trim();
+  const extUrl    = document.getElementById('biz-promo-url').value.trim();
+  const placement = document.getElementById('biz-promo-placement').value;
+  const duration  = document.getElementById('biz-promo-duration').value;
+  const cities    = document.getElementById('biz-promo-cities').value.trim();
+
+  if (!title) return _bizPromoMsg('Please enter a headline.', false);
+  if (!city)  return _bizPromoMsg('Please enter a city.', false);
+
+  const btn = document.getElementById('biz-promo-btn');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+
+  try {
+    const sb = getSB();
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) throw new Error('Not logged in');
+
+    const menuLink = location.origin + '/business-menu?id=' + getBizId();
+    const cityTargets = cities ? cities.split(',').map(c => c.trim()).filter(Boolean) : [];
+
+    const r = await fetch('/api/promotions/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({
+        title, organiser_name: BIZ.name,
+        venue_city: city, venue_name: BIZ.name,
+        is_free: false, image_url: BIZ.cover_image_url || null,
+        external_url: extUrl || menuLink,
+        placement, duration_days: parseInt(duration),
+        city_targets: cityTargets, genre_targets: [],
+      }),
+    });
+    const json = await r.json();
+    if (!r.ok) throw new Error(json.error);
+    _bizPromoMsg('✅ Submitted! Admin will review and activate your promotion shortly.', true);
+    document.getElementById('biz-promo-title').value = '';
+    document.getElementById('biz-promo-city').value  = '';
+    document.getElementById('biz-promo-url').value   = '';
+    document.getElementById('biz-promo-cities').value = '';
+    loadBizPromoMine(session.access_token);
+  } catch(e) {
+    _bizPromoMsg(e.message, false);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Submit for Review 🚀';
+  }
+}
+
+async function loadBizPromotions() {
+  const sb = getSB();
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) loadBizPromoMine(session.access_token);
+}
+
+async function loadBizPromoMine(token) {
+  const el = document.getElementById('biz-promo-mine');
+  if (!el) return;
+  try {
+    const r = await fetch('/api/promotions/mine', { headers: { 'Authorization': 'Bearer ' + token } });
+    const { promotions } = await r.json();
+    if (!promotions?.length) { el.innerHTML = '<div style="padding:16px 0;text-align:center;color:var(--mu);font-size:.8rem">No promotions yet.</div>'; return; }
+    const xb = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    el.innerHTML = promotions.map(p => `
+      <div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.84rem">${xb(p.title)}</div>
+          <span style="flex-shrink:0;padding:2px 8px;border-radius:50px;font-size:.62rem;font-family:'Syne',sans-serif;font-weight:700;background:${p.is_active ? 'rgba(198,255,74,.12)' : 'rgba(255,92,0,.12)'};color:${p.is_active ? '#C6FF4A' : 'var(--or)'}">${p.is_active ? 'LIVE' : 'Pending'}</span>
+        </div>
+        <div style="font-size:.72rem;color:var(--mu)">${p.placement} · ${p.ends_at ? 'Ends ' + p.ends_at.slice(0,10) : 'No end'}</div>
+        <button data-id="${p.id}" onclick="deleteBizPromo(this)" style="margin-top:8px;background:rgba(255,45,120,.1);color:#FF2D78;border:none;border-radius:8px;padding:4px 12px;font-size:.7rem;cursor:pointer">Delete</button>
+      </div>`).join('');
+    el.dataset.token = token;
+  } catch(e) { el.innerHTML = '<div style="color:var(--pk);font-size:.8rem;padding:8px">Failed to load</div>'; }
+}
+
+async function deleteBizPromo(btn) {
+  const id = btn.dataset.id;
+  const token = document.getElementById('biz-promo-mine').dataset.token;
+  btn.disabled = true; btn.textContent = '…';
+  const r = await fetch('/api/promotions/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+  if (r.ok) loadBizPromoMine(token); else { btn.disabled = false; btn.textContent = 'Delete'; }
 }
 </script>
 

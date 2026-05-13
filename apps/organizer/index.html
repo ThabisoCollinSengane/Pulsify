@@ -120,6 +120,7 @@ select.inp option{background:#0D1424}
     <div class="tab" onclick="switchTab(this,'pane-event')">🎟 Event</div>
     <div class="tab" onclick="switchTab(this,'pane-myposts')">📋 Posts</div>
     <div class="tab" onclick="switchTab(this,'pane-scan')">📷 Scan</div>
+    <div class="tab" onclick="switchTab(this,'pane-promote')">🚀 Promote</div>
     <div class="tab" onclick="switchTab(this,'pane-settings')">⚙️ Settings</div>
   </div>
 
@@ -184,6 +185,49 @@ select.inp option{background:#0D1424}
   <div class="pane" id="pane-myposts">
     <div class="card" id="my-posts-card">
       <div class="empty">Loading your posts…</div>
+    </div>
+  </div>
+
+  <!-- ══ PROMOTE ══ -->
+  <div class="pane" id="pane-promote">
+    <div class="card">
+      <div class="card-body">
+        <div class="section-label">🚀 Promote Your Event</div>
+        <div style="font-size:.76rem;color:var(--mu);margin-bottom:14px;line-height:1.5">Your promotion will appear in the "Featured This Weekend" section or injected into the event feed. All promotions are reviewed before going live.</div>
+
+        <div id="promo-msg-org" style="display:none;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px"></div>
+
+        <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Pick an event to promote</div>
+        <select class="inp" id="promo-event-sel" onchange="onPromoEventSelect()" style="margin-bottom:10px">
+          <option value="">— Select one of your events —</option>
+        </select>
+
+        <div id="promo-event-preview" style="display:none;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;font-size:.78rem"></div>
+
+        <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Placement *</div>
+        <select class="inp" id="promo-placement" style="margin-bottom:10px">
+          <option value="featured_weekend">⚡ Featured This Weekend (top of feed)</option>
+          <option value="feed_inject">📌 Feed Inject (between events)</option>
+          <option value="both">✨ Both</option>
+        </select>
+
+        <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Duration *</div>
+        <select class="inp" id="promo-duration" style="margin-bottom:10px">
+          <option value="7">7 days</option>
+          <option value="14">14 days</option>
+          <option value="30">30 days</option>
+        </select>
+
+        <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Target cities <span style="color:var(--mu)">(leave blank = all cities)</span></div>
+        <input class="inp" id="promo-cities" placeholder="e.g. Durban, Johannesburg" style="margin-bottom:10px"/>
+
+        <button class="btn-primary" id="promo-btn-org" onclick="submitOrgPromo()" style="width:100%">Submit for Review 🚀</button>
+
+        <div style="margin-top:20px">
+          <div class="section-label">Your Promotions</div>
+          <div id="promo-mine-org"><div style="padding:20px 0;text-align:center;color:var(--mu);font-size:.8rem">Loading…</div></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -574,6 +618,7 @@ function switchTab(btn, paneId) {
   btn.classList.add('active');
   document.getElementById(paneId).classList.add('active');
   if (paneId === 'pane-myposts') loadMyPosts();
+  if (paneId === 'pane-promote') { loadOrgPromoEvents(); loadMyOrgPromos(); }
   if (paneId === 'pane-scan') {
     const sel = document.getElementById('scan-event-sel');
     if (sel.options.length <= 1) loadScanEvents(); else loadScanStats();
@@ -969,6 +1014,110 @@ function closeOrgQrScanner() {
   const vid = document.getElementById('org-qr-video');
   if (vid) vid.srcObject = null;
   closeOrgSheet('org-qr-overlay');
+}
+
+/* ══════════════════════════════════════════════════
+   PROMOTIONS — ORGANIZER
+══════════════════════════════════════════════════ */
+async function loadOrgPromoEvents() {
+  const sel = document.getElementById('promo-event-sel');
+  if (!sel || sel.options.length > 1) return;
+  const { data } = await sb.from('events')
+    .select('id,name,date_local,venue_city,image_url,genre,price_min,is_free,organiser_name')
+    .eq('organiser_id', currentUser.id)
+    .order('date_local', { ascending: false })
+    .limit(30);
+  (data || []).forEach(ev => {
+    const opt = document.createElement('option');
+    opt.value = ev.id;
+    opt.dataset.ev = JSON.stringify(ev);
+    opt.textContent = ev.name + ' — ' + ev.date_local;
+    sel.appendChild(opt);
+  });
+}
+
+function onPromoEventSelect() {
+  const sel = document.getElementById('promo-event-sel');
+  const prev = document.getElementById('promo-event-preview');
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt.dataset.ev) { prev.style.display = 'none'; return; }
+  const ev = JSON.parse(opt.dataset.ev);
+  prev.style.display = 'block';
+  prev.innerHTML = `<div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:2px">${xe(ev.name)}</div>
+    <div style="color:var(--mu)">📍 ${xe(ev.venue_city)} · ${ev.date_local}</div>
+    <div style="color:var(--or);margin-top:2px">${ev.is_free ? 'FREE' : 'R'+(ev.price_min||'TBA')} · ${xe(ev.genre||'')}</div>`;
+}
+
+function _promoMsg(el, text, ok) {
+  el.style.cssText = 'display:block;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px;background:' +
+    (ok ? 'rgba(198,255,74,.1);color:#C6FF4A' : 'rgba(255,45,120,.12);color:#FF2D78');
+  el.textContent = text;
+}
+
+async function submitOrgPromo() {
+  const sel = document.getElementById('promo-event-sel');
+  const placement = document.getElementById('promo-placement').value;
+  const duration  = document.getElementById('promo-duration').value;
+  const cities    = document.getElementById('promo-cities').value.trim();
+  const msg       = document.getElementById('promo-msg-org');
+  const btn       = document.getElementById('promo-btn-org');
+
+  if (!sel.value) return _promoMsg(msg, 'Please select an event.', false);
+  const opt = sel.options[sel.selectedIndex];
+  const ev  = JSON.parse(opt.dataset.ev || '{}');
+
+  btn.disabled = true; btn.textContent = 'Submitting…';
+  try {
+    const cityTargets = cities ? cities.split(',').map(c => c.trim()).filter(Boolean) : [];
+    const r = await fetch('/api/promotions/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token },
+      body: JSON.stringify({
+        title: ev.name, organiser_name: ev.organiser_name,
+        venue_city: ev.venue_city, date_local: ev.date_local,
+        price_min: ev.price_min, is_free: ev.is_free,
+        image_url: ev.image_url, genre: ev.genre,
+        external_url: window.location.origin + '/?eid=' + encodeURIComponent(ev.id),
+        event_id: ev.id, placement, duration_days: parseInt(duration),
+        city_targets: cityTargets, genre_targets: [],
+      }),
+    });
+    const json = await r.json();
+    if (!r.ok) throw new Error(json.error);
+    _promoMsg(msg, '✅ Submitted! Admin will review and activate your promotion.', true);
+    sel.value = '';
+    document.getElementById('promo-event-preview').style.display = 'none';
+    loadMyOrgPromos();
+  } catch(e) {
+    _promoMsg(msg, e.message, false);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Submit for Review 🚀';
+  }
+}
+
+async function loadMyOrgPromos() {
+  const el = document.getElementById('promo-mine-org');
+  if (!el) return;
+  try {
+    const r = await fetch('/api/promotions/mine', { headers: { 'Authorization': 'Bearer ' + _token } });
+    const { promotions } = await r.json();
+    if (!promotions?.length) { el.innerHTML = '<div style="padding:16px 0;text-align:center;color:var(--mu);font-size:.8rem">No promotions yet.</div>'; return; }
+    el.innerHTML = promotions.map(p => `
+      <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.84rem">${xe(p.title)}</div>
+          <span style="flex-shrink:0;padding:2px 8px;border-radius:50px;font-size:.62rem;font-family:'Syne',sans-serif;font-weight:700;background:${p.is_active ? 'rgba(198,255,74,.12)' : 'rgba(255,92,0,.12)'};color:${p.is_active ? '#C6FF4A' : 'var(--or)'}">${p.is_active ? 'LIVE' : 'Pending'}</span>
+        </div>
+        <div style="font-size:.72rem;color:var(--mu);margin-top:4px">${p.placement} · ${p.ends_at ? 'Ends ' + p.ends_at.slice(0,10) : 'No end date'}</div>
+        <button onclick="deleteOrgPromo('${p.id}',this)" style="margin-top:8px;background:rgba(255,45,120,.1);color:#FF2D78;border:none;border-radius:8px;padding:4px 12px;font-size:.7rem;cursor:pointer">Delete</button>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<div style="color:var(--pk);font-size:.8rem;padding:8px">Failed to load</div>'; }
+}
+
+async function deleteOrgPromo(id, btn) {
+  btn.disabled = true; btn.textContent = '…';
+  const r = await fetch('/api/promotions/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + _token } });
+  if (r.ok) loadMyOrgPromos(); else { btn.disabled = false; btn.textContent = 'Delete'; }
 }
 
 renderOrgFAQ();
