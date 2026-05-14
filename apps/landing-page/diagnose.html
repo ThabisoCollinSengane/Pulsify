@@ -64,7 +64,7 @@ function withTimeout(promise, ms) {
   section('4. SDK createClient test');
   try {
     const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY, {
-      realtime: { params: { eventsPerSecond: 1 } }
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
     });
     const { data, error, count } = await withTimeout(
       sb.from('events').select('id,name', { count: 'exact' }).limit(2),
