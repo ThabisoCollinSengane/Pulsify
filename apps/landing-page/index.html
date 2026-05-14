@@ -769,7 +769,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 <div id="report-overlay" onclick="if(event.target===this)closeReportModal()" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);align-items:flex-end;justify-content:center">
   <div style="width:100%;max-width:480px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);padding:20px 20px 32px;animation:su .3s ease">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem">🚩 Report Event</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem" id="report-title">🚩 Report</div>
       <button onclick="closeReportModal()" style="background:rgba(255,255,255,.06);border:none;color:var(--tx);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.9rem">✕</button>
     </div>
     <div id="report-msg" style="display:none;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px"></div>
@@ -1526,6 +1526,7 @@ async function openBiz(bizId) {
         <button class="rb" onclick="openComments('${x(b.id)}','${x(b.name)}')"><span class="ri">💬</span><span class="rl">${fn(Math.round((b.review_count || 0) * .15))}</span></button>
         <button class="rb" onclick="toggleSave('biz','${x(b.id)}',this)"><span class="ri">${savedBz.includes(b.id) ? '🔖' : '🏷'}</span><span class="rl">Save</span></button>
         <button class="rb" onclick="shareIt('${x(b.name)}')"><span class="ri">🔗</span><span class="rl">Share</span></button>
+        <button class="rb" onclick="openReportModal('business','${x(b.id)}','${x(b.name).replace(/'/g,'\\\'')}')"><span class="ri">🚩</span><span class="rl">Report</span></button>
       </div>
       <div class="bztb"><div class="bzt active" onclick="switchBT(this,'bp-info')">ℹ️ Info</div><div class="bzt" onclick="switchBT(this,'bp-gallery')">📸 Gallery</div></div>
       <div class="bzp active" id="bp-info">
@@ -2821,25 +2822,35 @@ function _renderBizPage() {
 }
 
 /* ══════════════════════════════════════════════════
-   REPORT EVENT
+   REPORT — events, businesses, posts
 ══════════════════════════════════════════════════ */
-let _reportEvId = null, _reportEvName = null;
+const REPORT_CFG = {
+  event:    { title: '🚩 Report Event',    endpoint: '/api/report-event',    idKey: 'event_id',    nameKey: 'event_name'    },
+  business: { title: '🚩 Report Business', endpoint: '/api/report-business', idKey: 'business_id', nameKey: 'business_name' },
+  post:     { title: '🚩 Report Post',     endpoint: '/api/report-post',     idKey: 'post_id',     nameKey: 'post_caption'  },
+};
+let _reportType = null, _reportTargetId = null, _reportTargetName = null;
 
-function openReportModal(evId, evName) {
-  _reportEvId = evId; _reportEvName = evName;
+function openReportModal(type, id, name) {
+  // Backward-compat: openReportModal(eventId, eventName) → treat as event
+  if (typeof type === 'string' && !REPORT_CFG[type]) {
+    name = id; id = type; type = 'event';
+  }
+  if (!REPORT_CFG[type]) type = 'event';
+  _reportType = type; _reportTargetId = id; _reportTargetName = name || null;
+  document.getElementById('report-title').textContent = REPORT_CFG[type].title;
   document.getElementById('report-reason').value = '';
   document.getElementById('report-detail').value = '';
   const msg = document.getElementById('report-msg');
   msg.style.display = 'none';
   document.getElementById('report-submit-btn').disabled = false;
   document.getElementById('report-submit-btn').textContent = 'Submit Report';
-  const ov = document.getElementById('report-overlay');
-  ov.style.display = 'flex';
+  document.getElementById('report-overlay').style.display = 'flex';
 }
 
 function closeReportModal() {
   document.getElementById('report-overlay').style.display = 'none';
-  _reportEvId = null; _reportEvName = null;
+  _reportType = null; _reportTargetId = null; _reportTargetName = null;
 }
 
 async function submitReport() {
@@ -2851,16 +2862,17 @@ async function submitReport() {
     msg.textContent = 'Please select a reason.';
     return;
   }
+  const cfg = REPORT_CFG[_reportType] || REPORT_CFG.event;
   const btn = document.getElementById('report-submit-btn');
   btn.disabled = true; btn.textContent = 'Sending…';
   try {
     const { data: { session } } = await getSB().auth.getSession();
     const headers = { 'Content-Type': 'application/json' };
     if (session) headers['Authorization'] = 'Bearer ' + session.access_token;
-    const r = await fetch('/api/report-event', {
-      method: 'POST', headers,
-      body: JSON.stringify({ event_id: _reportEvId, event_name: _reportEvName, reason, detail: detail || null }),
-    });
+    const body = { reason, detail: detail || null };
+    body[cfg.idKey]   = _reportTargetId;
+    body[cfg.nameKey] = _reportTargetName;
+    const r = await fetch(cfg.endpoint, { method: 'POST', headers, body: JSON.stringify(body) });
     if (!r.ok) throw new Error((await r.json()).error || 'Failed');
     msg.style.cssText = 'display:block;background:rgba(198,255,74,.1);color:#C6FF4A;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px';
     msg.textContent = '✅ Report submitted. Our team will review it shortly.';

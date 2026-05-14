@@ -374,6 +374,7 @@ function buildCard(post) {
       '<button class="ab" onclick="toggleCmt(\u0027'+x(post.id)+'\u0027)"><span class="ai">💬</span> <span id="cc-'+x(post.id)+'">'+fn(comments.length)+'</span></button>' +
       '<button class="ab '+(reposted?'rp':'')+'" id="rb-'+x(post.id)+'" onclick="doRepost(\u0027'+x(post.id)+'\u0027)"><span class="ai">🔁</span> <span id="rc-'+x(post.id)+'">'+fn(reposts.length)+'</span></button>' +
       '<button class="ab" onclick="doShare(\u0027'+x(post.caption||'')+'\u0027)"><span class="ai">🔗</span></button>' +
+      '<button class="ab" onclick="openReportPost(\u0027'+x(post.id)+'\u0027,\u0027'+x((post.caption||'').slice(0,80).replace(/\u0027/g,''))+'\u0027)" title="Report post"><span class="ai">🚩</span></button>' +
     '</div>' +
     '<div class="cmt-wrap" id="cmt-'+x(post.id)+'">' +
       '<div id="cmtl-'+x(post.id)+'">'+buildCmts(comments)+'</div>' +
@@ -761,6 +762,78 @@ async function markAllNotifsRead() {
 }
 
 initFeed();
+
+/* ══════════════════════════════════════════════════
+   REPORT POST
+══════════════════════════════════════════════════ */
+let _rpId = null, _rpCap = null;
+function openReportPost(id, caption) {
+  _rpId = id; _rpCap = caption || '';
+  document.getElementById('rp-reason').value = '';
+  document.getElementById('rp-detail').value = '';
+  const m = document.getElementById('rp-msg'); m.style.display = 'none';
+  const b = document.getElementById('rp-submit'); b.disabled = false; b.textContent = 'Submit Report';
+  document.getElementById('rp-overlay').style.display = 'flex';
+}
+function closeReportPost() {
+  document.getElementById('rp-overlay').style.display = 'none';
+  _rpId = null; _rpCap = null;
+}
+async function submitReportPost() {
+  const reason = document.getElementById('rp-reason').value;
+  const detail = document.getElementById('rp-detail').value.trim();
+  const m = document.getElementById('rp-msg');
+  if (!reason) {
+    m.style.cssText = 'display:block;background:rgba(255,45,120,.12);color:#FF2D78;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px';
+    m.textContent = 'Please select a reason.';
+    return;
+  }
+  const b = document.getElementById('rp-submit');
+  b.disabled = true; b.textContent = 'Sending…';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const headers = { 'Content-Type': 'application/json' };
+    if (session) headers['Authorization'] = 'Bearer ' + session.access_token;
+    const r = await fetch('/api/report-post', {
+      method: 'POST', headers,
+      body: JSON.stringify({ post_id: _rpId, post_caption: _rpCap || null, reason, detail: detail || null }),
+    });
+    if (!r.ok) throw new Error((await r.json()).error || 'Failed');
+    m.style.cssText = 'display:block;background:rgba(198,255,74,.1);color:#C6FF4A;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px';
+    m.textContent = '✅ Report submitted. Our team will review it shortly.';
+    b.textContent = 'Reported';
+    setTimeout(closeReportPost, 2000);
+  } catch(e) {
+    m.style.cssText = 'display:block;background:rgba(255,45,120,.12);color:#FF2D78;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px';
+    m.textContent = e.message || 'Failed to submit. Please try again.';
+    b.disabled = false; b.textContent = 'Submit Report';
+  }
+}
 </script>
+
+<!-- REPORT POST MODAL -->
+<div id="rp-overlay" onclick="if(event.target===this)closeReportPost()" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);align-items:flex-end;justify-content:center">
+  <div style="width:100%;max-width:480px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);padding:20px 20px 32px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem">🚩 Report Post</div>
+      <button onclick="closeReportPost()" style="background:rgba(255,255,255,.06);border:none;color:var(--tx);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.9rem">✕</button>
+    </div>
+    <div id="rp-msg" style="display:none;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px"></div>
+    <div style="font-size:.76rem;color:var(--mu);margin-bottom:6px">Reason *</div>
+    <select id="rp-reason" style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--tx);font-size:.84rem;margin-bottom:12px;outline:none">
+      <option value="">— Select a reason —</option>
+      <option value="inappropriate">⚠️ Inappropriate content</option>
+      <option value="stolen_content">📋 Stolen / copied content</option>
+      <option value="fake_event">🎭 Spam or misleading</option>
+      <option value="i_am_owner">👤 Impersonation / I own this</option>
+      <option value="doesnt_exist">❌ Hate speech or harassment</option>
+      <option value="other">💬 Other</option>
+    </select>
+    <div style="font-size:.76rem;color:var(--mu);margin-bottom:6px">Additional details <span style="color:var(--mu)">(optional)</span></div>
+    <textarea id="rp-detail" rows="3" placeholder="Tell us more..." style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--tx);font-size:.84rem;resize:none;outline:none;box-sizing:border-box"></textarea>
+    <button id="rp-submit" onclick="submitReportPost()" style="width:100%;margin-top:14px;padding:13px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Submit Report</button>
+  </div>
+</div>
+
 </body>
 </html>
