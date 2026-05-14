@@ -1,0 +1,27 @@
+# Root-level index.html backups — real landing page is apps/landing-page/index.html
+# If a root index.html exists it takes precedence over vercel.json rewrites for /
+/index.html
+index.html.bak
+index.html.bak.*
+index.html.backup*
+index.html.bak_friend_fix
+
+# Other backup/junk files not needed for deployment
+*.bak
+*.bak.*
+feeds.html.bak
+feeds.html.backup
+business-login.html.bak*
+deepseek-edits/
+pumlas pc first backup/
+
+# Dev files
+generate_handover.py
+apply_fix.py
+fix_notifications.sql
+fix_rls.sql
+supabase/
+.claude/
+Pulsify_Handover.pdf
+claude code ft supabase.md
+DEPLOYMENT_STATUS.md
