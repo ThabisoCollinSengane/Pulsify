@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
 <meta name="description" content="Pulsify — Feel the Vibe 🇿🇦 South Africa's live event discovery platform"/>
-<meta name="build-version" content="v2.2.0-20260513"/>
+<meta name="build-version" content="v2.3.0-20260513"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
@@ -931,7 +931,9 @@ function triggerRev() { const obs = new IntersectionObserver(entries => { entrie
 /* ── SUPABASE CLIENT ── */
 function getSB() {
   if (!sbClient && window.supabase) {
-    sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+      auth: { detectSessionInUrl: false, autoRefreshToken: true, persistSession: true }
+    });
   }
   return sbClient;
 }
@@ -1015,7 +1017,10 @@ async function loadFeed(resetPage = false) {
     if (feedCity  && feedCity  !== 'all') q = q.ilike('venue_city', `%${feedCity}%`);
     if (feedGenre === 'free') q = q.eq('is_free', true);
     else if (feedGenre && feedGenre !== 'all') q = q.ilike('genre', `%${feedGenre}%`);
-    const { data: rawEvents, error, count } = await q;
+    const _abort = new AbortController();
+    const _timer = setTimeout(() => _abort.abort(), 12000);
+    const { data: rawEvents, error, count } = await q.abortSignal(_abort.signal);
+    clearTimeout(_timer);
     if (myReq !== _feedReqId) return;          // a newer request started — drop this result
     if (error) throw new Error('Supabase: ' + error.message);
     const events = rawEvents || [];
@@ -1269,7 +1274,8 @@ async function loadFrontline() {
       .order('rating', { ascending: false, nullsFirst: false })
       .limit(6);
     if (feedCity && feedCity !== 'all') bq = bq.ilike('city', `%${feedCity}%`);
-    const { data: rawBizs, error: bizErr } = await bq;
+    const _ba = new AbortController(); setTimeout(() => _ba.abort(), 12000);
+    const { data: rawBizs, error: bizErr } = await bq.abortSignal(_ba.signal);
     if (bizErr) throw new Error(bizErr.message);
     const bizs = rawBizs || [];
     bizForMap  = bizs;
