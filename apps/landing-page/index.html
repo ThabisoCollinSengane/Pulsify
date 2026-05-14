@@ -3366,22 +3366,37 @@ async function loadSquads() {
   _squadsLoaded = true;
   const workspace = document.getElementById('sq-workspace');
   const glb = document.getElementById('sq-global-lb');
-  if (!currentUser) {
+
+  // Fallback: if currentUser not yet set but localStorage has a session, use that
+  let uid = currentUser?.id || null;
+  if (!uid) {
+    try { const s = JSON.parse(localStorage.getItem('p_user')); uid = s?.id || null; } catch(e) {}
+  }
+
+  if (!uid) {
     if (workspace) workspace.innerHTML = '<div style="padding:24px;text-align:center;color:var(--mu);font-size:.84rem">Sign in to use Squads.<br><a href="/signin" style="color:var(--or);font-family:\'Syne\',sans-serif;font-weight:700">Sign in →</a></div>';
+    _squadsLoaded = false;
     return;
   }
   if (workspace) workspace.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Loading…</div>';
   try {
     const sb2 = getSB();
-    const session = sb2 ? (await sb2.auth.getSession()).data.session : null;
+    let session = null;
+    try { session = sb2 ? (await sb2.auth.getSession()).data?.session : null; } catch(e) {}
     const headers = { 'Content-Type': 'application/json' };
     if (session) headers['Authorization'] = 'Bearer ' + session.access_token;
-    const [myRes, lbRes] = await Promise.all([
+    const [myRes, lbRes] = await Promise.allSettled([
       fetch(API + '/squads', { headers }),
       fetch(API + '/squads/leaderboard')
     ]);
-    const { squads: mySquads = [] } = myRes.ok ? await myRes.json() : {};
-    const { leaderboard = [] } = lbRes.ok ? await lbRes.json() : {};
+    let mySquads = [];
+    let leaderboard = [];
+    if (myRes.status === 'fulfilled' && myRes.value.ok) {
+      try { const d = await myRes.value.json(); mySquads = d.squads || []; } catch(e) {}
+    }
+    if (lbRes.status === 'fulfilled' && lbRes.value.ok) {
+      try { const d = await lbRes.value.json(); leaderboard = d.leaderboard || []; } catch(e) {}
+    }
     _mySquads = mySquads;
     renderSquadTabs(mySquads);
     if (mySquads.length) {
@@ -3393,7 +3408,12 @@ async function loadSquads() {
       if (glb) renderLeaderboard(leaderboard, glb);
     }
   } catch(e) {
-    if (workspace) workspace.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Failed to load squads.</div>';
+    console.error('[loadSquads]', e);
+    _squadsLoaded = false;
+    if (workspace) workspace.innerHTML = `<div style="padding:24px;text-align:center">
+      <div style="font-size:.8rem;color:var(--mu);margin-bottom:14px">Could not connect. Check your connection.</div>
+      <button onclick="_squadsLoaded=false;showSquadSubTab('squads')" style="background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;padding:10px 24px;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem;cursor:pointer">Retry</button>
+    </div>`;
   }
 }
 

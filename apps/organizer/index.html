@@ -16,7 +16,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0;--bh:70px}
 html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
-body{padding-bottom:calc(var(--bh)+56px)}
+body{padding-bottom:calc(var(--bh)+80px)}
 .tb{position:fixed;top:0;left:0;right:0;height:58px;z-index:800;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:rgba(5,8,15,.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
 .logo{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.06em;display:flex;align-items:center;gap:8px;color:var(--tx)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--or);box-shadow:0 0 12px var(--or);animation:p 2s ease-in-out infinite}
@@ -141,7 +141,7 @@ select.inp option{background:#0D1424}
         <div id="org-img-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:8px"></div>
         <textarea class="inp" id="post-caption" placeholder="Write your update, promo or announcement…" maxlength="1000"></textarea>
         <input class="inp" id="post-event-tag" placeholder="Tag an event name (optional)"/>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;padding-bottom:8px">
           <button class="btn-sec" style="flex:1" onclick="previewOrgPost()">👁 Preview</button>
           <button class="btn-primary" id="post-btn" style="flex:2" onclick="submitPost()">Publish 🚀</button>
         </div>
@@ -1186,6 +1186,7 @@ async function loadMyOrgPromos() {
   if (!el) return;
   try {
     const r = await fetch('/api/promotions/mine', { headers: { 'Authorization': 'Bearer ' + _token } });
+    if (!r.ok) { el.innerHTML = '<div style="padding:16px 0;text-align:center;color:var(--mu);font-size:.8rem">No promotions yet.</div>'; return; }
     const { promotions } = await r.json();
     if (!promotions?.length) { el.innerHTML = '<div style="padding:16px 0;text-align:center;color:var(--mu);font-size:.8rem">No promotions yet.</div>'; return; }
     el.innerHTML = promotions.map(p => `

@@ -2032,8 +2032,11 @@ async function submitBizPromo() {
 
 async function loadBizPromotions() {
   const sb = getSB();
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) loadBizPromoMine(session.access_token);
+  if (!sb) return;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) loadBizPromoMine(session.access_token);
+  } catch(e) { console.warn('loadBizPromotions:', e.message); }
 }
 
 async function loadBizPromoMine(token) {
@@ -2041,6 +2044,10 @@ async function loadBizPromoMine(token) {
   if (!el) return;
   try {
     const r = await fetch('/api/promotions/mine', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!r.ok) {
+      el.innerHTML = '<div style="padding:16px 0;text-align:center;color:var(--mu);font-size:.8rem">No promotions yet.</div>';
+      return;
+    }
     const { promotions } = await r.json();
     if (!promotions?.length) { el.innerHTML = '<div style="padding:16px 0;text-align:center;color:var(--mu);font-size:.8rem">No promotions yet.</div>'; return; }
     const xb = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
