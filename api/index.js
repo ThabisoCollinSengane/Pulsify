@@ -1398,15 +1398,27 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
-    /* ─── POST /report-event ────────────────────────────── */
-    if (url === '/report-event' && req.method === 'POST') {
+    /* ─── POST /report-event | /report-business | /report-post ── */
+    const REPORT_TABLES = {
+      event:    { table: 'event_reports',    idCol: 'event_id',    nameCol: 'event_name' },
+      business: { table: 'business_reports', idCol: 'business_id', nameCol: 'business_name' },
+      post:     { table: 'post_reports',     idCol: 'post_id',     nameCol: 'post_caption' },
+    };
+    const reportPostMatch = url.match(/^\/report-(event|business|post)$/);
+    if (reportPostMatch && req.method === 'POST') {
+      const type   = reportPostMatch[1];
+      const cfg    = REPORT_TABLES[type];
       const token  = (req.headers.authorization || '').replace('Bearer ', '').trim();
       const user   = token ? await verifyToken(token) : null;
-      const { event_id, event_name, reason, detail } = req.body || {};
+      const body   = req.body || {};
+      const targetId = body[cfg.idCol] ?? body.target_id ?? body.id;
+      const targetName = body[cfg.nameCol] ?? body.target_name ?? body.name;
+      const { reason, detail } = body;
       const validReasons = ['fake_event','stolen_content','i_am_owner','doesnt_exist','inappropriate','other'];
-      if (!event_id || !validReasons.includes(reason)) return res.status(400).json({ error: 'event_id and valid reason required' });
-      const { error } = await sb().from('event_reports').insert({
-        event_id, event_name: event_name || null,
+      if (!targetId || !validReasons.includes(reason)) return res.status(400).json({ error: `${cfg.idCol} and valid reason required` });
+      const { error } = await sb().from(cfg.table).insert({
+        [cfg.idCol]: targetId,
+        [cfg.nameCol]: targetName || null,
         reporter_id: user?.id || null,
         reason, detail: detail?.trim() || null,
       });
@@ -1414,26 +1426,43 @@ module.exports = async (req, res) => {
       return res.status(201).json({ ok: true });
     }
 
-    /* ─── GET /admin/reports ─────────────────────────────── */
+    /* ─── GET /admin/reports?type=event|business|post|all ───── */
     if (url === '/admin/reports' && req.method === 'GET') {
       const auth = await authUser(req);
       if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
       const status = req.query?.status || 'pending';
-      let q = sb().from('event_reports').select('*').order('created_at', { ascending: false });
-      if (status !== 'all') q = q.eq('status', status);
-      const { data, error } = await q;
-      if (error) return res.status(400).json({ error: error.message });
-      return res.status(200).json({ reports: data || [] });
+      const type   = req.query?.type   || 'event';
+      const types  = type === 'all' ? ['event','business','post'] : [type];
+      if (types.some(t => !REPORT_TABLES[t])) return res.status(400).json({ error: 'invalid type' });
+      const results = await Promise.all(types.map(async (t) => {
+        const cfg = REPORT_TABLES[t];
+        let q = sb().from(cfg.table).select('*').order('created_at', { ascending: false });
+        if (status !== 'all') q = q.eq('status', status);
+        const { data, error } = await q;
+        if (error) throw error;
+        return (data || []).map(r => ({
+          ...r,
+          report_type: t,
+          target_id:   r[cfg.idCol],
+          target_name: r[cfg.nameCol],
+        }));
+      })).catch(err => ({ _error: err.message }));
+      if (results._error) return res.status(400).json({ error: results._error });
+      const reports = results.flat().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      return res.status(200).json({ reports });
     }
 
-    /* ─── PATCH /admin/reports/:id ───────────────────────── */
-    const reportMatch = url.match(/^\/admin\/reports\/([^/]+)$/);
-    if (reportMatch && req.method === 'PATCH') {
+    /* ─── PATCH /admin/reports/:type/:id (preferred) or /admin/reports/:id (legacy event) ── */
+    const reportTypedMatch  = url.match(/^\/admin\/reports\/(event|business|post)\/([^/]+)$/);
+    const reportLegacyMatch = url.match(/^\/admin\/reports\/([^/]+)$/);
+    if ((reportTypedMatch || reportLegacyMatch) && req.method === 'PATCH') {
       const auth = await authUser(req);
       if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
       const { status } = req.body || {};
       if (!['reviewed','dismissed'].includes(status)) return res.status(400).json({ error: 'status must be reviewed or dismissed' });
-      const { error } = await sb().from('event_reports').update({ status }).eq('id', reportMatch[1]);
+      const type = reportTypedMatch ? reportTypedMatch[1] : 'event';
+      const id   = reportTypedMatch ? reportTypedMatch[2] : reportLegacyMatch[1];
+      const { error } = await sb().from(REPORT_TABLES[type].table).update({ status }).eq('id', id);
       if (error) return res.status(400).json({ error: error.message });
       return res.status(200).json({ ok: true });
     }
