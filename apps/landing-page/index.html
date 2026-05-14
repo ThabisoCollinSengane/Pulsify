@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
 <meta name="description" content="Pulsify — Feel the Vibe 🇿🇦 South Africa's live event discovery platform"/>
-<meta name="build-version" content="v2.4.0-20260514"/>
+<meta name="build-version" content="v2.5.0-20260514"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
@@ -2372,6 +2372,7 @@ async function openNotifPanel() {
 }
 function closeNotifPanel() { document.getElementById('notif-overlay').style.display = 'none'; }
 
+let _notifMap = {};
 async function loadNotifications() {
   const sb = getSB(); const el = document.getElementById('notif-list');
   if (!el) return;
@@ -2386,6 +2387,7 @@ async function loadNotifications() {
       .order('created_at', { ascending: false }).limit(30);
     if (error) throw error;
     const notifs = data || [];
+    _notifMap = Object.fromEntries(notifs.map(n => [n.id, n]));
     const unread = notifs.filter(n => !n.read).length;
     const dot = document.getElementById('notif-dot');
     if (dot) dot.style.display = unread ? 'block' : 'none';
@@ -2418,7 +2420,7 @@ async function loadNotifications() {
         : msg;
 
       return `
-        <div onclick="markNotifRead('${n.id}')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);background:${n.read?'transparent':'rgba(176,38,255,.07)'};cursor:pointer;transition:background .15s" onmouseenter="this.style.background='rgba(255,255,255,.03)'" onmouseleave="this.style.background='${n.read?'transparent':'rgba(176,38,255,.07)'}'">
+        <div onclick="handleNotifClick('${n.id}')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);background:${n.read?'transparent':'rgba(176,38,255,.07)'};cursor:pointer;transition:background .15s" onmouseenter="this.style.background='rgba(255,255,255,.03)'" onmouseleave="this.style.background='${n.read?'transparent':'rgba(176,38,255,.07)'}'">
           <div style="position:relative;flex-shrink:0">
             ${avatarEl}
             <div style="position:absolute;bottom:-1px;right:-1px;width:18px;height:18px;border-radius:50%;background:var(--surf);display:flex;align-items:center;justify-content:center;font-size:.7rem;border:1.5px solid var(--bg2)">${ico[n.type]||'🔔'}</div>
@@ -2439,6 +2441,37 @@ async function markNotifRead(id) {
   const sb = getSB();
   if (!sb || !id) return;
   await sb.from('notifications').update({ read: true }).eq('id', id).eq('user_id', currentUser.id);
+}
+
+// Click on a notification → mark read, close panel, route to the right thing.
+// - follow                 → /user-profile?id={actor}
+// - like/comment on event  → openEv(entity_id)
+// - like/comment on post   → /feeds?pid={entity_id} (+ &cid for replies)
+// - reply                  → same as post/event but adds ?cid={comment_id}
+function handleNotifClick(id) {
+  const n = _notifMap[id]; if (!n) return;
+  markNotifRead(id);
+  closeNotifPanel();
+  const data = n.data || {};
+  const actor = n.from_user_id || data.actor_id;
+  if (n.type === 'follow') {
+    if (actor) window.location.href = `/user-profile?id=${encodeURIComponent(actor)}`;
+    return;
+  }
+  if (n.entity_type === 'event' && n.entity_id) {
+    openEv(n.entity_id);
+    return;
+  }
+  if (n.entity_type === 'post' && n.entity_id) {
+    const cid = data.comment_id;
+    const qs  = cid ? `?pid=${encodeURIComponent(n.entity_id)}&cid=${encodeURIComponent(cid)}`
+                    : `?pid=${encodeURIComponent(n.entity_id)}`;
+    window.location.href = `/feeds${qs}`;
+    return;
+  }
+  if (n.entity_type === 'profile' && actor) {
+    window.location.href = `/user-profile?id=${encodeURIComponent(actor)}`;
+  }
 }
 
 async function markAllNotifsRead() {
