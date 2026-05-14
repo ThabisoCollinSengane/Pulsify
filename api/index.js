@@ -1592,7 +1592,6 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
-    // GET /squads/:id — squad detail
     // PATCH /squads/:id — update squad config (admin only)
     if (squadDetailMatch && req.method === 'PATCH') {
       const auth = await authUser(req);

@@ -3108,7 +3108,7 @@ async function showSquadTab(squadId) {
     const detail = await r.json();
     renderSquadWorkspace(detail, workspace);
   } catch(e) {
-    if (workspace) workspace.innerHTML = `<div style="padding:20px;text-align:center;color:var(--mu);font-size:.84rem">Failed to load.<br><button onclick="showSquadTab(\'${squadId}\')" style="background:transparent;border:none;color:var(--or);cursor:pointer;font-family:\'Syne\',sans-serif;font-weight:700">Retry</button></div>`;
+    if (workspace) workspace.innerHTML = `<div style="padding:20px;text-align:center;color:var(--mu);font-size:.84rem">Failed to load.<br><button onclick="showSquadTab('${squadId}')" style="background:transparent;border:none;color:var(--or);cursor:pointer;font-family:'Syne',sans-serif;font-weight:700">Retry</button></div>`;
   }
 }
 
@@ -3120,54 +3120,54 @@ function renderSquadWorkspace(detail, container) {
   let highlightHtml = '';
   if (squad.template_type === 'tournament') {
     const ranked = [...members].sort((a,b) => (memberPoints[b.profiles?.id]||0) - (memberPoints[a.profiles?.id]||0));
-    const medals = ['\u{1F947}','\u{1F948}','\u{1F949}'];
+    const medals = ['🥇','🥈','🥉'];
     highlightHtml = `<div style="background:rgba(255,215,0,.07);border:1px solid rgba(255,215,0,.2);border-radius:12px;padding:12px;margin-bottom:14px">
-      <div style="font-family:\'Syne\',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#FFD700;margin-bottom:8px">\u{1F3C6} Member Rankings</div>
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#FFD700;margin-bottom:8px">🏆 Member Rankings</div>
       ${ranked.map((m,i) => { const p=m.profiles||{}; const pts=memberPoints[p.id]||0; const ini=(p.display_name||'?')[0].toUpperCase();
-        return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:.9rem;width:22px">${medals[i]||(i+1)+\'.\'}</span><div class="sq-member-av" style="width:26px;height:26px;font-size:.68rem">${p.avatar_url?`<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>`:ini}</div><div style="flex:1;font-size:.78rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(p.display_name||p.username||\'?\')}</div><span style="font-family:\'Syne\',sans-serif;font-size:.78rem;font-weight:700;color:var(--li)">\u26A1${pts}</span></div>`;
+        return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:.9rem;width:22px">${medals[i]||(i+1)+'.'}</span><div class="sq-member-av" style="width:26px;height:26px;font-size:.68rem">${p.avatar_url?`<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>`:ini}</div><div style="flex:1;font-size:.78rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(p.display_name||p.username||'?')}</div><span style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--li)">⚡${pts}</span></div>`;
       }).join('')}
     </div>`;
   } else if (squad.template_type === 'event_team') {
     const cfg = squad.template_config || {};
     highlightHtml = `<div style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.18);border-radius:12px;padding:12px;margin-bottom:14px">
-      <div style="font-family:\'Syne\',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--cy);margin-bottom:6px">\u{1F4C5} Event Info</div>
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--cy);margin-bottom:6px">📅 Event Info</div>
       ${cfg.event_name ? `<div style="font-size:.9rem;font-weight:700;margin-bottom:2px">${x(cfg.event_name)}</div>` : ''}
-      ${cfg.event_date ? `<div style="font-size:.76rem;color:var(--mu2);margin-bottom:2px">\u{1F5D3} ${x(cfg.event_date)}</div>` : ''}
-      ${cfg.venue ? `<div style="font-size:.76rem;color:var(--mu2)">\u{1F4CD} ${x(cfg.venue)}</div>` : ''}
+      ${cfg.event_date ? `<div style="font-size:.76rem;color:var(--mu2);margin-bottom:2px">🗓 ${x(cfg.event_date)}</div>` : ''}
+      ${cfg.venue ? `<div style="font-size:.76rem;color:var(--mu2)">📍 ${x(cfg.venue)}</div>` : ''}
       ${!cfg.event_name ? `<div style="font-size:.76rem;color:var(--mu)">No event info yet</div>` : ''}
-      ${isMember ? `<button onclick="showEventInfoForm(\'${x(squad.id)}\')" style="margin-top:8px;background:transparent;border:1px solid rgba(0,229,255,.3);border-radius:50px;color:var(--cy);font-family:\'Syne\',sans-serif;font-size:.7rem;font-weight:700;padding:4px 14px;cursor:pointer">Edit Event Info</button>` : ''}
+      ${isMember ? `<button onclick="showEventInfoForm('${x(squad.id)}')" style="margin-top:8px;background:transparent;border:1px solid rgba(0,229,255,.3);border-radius:50px;color:var(--cy);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;padding:4px 14px;cursor:pointer">Edit Event Info</button>` : ''}
     </div>`;
   }
 
-  const goalsHtml = goals.length ? `<div style="font-family:\'Syne\',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Goals</div>
+  const goalsHtml = goals.length ? `<div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Goals</div>
     ${goals.map(g => { const pct=Math.min(100,Math.round((g.current/g.target)*100));
       return `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:.76rem;margin-bottom:4px"><span>${x(g.label)}</span><span style="color:var(--mu)">${g.current}/${g.target}</span></div><div class="sq-goal-bar"><div class="sq-goal-fill" style="width:${pct}%"></div></div></div>`;
     }).join('')}` : '';
 
-  const membersHtml = `<div style="font-family:\'Syne\',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin:16px 0 10px">Members (${members.length})</div>
+  const membersHtml = `<div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin:16px 0 10px">Members (${members.length})</div>
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px">
       ${members.map(m => { const p=m.profiles||{}; const ini=(p.display_name||'?')[0].toUpperCase();
-        return `<div style="display:flex;align-items:center;gap:8px"><div class="sq-member-av">${p.avatar_url?`<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>`:ini}</div><div><div style="font-size:.78rem;font-weight:700">${x(p.display_name||p.username||\'?\')}</div><div style="font-size:.68rem;color:var(--mu)">${m.role===\'admin\'?\'\u{1F451} Admin\':\'Member\'}</div></div></div>`;
+        return `<div style="display:flex;align-items:center;gap:8px"><div class="sq-member-av">${p.avatar_url?`<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>`:ini}</div><div><div style="font-size:.78rem;font-weight:700">${x(p.display_name||p.username||'?')}</div><div style="font-size:.68rem;color:var(--mu)">${m.role==='admin'?'👑 Admin':'Member'}</div></div></div>`;
       }).join('')}
     </div>`;
 
-  const activityHtml = activity.length ? `<div style="font-family:\'Syne\',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Recent Activity</div>
+  const activityHtml = activity.length ? `<div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Recent Activity</div>
     <div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:8px 12px;margin-bottom:14px">
-      ${activity.map(a=>`<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:.74rem;color:var(--mu2);display:flex;justify-content:space-between"><span>${x(a.description||a.activity_type)}</span><span style="color:var(--mu)">${new Date(a.created_at).toLocaleDateString(\'en-ZA\',{day:\'numeric\',month:\'short\'})}</span></div>`).join('')}
+      ${activity.map(a=>`<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:.74rem;color:var(--mu2);display:flex;justify-content:space-between"><span>${x(a.description||a.activity_type)}</span><span style="color:var(--mu)">${new Date(a.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short'})}</span></div>`).join('')}
     </div>` : '';
 
   const actionsHtml = isMember
-    ? `<button onclick="leaveSquad(\'${x(squad.id)}\')" style="width:100%;padding:11px;background:rgba(255,45,120,.1);border:1.5px solid rgba(255,45,120,.3);border-radius:50px;color:var(--pk);font-family:\'Syne\',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer">Leave Squad</button>`
-    : `<button onclick="joinSquad(\'${x(squad.id)}\')" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:\'Syne\',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer">Join Squad</button>`;
+    ? `<button onclick="leaveSquad('${x(squad.id)}')" style="width:100%;padding:11px;background:rgba(255,45,120,.1);border:1.5px solid rgba(255,45,120,.3);border-radius:50px;color:var(--pk);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer">Leave Squad</button>`
+    : `<button onclick="joinSquad('${x(squad.id)}')" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer">Join Squad</button>`;
 
   container.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)">
       <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,${tmpl.color}22,${tmpl.color}55);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0">${tmpl.icon}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-family:\'Syne\',sans-serif;font-size:1rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(squad.name)}</div>
-        <div style="font-size:.72rem;color:var(--mu)">${tmpl.label} \u00B7 \u{1F465} ${squad.member_count} \u00B7 ${squad.is_public?\'\u{1F30D} Public\':\'\u{1F512} Private\'}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(squad.name)}</div>
+        <div style="font-size:.72rem;color:var(--mu)">${tmpl.label} · 👥 ${squad.member_count} · ${squad.is_public?'🌍 Public':'🔒 Private'}</div>
       </div>
-      <span class="sq-pts">\u26A1 ${squad.total_points}</span>
+      <span class="sq-pts">⚡ ${squad.total_points}</span>
     </div>
     ${highlightHtml}${goalsHtml}${membersHtml}${activityHtml}${actionsHtml}`;
 }
@@ -3176,23 +3176,23 @@ function showSquadEmptyState(container) {
   if (!container) return;
   container.innerHTML = `
     <div style="padding:24px 0 20px;text-align:center">
-      <div style="font-size:3rem;margin-bottom:10px">\u2694\uFE0F</div>
-      <div style="font-family:\'Syne\',sans-serif;font-size:.95rem;font-weight:800;margin-bottom:6px">No squads yet</div>
+      <div style="font-size:3rem;margin-bottom:10px">⚔️</div>
+      <div style="font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800;margin-bottom:6px">No squads yet</div>
       <div style="font-size:.78rem;color:var(--mu);margin-bottom:20px">Create your first squad and start earning points together</div>
-      <button onclick="showCreateForm()" style="background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;padding:12px 28px;border-radius:50px;color:#fff;font-family:\'Syne\',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer">+ Create a Squad</button>
+      <button onclick="showCreateForm()" style="background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;padding:12px 28px;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer">+ Create a Squad</button>
     </div>`;
 }
 
 function renderLeaderboard(rows, el) {
   if (!rows || !rows.length) { if (el) el.innerHTML = ''; return; }
   const medals = ['gold','silver','bronze'];
-  el.innerHTML = `<div style="font-family:\'Syne\',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">\u{1F3C6} Top Squads This Week</div>
+  el.innerHTML = `<div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">🏆 Top Squads This Week</div>
   <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:4px 14px;margin-bottom:16px">
-    ${rows.map((s,i) => { const tmpl=getTemplate(s.template_type||'general'); return `<div class="sq-lb-row" onclick="showSquadSubTab(\'squads\')">
+    ${rows.map((s,i) => { const tmpl=getTemplate(s.template_type||'general'); return `<div class="sq-lb-row" onclick="showSquadSubTab('squads')">
       <span class="sq-lb-rank ${medals[i]||''}">${i+1}</span>
       <span style="font-size:1rem">${tmpl.icon}</span>
-      <div style="flex:1;min-width:0"><div style="font-family:\'Syne\',sans-serif;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(s.name)}</div><div style="font-size:.7rem;color:var(--mu)">\u{1F465} ${s.member_count}</div></div>
-      <span class="sq-pts">\u26A1 ${s.total_points}</span>
+      <div style="flex:1;min-width:0"><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(s.name)}</div><div style="font-size:.7rem;color:var(--mu)">👥 ${s.member_count}</div></div>
+      <span class="sq-pts">⚡ ${s.total_points}</span>
     </div>`; }).join('')}
   </div>`;
 }
@@ -3214,14 +3214,14 @@ function showCreateForm() {
   _activeSquadTab = null;
   workspace.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-      <button onclick="cancelCreateForm()" style="background:transparent;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer;padding:0 4px 0 0">\u2190</button>
-      <div style="font-family:\'Syne\',sans-serif;font-size:.95rem;font-weight:800">New Squad</div>
+      <button onclick="cancelCreateForm()" style="background:transparent;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer;padding:0 4px 0 0">←</button>
+      <div style="font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800">New Squad</div>
     </div>
-    <div style="font-family:\'Syne\',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Choose a template</div>
+    <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Choose a template</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
-      ${templates.map(t => `<div class="sq-tmpl-card ${t.type===defType?\'active\':\'\'}" id="stmpl-${t.type}" onclick="selectTemplate(\'${t.type}\')">
+      ${templates.map(t => `<div class="sq-tmpl-card ${t.type===defType?'active':''}" id="stmpl-${t.type}" onclick="selectTemplate('${t.type}')">
         <div style="font-size:1.5rem;margin-bottom:5px">${t.icon}</div>
-        <div style="font-family:\'Syne\',sans-serif;font-size:.76rem;font-weight:700;margin-bottom:2px">${t.label}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;margin-bottom:2px">${t.label}</div>
         <div style="font-size:.66rem;color:var(--mu);line-height:1.35">${t.desc}</div>
       </div>`).join('')}
     </div>
@@ -3231,7 +3231,7 @@ function showCreateForm() {
       <input type="checkbox" id="sq-new-public" checked style="width:14px;height:14px"/> Public squad
     </label>
     <input type="hidden" id="sq-new-template" value="${defType}"/>
-    <button onclick="createSquad()" style="width:100%;padding:13px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:\'Syne\',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Create Squad</button>`;
+    <button onclick="createSquad()" style="width:100%;padding:13px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Create Squad</button>`;
 }
 
 function selectTemplate(type) {
@@ -3264,7 +3264,7 @@ async function createSquad() {
     });
     const d = await r.json();
     if (!r.ok) { showToast(d.error || 'Failed to create'); return; }
-    showToast('\u{1F389} Squad created!');
+    showToast('🎉 Squad created!');
     const chip = document.getElementById('sq-chip-new');
     if (chip) chip.remove();
     _squadsLoaded = false;
@@ -3277,13 +3277,13 @@ function showEventInfoForm(squadId) {
   if (!workspace) return;
   workspace.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-      <button onclick="showSquadTab(\'${squadId}\')" style="background:transparent;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer;padding:0 4px 0 0">\u2190</button>
-      <div style="font-family:\'Syne\',sans-serif;font-size:.95rem;font-weight:800">Event Info</div>
+      <button onclick="showSquadTab('${squadId}')" style="background:transparent;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer;padding:0 4px 0 0">←</button>
+      <div style="font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800">Event Info</div>
     </div>
     <input id="eif-name" class="sq-input" placeholder="Event name (required)"/>
     <input id="eif-date" class="sq-input" type="date" style="color-scheme:dark"/>
     <input id="eif-venue" class="sq-input" placeholder="Venue (optional)"/>
-    <button onclick="saveEventInfo(\'${squadId}\')" style="width:100%;padding:13px;background:linear-gradient(135deg,#00E5FF,#B026FF);border:none;border-radius:50px;color:#fff;font-family:\'Syne\',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Save Event Info</button>`;
+    <button onclick="saveEventInfo('${squadId}')" style="width:100%;padding:13px;background:linear-gradient(135deg,#00E5FF,#B026FF);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Save Event Info</button>`;
 }
 
 async function saveEventInfo(squadId) {
@@ -3300,7 +3300,7 @@ async function saveEventInfo(squadId) {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
       body: JSON.stringify({ template_config: { event_name: name, event_date: date || null, venue: venue || null } })
     });
-    if (r.ok) { showToast('\u2705 Event info saved'); showSquadTab(squadId); }
+    if (r.ok) { showToast('✅ Event info saved'); showSquadTab(squadId); }
     else { const d = await r.json(); showToast(d.error || 'Failed'); }
   } catch(e) { showToast('Error: ' + e.message); }
 }
@@ -3316,7 +3316,7 @@ async function joinSquad(squadId) {
     });
     const d = await r.json();
     if (!r.ok) { showToast(d.error || 'Failed to join'); return; }
-    showToast('\u{1F389} Joined squad!');
+    showToast('🎉 Joined squad!');
     _squadsLoaded = false;
     showSquadTab(squadId);
   } catch(e) { showToast('Error: ' + e.message); }
@@ -3343,12 +3343,12 @@ async function showSquadCheckinBar(eventId) {
   if (!currentUser || !_mySquads.length) return;
   const el = document.getElementById('tc-squad-checkin');
   if (!el) return;
-  const opts = _mySquads.map(s => `<option value="${x(s.id)}">${x(s.name)} (\u26A1${s.total_points} pts)</option>`).join('');
+  const opts = _mySquads.map(s => `<option value="${x(s.id)}">${x(s.name)} (⚡${s.total_points} pts)</option>`).join('');
   el.style.display = '';
   el.innerHTML = `<div style="background:rgba(176,38,255,.08);border:1px solid rgba(176,38,255,.25);border-radius:12px;padding:12px">
-    <div style="font-family:\'Syne\',sans-serif;font-size:.72rem;font-weight:700;color:var(--pu);margin-bottom:8px;letter-spacing:.08em">\u{1F3C6} SQUAD CHECK-IN</div>
+    <div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--pu);margin-bottom:8px;letter-spacing:.08em">🏆 SQUAD CHECK-IN</div>
     <select id="sq-checkin-select" class="sq-select">${opts}</select>
-    <button onclick="doSquadCheckin(\'${eventId}\')" class="sq-checkin-btn">\u26A1 Check in with squad <span style="margin-left:auto;background:rgba(176,38,255,.25);padding:2px 10px;border-radius:50px;font-size:.7rem">+20 pts</span></button>
+    <button onclick="doSquadCheckin('${eventId}')" class="sq-checkin-btn">⚡ Check in with squad <span style="margin-left:auto;background:rgba(176,38,255,.25);padding:2px 10px;border-radius:50px;font-size:.7rem">+20 pts</span></button>
   </div>`;
 }
 
@@ -3367,9 +3367,9 @@ async function doSquadCheckin(eventId) {
     const d = await r.json();
     if (!r.ok) { showToast(d.error || 'Failed'); return; }
     const sq = _mySquads.find(s => s.id === squadId);
-    showToast('\u26A1 +20 pts added to ' + (sq?.name || 'your squad') + '!');
+    showToast('⚡ +20 pts added to ' + (sq?.name || 'your squad') + '!');
     const el = document.getElementById('tc-squad-checkin');
-    if (el) el.innerHTML = '<div style="text-align:center;padding:10px;font-size:.8rem;color:var(--li);font-family:\'Syne\',sans-serif;font-weight:700">\u2705 Squad checked in! \u26A1 +20 pts earned</div>';
+    if (el) el.innerHTML = '<div style="text-align:center;padding:10px;font-size:.8rem;color:var(--li);font-family:\'Syne\',sans-serif;font-weight:700">✅ Squad checked in! ⚡ +20 pts earned</div>';
     _squadsLoaded = false;
   } catch(e) { showToast('Error: ' + e.message); }
 }
