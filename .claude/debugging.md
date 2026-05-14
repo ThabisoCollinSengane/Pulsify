@@ -108,40 +108,49 @@ Updated after every resolved issue.
 
 ---
 
-### [2026-05-14] Landing page served stale code — "Could not load events. Check your connection."
-- **Symptom:** Site at `/` consistently showed old error UI ("Could not load events. Check your connection.") even after successful deploys. `/diagnose` showed new code but `/` returned "No build-version found — OLD CODE".
-- **Root cause:** An untracked `index.html` existed at the Codespaces repo root from an earlier session. When deploying via `npx vercel --prod`, the CLI uploads the entire working directory (including untracked files). Vercel serves static files with higher priority than `rewrites`, so the stale root `index.html` was served for `/` instead of the rewrite `/ → apps/landing-page/index.html`.
-- **Fix:** Created `.vercelignore` at repo root excluding `/index.html` (and all `.bak` / junk files). Added `--force` flag to CLI deploy command to bypass edge cache. Future deploys use `npx vercel --prod --yes --force --token=<token>`.
-- **Files:** `.vercelignore` (new), `vercel.json` (added `/diagnose` rewrite).
-- **Lesson:** CRITICAL — Vercel static files always beat rewrites. Any `index.html` at the repo root will shadow the `/` rewrite and serve forever from the CDN until `.vercelignore` excludes it. Always check `/diagnose` vs `/` when the site appears stuck. Run deploys with `--force`.
+### [2026-05-14] CRITICAL — Landing page serving stale old HTML despite successful deploys
+- **Symptom:** `/` returned "Could not load events. Check your connection." no matter how many times the project was redeployed. `/diagnose` (which has no root equivalent) correctly served new code. Site appeared to "snap back" instantly on load.
+- **Root cause:** An untracked `index.html` existed at the Codespaces repo root from an earlier manual edit. Vercel's CLI (`npx vercel --prod`) uploads the entire working directory including untracked files. Vercel serves static files before evaluating `vercel.json` rewrites, so the root `index.html` silently took precedence over the rewrite `/ → apps/landing-page/index.html`. Since it was untracked, `git pull` never replaced it, and it persisted across sessions.
+- **Fix:** Created `.vercelignore` at repo root with `/index.html` listed. On next CLI deploy, Vercel excluded it and the rewrite resolved correctly.
+- **Lesson:** Vercel static files always win over rewrites. Any `index.html` at the root will intercept `/` regardless of `vercel.json`. Keep `.vercelignore` updated. When `/` and a non-root path serve different content, a stale root file is the first thing to check.
+- **Files:** `.vercelignore` (new file).
 
-### [2026-05-14] Supabase JS SDK hanging silently on Android Chrome mobile
-- **Symptom:** Landing page loaded but never rendered events on Android Chrome; no error, just a permanent spinner. Desktop and iOS worked fine.
-- **Root cause:** `autoRefreshToken: true` (default) caused the SDK to attempt a background token refresh on an unstable mobile network, blocking the ready state. Also, `detectSessionInUrl: true` (default) tried to parse the URL for auth callbacks on every page load, adding extra latency.
-- **Fix:** Added `detectSessionInUrl: false` to `createClient()` options in `getSB()`. Added a 12-second `AbortController` timeout to `loadFeed()` and `loadFrontline()` queries so they fail fast instead of hanging indefinitely.
-- **Files:** `apps/landing-page/index.html` — `getSB()` function and `loadFeed`/`loadFrontline` query blocks.
+### [2026-05-14] Supabase JS SDK hanging on Android Chrome mobile — events not loading
+- **Symptom:** On Android Chrome (mobile network), the landing page spinner ran indefinitely; events never loaded. Desktop worked fine.
+- **Root cause:** `autoRefreshToken: true` (the default) caused the SDK to attempt a token refresh using `AbortController` internally. On mobile networks the fetch stalled indefinitely with no timeout, blocking the session check that gates all data fetches.
+- **Fix 1:** Added `detectSessionInUrl: false` to `createClient()` options in `getSB()` — prevents the SDK from scanning URL hash for OAuth tokens on every page load, which was a secondary hang source.
+- **Fix 2:** Added a 12-second `AbortController` timeout around `loadFeed` and `loadFrontline` Supabase queries via `.abortSignal(_abort.signal)`. If the query stalls, it aborts and falls through to mock data.
+- **Files:** `apps/landing-page/index.html` — `getSB()` and `loadFeed`/`loadFrontline` functions.
 
 ### [2026-05-14] Sign-out not clearing Supabase session
-- **Symptom:** Tapping "Sign Out" dismissed the menu but the user remained signed in on refresh.
-- **Root cause:** Sign-out handler only cleared `localStorage` items manually but did not call `supabase.auth.signOut()`, leaving the Supabase auth session cookie active.
-- **Fix:** Added `await sb2.auth.signOut()` call before clearing localStorage in the sign-out handler.
+- **Symptom:** Tapping sign out returned user to landing page but they remained logged in (profile icon still showed name, protected routes still accessible).
+- **Root cause:** The sign-out handler called `localStorage.clear()` but never called `sb.auth.signOut()`. The Supabase session token remained valid in `localStorage`/`IndexedDB` and the SDK auto-restored it on next page load.
+- **Fix:** Added `await sb2.auth.signOut()` before clearing localStorage in the sign-out handler.
 - **Files:** `apps/landing-page/index.html` — sign-out handler.
 
-### [2026-05-14] `diagnose.html` SDK crash — `const URL` shadowed browser constructor
-- **Symptom:** Diagnose page Supabase SDK test failed with "Invalid supabaseUrl: Provided URL is malformed" even though the URL string was correct.
-- **Root cause:** `diagnose.html` declared `const URL = 'https://...'` at the top level, shadowing the browser's global `URL` constructor. The Supabase SDK internally calls `new URL(supabaseUrl)` — this used the string instead of the constructor, throwing a TypeError.
+### [2026-05-14] `diagnose.html` crashed Supabase SDK — `const URL` shadowed browser constructor
+- **Symptom:** The diagnose page test for "Supabase SDK connectivity" consistently failed with "Invalid supabaseUrl: Provided URL is malformed" even with a correct URL string.
+- **Root cause:** `diagnose.html` had `const URL = 'https://...'` at the top scope. This shadowed the global `URL` constructor. The Supabase SDK calls `new URL(supabaseUrl)` internally — with `URL` now a string, `new URL(...)` threw `TypeError: URL is not a constructor`.
 - **Fix:** Renamed the variable to `const SUPA_URL`.
+- **Lesson:** Never use `URL`, `fetch`, `Request`, `Response`, or `Headers` as variable names — all are global browser constructors.
 - **Files:** `apps/landing-page/diagnose.html`.
 
 ### [2026-05-14] Report functionality — businesses and posts
 - **Status:** Built and deployed (PR #8 merged).
 - **What was done:** Created `business_reports` and `post_reports` tables in Supabase (mirroring `event_reports` schema). Unified report handler in `api/index.js` covering `/report-event`, `/report-business`, `/report-post`. Generic `openReportModal(type, id, name)` in landing page index.html (backward-compatible). 🚩 Report button on business detail sheet and post cards in `feeds.html`. Admin panel updated with type filter and typed PATCH endpoint.
+- **Files:** `api/index.js`, `apps/landing-page/index.html`, `apps/landing-page/feeds.html`, `apps/admin/index.html`.
 
-### [2026-05-14] Organizer dashboard tab row overlapping bottom nav
-- **Symptom:** 6 tabs with `flex:1; flex-wrap:wrap` wrapped onto 2 rows on mobile, pushing the 📢 Post tab below the bottom navigation bar where it was untappable.
-- **Root cause:** 6 equal-width `flex:1` tabs in ~360px width = ~56px each minimum, wrapping when combined padding exceeds viewport. Bottom nav is fixed at `70px` height but the page didn't account for the 2-row tab height.
-- **Fix:** Changed `.tabs` to `overflow-x:auto; scrollbar-width:none` (horizontal scroll), set `.tab` to `flex-shrink:0; padding:6px 10px; white-space:nowrap`, removed `flex-wrap:wrap` inline style. All 6 tabs now sit in a single scrollable row.
-- **Files:** `apps/organizer/index.html` — `.tabs` and `.tab` CSS rules.
+### [2026-05-14] Vercel GitHub auto-deploy watching wrong repo
+- **Symptom:** Merging PRs to `ThabisoCollinSengane/Pulsify` main showed no Vercel deployment. Deployments only appeared when using the CLI directly.
+- **Root cause:** Vercel's Git integration was connected to the `thabisosengane5-collab` GitHub account's fork, not the `ThabisoCollinSengane` account. Two separate GitHub accounts own two separate repo copies; only one is wired to Vercel.
+- **Fix / Workaround:** Always deploy via `npx vercel --prod --yes --token=<token>` from the Codespaces terminal after pulling the latest code. Do not rely on auto-deploy from PR merges.
+- **Lesson:** Confirm which GitHub account/repo Vercel is watching in Vercel Dashboard → Project Settings → Git. CLI deploys bypass this entirely and upload local files directly.
+
+### [2026-05-14] Organizer dashboard tab row overlapping bottom nav — Post tab unreachable
+- **Symptom:** The 6-tab row in the organizer dashboard wrapped to two lines on mobile, pushing the last row down behind the bottom navigation bar. The "📢 Post" tab (first tab, left on second row) was visually present but could not be tapped.
+- **Root cause:** `.tab { flex:1 }` with 6 tabs caused each tab to be too narrow, so `flex-wrap:wrap` (set as inline style on the container) triggered a second row. The second row sat behind the fixed bottom nav (`z-index:800`).
+- **Fix:** Made the tab container horizontally scrollable (`overflow-x:auto; scrollbar-width:none`), removed `flex-wrap:wrap`, set `flex-shrink:0` on each tab, and reduced tab padding from `9px` to `6px 10px` so all 6 tabs fit in one scrollable row.
+- **Files:** `apps/organizer/index.html` — `.tabs` and `.tab` CSS, tabs container div.
 
 ---
 
