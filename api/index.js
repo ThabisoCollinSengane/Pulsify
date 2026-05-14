@@ -1477,6 +1477,141 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
+    /* ─── SQUADS ─────────────────────────────────────────── */
+
+    // GET /squads — list current user's squads
+    if (url === '/squads' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { data: memberships } = await sb()
+        .from('squad_members')
+        .select('squad_id, role, joined_at, squads(id, name, description, avatar_url, is_public, member_count, total_points, created_at)')
+        .eq('user_id', auth.user.id);
+      return res.status(200).json({ squads: (memberships || []).map(m => ({ ...m.squads, role: m.role, joined_at: m.joined_at })) });
+    }
+
+    // POST /squads — create a squad
+    if (url === '/squads' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { name, description, is_public = true } = req.body || {};
+      if (!name || !name.trim()) return res.status(400).json({ error: 'name is required' });
+      const { data: squad, error } = await sb()
+        .from('squads')
+        .insert({ name: name.trim(), description: description?.trim() || null, creator_id: auth.user.id, is_public })
+        .select('id, name, description, avatar_url, is_public, member_count, total_points, created_at')
+        .single();
+      if (error) return res.status(400).json({ error: error.message });
+      await sb().from('squad_members').insert({ squad_id: squad.id, user_id: auth.user.id, role: 'admin' });
+      return res.status(201).json({ squad });
+    }
+
+    // GET /squads/leaderboard — top squads by total_points
+    if (url === '/squads/leaderboard' && req.method === 'GET') {
+      const { data } = await sb()
+        .from('squads')
+        .select('id, name, avatar_url, member_count, total_points')
+        .eq('is_public', true)
+        .order('total_points', { ascending: false })
+        .limit(10);
+      return res.status(200).json({ leaderboard: data || [] });
+    }
+
+    // POST /squads/checkin — squad check-in awards 20 pts
+    if (url === '/squads/checkin' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { squad_id, event_id } = req.body || {};
+      if (!squad_id) return res.status(400).json({ error: 'squad_id required' });
+      const { data: membership } = await sb()
+        .from('squad_members')
+        .select('role')
+        .eq('squad_id', squad_id)
+        .eq('user_id', auth.user.id)
+        .single();
+      if (!membership) return res.status(403).json({ error: 'Not a squad member' });
+      await sb().from('squad_points').insert({ squad_id, user_id: auth.user.id, activity_type: 'squad_checkin', points: 20, event_id: event_id || null });
+      await sb().from('squad_activity').insert({ squad_id, user_id: auth.user.id, activity_type: 'squad_checkin', description: 'Squad check-in at event', data: event_id ? { event_id } : null });
+      const { data: updated } = await sb().from('squads').select('total_points').eq('id', squad_id).single();
+      return res.status(200).json({ ok: true, total_points: updated?.total_points });
+    }
+
+    const squadDetailMatch = url.match(/^\/squads\/([^/]+)$/);
+    const squadActionMatch = url.match(/^\/squads\/([^/]+)\/(join|leave|invite)$/);
+
+    // POST /squads/:id/join
+    if (squadActionMatch && squadActionMatch[2] === 'join' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const squadId = squadActionMatch[1];
+      const { data: squad } = await sb().from('squads').select('id, is_public, member_count').eq('id', squadId).single();
+      if (!squad) return res.status(404).json({ error: 'Squad not found' });
+      if (!squad.is_public) return res.status(403).json({ error: 'Squad is private' });
+      const { error } = await sb().from('squad_members').insert({ squad_id: squadId, user_id: auth.user.id, role: 'member' });
+      if (error) return res.status(400).json({ error: error.message });
+      await sb().from('squads').update({ member_count: squad.member_count + 1 }).eq('id', squadId);
+      return res.status(200).json({ ok: true });
+    }
+
+    // POST /squads/:id/leave
+    if (squadActionMatch && squadActionMatch[2] === 'leave' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const squadId = squadActionMatch[1];
+      const { data: squad } = await sb().from('squads').select('id, member_count, creator_id').eq('id', squadId).single();
+      if (!squad) return res.status(404).json({ error: 'Squad not found' });
+      await sb().from('squad_members').delete().eq('squad_id', squadId).eq('user_id', auth.user.id);
+      const newCount = Math.max(0, squad.member_count - 1);
+      if (newCount === 0) {
+        await sb().from('squads').delete().eq('id', squadId);
+      } else {
+        await sb().from('squads').update({ member_count: newCount }).eq('id', squadId);
+        if (squad.creator_id === auth.user.id) {
+          const { data: nextAdmin } = await sb().from('squad_members').select('user_id').eq('squad_id', squadId).limit(1).single();
+          if (nextAdmin) await sb().from('squad_members').update({ role: 'admin' }).eq('squad_id', squadId).eq('user_id', nextAdmin.user_id);
+        }
+      }
+      return res.status(200).json({ ok: true });
+    }
+
+    // POST /squads/:id/invite — add a follower to squad
+    if (squadActionMatch && squadActionMatch[2] === 'invite' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const squadId = squadActionMatch[1];
+      const { user_id: inviteeId } = req.body || {};
+      if (!inviteeId) return res.status(400).json({ error: 'user_id required' });
+      const { data: membership } = await sb().from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
+      if (!membership) return res.status(403).json({ error: 'Not a squad member' });
+      const { error } = await sb().from('squad_members').insert({ squad_id: squadId, user_id: inviteeId, role: 'member' });
+      if (error) return res.status(400).json({ error: error.message });
+      const { data: squad } = await sb().from('squads').select('member_count').eq('id', squadId).single();
+      await sb().from('squads').update({ member_count: (squad?.member_count || 1) + 1 }).eq('id', squadId);
+      await sb().from('squad_points').insert({ squad_id: squadId, user_id: auth.user.id, activity_type: 'invite', points: 5 });
+      await sb().from('squad_activity').insert({ squad_id: squadId, user_id: auth.user.id, activity_type: 'invite', description: 'Invited a friend', data: { invitee_id: inviteeId } });
+      return res.status(200).json({ ok: true });
+    }
+
+    // GET /squads/:id — squad detail
+    if (squadDetailMatch && req.method === 'GET') {
+      const auth = await authUser(req);
+      const squadId = squadDetailMatch[1];
+      const { data: squad } = await sb().from('squads').select('id, name, description, avatar_url, is_public, member_count, total_points, creator_id, created_at').eq('id', squadId).single();
+      if (!squad) return res.status(404).json({ error: 'Squad not found' });
+      const { data: members } = await sb().from('squad_members').select('role, joined_at, profiles(id, display_name, username, avatar_url)').eq('squad_id', squadId);
+      const { data: activity } = await sb().from('squad_activity').select('id, activity_type, description, created_at, profiles(display_name, avatar_url)').eq('squad_id', squadId).order('created_at', { ascending: false }).limit(10);
+      const { data: checkins } = await sb().from('squad_points').select('id').eq('squad_id', squadId).eq('activity_type', 'squad_checkin');
+      const { data: invites } = await sb().from('squad_points').select('id').eq('squad_id', squadId).eq('activity_type', 'invite');
+      const goals = [
+        { label: 'Attend 5 events together', current: (checkins || []).length, target: 5 },
+        { label: 'Reach 100 squad points', current: squad.total_points, target: 100 },
+        { label: 'Grow to 5 members', current: squad.member_count, target: 5 },
+        { label: 'Invite 3 friends', current: (invites || []).length, target: 3 },
+      ];
+      const isMember = auth ? (members || []).some(m => m.profiles?.id === auth.user.id) : false;
+      return res.status(200).json({ squad, members: members || [], activity: activity || [], goals, isMember });
+    }
+
     /* ─── GET /health ────────────────────────────────────── */
     if (url === '/health' && req.method === 'GET') {
       return res.status(200).json({ ok: true, ts: Date.now(), url: SUPA_URL });
