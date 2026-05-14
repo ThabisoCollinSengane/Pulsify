@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
-<meta name="build-version" content="v2.1.0-20260513"/>
+<meta name="build-version" content="v2.2.0-20260514"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
@@ -50,8 +50,9 @@ select.inp option{background:#0D1424}
 .post-row{display:flex;gap:10px;align-items:flex-start}
 .del-btn{background:none;border:none;color:var(--mu);font-size:.78rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;margin-left:auto;padding:0;flex-shrink:0}
 .del-btn:active{color:var(--pk)}
-.tabs{display:flex;gap:0;background:var(--surf);border-radius:12px;padding:3px;margin-bottom:16px}
-.tab{flex:1;padding:9px;text-align:center;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu);cursor:pointer;border-radius:10px;transition:all .2s}
+.tabs{display:flex;gap:3px;background:var(--surf);border-radius:12px;padding:3px;margin-bottom:16px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:6px 10px;text-align:center;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;color:var(--mu);cursor:pointer;border-radius:10px;transition:all .2s;white-space:nowrap}
 .tab.active{background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff}
 .pane{display:none}.pane.active{display:block}
 .bn{position:fixed;bottom:0;left:0;right:0;height:var(--bh);z-index:800;background:rgba(5,8,15,.97);backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;align-items:stretch}
@@ -119,7 +120,7 @@ select.inp option{background:#0D1424}
     <div class="stat-card"><div class="stat-n" id="stat-events">0</div><div class="stat-l">Events</div></div>
   </div>
 
-  <div class="tabs" style="flex-wrap:wrap;gap:3px">
+  <div class="tabs">
     <div class="tab active" onclick="switchTab(this,'pane-post')">📢 Post</div>
     <div class="tab" onclick="switchTab(this,'pane-event')">🎟 Event</div>
     <div class="tab" onclick="switchTab(this,'pane-myposts')">📋 Posts</div>

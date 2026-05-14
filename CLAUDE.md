@@ -79,8 +79,14 @@ For multi-step tasks, state a brief plan:
 - profiles.id = Supabase Auth user ID
 
 ### Deploy command
-export VT=$(grep VERCEL_TOKEN /workspaces/Pulsify/.env | cut -d= -f2)
-npx vercel --prod --yes --token=$VT
+npx vercel --prod --yes --force --token=<VT>
+
+**CRITICAL — always use `--force`.** Without it, Vercel's edge cache can serve the old CDN response for `/` even after a successful deploy. `--force` bypasses the cache and guarantees the new bundle is served immediately.
+
+### Deployment gotcha — root index.html shadows the `/` rewrite
+Vercel serves static files with higher priority than `rewrites`. If any `index.html` exists at the repo root, it will be uploaded by the CLI and served for `/`, completely bypassing the `/ → apps/landing-page/index.html` rewrite in `vercel.json`. This is why `.vercelignore` excludes `/index.html`. **Never create or leave an `index.html` at the repo root.**
+
+Diagnosis: if `/diagnose` shows the new build version but `/` still shows old code, a stale static file is being served. Check `.vercelignore` and run with `--force`.
 
 ---
 

@@ -108,6 +108,43 @@ Updated after every resolved issue.
 
 ---
 
+### [2026-05-14] Landing page served stale code — "Could not load events. Check your connection."
+- **Symptom:** Site at `/` consistently showed old error UI ("Could not load events. Check your connection.") even after successful deploys. `/diagnose` showed new code but `/` returned "No build-version found — OLD CODE".
+- **Root cause:** An untracked `index.html` existed at the Codespaces repo root from an earlier session. When deploying via `npx vercel --prod`, the CLI uploads the entire working directory (including untracked files). Vercel serves static files with higher priority than `rewrites`, so the stale root `index.html` was served for `/` instead of the rewrite `/ → apps/landing-page/index.html`.
+- **Fix:** Created `.vercelignore` at repo root excluding `/index.html` (and all `.bak` / junk files). Added `--force` flag to CLI deploy command to bypass edge cache. Future deploys use `npx vercel --prod --yes --force --token=<token>`.
+- **Files:** `.vercelignore` (new), `vercel.json` (added `/diagnose` rewrite).
+- **Lesson:** CRITICAL — Vercel static files always beat rewrites. Any `index.html` at the repo root will shadow the `/` rewrite and serve forever from the CDN until `.vercelignore` excludes it. Always check `/diagnose` vs `/` when the site appears stuck. Run deploys with `--force`.
+
+### [2026-05-14] Supabase JS SDK hanging silently on Android Chrome mobile
+- **Symptom:** Landing page loaded but never rendered events on Android Chrome; no error, just a permanent spinner. Desktop and iOS worked fine.
+- **Root cause:** `autoRefreshToken: true` (default) caused the SDK to attempt a background token refresh on an unstable mobile network, blocking the ready state. Also, `detectSessionInUrl: true` (default) tried to parse the URL for auth callbacks on every page load, adding extra latency.
+- **Fix:** Added `detectSessionInUrl: false` to `createClient()` options in `getSB()`. Added a 12-second `AbortController` timeout to `loadFeed()` and `loadFrontline()` queries so they fail fast instead of hanging indefinitely.
+- **Files:** `apps/landing-page/index.html` — `getSB()` function and `loadFeed`/`loadFrontline` query blocks.
+
+### [2026-05-14] Sign-out not clearing Supabase session
+- **Symptom:** Tapping "Sign Out" dismissed the menu but the user remained signed in on refresh.
+- **Root cause:** Sign-out handler only cleared `localStorage` items manually but did not call `supabase.auth.signOut()`, leaving the Supabase auth session cookie active.
+- **Fix:** Added `await sb2.auth.signOut()` call before clearing localStorage in the sign-out handler.
+- **Files:** `apps/landing-page/index.html` — sign-out handler.
+
+### [2026-05-14] `diagnose.html` SDK crash — `const URL` shadowed browser constructor
+- **Symptom:** Diagnose page Supabase SDK test failed with "Invalid supabaseUrl: Provided URL is malformed" even though the URL string was correct.
+- **Root cause:** `diagnose.html` declared `const URL = 'https://...'` at the top level, shadowing the browser's global `URL` constructor. The Supabase SDK internally calls `new URL(supabaseUrl)` — this used the string instead of the constructor, throwing a TypeError.
+- **Fix:** Renamed the variable to `const SUPA_URL`.
+- **Files:** `apps/landing-page/diagnose.html`.
+
+### [2026-05-14] Report functionality — businesses and posts
+- **Status:** Built and deployed (PR #8 merged).
+- **What was done:** Created `business_reports` and `post_reports` tables in Supabase (mirroring `event_reports` schema). Unified report handler in `api/index.js` covering `/report-event`, `/report-business`, `/report-post`. Generic `openReportModal(type, id, name)` in landing page index.html (backward-compatible). 🚩 Report button on business detail sheet and post cards in `feeds.html`. Admin panel updated with type filter and typed PATCH endpoint.
+
+### [2026-05-14] Organizer dashboard tab row overlapping bottom nav
+- **Symptom:** 6 tabs with `flex:1; flex-wrap:wrap` wrapped onto 2 rows on mobile, pushing the 📢 Post tab below the bottom navigation bar where it was untappable.
+- **Root cause:** 6 equal-width `flex:1` tabs in ~360px width = ~56px each minimum, wrapping when combined padding exceeds viewport. Bottom nav is fixed at `70px` height but the page didn't account for the 2-row tab height.
+- **Fix:** Changed `.tabs` to `overflow-x:auto; scrollbar-width:none` (horizontal scroll), set `.tab` to `flex-shrink:0; padding:6px 10px; white-space:nowrap`, removed `flex-wrap:wrap` inline style. All 6 tabs now sit in a single scrollable row.
+- **Files:** `apps/organizer/index.html` — `.tabs` and `.tab` CSS rules.
+
+---
+
 ## Claude Update Contract
 Only update this file when explicitly instructed.
 - Append, never rewrite history.
