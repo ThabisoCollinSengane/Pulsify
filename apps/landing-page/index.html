@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
 <meta name="description" content="Pulsify — Feel the Vibe 🇿🇦 South Africa's live event discovery platform"/>
-<meta name="build-version" content="v2.7.0-20260514"/>
+<meta name="build-version" content="v2.8.0-20260514"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
@@ -373,6 +373,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .sq-member-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;flex-shrink:0;overflow:hidden}
 .sq-checkin-btn{width:100%;padding:12px 14px;background:rgba(176,38,255,.12);border:1.5px solid rgba(176,38,255,.4);border-radius:12px;color:var(--pu);font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:8px;box-sizing:border-box}
 .sq-select{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--tx);font-size:.82rem;outline:none;margin-bottom:8px;box-sizing:border-box}
+.sq-tab-chip{flex-shrink:0;padding:8px 14px;border-radius:50px;border:1.5px solid var(--border);background:transparent;color:var(--mu);font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:all .2s}
+.sq-tab-chip.active{background:var(--or);border-color:var(--or);color:#fff}
+.sq-add-tab{flex-shrink:0;width:34px;height:34px;border-radius:50%;border:1.5px dashed rgba(176,38,255,.45);background:transparent;color:var(--pu);font-size:1.3rem;cursor:pointer;display:flex;align-items:center;justify-content:center;align-self:center;-webkit-tap-highlight-color:transparent;transition:border-color .2s}
+.sq-add-tab:active{border-color:var(--pu)}
+.sq-tmpl-card{background:var(--surf);border:1.5px solid var(--border);border-radius:14px;padding:12px;cursor:pointer;text-align:center;-webkit-tap-highlight-color:transparent;transition:border-color .2s}
+.sq-tmpl-card.active{border-color:var(--or);background:rgba(255,92,0,.07)}
+.sq-tmpl-card:active{border-color:var(--or)}
 
 /* ── MAP SPLASH (PULSIFY MAP EXPLORE) ── */
 #map-splash{position:absolute;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:radial-gradient(ellipse at center,#0c0f1f 0%,#05080F 70%);animation:msIn .35s ease-out;text-align:center;padding:24px;pointer-events:none}
@@ -570,11 +577,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     </div>
   </div>
   <!-- Squads sub-pane -->
-  <div id="squad-squads-pane" style="display:none;padding:12px 16px 80px">
-    <div id="sq-my-squads"></div>
-    <div id="sq-create-area"></div>
-    <div id="sq-leaderboard-section"></div>
-    <div id="sq-detail-view" style="display:none"></div>
+  <div id="squad-squads-pane" style="display:none;padding:0 0 80px;overflow-y:auto">
+    <div id="sq-tabs-row" style="display:flex;gap:6px;overflow-x:auto;padding:10px 16px;border-bottom:1px solid var(--border);scrollbar-width:none"></div>
+    <div id="sq-workspace" style="padding:14px 16px"></div>
+    <div id="sq-global-lb" style="padding:0 16px"></div>
   </div>
 </div><!-- ══ BOTTOM NAV ══ -->
 <!-- BUSINESSES FULL PAGE OVERLAY -->
@@ -3020,9 +3026,21 @@ async function submitReport() {
 
 /* ══ SQUADS & GAMIFICATION ════════════════════════════════════ */
 
+const SQUAD_TEMPLATES = [
+  { type:'general',       icon:'🎉', color:'#FF5C00', label:'Social Crew',    desc:'Friend groups & hangouts',        roles:['*'] },
+  { type:'tournament',    icon:'🏆', color:'#FFD700', label:'Tournament',      desc:'Compete & rank up on points',     roles:['*'] },
+  { type:'event_team',    icon:'📅', color:'#00E5FF', label:'Event Team',      desc:'Staff, volunteers & scheduling',  roles:['organizer','*'] },
+  { type:'business_team', icon:'🏢', color:'#B026FF', label:'Business Team',   desc:'Departments & collaboration',     roles:['business'] },
+  { type:'marketing',     icon:'📣', color:'#FF2D78', label:'Marketing Crew',  desc:'Campaigns & brand content',       roles:['business'] },
+  { type:'sales',         icon:'💼', color:'#C6FF4A', label:'Sales Squad',     desc:'Targets & performance tracking',  roles:['business'] },
+];
+function _userRole() { try { return JSON.parse(localStorage.getItem('p_user'))?.role || 'user'; } catch(e) { return 'user'; } }
+function getTemplateOptions() { const r = _userRole(); return SQUAD_TEMPLATES.filter(t => t.roles.includes('*') || t.roles.includes(r)); }
+function getTemplate(type) { return SQUAD_TEMPLATES.find(t => t.type === type) || SQUAD_TEMPLATES[0]; }
+
 let _squadsLoaded = false;
 let _mySquads = [];
-let _sqDetailId = null;
+let _activeSquadTab = null;
 
 function showSquadSubTab(tab) {
   document.querySelectorAll('.sq-stab').forEach(b => b.classList.toggle('active', b.id === 'stab-' + tab));
@@ -3035,14 +3053,13 @@ function showSquadSubTab(tab) {
 
 async function loadSquads() {
   _squadsLoaded = true;
-  const container  = document.getElementById('sq-my-squads');
-  const createArea = document.getElementById('sq-create-area');
-  const lbSection  = document.getElementById('sq-leaderboard-section');
+  const workspace = document.getElementById('sq-workspace');
+  const glb = document.getElementById('sq-global-lb');
   if (!currentUser) {
-    if (container) container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--mu);font-size:.84rem">Sign in to use Squads.<br><a href="/signin" style="color:var(--or);font-family:\'Syne\',sans-serif;font-weight:700">Sign in →</a></div>';
+    if (workspace) workspace.innerHTML = '<div style="padding:24px;text-align:center;color:var(--mu);font-size:.84rem">Sign in to use Squads.<br><a href="/signin" style="color:var(--or);font-family:\'Syne\',sans-serif;font-weight:700">Sign in →</a></div>';
     return;
   }
-  if (container) container.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Loading squads…</div>';
+  if (workspace) workspace.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Loading…</div>';
   try {
     const sb2 = getSB();
     const session = sb2 ? (await sb2.auth.getSession()).data.session : null;
@@ -3055,65 +3072,179 @@ async function loadSquads() {
     const { squads: mySquads = [] } = myRes.ok ? await myRes.json() : {};
     const { leaderboard = [] } = lbRes.ok ? await lbRes.json() : {};
     _mySquads = mySquads;
-    if (container)  renderSquadList(mySquads, container);
-    if (createArea) renderCreateArea(createArea);
-    if (lbSection)  renderLeaderboard(leaderboard, lbSection);
+    renderSquadTabs(mySquads);
+    if (mySquads.length) {
+      const targetId = _activeSquadTab && mySquads.find(s => s.id === _activeSquadTab) ? _activeSquadTab : mySquads[0].id;
+      showSquadTab(targetId);
+      if (glb) glb.innerHTML = '';
+    } else {
+      showSquadEmptyState(workspace);
+      if (glb) renderLeaderboard(leaderboard, glb);
+    }
   } catch(e) {
-    if (container) container.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Failed to load squads.</div>';
+    if (workspace) workspace.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Failed to load squads.</div>';
   }
 }
 
-function renderSquadList(squads, container) {
-  const detail = document.getElementById('sq-detail-view');
-  if (detail) detail.style.display = 'none';
-  if (!squads.length) {
-    container.innerHTML = '<div style="padding:24px 0;text-align:center"><div style="font-size:2.5rem;margin-bottom:8px">⚔️</div><div style="font-family:\'Syne\',sans-serif;font-size:.9rem;font-weight:700;margin-bottom:4px">No squads yet</div><div style="font-size:.78rem;color:var(--mu)">Create or join a squad below</div></div>';
-    return;
+function renderSquadTabs(squads) {
+  const tabsRow = document.getElementById('sq-tabs-row');
+  if (!tabsRow) return;
+  tabsRow.innerHTML = squads.map(s => {
+    const tmpl = getTemplate(s.template_type || 'general');
+    return `<button class="sq-tab-chip" id="sq-chip-${x(s.id)}" onclick="showSquadTab('${x(s.id)}')">${tmpl.icon} ${x(s.name)}</button>`;
+  }).join('') + `<button class="sq-add-tab" title="New Squad" onclick="showCreateForm()">+</button>`;
+}
+
+async function showSquadTab(squadId) {
+  _activeSquadTab = squadId;
+  document.querySelectorAll('.sq-tab-chip').forEach(c => c.classList.toggle('active', c.id === 'sq-chip-' + squadId));
+  const workspace = document.getElementById('sq-workspace');
+  const glb = document.getElementById('sq-global-lb');
+  if (workspace) workspace.innerHTML = '<div style="padding:20px;font-size:.78rem;color:var(--mu)">Loading…</div>';
+  if (glb) glb.innerHTML = '';
+  try {
+    const r = await fetch(API + '/squads/' + squadId);
+    if (!r.ok) throw new Error('Failed');
+    const detail = await r.json();
+    renderSquadWorkspace(detail, workspace);
+  } catch(e) {
+    if (workspace) workspace.innerHTML = `<div style="padding:20px;text-align:center;color:var(--mu);font-size:.84rem">Failed to load.<br><button onclick="showSquadTab(\'${squadId}\')" style="background:transparent;border:none;color:var(--or);cursor:pointer;font-family:\'Syne\',sans-serif;font-weight:700">Retry</button></div>`;
   }
-  container.innerHTML = '<div style="font-family:\'Syne\',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">⚔️ My Squads</div>' +
-    squads.map(s => `<div class="sq-card" onclick="showSquadDetail('${x(s.id)}')">
-      <div class="sq-card-head"><span class="sq-card-name">${x(s.name)}</span><span class="sq-card-role">${s.role === 'admin' ? '👑 Admin' : 'Member'}</span></div>
-      <div class="sq-card-meta">
-        <span>👥 ${s.member_count} member${s.member_count !== 1 ? 's' : ''}</span>
-        <span class="sq-pts">⚡ ${s.total_points} pts</span>
-        <span>${s.is_public ? '🌍 Public' : '🔒 Private'}</span>
+}
+
+function renderSquadWorkspace(detail, container) {
+  if (!container) return;
+  const { squad, members, activity, goals, isMember, memberPoints = {} } = detail;
+  const tmpl = getTemplate(squad.template_type || 'general');
+
+  let highlightHtml = '';
+  if (squad.template_type === 'tournament') {
+    const ranked = [...members].sort((a,b) => (memberPoints[b.profiles?.id]||0) - (memberPoints[a.profiles?.id]||0));
+    const medals = ['\u{1F947}','\u{1F948}','\u{1F949}'];
+    highlightHtml = `<div style="background:rgba(255,215,0,.07);border:1px solid rgba(255,215,0,.2);border-radius:12px;padding:12px;margin-bottom:14px">
+      <div style="font-family:\'Syne\',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#FFD700;margin-bottom:8px">\u{1F3C6} Member Rankings</div>
+      ${ranked.map((m,i) => { const p=m.profiles||{}; const pts=memberPoints[p.id]||0; const ini=(p.display_name||'?')[0].toUpperCase();
+        return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:.9rem;width:22px">${medals[i]||(i+1)+\'.\'}</span><div class="sq-member-av" style="width:26px;height:26px;font-size:.68rem">${p.avatar_url?`<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>`:ini}</div><div style="flex:1;font-size:.78rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(p.display_name||p.username||\'?\')}</div><span style="font-family:\'Syne\',sans-serif;font-size:.78rem;font-weight:700;color:var(--li)">\u26A1${pts}</span></div>`;
+      }).join('')}
+    </div>`;
+  } else if (squad.template_type === 'event_team') {
+    const cfg = squad.template_config || {};
+    highlightHtml = `<div style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.18);border-radius:12px;padding:12px;margin-bottom:14px">
+      <div style="font-family:\'Syne\',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--cy);margin-bottom:6px">\u{1F4C5} Event Info</div>
+      ${cfg.event_name ? `<div style="font-size:.9rem;font-weight:700;margin-bottom:2px">${x(cfg.event_name)}</div>` : ''}
+      ${cfg.event_date ? `<div style="font-size:.76rem;color:var(--mu2);margin-bottom:2px">\u{1F5D3} ${x(cfg.event_date)}</div>` : ''}
+      ${cfg.venue ? `<div style="font-size:.76rem;color:var(--mu2)">\u{1F4CD} ${x(cfg.venue)}</div>` : ''}
+      ${!cfg.event_name ? `<div style="font-size:.76rem;color:var(--mu)">No event info yet</div>` : ''}
+      ${isMember ? `<button onclick="showEventInfoForm(\'${x(squad.id)}\')" style="margin-top:8px;background:transparent;border:1px solid rgba(0,229,255,.3);border-radius:50px;color:var(--cy);font-family:\'Syne\',sans-serif;font-size:.7rem;font-weight:700;padding:4px 14px;cursor:pointer">Edit Event Info</button>` : ''}
+    </div>`;
+  }
+
+  const goalsHtml = goals.length ? `<div style="font-family:\'Syne\',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Goals</div>
+    ${goals.map(g => { const pct=Math.min(100,Math.round((g.current/g.target)*100));
+      return `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:.76rem;margin-bottom:4px"><span>${x(g.label)}</span><span style="color:var(--mu)">${g.current}/${g.target}</span></div><div class="sq-goal-bar"><div class="sq-goal-fill" style="width:${pct}%"></div></div></div>`;
+    }).join('')}` : '';
+
+  const membersHtml = `<div style="font-family:\'Syne\',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin:16px 0 10px">Members (${members.length})</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+      ${members.map(m => { const p=m.profiles||{}; const ini=(p.display_name||'?')[0].toUpperCase();
+        return `<div style="display:flex;align-items:center;gap:8px"><div class="sq-member-av">${p.avatar_url?`<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>`:ini}</div><div><div style="font-size:.78rem;font-weight:700">${x(p.display_name||p.username||\'?\')}</div><div style="font-size:.68rem;color:var(--mu)">${m.role===\'admin\'?\'\u{1F451} Admin\':\'Member\'}</div></div></div>`;
+      }).join('')}
+    </div>`;
+
+  const activityHtml = activity.length ? `<div style="font-family:\'Syne\',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Recent Activity</div>
+    <div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:8px 12px;margin-bottom:14px">
+      ${activity.map(a=>`<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:.74rem;color:var(--mu2);display:flex;justify-content:space-between"><span>${x(a.description||a.activity_type)}</span><span style="color:var(--mu)">${new Date(a.created_at).toLocaleDateString(\'en-ZA\',{day:\'numeric\',month:\'short\'})}</span></div>`).join('')}
+    </div>` : '';
+
+  const actionsHtml = isMember
+    ? `<button onclick="leaveSquad(\'${x(squad.id)}\')" style="width:100%;padding:11px;background:rgba(255,45,120,.1);border:1.5px solid rgba(255,45,120,.3);border-radius:50px;color:var(--pk);font-family:\'Syne\',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer">Leave Squad</button>`
+    : `<button onclick="joinSquad(\'${x(squad.id)}\')" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:\'Syne\',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer">Join Squad</button>`;
+
+  container.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+      <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,${tmpl.color}22,${tmpl.color}55);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0">${tmpl.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:\'Syne\',sans-serif;font-size:1rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(squad.name)}</div>
+        <div style="font-size:.72rem;color:var(--mu)">${tmpl.label} \u00B7 \u{1F465} ${squad.member_count} \u00B7 ${squad.is_public?\'\u{1F30D} Public\':\'\u{1F512} Private\'}</div>
       </div>
-    </div>`).join('');
+      <span class="sq-pts">\u26A1 ${squad.total_points}</span>
+    </div>
+    ${highlightHtml}${goalsHtml}${membersHtml}${activityHtml}${actionsHtml}`;
 }
 
-function renderCreateArea(el) {
-  el.innerHTML = `<button class="sq-create-btn" id="sq-create-toggle" onclick="toggleCreateForm()">+ Create a Squad</button>
-  <div id="sq-create-form" class="sq-create-form" style="display:none">
-    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;margin-bottom:12px">New Squad</div>
+function showSquadEmptyState(container) {
+  if (!container) return;
+  container.innerHTML = `
+    <div style="padding:24px 0 20px;text-align:center">
+      <div style="font-size:3rem;margin-bottom:10px">\u2694\uFE0F</div>
+      <div style="font-family:\'Syne\',sans-serif;font-size:.95rem;font-weight:800;margin-bottom:6px">No squads yet</div>
+      <div style="font-size:.78rem;color:var(--mu);margin-bottom:20px">Create your first squad and start earning points together</div>
+      <button onclick="showCreateForm()" style="background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;padding:12px 28px;border-radius:50px;color:#fff;font-family:\'Syne\',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer">+ Create a Squad</button>
+    </div>`;
+}
+
+function renderLeaderboard(rows, el) {
+  if (!rows || !rows.length) { if (el) el.innerHTML = ''; return; }
+  const medals = ['gold','silver','bronze'];
+  el.innerHTML = `<div style="font-family:\'Syne\',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">\u{1F3C6} Top Squads This Week</div>
+  <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:4px 14px;margin-bottom:16px">
+    ${rows.map((s,i) => { const tmpl=getTemplate(s.template_type||'general'); return `<div class="sq-lb-row" onclick="showSquadSubTab(\'squads\')">
+      <span class="sq-lb-rank ${medals[i]||''}">${i+1}</span>
+      <span style="font-size:1rem">${tmpl.icon}</span>
+      <div style="flex:1;min-width:0"><div style="font-family:\'Syne\',sans-serif;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(s.name)}</div><div style="font-size:.7rem;color:var(--mu)">\u{1F465} ${s.member_count}</div></div>
+      <span class="sq-pts">\u26A1 ${s.total_points}</span>
+    </div>`; }).join('')}
+  </div>`;
+}
+
+function showCreateForm() {
+  const workspace = document.getElementById('sq-workspace');
+  const tabsRow = document.getElementById('sq-tabs-row');
+  if (!workspace) return;
+  const templates = getTemplateOptions();
+  const defType = templates[0]?.type || 'general';
+  document.querySelectorAll('.sq-tab-chip').forEach(c => c.classList.remove('active'));
+  if (!document.getElementById('sq-chip-new') && tabsRow) {
+    const newChip = document.createElement('button');
+    newChip.className = 'sq-tab-chip active'; newChip.id = 'sq-chip-new';
+    newChip.textContent = '+ New';
+    const addBtn = tabsRow.querySelector('.sq-add-tab');
+    if (addBtn) tabsRow.insertBefore(newChip, addBtn); else tabsRow.appendChild(newChip);
+  }
+  _activeSquadTab = null;
+  workspace.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <button onclick="cancelCreateForm()" style="background:transparent;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer;padding:0 4px 0 0">\u2190</button>
+      <div style="font-family:\'Syne\',sans-serif;font-size:.95rem;font-weight:800">New Squad</div>
+    </div>
+    <div style="font-family:\'Syne\',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Choose a template</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+      ${templates.map(t => `<div class="sq-tmpl-card ${t.type===defType?\'active\':\'\'}" id="stmpl-${t.type}" onclick="selectTemplate(\'${t.type}\')">
+        <div style="font-size:1.5rem;margin-bottom:5px">${t.icon}</div>
+        <div style="font-family:\'Syne\',sans-serif;font-size:.76rem;font-weight:700;margin-bottom:2px">${t.label}</div>
+        <div style="font-size:.66rem;color:var(--mu);line-height:1.35">${t.desc}</div>
+      </div>`).join('')}
+    </div>
     <input id="sq-new-name" class="sq-input" placeholder="Squad name (required)" maxlength="40"/>
     <input id="sq-new-desc" class="sq-input" placeholder="Description (optional)" maxlength="120"/>
     <label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--mu);margin-bottom:14px;cursor:pointer">
       <input type="checkbox" id="sq-new-public" checked style="width:14px;height:14px"/> Public squad
     </label>
-    <button onclick="createSquad()" style="width:100%;padding:12px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer">Create Squad</button>
-  </div>`;
+    <input type="hidden" id="sq-new-template" value="${defType}"/>
+    <button onclick="createSquad()" style="width:100%;padding:13px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:\'Syne\',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Create Squad</button>`;
 }
 
-function toggleCreateForm() {
-  const form = document.getElementById('sq-create-form');
-  const btn  = document.getElementById('sq-create-toggle');
-  if (!form || !btn) return;
-  const visible = form.style.display !== 'none';
-  form.style.display = visible ? 'none' : 'block';
-  btn.textContent = visible ? '+ Create a Squad' : '✕ Cancel';
+function selectTemplate(type) {
+  document.querySelectorAll('.sq-tmpl-card').forEach(c => c.classList.toggle('active', c.id === 'stmpl-' + type));
+  const inp = document.getElementById('sq-new-template');
+  if (inp) inp.value = type;
 }
 
-function renderLeaderboard(rows, el) {
-  if (!rows.length) { el.innerHTML = ''; return; }
-  const medals = ['gold','silver','bronze'];
-  el.innerHTML = `<div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">🏆 Top Squads This Week</div>
-  <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:4px 14px;margin-bottom:16px">
-    ${rows.map((s,i) => `<div class="sq-lb-row" onclick="showSquadDetail('${x(s.id)}')">
-      <span class="sq-lb-rank ${medals[i]||''}">${i+1}</span>
-      <div style="flex:1;min-width:0"><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(s.name)}</div><div style="font-size:.7rem;color:var(--mu)">👥 ${s.member_count}</div></div>
-      <span class="sq-pts">⚡ ${s.total_points}</span>
-    </div>`).join('')}
-  </div>`;
+function cancelCreateForm() {
+  const chip = document.getElementById('sq-chip-new');
+  if (chip) chip.remove();
+  if (_mySquads.length) showSquadTab(_mySquads[0].id);
+  else showSquadEmptyState(document.getElementById('sq-workspace'));
 }
 
 async function createSquad() {
@@ -3121,81 +3252,57 @@ async function createSquad() {
   if (!name) { showToast('Squad name required'); return; }
   const desc = (document.getElementById('sq-new-desc')?.value || '').trim();
   const isPublic = document.getElementById('sq-new-public')?.checked ?? true;
-  const sb2 = getSB();
-  if (!sb2) { showToast('Sign in first'); return; }
+  const templateType = document.getElementById('sq-new-template')?.value || 'general';
+  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
   const session = (await sb2.auth.getSession()).data.session;
   if (!session) { showToast('Sign in first'); return; }
   try {
     const r = await fetch(API + '/squads', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-      body: JSON.stringify({ name, description: desc || null, is_public: isPublic })
+      body: JSON.stringify({ name, description: desc || null, is_public: isPublic, template_type: templateType })
     });
     const d = await r.json();
     if (!r.ok) { showToast(d.error || 'Failed to create'); return; }
-    showToast('🎉 Squad created!');
+    showToast('\u{1F389} Squad created!');
+    const chip = document.getElementById('sq-chip-new');
+    if (chip) chip.remove();
     _squadsLoaded = false;
     loadSquads();
   } catch(e) { showToast('Error: ' + e.message); }
 }
 
-async function showSquadDetail(squadId) {
-  _sqDetailId = squadId;
-  const detail    = document.getElementById('sq-detail-view');
-  const myList    = document.getElementById('sq-my-squads');
-  const createArea = document.getElementById('sq-create-area');
-  const lbSection = document.getElementById('sq-leaderboard-section');
-  if (!detail) return;
-  if (myList)    myList.style.display    = 'none';
-  if (createArea) createArea.style.display = 'none';
-  if (lbSection) lbSection.style.display = 'none';
-  detail.style.display = '';
-  detail.innerHTML = '<div style="padding:20px;font-size:.78rem;color:var(--mu)">Loading…</div>';
-  try {
-    const r = await fetch(API + '/squads/' + squadId);
-    if (!r.ok) throw new Error('Not found');
-    const { squad, members, activity, goals, isMember } = await r.json();
-    detail.innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-        <button onclick="closeSquadDetail()" style="background:transparent;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer;padding:0 6px 0 0">←</button>
-        <div style="flex:1">
-          <div style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800">${x(squad.name)}</div>
-          ${squad.description ? `<div style="font-size:.75rem;color:var(--mu)">${x(squad.description)}</div>` : ''}
-        </div>
-        <span class="sq-pts">⚡ ${squad.total_points} pts</span>
-      </div>
-      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Goals</div>
-      ${goals.map(g => { const pct = Math.min(100,Math.round((g.current/g.target)*100));
-        return `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:.76rem;margin-bottom:4px"><span>${x(g.label)}</span><span style="color:var(--mu)">${g.current}/${g.target}</span></div><div class="sq-goal-bar"><div class="sq-goal-fill" style="width:${pct}%"></div></div></div>`;
-      }).join('')}
-      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin:16px 0 10px">Members (${members.length})</div>
-      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px">
-        ${members.map(m => { const p = m.profiles || {}; const ini = (p.display_name || '?')[0].toUpperCase();
-          return `<div style="display:flex;align-items:center;gap:8px"><div class="sq-member-av">${p.avatar_url ? `<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>` : ini}</div><div><div style="font-size:.78rem;font-weight:700">${x(p.display_name||p.username||'?')}</div><div style="font-size:.68rem;color:var(--mu)">${m.role==='admin'?'👑 Admin':'Member'}</div></div></div>`;
-        }).join('')}
-      </div>
-      ${activity.length ? `<div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Recent Activity</div>
-      <div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:8px 12px;margin-bottom:14px">
-        ${activity.map(a=>`<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:.74rem;color:var(--mu2);display:flex;justify-content:space-between"><span>${x(a.description||a.activity_type)}</span><span style="color:var(--mu)">${new Date(a.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short'})}</span></div>`).join('')}
-      </div>` : ''}
-      ${isMember
-        ? `<button onclick="leaveSquad('${x(squad.id)}')" style="width:100%;padding:11px;background:rgba(255,45,120,.1);border:1.5px solid rgba(255,45,120,.3);border-radius:50px;color:var(--pk);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;margin-bottom:8px">Leave Squad</button>`
-        : `<button onclick="joinSquad('${x(squad.id)}')" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;margin-bottom:8px">Join Squad</button>`}`;
-  } catch(e) {
-    detail.innerHTML = `<div style="padding:20px;text-align:center;color:var(--mu)">Failed to load squad.<br><button onclick="closeSquadDetail()" style="background:transparent;border:none;color:var(--or);cursor:pointer;font-family:'Syne',sans-serif;font-weight:700">← Go back</button></div>`;
-  }
+function showEventInfoForm(squadId) {
+  const workspace = document.getElementById('sq-workspace');
+  if (!workspace) return;
+  workspace.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <button onclick="showSquadTab(\'${squadId}\')" style="background:transparent;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer;padding:0 4px 0 0">\u2190</button>
+      <div style="font-family:\'Syne\',sans-serif;font-size:.95rem;font-weight:800">Event Info</div>
+    </div>
+    <input id="eif-name" class="sq-input" placeholder="Event name (required)"/>
+    <input id="eif-date" class="sq-input" type="date" style="color-scheme:dark"/>
+    <input id="eif-venue" class="sq-input" placeholder="Venue (optional)"/>
+    <button onclick="saveEventInfo(\'${squadId}\')" style="width:100%;padding:13px;background:linear-gradient(135deg,#00E5FF,#B026FF);border:none;border-radius:50px;color:#fff;font-family:\'Syne\',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Save Event Info</button>`;
 }
 
-function closeSquadDetail() {
-  _sqDetailId = null;
-  const detail    = document.getElementById('sq-detail-view');
-  const myList    = document.getElementById('sq-my-squads');
-  const createArea = document.getElementById('sq-create-area');
-  const lbSection = document.getElementById('sq-leaderboard-section');
-  if (detail)    detail.style.display    = 'none';
-  if (myList)    myList.style.display    = '';
-  if (createArea) createArea.style.display = '';
-  if (lbSection) lbSection.style.display = '';
+async function saveEventInfo(squadId) {
+  const name = (document.getElementById('eif-name')?.value || '').trim();
+  if (!name) { showToast('Event name required'); return; }
+  const date = document.getElementById('eif-date')?.value;
+  const venue = (document.getElementById('eif-venue')?.value || '').trim();
+  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
+  const session = (await sb2.auth.getSession()).data.session;
+  if (!session) { showToast('Sign in first'); return; }
+  try {
+    const r = await fetch(API + '/squads/' + squadId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ template_config: { event_name: name, event_date: date || null, venue: venue || null } })
+    });
+    if (r.ok) { showToast('\u2705 Event info saved'); showSquadTab(squadId); }
+    else { const d = await r.json(); showToast(d.error || 'Failed'); }
+  } catch(e) { showToast('Error: ' + e.message); }
 }
 
 async function joinSquad(squadId) {
@@ -3209,9 +3316,9 @@ async function joinSquad(squadId) {
     });
     const d = await r.json();
     if (!r.ok) { showToast(d.error || 'Failed to join'); return; }
-    showToast('🎉 Joined squad!');
+    showToast('\u{1F389} Joined squad!');
     _squadsLoaded = false;
-    showSquadDetail(squadId);
+    showSquadTab(squadId);
   } catch(e) { showToast('Error: ' + e.message); }
 }
 
@@ -3228,7 +3335,6 @@ async function leaveSquad(squadId) {
     if (!r.ok) { const d = await r.json(); showToast(d.error || 'Failed'); return; }
     showToast('Left squad');
     _squadsLoaded = false;
-    closeSquadDetail();
     loadSquads();
   } catch(e) { showToast('Error: ' + e.message); }
 }
@@ -3237,12 +3343,12 @@ async function showSquadCheckinBar(eventId) {
   if (!currentUser || !_mySquads.length) return;
   const el = document.getElementById('tc-squad-checkin');
   if (!el) return;
-  const opts = _mySquads.map(s => `<option value="${x(s.id)}">${x(s.name)} (⚡${s.total_points} pts)</option>`).join('');
+  const opts = _mySquads.map(s => `<option value="${x(s.id)}">${x(s.name)} (\u26A1${s.total_points} pts)</option>`).join('');
   el.style.display = '';
   el.innerHTML = `<div style="background:rgba(176,38,255,.08);border:1px solid rgba(176,38,255,.25);border-radius:12px;padding:12px">
-    <div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--pu);margin-bottom:8px;letter-spacing:.08em">🏆 SQUAD CHECK-IN</div>
+    <div style="font-family:\'Syne\',sans-serif;font-size:.72rem;font-weight:700;color:var(--pu);margin-bottom:8px;letter-spacing:.08em">\u{1F3C6} SQUAD CHECK-IN</div>
     <select id="sq-checkin-select" class="sq-select">${opts}</select>
-    <button onclick="doSquadCheckin('${eventId}')" class="sq-checkin-btn">⚡ Check in with squad <span style="margin-left:auto;background:rgba(176,38,255,.25);padding:2px 10px;border-radius:50px;font-size:.7rem">+20 pts</span></button>
+    <button onclick="doSquadCheckin(\'${eventId}\')" class="sq-checkin-btn">\u26A1 Check in with squad <span style="margin-left:auto;background:rgba(176,38,255,.25);padding:2px 10px;border-radius:50px;font-size:.7rem">+20 pts</span></button>
   </div>`;
 }
 
@@ -3261,12 +3367,13 @@ async function doSquadCheckin(eventId) {
     const d = await r.json();
     if (!r.ok) { showToast(d.error || 'Failed'); return; }
     const sq = _mySquads.find(s => s.id === squadId);
-    showToast('⚡ +20 pts added to ' + (sq?.name || 'your squad') + '!');
+    showToast('\u26A1 +20 pts added to ' + (sq?.name || 'your squad') + '!');
     const el = document.getElementById('tc-squad-checkin');
-    if (el) el.innerHTML = '<div style="text-align:center;padding:10px;font-size:.8rem;color:var(--li);font-family:\'Syne\',sans-serif;font-weight:700">✅ Squad checked in! ⚡ +20 pts earned</div>';
+    if (el) el.innerHTML = '<div style="text-align:center;padding:10px;font-size:.8rem;color:var(--li);font-family:\'Syne\',sans-serif;font-weight:700">\u2705 Squad checked in! \u26A1 +20 pts earned</div>';
     _squadsLoaded = false;
   } catch(e) { showToast('Error: ' + e.message); }
 }
+
 
 </script>
 </body>

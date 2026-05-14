@@ -1485,7 +1485,7 @@ module.exports = async (req, res) => {
       if (!auth) return res.status(401).json({ error: 'Unauthorized' });
       const { data: memberships } = await sb()
         .from('squad_members')
-        .select('squad_id, role, joined_at, squads(id, name, description, avatar_url, is_public, member_count, total_points, created_at)')
+        .select('squad_id, role, joined_at, squads(id, name, description, avatar_url, is_public, member_count, total_points, template_type, created_at)')
         .eq('user_id', auth.user.id);
       return res.status(200).json({ squads: (memberships || []).map(m => ({ ...m.squads, role: m.role, joined_at: m.joined_at })) });
     }
@@ -1494,12 +1494,12 @@ module.exports = async (req, res) => {
     if (url === '/squads' && req.method === 'POST') {
       const auth = await authUser(req);
       if (!auth) return res.status(401).json({ error: 'Unauthorized' });
-      const { name, description, is_public = true } = req.body || {};
+      const { name, description, is_public = true, template_type = 'general' } = req.body || {};
       if (!name || !name.trim()) return res.status(400).json({ error: 'name is required' });
       const { data: squad, error } = await sb()
         .from('squads')
-        .insert({ name: name.trim(), description: description?.trim() || null, creator_id: auth.user.id, is_public })
-        .select('id, name, description, avatar_url, is_public, member_count, total_points, created_at')
+        .insert({ name: name.trim(), description: description?.trim() || null, creator_id: auth.user.id, is_public, template_type })
+        .select('id, name, description, avatar_url, is_public, member_count, total_points, template_type, template_config, created_at')
         .single();
       if (error) return res.status(400).json({ error: error.message });
       await sb().from('squad_members').insert({ squad_id: squad.id, user_id: auth.user.id, role: 'admin' });
@@ -1593,13 +1593,35 @@ module.exports = async (req, res) => {
     }
 
     // GET /squads/:id — squad detail
+    // PATCH /squads/:id — update squad config (admin only)
+    if (squadDetailMatch && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const squadId = squadDetailMatch[1];
+      const { data: membership } = await sb().from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
+      if (!membership || membership.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const { name, description, is_public, template_config } = req.body || {};
+      const updates = {};
+      if (name) updates.name = name.trim();
+      if (description !== undefined) updates.description = description;
+      if (is_public !== undefined) updates.is_public = is_public;
+      if (template_config) updates.template_config = template_config;
+      const { error } = await sb().from('squads').update(updates).eq('id', squadId);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ ok: true });
+    }
+
+    // GET /squads/:id — squad detail with per-member points
     if (squadDetailMatch && req.method === 'GET') {
       const auth = await authUser(req);
       const squadId = squadDetailMatch[1];
-      const { data: squad } = await sb().from('squads').select('id, name, description, avatar_url, is_public, member_count, total_points, creator_id, created_at').eq('id', squadId).single();
+      const { data: squad } = await sb().from('squads').select('id, name, description, avatar_url, is_public, member_count, total_points, template_type, template_config, creator_id, created_at').eq('id', squadId).single();
       if (!squad) return res.status(404).json({ error: 'Squad not found' });
       const { data: members } = await sb().from('squad_members').select('role, joined_at, profiles(id, display_name, username, avatar_url)').eq('squad_id', squadId);
       const { data: activity } = await sb().from('squad_activity').select('id, activity_type, description, created_at, profiles(display_name, avatar_url)').eq('squad_id', squadId).order('created_at', { ascending: false }).limit(10);
+      const { data: allPoints } = await sb().from('squad_points').select('user_id, points').eq('squad_id', squadId);
+      const memberPoints = {};
+      (allPoints || []).forEach(p => { memberPoints[p.user_id] = (memberPoints[p.user_id] || 0) + p.points; });
       const { data: checkins } = await sb().from('squad_points').select('id').eq('squad_id', squadId).eq('activity_type', 'squad_checkin');
       const { data: invites } = await sb().from('squad_points').select('id').eq('squad_id', squadId).eq('activity_type', 'invite');
       const goals = [
@@ -1609,7 +1631,7 @@ module.exports = async (req, res) => {
         { label: 'Invite 3 friends', current: (invites || []).length, target: 3 },
       ];
       const isMember = auth ? (members || []).some(m => m.profiles?.id === auth.user.id) : false;
-      return res.status(200).json({ squad, members: members || [], activity: activity || [], goals, isMember });
+      return res.status(200).json({ squad, members: members || [], activity: activity || [], goals, isMember, memberPoints });
     }
 
     /* ─── GET /health ────────────────────────────────────── */
