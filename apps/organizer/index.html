@@ -124,6 +124,7 @@ select.inp option{background:#0D1424}
     <div class="tab active" onclick="switchTab(this,'pane-post')">📢 Post</div>
     <div class="tab" onclick="switchTab(this,'pane-event')">🎟 Event</div>
     <div class="tab" onclick="switchTab(this,'pane-myposts')">📋 Posts</div>
+    <div class="tab" onclick="switchTab(this,'pane-discover')">🌍 Discover</div>
     <div class="tab" onclick="switchTab(this,'pane-scan')">📷 Scan</div>
     <div class="tab" onclick="switchTab(this,'pane-promote')">🚀 Promote</div>
     <div class="tab" onclick="switchTab(this,'pane-settings')">⚙️ Settings</div>
@@ -232,6 +233,17 @@ select.inp option{background:#0D1424}
           <div class="section-label">Your Promotions</div>
           <div id="promo-mine-org"><div style="padding:20px 0;text-align:center;color:var(--mu);font-size:.8rem">Loading…</div></div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ DISCOVER (public events catalog) ══ -->
+  <div class="pane" id="pane-discover">
+    <div class="card">
+      <div class="card-body">
+        <div class="section-label" style="margin-top:0">🌍 Upcoming events on Pulsify</div>
+        <div style="font-size:.74rem;color:var(--mu);margin-bottom:12px;line-height:1.5">See what other organizers are running. Tap any event to view details and tickets on the public site.</div>
+        <div id="discover-list"><div style="padding:30px 0;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div></div>
       </div>
     </div>
   </div>
@@ -628,10 +640,56 @@ function switchTab(btn, paneId, _noPush) {
   if (!_noPush) history.pushState({ pane: paneId }, '');
   if (paneId === 'pane-myposts') loadMyPosts();
   if (paneId === 'pane-promote') { loadOrgPromoEvents(); loadMyOrgPromos(); }
+  if (paneId === 'pane-discover') loadDiscoverEvents();
   if (paneId === 'pane-scan') {
     const sel = document.getElementById('scan-event-sel');
     if (sel.options.length <= 1) loadScanEvents(); else loadScanStats();
   }
+}
+
+// ═══════════ DISCOVER (public events catalog) ═══════════
+let _discoverLoaded = false;
+async function loadDiscoverEvents() {
+  if (_discoverLoaded) return; // cache once per session
+  const el = document.getElementById('discover-list'); if (!el) return;
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const { data, error } = await sb.from('events')
+      .select('id,name,date_local,time_local,venue_name,venue_city,price_min,is_free,image_url,genre,organiser_name')
+      .gte('date_local', today)
+      .order('date_local', { ascending: true })
+      .limit(40);
+    if (error) throw error;
+    const events = data || [];
+    if (!events.length) {
+      el.innerHTML = '<div style="padding:30px 0;text-align:center;color:var(--mu);font-size:.82rem">No upcoming events yet 🎟</div>';
+      return;
+    }
+    el.innerHTML = events.map(renderDiscoverCard).join('');
+    _discoverLoaded = true;
+  } catch(e) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--pk);font-size:.78rem">Could not load events. <button class="btn-sec" style="margin-left:8px;padding:5px 12px;font-size:.7rem" onclick="_discoverLoaded=false;loadDiscoverEvents()">Retry</button></div>';
+  }
+}
+function renderDiscoverCard(ev) {
+  const xe = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const price = ev.is_free ? 'FREE' : (ev.price_min ? 'R' + ev.price_min : 'TBA');
+  const d = ev.date_local ? new Date(ev.date_local) : null;
+  const date = d ? d.toLocaleDateString('en-ZA', { day:'numeric', month:'short' }) : '';
+  const time = ev.time_local ? ev.time_local.slice(0,5) : '';
+  const url = '/?eid=' + encodeURIComponent(ev.id);
+  const img = ev.image_url
+    ? `<img src="${xe(ev.image_url)}" loading="lazy" style="width:100%;height:120px;object-fit:cover;border-radius:12px;margin-bottom:8px" onerror="this.style.display='none'"/>`
+    : `<div style="width:100%;height:120px;background:linear-gradient(135deg,rgba(176,38,255,.18),rgba(255,92,0,.14));border-radius:12px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:2.4rem">🎟</div>`;
+  return `<a href="${url}" style="display:block;background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:10px;text-decoration:none;color:inherit">
+    ${img}
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.92rem;margin-bottom:4px;color:var(--tx)">${xe(ev.name)}</div>
+    <div style="font-size:.72rem;color:var(--mu2);margin-bottom:3px">📍 ${xe(ev.venue_city || '')}${ev.venue_name ? ' · ' + xe(ev.venue_name) : ''}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+      <div style="font-size:.7rem;color:var(--mu)">📅 ${xe(date)}${time ? ' · ' + xe(time) : ''}${ev.genre ? ' · ' + xe(ev.genre) : ''}</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:${ev.is_free ? 'var(--li)' : 'var(--or)'}">${price}</div>
+    </div>
+  </a>`;
 }
 
 async function doLogout() {
