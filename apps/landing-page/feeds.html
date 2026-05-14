@@ -64,6 +64,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .ci:focus{border-color:var(--or)!important}
 .ci::placeholder{color:var(--mu)}
 .csnd{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cmt-reply-btn{background:none;border:none;color:var(--mu);font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.04em;cursor:pointer;padding:2px 0;margin-top:3px}
+.cmt-reply-btn:hover{color:var(--or)}
+.cmt-replies{margin-left:36px;border-left:1px solid var(--border);padding-left:8px;margin-top:4px}
+.reply-banner{background:rgba(255,92,0,.08);border:1px solid rgba(255,92,0,.25);border-radius:8px;padding:6px 10px;margin:0 14px 6px;font-size:.7rem;color:var(--mu2);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.reply-banner button{background:none;border:none;color:var(--mu);cursor:pointer;font-size:.85rem}
+.fc.cmt-target{box-shadow:0 0 0 2px var(--or)}
+.cmt-item.cmt-target-c{background:rgba(255,92,0,.08)}
 .fab{position:fixed;bottom:calc(var(--bh) + 14px);right:16px;z-index:200;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:1.2rem;cursor:pointer;box-shadow:0 4px 18px rgba(176,38,255,.4);display:flex;align-items:center;justify-content:center}
 .co{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(10px);z-index:1200;display:none;align-items:flex-end;justify-content:center}
 .co.open{display:flex}
@@ -377,15 +384,40 @@ function buildCard(post) {
       '<button class="ab" onclick="openReportPost(\u0027'+x(post.id)+'\u0027,\u0027'+x((post.caption||'').slice(0,80).replace(/\u0027/g,''))+'\u0027)" title="Report post"><span class="ai">🚩</span></button>' +
     '</div>' +
     '<div class="cmt-wrap" id="cmt-'+x(post.id)+'">' +
-      '<div id="cmtl-'+x(post.id)+'">'+buildCmts(comments)+'</div>' +
-      '<div class="cir"><input class="ci" id="cmti-'+x(post.id)+'" placeholder="Add a comment…" maxlength="300" onkeydown="if(event.key===\u0027Enter\u0027)doComment(\u0027'+x(post.id)+'\u0027)"/><button class="csnd" onclick="doComment(\u0027'+x(post.id)+'\u0027)">➤</button></div>' +
+      '<div id="cmtl-'+x(post.id)+'">'+(_cmtCache[post.id]?buildCmts(_cmtCache[post.id],post.id):'<div style="padding:10px 14px;font-size:.74rem;color:var(--mu)">Tap to load comments…</div>')+'</div>' +
+      '<div class="cir"><input class="ci" id="cmti-'+x(post.id)+'" placeholder="Add a comment…" maxlength="500" onkeydown="if(event.key===\u0027Enter\u0027)doComment(\u0027'+x(post.id)+'\u0027)"/><button class="csnd" onclick="doComment(\u0027'+x(post.id)+'\u0027)">➤</button></div>' +
     '</div>';
   return el;
 }
 
-function buildCmts(comments) {
-  if (!comments.length) return '<div style="padding:10px 14px;font-size:.76rem;color:var(--mu)">No comments yet. Be first 💬</div>';
-  return comments.slice(-10).map(c => '<div class="cmt-item"><div class="cmt-av">'+(c.display_name||c.username||'?')[0].toUpperCase()+'</div><div style="flex:1;min-width:0"><div class="cmt-name" style="cursor:pointer" onclick="openProfile(\''+x(c.user_id||'')+'\')" >'+x(c.display_name||c.username)+'</div><div class="cmt-text">'+x(c.text)+'</div><div class="cmt-time">'+timeAgo(c.ts||c.timestamp)+'</div></div></div>').join('');
+function buildCmts(comments, postId) {
+  if (!comments || !comments.length) return '<div style="padding:10px 14px;font-size:.76rem;color:var(--mu)">No comments yet. Be first 💬</div>';
+  const renderOne = (c, isReply) => {
+    const p = c.profile || {};
+    const name  = p.display_name || p.username || c.display_name || c.username || 'Someone';
+    const init  = (name[0] || '?').toUpperCase();
+    const ts    = c.created_at || c.ts;
+    const avEl  = p.avatar_url
+      ? '<div class="cmt-av"><img src="'+x(p.avatar_url)+'" loading="lazy" onerror="this.parentNode.textContent=\''+init+'\'"/></div>'
+      : '<div class="cmt-av">'+init+'</div>';
+    const replyBtn = (!isReply && postId)
+      ? '<button class="cmt-reply-btn" onclick="startReply(\''+x(postId)+'\',\''+x(c.id)+'\',\''+x(name).replace(/\'/g,'&#39;')+'\')">↩ Reply</button>'
+      : '';
+    const repliesHtml = (c.replies && c.replies.length)
+      ? '<div class="cmt-replies">'+c.replies.map(r => renderOne(r, true)).join('')+'</div>'
+      : '';
+    const body = c.body || c.content || c.text || '';
+    return ''+
+      '<div class="cmt-item" id="c-'+x(c.id)+'">'+avEl+
+        '<div style="flex:1;min-width:0">'+
+          '<div class="cmt-name" style="cursor:pointer" onclick="openProfile(\''+x(c.user_id||'')+'\')">'+x(name)+'</div>'+
+          '<div class="cmt-text">'+x(body)+'</div>'+
+          '<div class="cmt-time">'+timeAgo(ts)+'</div>'+
+          replyBtn+
+        '</div>'+
+      '</div>'+repliesHtml;
+  };
+  return comments.map(c => renderOne(c, false)).join('');
 }
 
 function expandCap(postId) {
@@ -433,34 +465,97 @@ async function doRepost(postId) {
   }
 }
 
-function toggleCmt(postId) {
+// Threaded comments — lazy-load from DB on first open
+const _cmtCache = {};        // postId → array of top-level comments (each with .replies[])
+const _replyTo  = {};        // postId → { parent_id, name }  when user is composing a reply
+async function toggleCmt(postId) {
   const el = document.getElementById('cmt-'+postId);
-  if (el) el.style.display = el.style.display === 'block' ? 'none' : 'block';
+  if (!el) return;
+  const opening = el.style.display !== 'block';
+  el.style.display = opening ? 'block' : 'none';
+  if (opening && !_cmtCache[postId]) await loadComments(postId);
+}
+async function loadComments(postId) {
+  const lEl = document.getElementById('cmtl-'+postId);
+  if (lEl) lEl.innerHTML = '<div style="padding:10px 14px;font-size:.74rem;color:var(--mu)">Loading comments…</div>';
+  try {
+    const res  = await fetch('/api/comments?entity_id=' + encodeURIComponent(postId) + '&entity_type=post');
+    const json = await res.json();
+    const top  = (json.comments || []).map(c => ({ ...c, profile: c.profile || {} }));
+    _cmtCache[postId] = top;
+    const totalCount = (json.flat || []).length;
+    const cEl = document.getElementById('cc-'+postId);
+    if (cEl) cEl.textContent = fn(totalCount);
+    if (lEl) lEl.innerHTML = buildCmts(top, postId);
+  } catch(e) {
+    if (lEl) lEl.innerHTML = '<div style="padding:10px 14px;font-size:.74rem;color:var(--mu)">Could not load comments</div>';
+  }
+}
+
+function startReply(postId, parentId, name) {
+  _replyTo[postId] = { parent_id: parentId, name };
+  const wrap = document.getElementById('cmt-'+postId);
+  if (!wrap) return;
+  // Insert/refresh a banner above the input
+  let bn = wrap.querySelector('.reply-banner');
+  if (!bn) {
+    bn = document.createElement('div');
+    bn.className = 'reply-banner';
+    wrap.querySelector('.cir').before(bn);
+  }
+  bn.innerHTML = 'Replying to <strong>'+x(name||'this comment')+'</strong> <button onclick="cancelReply(\''+x(postId)+'\')">✕</button>';
+  const inp = document.getElementById('cmti-'+postId);
+  if (inp) { inp.placeholder = 'Write your reply…'; inp.focus(); }
+}
+function cancelReply(postId) {
+  delete _replyTo[postId];
+  const wrap = document.getElementById('cmt-'+postId);
+  const bn   = wrap?.querySelector('.reply-banner');
+  if (bn) bn.remove();
+  const inp  = document.getElementById('cmti-'+postId);
+  if (inp) inp.placeholder = 'Add a comment…';
 }
 
 async function doComment(postId) {
   if (!_uid) return showToast('Sign in to comment');
   const inp  = document.getElementById('cmti-'+postId);
   const txt  = inp?.value.trim(); if (!txt) return;
+  const reply = _replyTo[postId] || null;
+  inp.value = '';
+  cancelReply(postId);
+
+  // Optimistic insert into local cache
   const name  = _profile?.display_name || _session?.display_name || 'You';
   const uname = _profile?.username     || _session?.email?.split('@')[0] || 'you';
-  const cmt   = {id:'c_'+Date.now(), user_id:_uid, username:uname, display_name:name, text:txt, ts:new Date().toISOString()};
-
-  const post    = _posts.find(p => p.id === postId);
-  const cmts    = getComments(post || {id:postId});
-  cmts.push(cmt);
-  _setComments(postId, cmts);
-  inp.value = '';
+  const localCmt = {
+    id: 'tmp_'+Date.now(), user_id: _uid, body: txt, content: txt,
+    parent_id: reply?.parent_id || null, created_at: new Date().toISOString(),
+    profile: { display_name: name, username: uname, avatar_url: _profile?.avatar_url || null },
+    replies: []
+  };
+  const cache = _cmtCache[postId] = _cmtCache[postId] || [];
+  if (reply?.parent_id) {
+    const parent = cache.find(c => c.id === reply.parent_id);
+    if (parent) parent.replies.push(localCmt);
+    else cache.push(localCmt);
+  } else {
+    cache.push(localCmt);
+  }
   const lEl = document.getElementById('cmtl-'+postId);
-  if (lEl) lEl.innerHTML = buildCmts(cmts);
-  const cEl = document.getElementById('cc-'+postId);
-  if (cEl) cEl.textContent = fn(cmts.length);
+  if (lEl) lEl.innerHTML = buildCmts(cache, postId);
 
-  fetch('/api/comments', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
-    body: JSON.stringify({ entity_id: postId, entity_type: 'post', content: txt }),
-  }).catch(()=>{});
+  try {
+    const res = await fetch('/api/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
+      body: JSON.stringify({ entity_id: postId, entity_type: 'post', body: txt, parent_id: reply?.parent_id || undefined }),
+    });
+    if (!res.ok) throw new Error('post failed');
+    // Re-sync from server to pick up real id + DB trigger side-effects
+    loadComments(postId);
+  } catch(e) {
+    showToast('Could not post comment', 'err');
+  }
 }
 
 async function doFollow(targetUserId, postId) {
@@ -690,6 +785,36 @@ async function initFeed() {
     }
   }
   await render();
+  // Deep-link: notification routed to /feeds?pid={postId}[&cid={commentId}]
+  // Scroll to the post, open its comment section, and (if cid) highlight comment.
+  const qp = new URLSearchParams(location.search);
+  const pid = qp.get('pid'), cid = qp.get('cid');
+  if (pid) scrollToPostAndComment(pid, cid);
+}
+
+async function scrollToPostAndComment(postId, commentId) {
+  // Wait one frame for buildCard DOM to settle
+  await new Promise(r => requestAnimationFrame(r));
+  const post = document.getElementById('post-' + postId);
+  if (!post) return;
+  post.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  post.classList.add('cmt-target');
+  setTimeout(() => post.classList.remove('cmt-target'), 2400);
+  // Open comments + load
+  const wrap = document.getElementById('cmt-' + postId);
+  if (wrap && wrap.style.display !== 'block') await toggleCmt(postId);
+  if (!commentId) return;
+  // Wait for loadComments to render, then scroll to the comment
+  for (let i = 0; i < 20; i++) {
+    const c = document.getElementById('c-' + commentId);
+    if (c) {
+      c.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      c.classList.add('cmt-target-c');
+      setTimeout(() => c.classList.remove('cmt-target-c'), 2400);
+      return;
+    }
+    await new Promise(r => setTimeout(r, 100));
+  }
 }
 
 /* ── Notification bell ── */

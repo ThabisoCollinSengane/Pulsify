@@ -631,17 +631,21 @@ module.exports = async (req, res) => {
     }
 
     /* ─── GET /comments ──────────────────────────────────── */
+    // Returns threaded comments: top-level first, replies attached as
+    // `replies[]` on each parent. Production DB uses `body` column;
+    // we alias it to `content` in the response so existing UI callers
+    // keep working.
     if (url === '/comments' && req.method === 'GET') {
       const entity_id   = q.entity_id;
       const entity_type = q.entity_type || 'post';
       if (!entity_id) return res.status(400).json({ error: 'entity_id required' });
 
       const { data, error } = await sb().from('comments')
-        .select('id,user_id,content,created_at')
+        .select('id,user_id,body,parent_id,like_count,created_at')
         .eq('entity_id', entity_id)
         .eq('entity_type', entity_type)
         .order('created_at', { ascending: true })
-        .limit(50);
+        .limit(200);
 
       if (error) return res.status(400).json({ error: error.message });
 
@@ -653,41 +657,47 @@ module.exports = async (req, res) => {
         (profiles || []).forEach(p => { profileMap[p.id] = p; });
       }
 
-      return res.status(200).json({ comments: (data || []).map(c => ({ ...c, profile: profileMap[c.user_id] || null })) });
+      const enriched = (data || []).map(c => ({
+        ...c, content: c.body, profile: profileMap[c.user_id] || null, replies: []
+      }));
+      const byId = Object.fromEntries(enriched.map(c => [c.id, c]));
+      const top = [];
+      for (const c of enriched) {
+        if (c.parent_id && byId[c.parent_id]) byId[c.parent_id].replies.push(c);
+        else top.push(c);
+      }
+      return res.status(200).json({ comments: top, flat: enriched });
     }
 
     /* ─── POST /comments ─────────────────────────────────── */
+    // Accepts {entity_id, entity_type, content|body, parent_id?}.
+    // The DB column is `body` — we accept either name and write to body.
+    // Notification creation is handled by trg_notif_on_comment (DB
+    // trigger); do NOT create one here or it will double-fire.
     if (url === '/comments' && req.method === 'POST') {
       const token = (req.headers.authorization || '').replace('Bearer ', '');
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
-      const { entity_id, entity_type = 'post', content } = req.body || {};
-      if (!entity_id || !content?.trim()) return res.status(400).json({ error: 'entity_id and content required' });
+      const { entity_id, entity_type = 'post', content, body, parent_id } = req.body || {};
+      const text = (body ?? content ?? '').trim();
+      if (!entity_id || !text) return res.status(400).json({ error: 'entity_id and body/content required' });
+      if (text.length > 500) return res.status(400).json({ error: 'comment too long (max 500)' });
+
+      const insertRow = { user_id: user.id, entity_id, entity_type, body: text };
+      if (parent_id) insertRow.parent_id = parent_id;
 
       const { data: comment, error } = await sb().from('comments')
-        .insert({ user_id: user.id, entity_id, entity_type, content: content.trim() })
-        .select().single();
+        .insert(insertRow).select().single();
 
       if (error) return res.status(400).json({ error: error.message });
 
       if (entity_type === 'post') {
-        const { data: p } = await sb().from('posts').select('user_id,comments_count').eq('id', entity_id).single();
-        if (p) {
-          await sb().from('posts').update({ comments_count: (p.comments_count || 0) + 1 }).eq('id', entity_id);
-          if (p.user_id !== user.id) {
-            const { data: prof } = await sb().from('profiles').select('display_name').eq('id', user.id).single();
-            const name = prof?.display_name || 'Someone';
-            await sb().from('notifications').insert({
-              user_id: p.user_id, type: 'comment', from_user_id: user.id,
-              from_display_name: name, entity_id, entity_type: 'post',
-              message: `${name} commented on your post`,
-            });
-          }
-        }
+        const { data: p } = await sb().from('posts').select('comments_count').eq('id', entity_id).single();
+        if (p) await sb().from('posts').update({ comments_count: (p.comments_count || 0) + 1 }).eq('id', entity_id);
       }
 
-      return res.status(200).json({ comment, success: true });
+      return res.status(200).json({ comment: { ...comment, content: comment.body }, success: true });
     }
 
     /* ─── POST /leads/ingest ────────────────────────────── */
