@@ -629,9 +629,24 @@ function showAuthMsg(m, t) { const el=document.getElementById('auth-msg'); el.te
 async function checkSession() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return;
-  const { data: prof, error: profErr } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
-  // If role check is blocked by RLS, allow through; if role is explicitly non-admin, reject
-  if (!profErr && prof?.role && prof.role !== 'admin') return;
+  const { data: prof, error: profErr } = await sb.from('profiles').select('role,display_name').eq('id', session.user.id).single();
+  // If a session exists and we can see role !== admin, surface the reason
+  // instead of silently leaving the user staring at the login form.
+  if (!profErr && prof?.role && prof.role !== 'admin') {
+    showAuthMsg(`Signed in as ${session.user.email} but role is "${prof.role}". Admin access required — contact support to be promoted.`, 'err');
+    // Show a one-click "Sign out and use a different account" button
+    const gate = document.getElementById('auth-gate');
+    if (gate && !document.getElementById('admin-switch-btn')) {
+      const btn = document.createElement('button');
+      btn.id = 'admin-switch-btn';
+      btn.textContent = 'Sign out and use a different account';
+      btn.className = 'btn-sec';
+      btn.style.cssText = 'width:100%;margin-top:10px';
+      btn.onclick = async () => { await sb.auth.signOut(); location.reload(); };
+      gate.appendChild(btn);
+    }
+    return;
+  }
   adminToken = session.access_token;
   showAdminUI();
 }

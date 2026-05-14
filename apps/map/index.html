@@ -165,24 +165,37 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:an
 .b-card:hover{opacity:.9}
 @keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
 
-/* ── Loading overlay ── */
+/* ── Loading overlay — PULSIFY MAP EXPLORE ── */
 #loader{
   position:fixed;inset:0;z-index:300;
-  background:linear-gradient(135deg,#0A0E1A,#1A0D2E);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  background:radial-gradient(ellipse at center,#0c0f1f 0%,#05080F 70%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  text-align:center;padding:24px;
 }
-.loader-logo{font-family:'Bebas Neue',sans-serif;font-size:2.8rem;letter-spacing:.08em;
-  background:linear-gradient(135deg,var(--pu),var(--or));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.loader-spin{width:36px;height:36px;border-radius:50%;border:3px solid rgba(176,38,255,.3);
-  border-top-color:var(--pu);animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+#loader.fade-out{animation:loaderOut .45s ease-in forwards}
+.ms-pulse{position:relative;width:110px;height:110px;display:flex;align-items:center;justify-content:center;margin-bottom:6px}
+.ms-pulse::before,.ms-pulse::after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid var(--or);box-shadow:0 0 30px rgba(255,92,0,.55);animation:msRing 1.8s ease-out infinite}
+.ms-pulse::after{animation-delay:.9s;border-color:var(--pu);box-shadow:0 0 30px rgba(176,38,255,.55)}
+.ms-dot{width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,var(--or) 55%,var(--pu));box-shadow:0 0 50px var(--or),0 0 90px rgba(176,38,255,.6);animation:msDot 1.6s ease-in-out infinite}
+.loader-logo{font-family:'Bebas Neue',sans-serif;font-size:2.6rem;letter-spacing:.18em;line-height:1;
+  background:linear-gradient(135deg,#FF5C00,#B026FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  text-shadow:0 0 30px rgba(255,92,0,.35)}
+.loader-sub{font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;letter-spacing:.5em;color:var(--cy);margin-top:-2px;
+  text-shadow:0 0 12px rgba(0,229,255,.6);padding-left:.5em}
+.loader-sub2{font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--mu);margin-top:4px;animation:loaderTextPulse 1.6s ease-in-out infinite}
+@keyframes msRing{0%{transform:scale(.65);opacity:1}100%{transform:scale(1.9);opacity:0}}
+@keyframes msDot{0%,100%{transform:scale(1);box-shadow:0 0 50px var(--or),0 0 90px rgba(176,38,255,.6)}50%{transform:scale(1.12);box-shadow:0 0 70px var(--or),0 0 120px rgba(176,38,255,.8)}}
+@keyframes loaderTextPulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes loaderOut{from{opacity:1}to{opacity:0}}
 </style>
 </head>
 <body>
 
 <div id="loader">
-  <div class="loader-logo">PULSIFY</div>
-  <div class="loader-spin"></div>
+  <div class="ms-pulse"><div class="ms-dot"></div></div>
+  <div class="loader-logo">PULSIFY MAP</div>
+  <div class="loader-sub">EXPLORE</div>
+  <div class="loader-sub2">Loading the streets…</div>
 </div>
 
 <div class="tb">
@@ -404,7 +417,7 @@ async function loadData() {
         .order('date_local', { ascending: false })
         .limit(500),
       sb.from('businesses')
-        .select('id,name,category,city,province,lat,lon,image_url,description')
+        .select('id,name,category,city,province,lat,lon,cover_image_url,description')
         .not('lat', 'is', null)
         .not('lon', 'is', null)
         .neq('lat', 0)
@@ -413,10 +426,12 @@ async function loadData() {
     ]);
 
     const events = (evRes.data  || []).map(e => ({ ...e, _kind: 'event', _past: e.date_local < today }));
-    const biz    = (bzRes.data  || []).map(b => ({ ...b, _kind: 'business' }));
+    // Alias businesses.cover_image_url → image_url so the marker renderer
+    // (which reads item.image_url for both kinds) gets a usable value.
+    const biz    = (bzRes.data  || []).map(b => ({ ...b, image_url: b.cover_image_url, _kind: 'business' }));
     allItems = [...events, ...biz];
 
-    document.getElementById('loader').style.display = 'none';
+    { const _l = document.getElementById('loader'); if (_l) { _l.classList.add('fade-out'); setTimeout(() => _l.style.display = 'none', 450); } }
 
     if (!allItems.length) {
       toast('No locations found — add some events or businesses first', true);
@@ -425,7 +440,7 @@ async function loadData() {
     renderMarkers();
   } catch (e) {
     console.error('[Map]', e);
-    document.getElementById('loader').style.display = 'none';
+    { const _l = document.getElementById('loader'); if (_l) { _l.classList.add('fade-out'); setTimeout(() => _l.style.display = 'none', 450); } }
     toast('Failed to load: ' + e.message, true);
   }
 }

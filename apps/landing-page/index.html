@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
 <meta name="description" content="Pulsify — Feel the Vibe 🇿🇦 South Africa's live event discovery platform"/>
-<meta name="build-version" content="v2.5.0-20260514"/>
+<meta name="build-version" content="v2.6.0-20260514"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
@@ -349,6 +349,22 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   50%{transform:scale(1.6);opacity:0}
 }
 
+/* ── MAP SPLASH (PULSIFY MAP EXPLORE) ── */
+#map-splash{position:absolute;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:radial-gradient(ellipse at center,#0c0f1f 0%,#05080F 70%);animation:msIn .35s ease-out;text-align:center;padding:24px;pointer-events:none}
+#map-splash.ms-fade{animation:msOut .45s ease-in forwards;pointer-events:none}
+.ms-pulse{position:relative;width:110px;height:110px;display:flex;align-items:center;justify-content:center}
+.ms-pulse::before,.ms-pulse::after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid var(--or);box-shadow:0 0 30px rgba(255,92,0,.55);animation:msRing 1.8s ease-out infinite}
+.ms-pulse::after{animation-delay:.9s;border-color:var(--pu);box-shadow:0 0 30px rgba(176,38,255,.55)}
+.ms-dot{width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,var(--or) 55%,var(--pu));box-shadow:0 0 50px var(--or),0 0 90px rgba(176,38,255,.6);animation:msDot 1.6s ease-in-out infinite}
+.ms-title{font-family:'Bebas Neue',sans-serif;font-size:2.6rem;letter-spacing:.18em;background:linear-gradient(135deg,#FF5C00,#B026FF);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1;text-shadow:0 0 30px rgba(255,92,0,.35)}
+.ms-sub{font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;letter-spacing:.5em;color:var(--cy);margin-top:-4px;text-shadow:0 0 12px rgba(0,229,255,.6);padding-left:.5em}
+.ms-sub2{font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--mu);letter-spacing:.05em;margin-top:6px;animation:msPulseText 1.6s ease-in-out infinite}
+@keyframes msIn{from{opacity:0}to{opacity:1}}
+@keyframes msOut{from{opacity:1}to{opacity:0}}
+@keyframes msRing{0%{transform:scale(.65);opacity:1}100%{transform:scale(1.9);opacity:0}}
+@keyframes msDot{0%,100%{transform:scale(1);box-shadow:0 0 50px var(--or),0 0 90px rgba(176,38,255,.6)}50%{transform:scale(1.12);box-shadow:0 0 70px var(--or),0 0 120px rgba(176,38,255,.8)}}
+@keyframes msPulseText{0%,100%{opacity:.55}50%{opacity:1}}
+
 </style>
 </head>
 <body>
@@ -600,7 +616,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 <nav class="bn">
   <button class="bb active" data-tab="home" onclick="showTab('home')"><svg viewBox="0 0 24 24"><path d="M12 3C12 3 4 9.5 4 15a8 8 0 0016 0C20 9.5 12 3 12 3Z"/><path d="M12 10v5M9.5 13h5"/></svg><span class="bl">Home</span></button>
   <button class="bb" data-tab="discover" onclick="showTab('discover')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"/></svg><span class="bl">Discover</span></button>
-  <button class="bb" data-tab="map" onclick="window.location.href='/map'"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3M9 20V7m6 13l5.447-2.724A1 1 0 0021 16.382V5.618a1 1 0 00-1.447-.894L15 7m0 13V7M9 7l6-3"/></svg><span class="bl">Map</span></button>
+  <button class="bb" data-tab="map" onclick="showTab('map')"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3M9 20V7m6 13l5.447-2.724A1 1 0 0021 16.382V5.618a1 1 0 00-1.447-.894L15 7m0 13V7M9 7l6-3"/></svg><span class="bl">Map</span></button>
   <button class="bb" data-tab="tickets" onclick="showTab('tickets')"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M16 7v-.5a3.5 3.5 0 00-7 0V7M16 17v.5a3.5 3.5 0 01-7 0V17"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span class="bl">Bookings</span></button>
   <button class="bb" data-tab="squad" onclick="showTab('squad')"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M18 20c0-2.2-1.3-4.1-3-5"/></svg><span class="bl">Friends</span></button>
   <button class="bb" data-tab="profile" onclick="showTab('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg><span class="bl">Profile</span></button>
@@ -952,7 +968,51 @@ function showTab(name, _noPush) {
   if (name === 'tickets') renderBookings();
   if (name === 'discover') loadDiscover();
   if (name === 'profile') renderProfile();
-  if (name === 'map' && mapInited && mapObj) setTimeout(() => mapObj.resize(), 50);
+  if (name === 'map') {
+    if (!mapInited) {
+      // First open — show splash, init map, ensure business pins
+      showMapSplash();
+      requestAnimationFrame(() => { initMap(); ensureBizForMap(); });
+    } else if (mapObj) {
+      setTimeout(() => mapObj.resize(), 50);
+      // Refresh markers in case bizForMap loaded after first init
+      if (typeof placeMapMarkers === 'function') placeMapMarkers();
+    }
+  }
+}
+// Show "PULSIFY MAP EXPLORE" splash inside the map panel while it boots
+function showMapSplash() {
+  const mc = document.getElementById('mc'); if (!mc) return;
+  if (document.getElementById('map-splash')) return;
+  const splash = document.createElement('div');
+  splash.id = 'map-splash';
+  splash.innerHTML = `
+    <div class="ms-pulse"><div class="ms-dot"></div></div>
+    <div class="ms-title">PULSIFY MAP</div>
+    <div class="ms-sub">EXPLORE</div>
+    <div class="ms-sub2">Loading the streets…</div>`;
+  mc.appendChild(splash);
+}
+function hideMapSplash() {
+  const s = document.getElementById('map-splash');
+  if (!s) return;
+  s.classList.add('ms-fade');
+  setTimeout(() => s.remove(), 460);
+}
+// Make sure bizForMap is populated even if user opens Map before loadFrontline ran
+async function ensureBizForMap() {
+  if (bizForMap && bizForMap.length) return;
+  try {
+    const sb = getSB(); if (!sb) return;
+    const { data } = await sb.from('businesses')
+      .select('id,name,category,subcategory,lat,lon,cover_image_url,city,suburb,is_frontline,rating')
+      .not('lat','is',null).not('lon','is',null).limit(500);
+    bizForMap = (data || []).filter(b => {
+      const la = Number(b.lat), lo = Number(b.lon);
+      return Number.isFinite(la) && Number.isFinite(lo) && la >= -35 && la <= -22 && lo >= 16 && lo <= 33;
+    });
+    if (mapInited && typeof placeMapMarkers === 'function') placeMapMarkers();
+  } catch(e) { /* ignore — map still works with events only */ }
 }
 function showDetailTab(name, _noPush) {
   prevTab = curTab; curTab = name;
@@ -1644,9 +1704,10 @@ function initMap() {
       }
     } catch(e) {}
     
-    placeMapMarkers(); 
+    placeMapMarkers();
     addHeatmap();
     addPulseAnimation();
+    hideMapSplash();
   });
   
   // Close panel on map tap — but NOT if a marker was just tapped
