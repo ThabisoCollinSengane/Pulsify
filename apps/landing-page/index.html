@@ -647,6 +647,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
       </button>
     </div>
     <div style="padding:0 14px 20px">
+      <button id="promo-btn" onclick="openPromoManager()" style="display:none;width:100%;background:linear-gradient(135deg,rgba(255,92,0,.1),rgba(255,45,120,.08));border:1px solid rgba(255,92,0,.3);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">📣</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Promotions</div><div style="font-size:.68rem;color:var(--mu)">Create and manage promos</div></div></div>
+        <span style="color:var(--or);font-size:.8rem">→</span>
+      </button>
+      <button id="admin-promo-btn" onclick="openAdminPromos()" style="display:none;width:100%;background:linear-gradient(135deg,rgba(176,38,255,.1),rgba(0,229,255,.08));border:1px solid rgba(176,38,255,.3);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">👮</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Admin · Approve Promos</div><div style="font-size:.68rem;color:var(--mu)">Review pending submissions</div></div></div>
+        <span style="color:#B026FF;font-size:.8rem">→</span>
+      </button>
       <button onclick="openFAQ()" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">❓</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Help & FAQ</div><div style="font-size:.68rem;color:var(--mu)">Get help and answers</div></div></div>
         <span style="color:var(--or);font-size:.8rem">→</span>
@@ -761,6 +769,22 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
           <div class="faq-a">Featured businesses appear at the top of search results with a ⭐ badge, get priority on the map, and receive detailed analytics. Plans start at R299/month. Contact us for custom packages! 🌟</div>
         </div>
         <div class="faq-item" onclick="toggleFAQ(this)">
+          <div class="faq-q">How do I promote my venue (BnB, club, shisanyama)?</div>
+          <div class="faq-a">Open <b>Profile → 📣 Promotions</b>. Pick the template that matches: <b>🏡 BnB</b> for stays, <b>🪩 Club Night</b> for Fri/Sat parties, <b>🔥 Shisanyama</b> for Sunday sessions. Each template pre-fills sensible defaults (price, placement, duration) so you can launch in under a minute. Submit and wait for admin approval. 📣</div>
+        </div>
+        <div class="faq-item" onclick="toggleFAQ(this)">
+          <div class="faq-q">What makes a great BnB / Stay promo?</div>
+          <div class="faq-a">Show the space — exterior + interior + the view. Mention <b>weekend rate</b>, location (city + suburb), and what makes it different (pool, braai, sea view). Add a WhatsApp or booking link. Best run window: 14 days. 🏡</div>
+        </div>
+        <div class="faq-item" onclick="toggleFAQ(this)">
+          <div class="faq-q">What makes a great Club Night promo?</div>
+          <div class="faq-a">Lead with the <b>headline DJ or lineup</b>. Pin the date + door time clearly. Mention door price + dress code. Use a high-energy image with the venue branding. Featured placement (weekend hero) works best — run it Wed–Sat. 🪩</div>
+        </div>
+        <div class="faq-item" onclick="toggleFAQ(this)">
+          <div class="faq-q">What makes a great Shisanyama promo?</div>
+          <div class="faq-a">Sunday afternoon is prime. Lead with the <b>food + drinks special</b> (e.g. "Pap & wors R65, double Hennessy R120"). Add the resident DJ or live act. Feed-injected placement reaches casual scrollers — set the run for 14 days to cover recurring Sundays. 🔥</div>
+        </div>
+        <div class="faq-item" onclick="toggleFAQ(this)">
           <div class="faq-q">Can I manage multiple locations?</div>
           <div class="faq-a">Yes! Business accounts can manage multiple venues from one dashboard. Each location gets its own profile, reviews, and analytics. Perfect for chains and franchises. 📍</div>
         </div>
@@ -791,7 +815,19 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
         </div>
         <div class="faq-item" onclick="toggleFAQ(this)">
           <div class="faq-q">How do I promote my event?</div>
-          <div class="faq-a">Events appear on our homepage, map, and in user feeds. Boost visibility with Featured placement (R499). We also promote top events on social media. Share your event link everywhere! 📣</div>
+          <div class="faq-a">Open <b>Profile → 📣 Promotions</b> and pick the "Event Boost" template. Paste your Event ID, add a hero image and external link, then submit. Once an admin approves it (usually within hours), your promo appears in the Featured carousel and in user feeds. 📣</div>
+        </div>
+        <div class="faq-item" onclick="toggleFAQ(this)">
+          <div class="faq-q">What placements can I choose for my promo?</div>
+          <div class="faq-a"><b>Featured (weekend hero)</b> = top of the homepage carousel, best for Fri/Sat events. <b>Feed-injected</b> = appears mixed into the main feed, best for steady awareness. <b>Both</b> = maximum reach. Pick based on your event's vibe and date. 🎯</div>
+        </div>
+        <div class="faq-item" onclick="toggleFAQ(this)">
+          <div class="faq-q">How long does approval take?</div>
+          <div class="faq-a">Most promos are reviewed within a few hours. You'll see status in <b>Profile → Promotions</b>: <span style="color:#FFB800">● Pending Review</span> means we're looking; <span style="color:var(--li)">● Approved</span> means it's live. We may reject promos that lack images, have broken links, or violate community rules. ⏳</div>
+        </div>
+        <div class="faq-item" onclick="toggleFAQ(this)">
+          <div class="faq-q">Tips for a promo that converts</div>
+          <div class="faq-a">1) Use a sharp hero image (1080×1080 or 16:9). 2) Mention the headline act or vibe in the title. 3) Set a clear price or "FREE" tag. 4) Add a working external link (Quicket, WhatsApp, IG). 5) Time your run window — Fri promos should launch by Wed. 🔥</div>
         </div>
         <div class="faq-item" onclick="toggleFAQ(this)">
           <div class="faq-q">Can I offer discount codes?</div>
@@ -821,6 +857,24 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
         <a href="mailto:help@pulsify.co.za" style="color:var(--or);font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;text-decoration:none">Contact Support →</a>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- PROMO MANAGER OVERLAY (Organizer / Business) -->
+<div id="promo-overlay" style="display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closePromoManager()">
+  <div style="width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;max-height:94vh;display:flex;flex-direction:column;animation:su .25s ease;position:relative">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--border2);margin:10px auto 0;flex-shrink:0"></div>
+    <button onclick="closePromoManager()" style="position:absolute;top:14px;right:14px;background:rgba(0,0,0,.5);border:1px solid var(--border2);color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;z-index:5">✕</button>
+    <div id="promo-overlay-body" style="overflow-y:auto;padding:16px 18px 32px;flex:1;scrollbar-width:none"></div>
+  </div>
+</div>
+
+<!-- ADMIN PROMOS OVERLAY -->
+<div id="admin-promo-overlay" style="display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeAdminPromos()">
+  <div style="width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;max-height:94vh;display:flex;flex-direction:column;animation:su .25s ease;position:relative">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--border2);margin:10px auto 0;flex-shrink:0"></div>
+    <button onclick="closeAdminPromos()" style="position:absolute;top:14px;right:14px;background:rgba(0,0,0,.5);border:1px solid var(--border2);color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;z-index:5">✕</button>
+    <div id="admin-promo-body" style="overflow-y:auto;padding:16px 18px 32px;flex:1;scrollbar-width:none"></div>
   </div>
 </div>
 
@@ -2111,6 +2165,13 @@ function renderProfile() {
   const ab = document.getElementById('auth-btn');
   if (ab) { ab.textContent = 'Feed'; ab.onclick = () => window.location.href = '/feeds'; }
 
+  // Role-gated menu items
+  const role = (prof?.role || sess?.role || 'user');
+  const promoBtn = document.getElementById('promo-btn');
+  if (promoBtn) promoBtn.style.display = (role === 'business' || role === 'organizer' || role === 'admin') ? 'flex' : 'none';
+  const adminBtn = document.getElementById('admin-promo-btn');
+  if (adminBtn) adminBtn.style.display = (role === 'admin') ? 'flex' : 'none';
+
   currentUser = sess;
 }
 
@@ -2743,6 +2804,256 @@ function toggleFAQ(item) {
   item.classList.toggle('open');
 }
 
+/* ══════════════════════════════════════════════════
+   PROMOTIONS — Create with Templates (Business/Organizer)
+══════════════════════════════════════════════════ */
+const PROMO_TEMPLATES = [
+  { id:'bnb',         icon:'🏡', label:'BnB / Stay',      tagline:'Weekend getaway · Special rate',
+    fields:{ title:'Weekend Getaway Special', genre:'Stay', is_free:false, price_min:899, placement:'feed_inject', duration_days:14 },
+    hint:'Show off your space. Add a hero image, the nightly rate, and city. Best for weekend & holiday slots.' },
+  { id:'club',        icon:'🪩', label:'Club Night',      tagline:'Friday/Saturday · DJ lineup',
+    fields:{ title:'Saturday Night Sessions', genre:'Amapiano', is_free:false, price_min:100, placement:'featured_weekend', duration_days:7 },
+    hint:'Friday/Saturday nights work best. Mention headline DJs, door price, and dress code.' },
+  { id:'shisanyama', icon:'🔥', label:'Shisanyama',      tagline:'Sunday session · Food + music',
+    fields:{ title:'Sunday Shisanyama Sessions', genre:'House', is_free:true, price_min:0, placement:'feed_inject', duration_days:14 },
+    hint:'Sundays own the shisanyama vibe. Add food specials, drinks deals, and live DJ info.' },
+  { id:'event',       icon:'🎤', label:'Event Boost',     tagline:'Promote an existing event',
+    fields:{ title:'', genre:'', is_free:false, price_min:null, placement:'both', duration_days:7 },
+    hint:'Boost an event you already created. Link it below — title and price will auto-fill from the event.' },
+  { id:'custom',      icon:'✨', label:'Custom Promo',    tagline:'Build from scratch',
+    fields:{ title:'', genre:'', is_free:false, price_min:null, placement:'feed_inject', duration_days:7 },
+    hint:'Full control — fill in every field yourself.' },
+];
+
+function openPromoManager() {
+  const ov = document.getElementById('promo-overlay'); if (!ov) return;
+  ov.style.display = 'flex';
+  renderPromoHome();
+}
+function closePromoManager() {
+  const ov = document.getElementById('promo-overlay'); if (ov) ov.style.display = 'none';
+}
+
+async function renderPromoHome() {
+  const body = document.getElementById('promo-overlay-body'); if (!body) return;
+  body.innerHTML = `
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.03em;margin-bottom:2px">📣 Promotions</div>
+    <div style="font-size:.78rem;color:var(--mu);margin-bottom:18px">Create a promo or manage your active ones</div>
+    <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Quick-start templates</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px">
+      ${PROMO_TEMPLATES.map(t => `<div onclick="openPromoForm('${t.id}')" class="sq-tmpl-card" style="cursor:pointer">
+        <div style="font-size:1.6rem;margin-bottom:5px">${t.icon}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;margin-bottom:2px">${t.label}</div>
+        <div style="font-size:.66rem;color:var(--mu);line-height:1.35">${t.tagline}</div>
+      </div>`).join('')}
+    </div>
+    <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">My promotions</div>
+    <div id="promo-mine-list" style="margin-bottom:18px"><div style="font-size:.78rem;color:var(--mu);padding:14px 0">Loading…</div></div>`;
+  loadMyPromotions();
+}
+
+async function loadMyPromotions() {
+  const list = document.getElementById('promo-mine-list'); if (!list) return;
+  const sb2 = getSB(); if (!sb2) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu);padding:14px 0">Sign in to view</div>'; return; }
+  const session = (await sb2.auth.getSession()).data.session;
+  if (!session) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu);padding:14px 0">Sign in to view</div>'; return; }
+  try {
+    const r = await fetch(API + '/promotions/mine', { headers:{ 'Authorization': 'Bearer ' + session.access_token }});
+    const d = await r.json();
+    const promos = d.promotions || [];
+    if (!promos.length) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu);padding:14px 0;text-align:center">No promotions yet — pick a template above to get started.</div>'; return; }
+    list.innerHTML = promos.map(p => {
+      const status = p.is_active ? '<span style="color:var(--li);font-size:.66rem;font-weight:700">● APPROVED</span>' : '<span style="color:#FFB800;font-size:.66rem;font-weight:700">● PENDING REVIEW</span>';
+      return `<div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
+          <div style="font-family:'Syne',sans-serif;font-size:.86rem;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(p.title)}</div>
+          ${status}
+        </div>
+        <div style="font-size:.72rem;color:var(--mu)">${x(p.venue_city||'')} · ${x(p.genre||'')} · ${x(p.placement)}</div>
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <button onclick="deleteMyPromo('${x(p.id)}')" style="flex:1;background:rgba(255,45,120,.07);border:1px solid rgba(255,45,120,.25);color:var(--pk);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;padding:6px;border-radius:50px;cursor:pointer">Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu);padding:14px 0">Error loading</div>'; }
+}
+
+async function deleteMyPromo(id) {
+  if (!confirm('Delete this promotion?')) return;
+  const sb2 = getSB(); if (!sb2) return;
+  const session = (await sb2.auth.getSession()).data.session;
+  if (!session) return;
+  try {
+    const r = await fetch(API + '/promotions/' + id, { method:'DELETE', headers:{ 'Authorization': 'Bearer ' + session.access_token }});
+    if (r.ok) { showToast('Deleted'); loadMyPromotions(); }
+    else { const d = await r.json(); showToast(d.error || 'Failed'); }
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+function openPromoForm(templateId) {
+  const tmpl = PROMO_TEMPLATES.find(t => t.id === templateId) || PROMO_TEMPLATES[PROMO_TEMPLATES.length - 1];
+  const f = tmpl.fields;
+  const body = document.getElementById('promo-overlay-body'); if (!body) return;
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <button onclick="renderPromoHome()" style="background:transparent;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer;padding:0 4px 0 0">←</button>
+      <div style="font-size:1.6rem">${tmpl.icon}</div>
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800">${tmpl.label}</div>
+        <div style="font-size:.7rem;color:var(--mu)">${tmpl.tagline}</div>
+      </div>
+    </div>
+    <div style="background:rgba(255,92,0,.07);border:1px solid rgba(255,92,0,.2);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:.74rem;color:var(--mu2);line-height:1.45">💡 ${tmpl.hint}</div>
+    ${templateId === 'event' ? `<input id="pf-eventid" class="sq-input" placeholder="Event ID (from your dashboard)"/>` : ''}
+    <input id="pf-title" class="sq-input" placeholder="Promo title *" maxlength="80" value="${x(f.title||'')}"/>
+    <input id="pf-venue" class="sq-input" placeholder="Venue / business name" maxlength="60"/>
+    <input id="pf-city" class="sq-input" placeholder="City (e.g. Durban, Joburg)" maxlength="40"/>
+    <input id="pf-date" class="sq-input" type="date" style="color-scheme:dark"/>
+    <input id="pf-time" class="sq-input" type="time" step="60" style="color-scheme:dark"/>
+    <input id="pf-genre" class="sq-input" placeholder="Genre / category" maxlength="40" value="${x(f.genre||'')}"/>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--mu);margin-bottom:10px;cursor:pointer">
+      <input type="checkbox" id="pf-isfree" ${f.is_free?'checked':''} style="width:14px;height:14px"/> Free entry
+    </label>
+    <input id="pf-price" class="sq-input" type="number" min="0" placeholder="Price min (R)" value="${f.price_min ?? ''}"/>
+    <input id="pf-image" class="sq-input" placeholder="Image URL (hero / cover)"/>
+    <input id="pf-url" class="sq-input" placeholder="External link (booking / WhatsApp / IG)"/>
+    <div style="font-size:.72rem;color:var(--mu);margin:6px 0 4px">Placement</div>
+    <select id="pf-placement" class="sq-input" style="background:rgba(255,255,255,.05);color:var(--tx)">
+      <option value="featured_weekend" ${f.placement==='featured_weekend'?'selected':''}>Featured (weekend hero)</option>
+      <option value="feed_inject" ${f.placement==='feed_inject'?'selected':''}>Feed-injected card</option>
+      <option value="both" ${f.placement==='both'?'selected':''}>Both</option>
+    </select>
+    <input id="pf-days" class="sq-input" type="number" min="1" max="90" placeholder="Run duration (days)" value="${f.duration_days||7}"/>
+    <div style="background:rgba(176,38,255,.06);border:1px solid rgba(176,38,255,.2);border-radius:10px;padding:10px 12px;margin:6px 0 14px;font-size:.72rem;color:var(--mu2);line-height:1.45">
+      ⏳ Promos go through admin review before going live. You'll see status in the list above.
+    </div>
+    <button onclick="submitPromo()" style="width:100%;padding:13px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Submit for Review</button>`;
+}
+
+async function submitPromo() {
+  const title = (document.getElementById('pf-title')?.value || '').trim();
+  if (!title) { showToast('Title required'); return; }
+  const body = {
+    title,
+    venue_name: (document.getElementById('pf-venue')?.value || '').trim() || null,
+    venue_city: (document.getElementById('pf-city')?.value || '').trim() || null,
+    date_local: document.getElementById('pf-date')?.value || null,
+    time_local: document.getElementById('pf-time')?.value || null,
+    genre: (document.getElementById('pf-genre')?.value || '').trim() || null,
+    is_free: !!document.getElementById('pf-isfree')?.checked,
+    price_min: parseInt(document.getElementById('pf-price')?.value) || null,
+    image_url: (document.getElementById('pf-image')?.value || '').trim() || null,
+    external_url: (document.getElementById('pf-url')?.value || '').trim() || null,
+    placement: document.getElementById('pf-placement')?.value || 'feed_inject',
+    duration_days: parseInt(document.getElementById('pf-days')?.value) || 7,
+  };
+  const evIdEl = document.getElementById('pf-eventid');
+  if (evIdEl && evIdEl.value.trim()) body.event_id = evIdEl.value.trim();
+  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
+  const session = (await sb2.auth.getSession()).data.session;
+  if (!session) { showToast('Sign in first'); return; }
+  try {
+    const r = await fetch(API + '/promotions/create', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token },
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if (!r.ok) { showToast(d.error || 'Failed'); return; }
+    showToast('✅ Submitted for review!');
+    renderPromoHome();
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+/* ══════════════════════════════════════════════════
+   ADMIN — Approve / Reject Promotions
+══════════════════════════════════════════════════ */
+let _adminPromoFilter = 'pending';
+
+function openAdminPromos() {
+  const ov = document.getElementById('admin-promo-overlay'); if (!ov) return;
+  ov.style.display = 'flex';
+  renderAdminPromos();
+}
+function closeAdminPromos() {
+  const ov = document.getElementById('admin-promo-overlay'); if (ov) ov.style.display = 'none';
+}
+
+async function renderAdminPromos() {
+  const body = document.getElementById('admin-promo-body'); if (!body) return;
+  body.innerHTML = `
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.03em;margin-bottom:2px">👮 Admin · Promos</div>
+    <div style="font-size:.78rem;color:var(--mu);margin-bottom:14px">Review and approve submissions</div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button onclick="setAdminPromoFilter('pending')" id="apf-pending" class="sq-stab ${_adminPromoFilter==='pending'?'active':''}">⏳ Pending</button>
+      <button onclick="setAdminPromoFilter('active')" id="apf-active" class="sq-stab ${_adminPromoFilter==='active'?'active':''}">✅ Active</button>
+    </div>
+    <div id="admin-promo-list"><div style="font-size:.78rem;color:var(--mu);padding:14px 0">Loading…</div></div>`;
+  loadAdminPromos();
+}
+
+function setAdminPromoFilter(f) { _adminPromoFilter = f; renderAdminPromos(); }
+
+async function loadAdminPromos() {
+  const list = document.getElementById('admin-promo-list'); if (!list) return;
+  const sb2 = getSB(); if (!sb2) return;
+  const session = (await sb2.auth.getSession()).data.session;
+  if (!session) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu)">Sign in</div>'; return; }
+  try {
+    const r = await fetch(API + '/admin/promotions?status=' + _adminPromoFilter, { headers:{ 'Authorization':'Bearer '+session.access_token }});
+    const d = await r.json();
+    if (!r.ok) { list.innerHTML = '<div style="font-size:.78rem;color:var(--pk);padding:14px 0">'+(d.error||'Failed')+'</div>'; return; }
+    const promos = d.promotions || [];
+    if (!promos.length) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu);padding:24px 0;text-align:center">No promotions in this view.</div>'; return; }
+    list.innerHTML = promos.map(p => `<div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px">
+      ${p.image_url ? `<img src="${x(p.image_url)}" style="width:100%;height:140px;object-fit:cover;border-radius:10px;margin-bottom:10px" onerror="this.style.display='none'"/>` : ''}
+      <div style="font-family:'Syne',sans-serif;font-size:.92rem;font-weight:800;margin-bottom:4px">${x(p.title)}</div>
+      <div style="font-size:.74rem;color:var(--mu2);margin-bottom:6px">${x(p.venue_name||'—')} · ${x(p.venue_city||'—')}</div>
+      <div style="font-size:.7rem;color:var(--mu);margin-bottom:4px">📅 ${x(p.date_local||'—')} ${x(p.time_local||'')}</div>
+      <div style="font-size:.7rem;color:var(--mu);margin-bottom:4px">🎵 ${x(p.genre||'—')} · ${p.is_free?'FREE':'R'+(p.price_min||'—')}</div>
+      <div style="font-size:.7rem;color:var(--mu);margin-bottom:4px">📍 Placement: <span style="color:var(--tx)">${x(p.placement)}</span></div>
+      <div style="font-size:.7rem;color:var(--mu);margin-bottom:10px">👤 Owner: ${x(p.owner_role||'')}</div>
+      ${p.external_url ? `<a href="${x(p.external_url)}" target="_blank" rel="noopener" style="font-size:.72rem;color:var(--or);text-decoration:none;display:inline-block;margin-bottom:10px">🔗 ${x(p.external_url.substring(0,40))}…</a>` : ''}
+      <div style="display:flex;gap:6px">
+        ${!p.is_active ? `<button onclick="approvePromo('${x(p.id)}')" style="flex:1;background:linear-gradient(135deg,#C6FF4A,#00E5FF);border:none;color:#0a0a0a;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;padding:8px;border-radius:50px;cursor:pointer">✅ Approve</button>` : `<button onclick="unpublishPromo('${x(p.id)}')" style="flex:1;background:rgba(255,255,255,.08);border:1px solid var(--border2);color:var(--mu2);font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;padding:8px;border-radius:50px;cursor:pointer">⏸ Unpublish</button>`}
+        <button onclick="rejectPromo('${x(p.id)}')" style="flex:1;background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.3);color:var(--pk);font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;padding:8px;border-radius:50px;cursor:pointer">🗑 Reject</button>
+      </div>
+    </div>`).join('');
+  } catch(e) { list.innerHTML = '<div style="font-size:.78rem;color:var(--pk);padding:14px 0">Error: '+e.message+'</div>'; }
+}
+
+async function approvePromo(id) {
+  const sb2 = getSB(); const session = (await sb2.auth.getSession()).data.session; if (!session) return;
+  try {
+    const r = await fetch(API + '/admin/promotions/' + id, {
+      method:'PATCH',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token },
+      body: JSON.stringify({ is_active: true })
+    });
+    if (r.ok) { showToast('✅ Approved'); loadAdminPromos(); }
+    else { const d = await r.json(); showToast(d.error || 'Failed'); }
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+async function unpublishPromo(id) {
+  const sb2 = getSB(); const session = (await sb2.auth.getSession()).data.session; if (!session) return;
+  try {
+    const r = await fetch(API + '/admin/promotions/' + id, {
+      method:'PATCH',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token },
+      body: JSON.stringify({ is_active: false })
+    });
+    if (r.ok) { showToast('Unpublished'); loadAdminPromos(); }
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+async function rejectPromo(id) {
+  if (!confirm('Reject and delete this promotion?')) return;
+  const sb2 = getSB(); const session = (await sb2.auth.getSession()).data.session; if (!session) return;
+  try {
+    const r = await fetch(API + '/admin/promotions/' + id, { method:'DELETE', headers:{ 'Authorization':'Bearer '+session.access_token }});
+    if (r.ok) { showToast('Rejected'); loadAdminPromos(); }
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
 /* ── Supabase session sync on load ── */
 async function initSupabaseSession() {
   const sb = getSB();
@@ -3137,6 +3448,44 @@ function renderSquadWorkspace(detail, container) {
       ${!cfg.event_name ? `<div style="font-size:.76rem;color:var(--mu)">No event info yet</div>` : ''}
       ${isMember ? `<button onclick="showEventInfoForm('${x(squad.id)}')" style="margin-top:8px;background:transparent;border:1px solid rgba(0,229,255,.3);border-radius:50px;color:var(--cy);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;padding:4px 14px;cursor:pointer">Edit Event Info</button>` : ''}
     </div>`;
+  } else if (squad.template_type === 'business_team') {
+    const cfg = squad.template_config || {};
+    const objs = Array.isArray(cfg.objectives) ? cfg.objectives : [];
+    highlightHtml = `<div style="background:rgba(176,38,255,.06);border:1px solid rgba(176,38,255,.2);border-radius:12px;padding:12px;margin-bottom:14px">
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#B026FF;margin-bottom:6px">🏢 Team Objectives</div>
+      ${cfg.department ? `<div style="font-size:.72rem;color:var(--mu2);margin-bottom:8px">Dept: <span style="color:var(--tx);font-weight:700">${x(cfg.department)}</span></div>` : ''}
+      ${objs.length ? objs.map(o => `<div style="font-size:.78rem;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);display:flex;gap:8px;align-items:flex-start"><span style="color:#B026FF">•</span><span>${x(o)}</span></div>`).join('') : `<div style="font-size:.76rem;color:var(--mu)">No objectives set yet</div>`}
+      ${isMember ? `<button onclick="showBusinessTeamForm('${x(squad.id)}')" style="margin-top:8px;background:transparent;border:1px solid rgba(176,38,255,.3);border-radius:50px;color:#B026FF;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;padding:4px 14px;cursor:pointer">Edit Objectives</button>` : ''}
+    </div>`;
+  } else if (squad.template_type === 'marketing') {
+    const cfg = squad.template_config || {};
+    const postsTarget = parseInt(cfg.posts_target) || 0;
+    const postsDone   = parseInt(cfg.posts_done) || 0;
+    const pct = postsTarget ? Math.min(100, Math.round((postsDone/postsTarget)*100)) : 0;
+    highlightHtml = `<div style="background:rgba(255,45,120,.06);border:1px solid rgba(255,45,120,.2);border-radius:12px;padding:12px;margin-bottom:14px">
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--pk);margin-bottom:6px">📣 Campaign</div>
+      ${cfg.campaign_name ? `<div style="font-size:.9rem;font-weight:700;margin-bottom:2px">${x(cfg.campaign_name)}</div>` : ''}
+      ${cfg.deadline ? `<div style="font-size:.76rem;color:var(--mu2);margin-bottom:6px">⏰ Deadline: ${x(cfg.deadline)}</div>` : ''}
+      ${postsTarget ? `<div style="margin-top:6px"><div style="display:flex;justify-content:space-between;font-size:.74rem;margin-bottom:4px"><span>Content posts</span><span style="color:var(--mu)">${postsDone}/${postsTarget}</span></div><div class="sq-goal-bar"><div class="sq-goal-fill" style="width:${pct}%;background:linear-gradient(90deg,#FF2D78,#FF5C00)"></div></div></div>` : ''}
+      ${!cfg.campaign_name ? `<div style="font-size:.76rem;color:var(--mu)">No active campaign</div>` : ''}
+      ${isMember ? `<button onclick="showCampaignForm('${x(squad.id)}')" style="margin-top:8px;background:transparent;border:1px solid rgba(255,45,120,.3);border-radius:50px;color:var(--pk);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;padding:4px 14px;cursor:pointer">Edit Campaign</button>` : ''}
+    </div>`;
+  } else if (squad.template_type === 'sales') {
+    const cfg = squad.template_config || {};
+    const target = parseFloat(cfg.target_amount) || 0;
+    const ranked = [...members].sort((a,b) => (memberPoints[b.profiles?.id]||0) - (memberPoints[a.profiles?.id]||0));
+    const medals = ['🥇','🥈','🥉'];
+    const totalPts = squad.total_points || 0;
+    const pct = target ? Math.min(100, Math.round((totalPts/target)*100)) : 0;
+    highlightHtml = `<div style="background:rgba(198,255,74,.06);border:1px solid rgba(198,255,74,.22);border-radius:12px;padding:12px;margin-bottom:14px">
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--li);margin-bottom:6px">💼 Sales Target</div>
+      ${target ? `<div style="display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:4px"><span>Progress</span><span style="color:var(--mu)">${totalPts}/${target} pts</span></div><div class="sq-goal-bar"><div class="sq-goal-fill" style="width:${pct}%;background:linear-gradient(90deg,#C6FF4A,#00E5FF)"></div></div>` : `<div style="font-size:.76rem;color:var(--mu)">No target set</div>`}
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--li);margin:12px 0 6px">Top Performers</div>
+      ${ranked.slice(0,5).map((m,i) => { const p=m.profiles||{}; const pts=memberPoints[p.id]||0; const ini=(p.display_name||'?')[0].toUpperCase();
+        return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:.85rem;width:22px">${medals[i]||(i+1)+'.'}</span><div class="sq-member-av" style="width:26px;height:26px;font-size:.68rem">${p.avatar_url?`<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>`:ini}</div><div style="flex:1;font-size:.78rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(p.display_name||p.username||'?')}</div><span style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--li)">⚡${pts}</span></div>`;
+      }).join('')}
+      ${isMember ? `<button onclick="showSalesTargetForm('${x(squad.id)}')" style="margin-top:10px;background:transparent;border:1px solid rgba(198,255,74,.3);border-radius:50px;color:var(--li);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;padding:4px 14px;cursor:pointer">Edit Target</button>` : ''}
+    </div>`;
   }
 
   const goalsHtml = goals.length ? `<div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Goals</div>
@@ -3303,6 +3652,79 @@ async function saveEventInfo(squadId) {
     if (r.ok) { showToast('✅ Event info saved'); showSquadTab(squadId); }
     else { const d = await r.json(); showToast(d.error || 'Failed'); }
   } catch(e) { showToast('Error: ' + e.message); }
+}
+
+async function _patchSquadConfig(squadId, configPatch, okMsg) {
+  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return false; }
+  const session = (await sb2.auth.getSession()).data.session;
+  if (!session) { showToast('Sign in first'); return false; }
+  try {
+    const r = await fetch(API + '/squads/' + squadId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ template_config: configPatch })
+    });
+    if (r.ok) { showToast(okMsg || '✅ Saved'); showSquadTab(squadId); return true; }
+    const d = await r.json(); showToast(d.error || 'Failed'); return false;
+  } catch(e) { showToast('Error: ' + e.message); return false; }
+}
+
+function showBusinessTeamForm(squadId) {
+  const ws = document.getElementById('sq-workspace'); if (!ws) return;
+  ws.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <button onclick="showSquadTab('${x(squadId)}')" style="background:transparent;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer;padding:0 4px 0 0">←</button>
+      <div style="font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800">Team Objectives</div>
+    </div>
+    <input id="bt-dept" class="sq-input" placeholder="Department (e.g. Sales, Ops)" maxlength="40"/>
+    <textarea id="bt-objs" class="sq-input" placeholder="Objectives — one per line" maxlength="600" style="min-height:120px;resize:vertical;font-family:inherit"></textarea>
+    <div style="font-size:.7rem;color:var(--mu);margin-bottom:14px">Each line becomes a bullet point.</div>
+    <button onclick="saveBusinessTeam('${x(squadId)}')" style="width:100%;padding:13px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Save Objectives</button>`;
+}
+async function saveBusinessTeam(squadId) {
+  const dept = (document.getElementById('bt-dept')?.value || '').trim();
+  const raw  = (document.getElementById('bt-objs')?.value || '').trim();
+  const objectives = raw ? raw.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 12) : [];
+  await _patchSquadConfig(squadId, { department: dept || null, objectives }, '✅ Objectives saved');
+}
+
+function showCampaignForm(squadId) {
+  const ws = document.getElementById('sq-workspace'); if (!ws) return;
+  ws.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <button onclick="showSquadTab('${x(squadId)}')" style="background:transparent;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer;padding:0 4px 0 0">←</button>
+      <div style="font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800">Campaign Info</div>
+    </div>
+    <input id="cf-name" class="sq-input" placeholder="Campaign name (required)" maxlength="60"/>
+    <input id="cf-deadline" class="sq-input" type="date" style="color-scheme:dark"/>
+    <input id="cf-target" class="sq-input" type="number" min="0" placeholder="Content posts target (e.g. 20)"/>
+    <input id="cf-done" class="sq-input" type="number" min="0" placeholder="Posts done so far (optional)"/>
+    <button onclick="saveCampaign('${x(squadId)}')" style="width:100%;padding:13px;background:linear-gradient(135deg,#FF2D78,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Save Campaign</button>`;
+}
+async function saveCampaign(squadId) {
+  const name = (document.getElementById('cf-name')?.value || '').trim();
+  if (!name) { showToast('Campaign name required'); return; }
+  const deadline = document.getElementById('cf-deadline')?.value || null;
+  const posts_target = parseInt(document.getElementById('cf-target')?.value) || 0;
+  const posts_done   = parseInt(document.getElementById('cf-done')?.value) || 0;
+  await _patchSquadConfig(squadId, { campaign_name: name, deadline, posts_target, posts_done }, '✅ Campaign saved');
+}
+
+function showSalesTargetForm(squadId) {
+  const ws = document.getElementById('sq-workspace'); if (!ws) return;
+  ws.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <button onclick="showSquadTab('${x(squadId)}')" style="background:transparent;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer;padding:0 4px 0 0">←</button>
+      <div style="font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800">Sales Target</div>
+    </div>
+    <input id="st-target" class="sq-input" type="number" min="0" placeholder="Target (in squad points)"/>
+    <div style="font-size:.7rem;color:var(--mu);margin-bottom:14px">Squad earns points via check-ins (20 pts) and invites (5 pts). Progress is tracked automatically.</div>
+    <button onclick="saveSalesTarget('${x(squadId)}')" style="width:100%;padding:13px;background:linear-gradient(135deg,#C6FF4A,#00E5FF);border:none;border-radius:50px;color:#0a0a0a;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Save Target</button>`;
+}
+async function saveSalesTarget(squadId) {
+  const target = parseInt(document.getElementById('st-target')?.value) || 0;
+  if (!target) { showToast('Target required'); return; }
+  await _patchSquadConfig(squadId, { target_amount: target }, '✅ Target saved');
 }
 
 async function joinSquad(squadId) {
