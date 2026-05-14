@@ -809,6 +809,7 @@ function previewPost() {
 // ── Boot ─────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   let s = localStorage.getItem('biz_session');
+  let _sessionUser = null, _sessionRole = null;
 
   // Bridge: if no biz_session but user has a live Supabase session, create one.
   // Falls back to localStorage p_user role if RLS blocks the profile query.
@@ -817,12 +818,14 @@ window.addEventListener('DOMContentLoaded', async () => {
       const sb = getSB();
       const { data: { session } } = await sb.auth.getSession();
       if (session) {
+        _sessionUser = session.user;
         const { data: profile } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
         let role = profile?.role;
         if (!role) {
           // RLS blocked profile read — try localStorage p_user
           try { role = JSON.parse(localStorage.getItem('p_user') || '{}').role; } catch(e) {}
         }
+        _sessionRole = role || null;
         if (role && ['business','admin'].includes(role)) {
           const bridged = {
             id: session.user.id, email: session.user.email,
@@ -837,6 +840,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     } catch(e) { console.warn('[business] bridge failed', e); }
   }
 
+  // Signed in but wrong role → show friendly gate (don't silently redirect)
+  if (!s && _sessionUser) { showNoBusinessAccountGate(_sessionUser, _sessionRole); return; }
   if (!s) { window.location.href = '/signin'; return; }
   BIZ = JSON.parse(s);
   history.replaceState({ tab: 'home' }, '');
@@ -881,6 +886,43 @@ function openSheet(id)  { document.getElementById(id).classList.add('open'); }
 function closeSheet(id) { document.getElementById(id).classList.remove('open'); }
 function toast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast ' + type + ' show'; setTimeout(() => t.className = 'toast', 2600); }
 async function doLogout() {
+  try { const sb = getSB(); if (sb) await sb.auth.signOut(); } catch(e) {}
+  ['biz_session','p_user','p_profile','p_token'].forEach(k => localStorage.removeItem(k));
+  window.location.href = '/signin';
+}
+
+// Friendly gate for signed-in users without a business account
+function showNoBusinessAccountGate(user, role) {
+  const roleLabel = role ? `<code style="background:rgba(255,255,255,.06);padding:2px 6px;border-radius:4px">${role}</code>` : 'standard user';
+  document.body.innerHTML = `
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif">
+      <div style="max-width:420px;width:100%;background:var(--surf);border:1px solid var(--border);border-radius:20px;padding:28px;text-align:center">
+        <div style="font-size:3rem;margin-bottom:12px">🏢</div>
+        <h1 style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.02em;margin-bottom:8px">You don't have a business account</h1>
+        <p style="color:var(--mu);font-size:.9rem;line-height:1.5;margin-bottom:20px">
+          You're signed in as <strong>${user.email || 'a user'}</strong> (${roleLabel}). The business dashboard is only available to accounts with the <strong>business</strong> role.
+        </p>
+        <button onclick="createBusinessAccount()" style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:13px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;margin-bottom:10px">Create a business account</button>
+        <button onclick="window.location.href='/feeds'" style="width:100%;background:var(--surf2);border:1px solid var(--border2);border-radius:50px;padding:11px;font-family:'Syne',sans-serif;font-size:.82rem;color:var(--tx);cursor:pointer;margin-bottom:10px">Back to feeds</button>
+        <button onclick="doLogoutInline()" style="background:none;border:none;color:var(--mu);font-size:.78rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;padding:6px">Sign out</button>
+      </div>
+    </div>`;
+}
+async function createBusinessAccount() {
+  try {
+    const sb = getSB();
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = '/signin'; return; }
+    const res = await fetch('/api/auth/ensure-business-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ role: 'business' })
+    });
+    if (!res.ok) { alert('Could not create business account. Please try again.'); return; }
+    window.location.reload();
+  } catch(e) { alert('Network error. Please try again.'); }
+}
+async function doLogoutInline() {
   try { const sb = getSB(); if (sb) await sb.auth.signOut(); } catch(e) {}
   ['biz_session','p_user','p_profile','p_token'].forEach(k => localStorage.removeItem(k));
   window.location.href = '/signin';
