@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
 <meta name="description" content="Pulsify — Feel the Vibe 🇿🇦 South Africa's live event discovery platform"/>
-<meta name="build-version" content="v2.9.0-20260515-likes-quicket-map"/>
+<meta name="build-version" content="v2.9.1-20260515-debug-map-quicket"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
@@ -1320,17 +1320,21 @@ async function loadQuicketEvents(city, genre) {
   const container = document.getElementById('events-feed');
   if (!container) return;
   try {
-    const params = new URLSearchParams({ city: city || 'all', genre: genre === 'free' ? 'all' : (genre || 'all'), limit: '200' });
+    const params = new URLSearchParams({ city: city || 'all', genre: genre === 'free' ? 'all' : (genre || 'all'), limit: '200', _t: String(Date.now()) });
     if (genre === 'free') params.append('free', '1');
-    const resp = await fetch('/api/quicket-events?' + params);
+    const resp = await fetch('/api/quicket-events?' + params, { cache: 'no-store' });
     if (!resp.ok) {
       const err = await resp.text();
       console.warn('[Quicket] API error', resp.status, err);
       return;
     }
-    const { events } = await safeJson(resp);
-    console.log('[Quicket] Loaded', events?.length || 0, 'events');
-    if (!events?.length) return;
+    const json = await safeJson(resp);
+    const events = json.events || [];
+    console.log('[Quicket] Loaded', events.length, 'events. Total from API:', json.total, 'Source:', json.source);
+    if (!events.length) {
+      console.warn('[Quicket] No events returned. Server may be rejecting auth or location filter is too narrow. Check Vercel function logs for [Quicket] entries.');
+      return;
+    }
 
     const existingIds = new Set([...container.querySelectorAll('[data-evid]')].map(el => el.dataset.evid));
     const fresh = events.filter(e => !existingIds.has(e.id));
@@ -1904,17 +1908,23 @@ function initMap() {
 
   // If the map fails to load (bad token, network, domain restriction) — show error instead of infinite splash
   mapObj.on('error', (e) => {
-    console.error('[Map error]', e.error?.message || e);
+    const errMsg = e.error?.message || e.error?.toString() || 'Unknown error';
+    const errStatus = e.error?.status;
+    console.error('[Map error]', errStatus, errMsg, e);
     hideMapSplash();
     const mc = document.getElementById('mc');
     if (mc && !document.getElementById('map-err-msg')) {
       const d = document.createElement('div');
       d.id = 'map-err-msg';
-      const isAuth = (e.error?.message || '').includes('401') || (e.error?.status === 401);
+      let reason = 'Check your internet connection and try again';
+      if (errStatus === 401 || /401|unauthorized/i.test(errMsg)) reason = 'Mapbox token is invalid or expired. Get a new one at mapbox.com/account/access-tokens';
+      else if (errStatus === 403 || /403|forbidden/i.test(errMsg)) reason = 'Mapbox token is restricted to a different domain. Add ' + location.hostname + ' at mapbox.com/account/access-tokens';
+      else if (/load.*style|style.*load/i.test(errMsg)) reason = 'Map style failed to load. The Mapbox token may be invalid.';
+      else reason = 'Map error: ' + errMsg.slice(0, 120);
       d.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;background:#05080F;z-index:10;pointer-events:none';
       d.innerHTML = `<div style="font-size:2.2rem;margin-bottom:14px">🗺️</div>
         <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;margin-bottom:8px">Map couldn't load</div>
-        <div style="font-size:.75rem;color:var(--mu);max-width:240px;line-height:1.5">${isAuth ? 'Mapbox token may be restricted to a different domain. Add your Vercel URL at mapbox.com/account/access-tokens' : 'Check your internet connection and try again'}</div>`;
+        <div style="font-size:.7rem;color:var(--mu);max-width:280px;line-height:1.5">${reason}</div>`;
       mc.appendChild(d);
     }
   });

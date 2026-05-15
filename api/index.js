@@ -1091,8 +1091,9 @@ module.exports = async (req, res) => {
           return new Date(a.date_local) - new Date(b.date_local);
         });
         events = events.slice(0, limit);
-        res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=3600');
-        return res.status(200).json({ events, total: events.length, source: 'quicket' });
+        // Don't cache while we're debugging the integration — re-enable s-maxage=1800 once stable
+        res.setHeader('Cache-Control', 'no-store');
+        return res.status(200).json({ events, total: events.length, source: 'quicket', cities_tried: citiesToFetch });
       } catch(e) {
         console.error('[Quicket]', e.message);
         return res.status(502).json({ error: 'Failed to fetch Quicket events', detail: e.message });
