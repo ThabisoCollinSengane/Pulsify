@@ -457,12 +457,26 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     </div>
     <div class="cr">
       <button class="chip active" onclick="setGenre(this,'all')">✦ All</button>
+      <button class="chip" onclick="setGenre(this,'free')">✅ Free</button>
       <button class="chip" onclick="setGenre(this,'gqom')">🔊 Gqom</button>
       <button class="chip" onclick="setGenre(this,'amapiano')">🎶 Amapiano</button>
       <button class="chip" onclick="setGenre(this,'nightlife')">🌙 Nightlife</button>
       <button class="chip" onclick="setGenre(this,'sport')">⚽ Sport</button>
+      <button class="chip" onclick="setGenre(this,'outdoor')">🏞️ Outdoor</button>
+      <button class="chip" onclick="setGenre(this,'ceremonies')">💍 Ceremonies</button>
+      <button class="chip" onclick="setGenre(this,'workshop')">🛠️ Workshop</button>
+      <button class="chip" onclick="setGenre(this,'food')">🍴 Food</button>
+      <button class="chip" onclick="setGenre(this,'cultural')">🥁 Cultural</button>
+      <button class="chip" onclick="setGenre(this,'business')">💼 Business</button>
+      <button class="chip" onclick="setGenre(this,'wellness')">🧘 Wellness</button>
+      <button class="chip" onclick="setGenre(this,'art')">🎨 Art</button>
+      <button class="chip" onclick="setGenre(this,'market')">🛍️ Market</button>
+      <button class="chip" onclick="setGenre(this,'kids')">🧸 Kids</button>
+      <button class="chip" onclick="setGenre(this,'charity')">❤️ Charity</button>
+      <button class="chip" onclick="setGenre(this,'comedy')">😂 Comedy</button>
+      <button class="chip" onclick="setGenre(this,'jazz')">🎷 Jazz</button>
+      <button class="chip" onclick="setGenre(this,'gospel')">🙏 Gospel</button>
       <button class="chip" onclick="setGenre(this,'march')">✊ March</button>
-      <button class="chip" onclick="setGenre(this,'free')">✅ Free</button>
       <button class="chip" onclick="setGenre(this,'student')">🎓 Student</button>
     </div>
     <div class="sl"><span>🏆 Top Spots</span><a onclick="openBizPage();return false">See all →</a></div>
@@ -1028,7 +1042,47 @@ function ft(t) {
   return (hr > 12 ? hr - 12 : hr || 12) + ':' + m + (hr >= 12 ? 'PM' : 'AM');
 }
 function gg(g) {
-  const m = { amapiano:'linear-gradient(135deg,#1a0533,#4a0080)', gqom:'linear-gradient(135deg,#1a0015,#5a0035)', sport:'linear-gradient(135deg,#001a0a,#004d22)', sports:'linear-gradient(135deg,#001a0a,#004d22)', march:'linear-gradient(135deg,#0a1a00,#253a00)', nightlife:'linear-gradient(135deg,#1a000d,#3d0026)', jazz:'linear-gradient(135deg,#001a1a,#003535)', shisanyama:'linear-gradient(135deg,#1a0800,#4d1a00)', experience:'linear-gradient(135deg,#001a2a,#003550)', festival:'linear-gradient(135deg,#0a001a,#2a0050)', live:'linear-gradient(135deg,#001a2a,#003050)', comedy:'linear-gradient(135deg,#1a1a00,#4d4d00)', maskandi:'linear-gradient(135deg,#0a1a00,#204000)', afrobeats:'linear-gradient(135deg,#1a0010,#4a0030)', hip:'linear-gradient(135deg,#1a001a,#3a0040)' };
+  const m = {
+    amapiano:'linear-gradient(135deg,#1a0533,#4a0080)',
+    gqom:'linear-gradient(135deg,#1a0015,#5a0035)',
+    sport:'linear-gradient(135deg,#001a0a,#004d22)',
+    sports:'linear-gradient(135deg,#001a0a,#004d22)',
+    march:'linear-gradient(135deg,#0a1a00,#253a00)',
+    nightlife:'linear-gradient(135deg,#1a000d,#3d0026)',
+    jazz:'linear-gradient(135deg,#001a1a,#003535)',
+    shisanyama:'linear-gradient(135deg,#1a0800,#4d1a00)',
+    experience:'linear-gradient(135deg,#001a2a,#003550)',
+    festival:'linear-gradient(135deg,#0a001a,#2a0050)',
+    live:'linear-gradient(135deg,#001a2a,#003050)',
+    comedy:'linear-gradient(135deg,#1a1a00,#4d4d00)',
+    maskandi:'linear-gradient(135deg,#0a1a00,#204000)',
+    afrobeats:'linear-gradient(135deg,#1a0010,#4a0030)',
+    hip:'linear-gradient(135deg,#1a001a,#3a0040)',
+    outdoor:'linear-gradient(135deg,#001a14,#003d2e)',
+    ceremon:'linear-gradient(135deg,#1a0a14,#3d1a2e)',
+    wedding:'linear-gradient(135deg,#1a0a14,#3d1a2e)',
+    workshop:'linear-gradient(135deg,#1a1500,#3d3500)',
+    food:'linear-gradient(135deg,#1a0a00,#3d1a00)',
+    cultural:'linear-gradient(135deg,#1a0500,#4d1a00)',
+    heritage:'linear-gradient(135deg,#1a0500,#4d1a00)',
+    business:'linear-gradient(135deg,#0a0a1a,#1a1a3d)',
+    fashion:'linear-gradient(135deg,#1a000d,#3d0026)',
+    wellness:'linear-gradient(135deg,#001a1a,#003535)',
+    yoga:'linear-gradient(135deg,#001a1a,#003535)',
+    art:'linear-gradient(135deg,#0a001a,#2a0050)',
+    market:'linear-gradient(135deg,#001a0a,#003d1a)',
+    kids:'linear-gradient(135deg,#1a0a0d,#3d1a26)',
+    family:'linear-gradient(135deg,#1a0a0d,#3d1a26)',
+    charity:'linear-gradient(135deg,#1a000d,#3d0026)',
+    tech:'linear-gradient(135deg,#001a2a,#003050)',
+    film:'linear-gradient(135deg,#0d000d,#26002a)',
+    movie:'linear-gradient(135deg,#0d000d,#26002a)',
+    dance:'linear-gradient(135deg,#1a000d,#3d0026)',
+    gospel:'linear-gradient(135deg,#0a1a00,#1f3d00)',
+    rock:'linear-gradient(135deg,#1a000d,#3d0026)',
+    theatre:'linear-gradient(135deg,#1a0a00,#3d1a00)',
+    house:'linear-gradient(135deg,#001a2a,#003050)',
+  };
   const k = Object.keys(m).find(k => (g ?? '').toLowerCase().includes(k));
   return m[k] ?? 'linear-gradient(135deg,#0D1424,#121B30)';
 }
@@ -1041,11 +1095,31 @@ function ge(g) {
   if (s.includes('amapiano'))return '🎶';
   if (s.includes('night') || s.includes('club')) return '🌙';
   if (s.includes('hip'))     return '🎤';
-  if (s.includes('food') || s.includes('shisa')) return '🥩';
+  if (s.includes('shisa'))   return '🥩';
+  if (s.includes('food') || s.includes('cuisine') || s.includes('dining') || s.includes('tasting')) return '🍴';
   if (s.includes('comedy'))  return '😂';
-  if (s.includes('experience') || s.includes('cruise')) return '🛥️';
+  if (s.includes('cruise') || s.includes('experience')) return '🛥️';
   if (s.includes('festival')) return '🎉';
-  if (s.includes('market'))  return '🛍️';
+  if (s.includes('market') || s.includes('flea') || s.includes('craft')) return '🛍️';
+  if (s.includes('outdoor') || s.includes('hike') || s.includes('camping') || s.includes('adventure')) return '🏞️';
+  if (s.includes('ceremon') || s.includes('wedding')) return '💍';
+  if (s.includes('workshop') || s.includes('course') || s.includes('training') || s.includes('class') || s.includes('seminar')) return '🛠️';
+  if (s.includes('cultural') || s.includes('heritage') || s.includes('traditional')) return '🥁';
+  if (s.includes('business') || s.includes('conference') || s.includes('expo') || s.includes('network')) return '💼';
+  if (s.includes('fashion') || s.includes('style')) return '👗';
+  if (s.includes('wellness') || s.includes('yoga') || s.includes('fitness') || s.includes('meditation') || s.includes('health')) return '🧘';
+  if (s.includes('art') || s.includes('exhibit') || s.includes('gallery')) return '🎨';
+  if (s.includes('kids') || s.includes('family') || s.includes('children')) return '🧸';
+  if (s.includes('charity') || s.includes('fundrais') || s.includes('cause')) return '❤️';
+  if (s.includes('tech'))    return '💻';
+  if (s.includes('film') || s.includes('movie') || s.includes('cinema')) return '🎬';
+  if (s.includes('dance') || s.includes('ballet')) return '💃';
+  if (s.includes('gospel'))  return '🙏';
+  if (s.includes('rock'))    return '🎸';
+  if (s.includes('theatre') || s.includes('theater')) return '🎭';
+  if (s.includes('maskandi')) return '🪕';
+  if (s.includes('afro'))    return '🎶';
+  if (s.includes('house'))   return '🏠';
   return '🎶';
 }
 function ce(c) { return { restaurant:'🍽️', bar:'🍸', club:'💃', shisanyama:'🥩', hotel:'🏨', bnb:'🏡', venue:'🎪' }[c] ?? '📍'; }
@@ -1246,25 +1320,37 @@ async function loadQuicketEvents(city, genre) {
   const container = document.getElementById('events-feed');
   if (!container) return;
   try {
-    const params = new URLSearchParams({ city: city || 'all', genre: genre || 'all', page: '1' });
+    const params = new URLSearchParams({ city: city || 'all', genre: genre === 'free' ? 'all' : (genre || 'all'), limit: '200' });
+    if (genre === 'free') params.append('free', '1');
     const resp = await fetch('/api/quicket-events?' + params);
     if (!resp.ok) {
       const err = await resp.text();
       console.warn('[Quicket] API error', resp.status, err);
       return;
     }
-    const { events } = await resp.json();
+    const { events } = await safeJson(resp);
     console.log('[Quicket] Loaded', events?.length || 0, 'events');
     if (!events?.length) return;
 
-    // Filter out any that are already shown
     const existingIds = new Set([...container.querySelectorAll('[data-evid]')].map(el => el.dataset.evid));
     const fresh = events.filter(e => !existingIds.has(e.id));
     if (!fresh.length) return;
 
+    // Split free vs paid for two sub-sections
+    const freeEvs = fresh.filter(e => e.is_free);
+    const paidEvs = fresh.filter(e => !e.is_free);
+
     const section = document.createElement('div');
-    section.innerHTML = `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);padding:16px 0 8px;display:flex;align-items:center;gap:8px"><img src="https://www.quicket.co.za/favicon.ico" width="14" height="14" style="border-radius:3px" onerror="this.style.display='none'"/>More events from Quicket</div>` +
-      fresh.slice(0, 30).map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
+    let html = '';
+    if (freeEvs.length) {
+      html += `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--li);padding:16px 0 8px;display:flex;align-items:center;gap:8px">🆓 Free Events Near You</div>`;
+      html += freeEvs.slice(0, 40).map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
+    }
+    if (paidEvs.length) {
+      html += `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);padding:20px 0 8px;display:flex;align-items:center;gap:8px"><img src="https://www.quicket.co.za/favicon.ico" width="14" height="14" style="border-radius:3px" onerror="this.style.display='none'"/>More events from Quicket</div>`;
+      html += paidEvs.slice(0, 80).map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
+    }
+    section.innerHTML = html;
     container.appendChild(section);
     eventsForMap = [...eventsForMap, ...fresh];
   } catch(e) { /* Quicket unavailable — silently skip */ }

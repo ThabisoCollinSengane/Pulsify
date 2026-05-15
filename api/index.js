@@ -930,61 +930,83 @@ module.exports = async (req, res) => {
 
     /* ─── GET /quicket-events ─────────────────────────────── */
     if (url === '/quicket-events' && req.method === 'GET') {
-      const QUICKET_KEY = process.env.QUICKET_API_KEY;
-      if (!QUICKET_KEY) return res.status(503).json({ error: 'QUICKET_API_KEY not configured' });
+      const QUICKET_KEY = process.env.QUICKET_API_KEY || '7f03069e38b5802980c9ca620dd14dff';
 
-      const city  = q.city  || 'all';   // 'durban' | 'johannesburg' | 'all'
+      const city  = q.city  || 'all';   // 'all' | 'kzn' | 'jhb' | 'durban' | 'johannesburg' | ...
       const genre = q.genre || 'all';
-      const page  = Math.max(1, parseInt(q.page || '1'));
+      const free  = q.free === '1' || q.free === 'true';
+      const limit = Math.min(parseInt(q.limit || '200'), 500);
 
-      // Quicket genre → Pulsify genre
+      // Quicket category/keyword → Pulsify genre
       const GENRE_MAP = {
-        music: 'house', concert: 'house', festival: 'house',
-        amapiano: 'amapiano', gqom: 'gqom',
-        'hip-hop': 'hiphop', hiphop: 'hiphop', hip_hop: 'hiphop', rap: 'hiphop',
-        house: 'house', afrobeats: 'afrobeats', afrohouse: 'afrohouse',
-        rock: 'rock', gospel: 'gospel', jazz: 'jazz',
-        comedy: 'comedy', sport: 'sport', sports: 'sport',
-        maskandi: 'maskandi',
+        music:'house', concert:'house', live:'live',
+        amapiano:'amapiano', gqom:'gqom',
+        'hip-hop':'hiphop', hiphop:'hiphop', hip_hop:'hiphop', rap:'hiphop',
+        house:'house', afrobeats:'afrobeats', afrohouse:'afrohouse',
+        rock:'rock', gospel:'gospel', jazz:'jazz',
+        maskandi:'maskandi', kwaito:'kwaito',
+        reggae:'reggae', soul:'soul', rnb:'rnb',
+        comedy:'comedy', sport:'sport', sports:'sport',
+        festival:'festival', nightlife:'nightlife',
+        theatre:'theatre', theater:'theatre',
+        outdoor:'outdoor', adventure:'outdoor', hiking:'outdoor', camping:'outdoor',
+        ceremonies:'ceremonies', ceremony:'ceremonies', wedding:'ceremonies',
+        workshop:'workshop', course:'workshop', training:'workshop', class:'workshop', seminar:'workshop',
+        food:'food', cuisine:'food', dining:'food', tasting:'food', shisanyama:'shisanyama',
+        cultural:'cultural', heritage:'cultural', traditional:'cultural',
+        business:'business', conference:'business', networking:'business', expo:'business',
+        fashion:'fashion', style:'fashion',
+        wellness:'wellness', yoga:'wellness', fitness:'wellness', meditation:'wellness', health:'wellness',
+        art:'art', exhibition:'art', gallery:'art',
+        market:'market', flea:'market', craft:'market',
+        kids:'kids', family:'kids', children:'kids',
+        charity:'charity', fundraiser:'charity', cause:'charity',
+        technology:'tech', tech:'tech',
+        film:'film', movie:'film', cinema:'film',
+        dance:'dance', ballet:'dance',
       };
 
-      // Pulsify genre → Quicket category query string
-      const PULSIFY_TO_QCT = {
-        amapiano: 'amapiano', gqom: 'gqom', hiphop: 'hip-hop',
-        house: 'house music', afrobeats: 'afrobeats', rock: 'rock',
-        gospel: 'gospel', jazz: 'jazz', comedy: 'comedy', sport: 'sport',
-      };
+      // Cities to fetch — biased toward KZN + JHB metros
+      const KZN = ['Durban', 'Pietermaritzburg', 'Umhlanga'];
+      const JHB = ['Johannesburg', 'Sandton', 'Pretoria'];
+      let citiesToFetch;
+      if (city === 'all')              citiesToFetch = [...KZN, ...JHB];
+      else if (city === 'kzn')         citiesToFetch = KZN;
+      else if (city === 'jhb' || city === 'johannesburg') citiesToFetch = JHB;
+      else if (city === 'durban')      citiesToFetch = ['Durban'];
+      else                              citiesToFetch = [city];
 
-      const citiesToFetch = city === 'all'
-        ? ['Durban', 'Johannesburg']
-        : city === 'johannesburg' ? ['Johannesburg'] : ['Durban'];
+      const PAGES_PER_CITY = 2;
+      const PAGE_SIZE      = 50;
 
-      const quicketFetch = async (fetchCity) => {
+      const quicketFetch = async (fetchCity, page) => {
         const params = new URLSearchParams({
-          pagesize: '50',
-          page: String(page),
-          location: fetchCity,
-          country: 'ZA',
+          pagesize:  String(PAGE_SIZE),
+          page:      String(page),
+          location:  fetchCity,
+          country:   'ZA',
           startDate: new Date().toISOString().split('T')[0],
-          ...(genre !== 'all' && PULSIFY_TO_QCT[genre] ? { category: PULSIFY_TO_QCT[genre] } : {}),
         });
+        if (genre !== 'all') params.append('search', genre);
 
-        const resp = await fetch(`https://api.quicket.co.za/api/events?${params}`, {
-          headers: { 'X-API-Key': QUICKET_KEY, 'Accept': 'application/json' },
-          signal: AbortSignal.timeout(8000),
-        });
-
-        if (!resp.ok) {
-          console.warn(`[Quicket] ${fetchCity} → HTTP ${resp.status}: ${await resp.text().catch(()=>'')}`);
+        try {
+          const resp = await fetch(`https://api.quicket.co.za/api/events?${params}`, {
+            headers: { 'usertoken': QUICKET_KEY, 'Accept': 'application/json' },
+            signal: AbortSignal.timeout(10000),
+          });
+          if (!resp.ok) {
+            console.warn(`[Quicket] ${fetchCity} p${page} → HTTP ${resp.status}`);
+            return [];
+          }
+          const json = await resp.json();
+          return json?.data || json?.events || json?.results || (Array.isArray(json) ? json : []);
+        } catch(e) {
+          console.warn(`[Quicket] ${fetchCity} p${page} fetch error: ${e.message}`);
           return [];
         }
-        const json = await resp.json();
-        // Quicket returns { data: [...] } or { events: [...] } or directly an array
-        return json?.data || json?.events || (Array.isArray(json) ? json : []);
       };
 
       const normalize = (item, fetchCity) => {
-        // Handle multiple possible Quicket response shapes
         const id         = item.id || item.event_id || item.EventId;
         const title      = item.title || item.name || item.EventName;
         const venue      = item.venue?.name || item.venueName || item.venue_name || item.Venue || '';
@@ -995,9 +1017,10 @@ module.exports = async (req, res) => {
         const url_       = item.url || item.eventUrl || item.event_url || `https://www.quicket.co.za/events/${id}`;
         const priceRaw   = item.minPrice ?? item.min_price ?? item.ticketMinPrice ?? item.price_min ?? 0;
         const catRaw     = (item.category || item.categories?.[0]?.name || item.genre || '').toLowerCase().replace(/\s+/g, '');
-        const mappedGenre = GENRE_MAP[catRaw] || 'other';
+        const mappedGenre = GENRE_MAP[catRaw] || (catRaw || 'other');
         const lat        = parseFloat(item.venue?.latitude  || item.latitude  || item.lat  || 0) || null;
         const lon        = parseFloat(item.venue?.longitude || item.longitude || item.lon || 0) || null;
+        const priceNum   = typeof priceRaw === 'number' ? priceRaw : parseFloat(priceRaw) || 0;
 
         if (!id || !title || !start) return null;
 
@@ -1009,8 +1032,8 @@ module.exports = async (req, res) => {
           venue_city:    cityVal,
           venue_lat:     lat,
           venue_lon:     lon,
-          price_min:     typeof priceRaw === 'number' ? priceRaw : parseFloat(priceRaw) || 0,
-          is_free:       (priceRaw === 0 || priceRaw === '0' || priceRaw === 'Free'),
+          price_min:     priceNum,
+          is_free:       priceNum === 0 || priceRaw === 'Free' || priceRaw === 'free',
           image_url:     image,
           genre:         mappedGenre,
           description:   desc,
@@ -1022,10 +1045,29 @@ module.exports = async (req, res) => {
       };
 
       try {
-        const raw = (await Promise.all(citiesToFetch.map(c => quicketFetch(c)))).flat();
-        const events = raw.map((item, i) => normalize(item, citiesToFetch[i % citiesToFetch.length])).filter(Boolean);
-        // Sort: soonest first
-        events.sort((a, b) => new Date(a.date_local) - new Date(b.date_local));
+        const tasks = [];
+        for (const c of citiesToFetch) {
+          for (let p = 1; p <= PAGES_PER_CITY; p++) {
+            tasks.push(quicketFetch(c, p).then(items => items.map(i => normalize(i, c)).filter(Boolean)));
+          }
+        }
+        const batches = await Promise.all(tasks);
+        const seen = new Set();
+        let events = [];
+        for (const batch of batches) {
+          for (const ev of batch) {
+            if (seen.has(ev.id)) continue;
+            seen.add(ev.id);
+            events.push(ev);
+          }
+        }
+        if (free) events = events.filter(e => e.is_free);
+        // Free events first, then by date ascending
+        events.sort((a, b) => {
+          if (a.is_free !== b.is_free) return a.is_free ? -1 : 1;
+          return new Date(a.date_local) - new Date(b.date_local);
+        });
+        events = events.slice(0, limit);
         res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=3600');
         return res.status(200).json({ events, total: events.length, source: 'quicket' });
       } catch(e) {
