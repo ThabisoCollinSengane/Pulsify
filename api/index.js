@@ -993,7 +993,9 @@ module.exports = async (req, res) => {
       const PAGE_SIZE      = 50;
 
       const quicketFetch = async (fetchCity, page) => {
+        // usertoken must be a query param, not a header
         const params = new URLSearchParams({
+          usertoken: QUICKET_KEY,
           pagesize:  String(PAGE_SIZE),
           page:      String(page),
           location:  fetchCity,
@@ -1004,15 +1006,18 @@ module.exports = async (req, res) => {
 
         try {
           const resp = await fetch(`https://api.quicket.co.za/api/events?${params}`, {
-            headers: { 'usertoken': QUICKET_KEY, 'Accept': 'application/json' },
+            headers: { 'Accept': 'application/json' },
             signal: AbortSignal.timeout(10000),
           });
           if (!resp.ok) {
-            console.warn(`[Quicket] ${fetchCity} p${page} → HTTP ${resp.status}`);
+            const body = await resp.text().catch(() => '');
+            console.warn(`[Quicket] ${fetchCity} p${page} → HTTP ${resp.status}`, body.slice(0, 200));
             return [];
           }
           const json = await resp.json();
-          return json?.data || json?.events || json?.results || (Array.isArray(json) ? json : []);
+          const rows = json?.data || json?.events || json?.results || (Array.isArray(json) ? json : []);
+          console.log(`[Quicket] ${fetchCity} p${page} → ${rows.length} events`);
+          return rows;
         } catch(e) {
           console.warn(`[Quicket] ${fetchCity} p${page} fetch error: ${e.message}`);
           return [];

@@ -1884,7 +1884,8 @@ function initMap() {
   
   mapObj.on('load', () => {
     mapObj.resize();
-    
+    setTimeout(() => mapObj.resize(), 200); // second resize for mobile layout settle
+
     // Enhanced ocean and water styling
     const WF = '#0a1929', WL = '#1a3a52';
     ['water','water-shadow'].forEach(id => {
@@ -1893,20 +1894,49 @@ function initMap() {
     ['waterway'].forEach(id => {
       try { if (mapObj.getLayer(id)) mapObj.setPaintProperty(id, 'line-color', WL); } catch(e) {}
     });
-    
-    // Add glow effect to land
-    try {
-      if (mapObj.getLayer('land')) {
-        mapObj.setPaintProperty('land', 'background-color', '#05080F');
-      }
-    } catch(e) {}
-    
+    try { if (mapObj.getLayer('land')) mapObj.setPaintProperty('land', 'background-color', '#05080F'); } catch(e) {}
+
     placeMapMarkers();
     addHeatmap();
     addPulseAnimation();
     hideMapSplash();
   });
-  
+
+  // If the map fails to load (bad token, network, domain restriction) — show error instead of infinite splash
+  mapObj.on('error', (e) => {
+    console.error('[Map error]', e.error?.message || e);
+    hideMapSplash();
+    const mc = document.getElementById('mc');
+    if (mc && !document.getElementById('map-err-msg')) {
+      const d = document.createElement('div');
+      d.id = 'map-err-msg';
+      const isAuth = (e.error?.message || '').includes('401') || (e.error?.status === 401);
+      d.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;background:#05080F;z-index:10;pointer-events:none';
+      d.innerHTML = `<div style="font-size:2.2rem;margin-bottom:14px">🗺️</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;margin-bottom:8px">Map couldn't load</div>
+        <div style="font-size:.75rem;color:var(--mu);max-width:240px;line-height:1.5">${isAuth ? 'Mapbox token may be restricted to a different domain. Add your Vercel URL at mapbox.com/account/access-tokens' : 'Check your internet connection and try again'}</div>`;
+      mc.appendChild(d);
+    }
+  });
+
+  // Fallback: if load event hasn't fired within 12s, assume failure
+  const _mapTimeout = setTimeout(() => {
+    if (!mapObj.loaded()) {
+      hideMapSplash();
+      const mc = document.getElementById('mc');
+      if (mc && !document.getElementById('map-err-msg')) {
+        const d = document.createElement('div');
+        d.id = 'map-err-msg';
+        d.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;background:#05080F;z-index:10;pointer-events:none';
+        d.innerHTML = `<div style="font-size:2.2rem;margin-bottom:14px">🗺️</div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;margin-bottom:8px">Map timed out</div>
+          <div style="font-size:.75rem;color:var(--mu);max-width:240px;line-height:1.5">Could not load map tiles. Check your Mapbox token at mapbox.com/account/access-tokens and ensure your domain is allowed.</div>`;
+        mc.appendChild(d);
+      }
+    }
+  }, 12000);
+  mapObj.once('load', () => clearTimeout(_mapTimeout));
+
   // Close panel on map tap — but NOT if a marker was just tapped
   let _markerJustTapped = false;
   mapObj.on('click', () => { if (_markerJustTapped) { _markerJustTapped = false; return; } closeMapPanel(); });
