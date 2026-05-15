@@ -3580,7 +3580,7 @@ async function showSquadTab(squadId) {
 
 function renderSquadWorkspace(detail, container) {
   if (!container) return;
-  const { squad, members, activity, isMember } = detail;
+  const { squad, members, activity, goals, isMember } = detail;
   const tmpl = getTemplate(squad.template_type || 'general');
   const pts = squad.total_points || 0;
 
@@ -3590,6 +3590,24 @@ function renderSquadWorkspace(detail, container) {
         return `<div style="display:flex;align-items:center;gap:8px"><div class="sq-member-av">${p.avatar_url?`<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>`:ini}</div><div><div style="font-size:.78rem;font-weight:700">${x(p.display_name||p.username||'?')}</div><div style="font-size:.68rem;color:var(--mu)">${m.role==='admin'?'👑 Admin':'Member'}</div></div></div>`;
       }).join('')}
     </div>`;
+
+  const goalsHtml = (goals && goals.length) ? `
+    <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin:18px 0 10px">🎯 Squad Goals</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+      ${goals.map(g => {
+        const pct = Math.min(100, Math.round((g.current / g.target) * 100));
+        const done = g.current >= g.target;
+        return `<div style="background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div style="font-size:.76rem;font-weight:600">${done?'✅ ':''}${x(g.label)}</div>
+            <div style="font-size:.7rem;color:var(--mu)">${g.current}/${g.target}</div>
+          </div>
+          <div style="height:5px;background:rgba(255,255,255,.07);border-radius:50px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${done?'var(--li)':'linear-gradient(90deg,#B026FF,#FF5C00)'};border-radius:50px;transition:width .4s"></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>` : '';
 
   const inviteBtn = isMember
     ? `<button onclick="openSquadInvite('${x(squad.id)}')" style="width:100%;padding:11px;background:rgba(0,229,255,.08);border:1.5px solid rgba(0,229,255,.3);border-radius:50px;color:var(--cy);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;margin-bottom:8px">＋ Invite Friends</button>`
@@ -3615,10 +3633,10 @@ function renderSquadWorkspace(detail, container) {
         <div style="font-size:.68rem;color:var(--mu);margin-top:4px">Use these for partner discounts</div>
       </div>
     </div>
-    ${membersHtml}${inviteBtn}${actionsHtml}`;
+    ${goalsHtml}${membersHtml}${inviteBtn}${actionsHtml}`;
 }
 
-function showSquadEmptyState(container) {
+async function showSquadEmptyState(container) {
   if (!container) return;
   container.innerHTML = `
     <div style="padding:32px 16px 20px;text-align:center">
@@ -3626,7 +3644,28 @@ function showSquadEmptyState(container) {
       <div style="font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800;margin-bottom:6px">No squads yet</div>
       <div style="font-size:.78rem;color:var(--mu);margin-bottom:20px;line-height:1.5">Create a squad with your friends — earn points together to unlock discounts at partner venues.</div>
       <button onclick="showCreateForm()" style="background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;padding:12px 28px;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer">+ Create a Squad</button>
+    </div>
+    <div id="sq-leaderboard-section" style="padding:0 4px 16px">
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">🏆 Top Squads This Week</div>
+      <div id="sq-lb-list"><div style="font-size:.76rem;color:var(--mu)">Loading…</div></div>
     </div>`;
+  try {
+    const r = await fetch(API + '/squads/leaderboard');
+    if (!r.ok) return;
+    const { leaderboard } = await safeJson(r);
+    const el = document.getElementById('sq-lb-list');
+    if (!el) return;
+    if (!leaderboard || !leaderboard.length) { el.innerHTML = '<div style="font-size:.76rem;color:var(--mu)">No squads yet — be the first!</div>'; return; }
+    el.innerHTML = leaderboard.map((s, i) => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surf);border:1px solid var(--border);border-radius:10px;margin-bottom:6px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:${i===0?'#FFD700':i===1?'#C0C0C0':i===2?'#CD7F32':'var(--mu)'};min-width:22px">${i+1}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(s.name)}</div>
+          <div style="font-size:.68rem;color:var(--mu)">👥 ${s.member_count || 0} members</div>
+        </div>
+        <div style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;color:var(--or)">⚡ ${s.total_points || 0}</div>
+      </div>`).join('');
+  } catch(e) { /* leaderboard non-critical */ }
 }
 
 function showCreateForm() {
