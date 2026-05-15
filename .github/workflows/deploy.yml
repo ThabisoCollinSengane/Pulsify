@@ -10,6 +10,10 @@ jobs:
   deploy:
     name: Vercel Production Deploy
     runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -17,5 +21,8 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Link project
+        run: npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+
       - name: Deploy
-        run: npx vercel --prod --yes --force --token=${{ secrets.VERCEL_TOKEN }}
+        run: npx vercel deploy --prod --force --yes --token=$VERCEL_TOKEN
