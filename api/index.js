@@ -1306,6 +1306,9 @@ module.exports = async (req, res) => {
       const days = Math.min(Math.max(parseInt(duration_days) || 7, 1), 90);
       const ends_at = new Date(Date.now() + days * 86400000).toISOString();
 
+      // Trusted submitters (or admins) bypass the approval queue
+      const autoApprove = role === 'admin' || !!auth.profile.is_trusted_submitter;
+
       const { data: promo, error } = await sb().from('promotions').insert({
         title, organiser_name: organiser_name || auth.profile.display_name || null,
         venue_name: venue_name || null, venue_city: venue_city || null,
@@ -1316,14 +1319,14 @@ module.exports = async (req, res) => {
         city_targets: Array.isArray(city_targets) ? city_targets : [],
         genre_targets: Array.isArray(genre_targets) ? genre_targets : [],
         placement, priority: 0,
-        is_active: false,  // admin must approve
+        is_active: autoApprove,
         starts_at: new Date().toISOString(), ends_at,
         owner_id: auth.user.id, owner_role: role,
         event_id: event_id || null,
       }).select().single();
 
       if (error) return res.status(400).json({ error: error.message });
-      return res.status(201).json({ promotion: promo });
+      return res.status(201).json({ promotion: promo, auto_approved: autoApprove });
     }
 
     /* ─── GET /promotions/mine ───────────────────────────── */
@@ -1406,6 +1409,34 @@ module.exports = async (req, res) => {
       const { error } = await sb().from('promotions').delete().eq('id', adminPromoMatch[1]);
       if (error) return res.status(400).json({ error: error.message });
       return res.status(200).json({ ok: true });
+    }
+
+    /* ─── GET /admin/trusted-submitters ──────────────────── */
+    if (url === '/admin/trusted-submitters' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const { data, error } = await sb().from('profiles')
+        .select('id, display_name, username, role, is_trusted_submitter, avatar_url')
+        .in('role', ['business','organizer'])
+        .order('is_trusted_submitter', { ascending: false })
+        .order('display_name', { ascending: true })
+        .limit(200);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ submitters: data || [] });
+    }
+
+    /* ─── PATCH /admin/trusted-submitters/:userId ────────── */
+    const trustedMatch = url.match(/^\/admin\/trusted-submitters\/([^/]+)$/);
+    if (trustedMatch && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const { is_trusted_submitter } = req.body || {};
+      const { data, error } = await sb().from('profiles')
+        .update({ is_trusted_submitter: !!is_trusted_submitter })
+        .eq('id', trustedMatch[1])
+        .select('id, is_trusted_submitter').single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ profile: data });
     }
 
     /* ─── POST /report-event | /report-business | /report-post ── */
