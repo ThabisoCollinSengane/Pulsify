@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
 <meta name="theme-color" content="#05080F"/>
 <meta name="build-version" content="v2.2.0-20260514"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
@@ -16,7 +16,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0;--bh:70px}
 html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
-body{padding-bottom:calc(var(--bh)+80px)}
+body{padding-bottom:calc(var(--bh) + env(safe-area-inset-bottom, 0px) + 32px)}
 .tb{position:fixed;top:0;left:0;right:0;height:58px;z-index:800;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:rgba(5,8,15,.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
 .logo{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.06em;display:flex;align-items:center;gap:8px;color:var(--tx)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--or);box-shadow:0 0 12px var(--or);animation:p 2s ease-in-out infinite}
@@ -55,7 +55,7 @@ select.inp option{background:#0D1424}
 .tab{flex-shrink:0;padding:6px 10px;text-align:center;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;color:var(--mu);cursor:pointer;border-radius:10px;transition:all .2s;white-space:nowrap}
 .tab.active{background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff}
 .pane{display:none}.pane.active{display:block}
-.bn{position:fixed;bottom:0;left:0;right:0;height:var(--bh);z-index:800;background:rgba(5,8,15,.97);backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;align-items:stretch}
+.bn{position:fixed;bottom:0;left:0;right:0;height:auto;min-height:var(--bh);padding-bottom:env(safe-area-inset-bottom, 0px);z-index:800;background:rgba(5,8,15,.97);backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;align-items:stretch}
 .bb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:transparent;border:none;cursor:pointer;padding:8px 2px 10px;-webkit-tap-highlight-color:transparent}
 .bb svg{width:22px;height:22px;stroke:var(--mu);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;transition:stroke .2s}
 .bb.active svg{stroke:var(--or)}
@@ -611,6 +611,7 @@ function previewOrgPost() {
 
 function x(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function toast(m, t='') { const el=document.getElementById('toast'); el.textContent=m; el.className='toast '+t+' show'; setTimeout(()=>el.classList.remove('show'),3500); }
+async function safeJson(r) { try { const t = await r.text(); return t ? JSON.parse(t) : {}; } catch(e) { return {}; } }
 
 function showOrgSubBanner(profile) {
   const banner = document.getElementById('org-sub-banner');
@@ -915,7 +916,7 @@ async function initNotifBell() {
   async function refreshDot() {
     try {
       const r = await fetch('/api/notifications/count', { headers: { 'Authorization': 'Bearer ' + tok } });
-      const j = await r.json();
+      const j = await safeJson(r);
       const dot = document.getElementById('sn-dot');
       if (dot) dot.style.display = (j.count > 0) ? 'block' : 'none';
     } catch {}
@@ -936,7 +937,7 @@ async function openSNPanel() {
   list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu);font-size:.8rem">Loading…</div>';
   try {
     const r = await fetch('/api/notifications?limit=30', { headers: { 'Authorization': 'Bearer ' + session.access_token } });
-    const { notifications } = await r.json();
+    const { notifications } = await safeJson(r);
     if (!notifications?.length) { list.innerHTML = '<div style="padding:30px;text-align:center;color:var(--mu)">No notifications yet.</div>'; return; }
     const ICON = { like:'❤️', comment:'💬', follow:'👤', event:'🎟', order:'📦' };
     list.innerHTML = notifications.map(n => `<div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border)"><div style="width:38px;height:38px;border-radius:50%;background:var(--surf2,#121B30);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">${ICON[n.type]||'🔔'}</div><div style="flex:1;min-width:0"><div style="font-size:.82rem;line-height:1.4;color:var(--tx)">${n.message||''}</div><div style="font-size:.68rem;color:var(--mu);margin-top:3px">${new Date(n.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div></div></div>`).join('');
@@ -1060,7 +1061,7 @@ async function _handleOrgQrResult(qrData) {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token },
       body: JSON.stringify({ qr_data: qrData }),
     });
-    const d = await r.json();
+    const d = await safeJson(r);
     if (r.status === 409) {
       res.innerHTML = `<div style="background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.3);border-radius:14px;padding:16px;text-align:center">
         <div style="font-size:2rem;margin-bottom:8px">⚠️</div>
@@ -1168,7 +1169,7 @@ async function submitOrgPromo() {
         city_targets: cityTargets, genre_targets: [],
       }),
     });
-    const json = await r.json();
+    const json = await safeJson(r);
     if (!r.ok) throw new Error(json.error);
     _promoMsg(msg, '✅ Submitted! Admin will review and activate your promotion.', true);
     sel.value = '';
@@ -1187,7 +1188,7 @@ async function loadMyOrgPromos() {
   try {
     const r = await fetch('/api/promotions/mine', { headers: { 'Authorization': 'Bearer ' + _token } });
     if (!r.ok) { el.innerHTML = '<div style="padding:16px 0;text-align:center;color:var(--mu);font-size:.8rem">No promotions yet.</div>'; return; }
-    const { promotions } = await r.json();
+    const { promotions } = await safeJson(r);
     if (!promotions?.length) { el.innerHTML = '<div style="padding:16px 0;text-align:center;color:var(--mu);font-size:.8rem">No promotions yet.</div>'; return; }
     el.innerHTML = promotions.map(p => `
       <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px">
