@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
 <meta name="description" content="Pulsify — Feel the Vibe 🇿🇦 South Africa's live event discovery platform"/>
-<meta name="build-version" content="v2.9.5-20260515-squads-rls-likes-map"/>
+<meta name="build-version" content="v2.9.6-20260515-quicket-all-cities"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
@@ -1362,56 +1362,111 @@ async function loadQuicketEvents(city, genre) {
 }
 
 // Direct browser-side Quicket fetch — bypasses Vercel IP restriction.
-// Silently fails if Quicket blocks CORS (no regression from current state).
+// Fetches all 6 SA cities × 2 pages in parallel. Silently fails if CORS blocked.
 async function loadQuicketDirect(container, city, genre) {
   try {
-    const cities = city === 'kzn' ? ['Durban','Pietermaritzburg','Umhlanga'] :
-                   city === 'jhb' || city === 'johannesburg' ? ['Johannesburg','Sandton','Pretoria'] :
-                   city === 'all' ? ['Durban','Johannesburg'] : [city];
+    const KZN = ['Durban','Pietermaritzburg','Umhlanga'];
+    const JHB = ['Johannesburg','Sandton','Pretoria'];
+    let citiesToFetch;
+    if (!city || city === 'all') citiesToFetch = [...KZN, ...JHB];
+    else if (city === 'kzn')    citiesToFetch = KZN;
+    else if (city === 'jhb' || city === 'johannesburg') citiesToFetch = JHB;
+    else if (city === 'durban') citiesToFetch = ['Durban'];
+    else                         citiesToFetch = [city];
+
+    const QUICKET_KEY = '7f03069e38b5802980c9ca620dd14dff';
     const today = new Date().toISOString().split('T')[0];
-    const params = new URLSearchParams({
-      usertoken: '7f03069e38b5802980c9ca620dd14dff',
-      pagesize: '50', page: '1',
-      location: cities[0], country: 'ZA', startDate: today
-    });
-    if (genre && genre !== 'all' && genre !== 'free') params.append('search', genre);
-    const resp = await fetch('https://api.quicket.co.za/api/events?' + params, {
-      headers: { Accept: 'application/json' }
-    });
-    if (!resp.ok) return;
-    const json = await resp.json();
-    const rows = json?.data || json?.events || json?.results || (Array.isArray(json) ? json : []);
-    if (!rows.length) return;
-    const normalizeQ = (item) => {
-      const id = String(item.id || item.eventId || item.EventId || '');
-      if (!id) return null;
-      const dateRaw = item.startDate || item.start_date || item.EventStartDate || item.StartDate || '';
-      const date_local = dateRaw ? dateRaw.split('T')[0] : '';
-      const price = item.minPrice ?? item.MinPrice ?? item.min_price ?? 0;
-      return {
-        id: 'q-' + id,
-        title: item.name || item.title || item.EventName || item.Name || 'Event',
-        date_local, city: cities[0],
-        venue_name: item.venue?.name || item.VenueName || item.venueName || item.location || '',
-        image_url: item.imageUrl || item.image || item.ImageUrl || item.ImageURL || '',
-        genre: (item.categoryName || item.category || item.CategoryName || 'general').toLowerCase(),
-        is_free: price === 0 || !!(item.isFree || item.IsFree),
-        price_min: price, hype_score: 65,
-        url: item.url || item.eventUrl || `https://www.quicket.co.za/events/${id}`,
-        source: 'quicket',
-      };
+    const GENRE_MAP = {
+      music:'house', concert:'house', amapiano:'amapiano', gqom:'gqom',
+      'hip-hop':'hiphop', hiphop:'hiphop', rap:'hiphop', house:'house',
+      afrobeats:'afrobeats', afrohouse:'afrohouse', rock:'rock', gospel:'gospel',
+      jazz:'jazz', maskandi:'maskandi', kwaito:'kwaito', reggae:'reggae',
+      comedy:'comedy', sport:'sport', festival:'festival', nightlife:'nightlife',
+      theatre:'theatre', outdoor:'outdoor', workshop:'workshop', food:'food',
+      cultural:'cultural', business:'business', fashion:'fashion', wellness:'wellness',
+      art:'art', market:'market', kids:'kids', tech:'tech', film:'film', dance:'dance',
     };
-    const events = rows.map(normalizeQ).filter(Boolean).filter(e => genre !== 'free' || e.is_free);
-    if (!events.length) return;
+
+    const fetchPage = async (fetchCity, page) => {
+      const params = new URLSearchParams({
+        usertoken: QUICKET_KEY, pagesize: '50', page: String(page),
+        location: fetchCity, country: 'ZA', startDate: today,
+      });
+      if (genre && genre !== 'all' && genre !== 'free') params.append('search', genre);
+      const resp = await fetch('https://api.quicket.co.za/api/events?' + params, {
+        headers: { Accept: 'application/json' }
+      });
+      if (!resp.ok) return [];
+      const json = await resp.json();
+      const rows = json?.data || json?.events || json?.results || (Array.isArray(json) ? json : []);
+      return rows.map(item => {
+        const id = String(item.id || item.eventId || item.EventId || '');
+        if (!id) return null;
+        const dateRaw = item.startDate || item.start_date || item.EventStartDate || '';
+        const priceRaw = item.minPrice ?? item.min_price ?? 0;
+        const priceNum = typeof priceRaw === 'number' ? priceRaw : parseFloat(priceRaw) || 0;
+        const catRaw = (item.category || item.categoryName || item.genre || '').toLowerCase().replace(/\s+/g,'');
+        return {
+          id: 'qkt_' + id,
+          name: item.name || item.title || item.EventName || 'Event',
+          date_local: dateRaw ? dateRaw.split('T')[0] : '',
+          venue_city: item.venue?.city || item.city || fetchCity,
+          venue_name: item.venue?.name || item.venueName || item.location || '',
+          venue_lat: parseFloat(item.venue?.latitude || item.latitude || 0) || null,
+          venue_lon: parseFloat(item.venue?.longitude || item.longitude || 0) || null,
+          image_url: item.imageUrl || item.bannerUrl || item.image || '',
+          genre: GENRE_MAP[catRaw] || catRaw || 'other',
+          is_free: priceNum === 0 || !!(item.isFree || item.IsFree),
+          price_min: priceNum,
+          hype_score: 65,
+          organiser_name: item.organiser?.name || item.organiserName || null,
+          external_url: item.url || item.eventUrl || `https://www.quicket.co.za/events/${id}`,
+          source: 'quicket',
+        };
+      }).filter(Boolean);
+    };
+
+    // All cities × 2 pages in parallel
+    const tasks = [];
+    for (const c of citiesToFetch) {
+      for (let p = 1; p <= 2; p++) tasks.push(fetchPage(c, p));
+    }
+    const batches = await Promise.all(tasks);
+
     const existingIds = new Set([...container.querySelectorAll('[data-evid]')].map(el => el.dataset.evid));
-    const fresh = events.filter(e => !existingIds.has(e.id));
-    if (!fresh.length) return;
+    const seen = new Set(existingIds);
+    let events = [];
+    for (const batch of batches) {
+      for (const ev of batch) {
+        if (seen.has(ev.id)) continue;
+        seen.add(ev.id);
+        events.push(ev);
+      }
+    }
+    if (genre === 'free') events = events.filter(e => e.is_free);
+    events.sort((a, b) => {
+      if (a.is_free !== b.is_free) return a.is_free ? -1 : 1;
+      return new Date(a.date_local) - new Date(b.date_local);
+    });
+    if (!events.length) return;
+
+    const freeEvs = events.filter(e => e.is_free);
+    const paidEvs = events.filter(e => !e.is_free);
+    let html = '';
+    if (freeEvs.length) {
+      html += `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--li);padding:16px 0 8px;display:flex;align-items:center;gap:8px">🆓 Free Events Near You</div>`;
+      html += freeEvs.slice(0, 40).map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
+    }
+    if (paidEvs.length) {
+      html += `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);padding:20px 0 8px;display:flex;align-items:center;gap:8px"><img src="https://www.quicket.co.za/favicon.ico" width="14" height="14" style="border-radius:3px" onerror="this.style.display='none'"/>Events from Quicket</div>`;
+      html += paidEvs.slice(0, 80).map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
+    }
+    if (!html) return;
     const section = document.createElement('div');
-    section.innerHTML = `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);padding:20px 0 8px;display:flex;align-items:center;gap:8px"><img src="https://www.quicket.co.za/favicon.ico" width="14" height="14" style="border-radius:3px" onerror="this.style.display='none'"/> Events from Quicket</div>` +
-      fresh.slice(0, 60).map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
+    section.innerHTML = html;
     container.appendChild(section);
-    eventsForMap = [...eventsForMap, ...fresh];
-    console.log('[Quicket Direct]', fresh.length, 'events loaded');
+    eventsForMap = [...eventsForMap, ...events];
+    console.log('[Quicket Direct]', events.length, 'events from', citiesToFetch.length, 'cities');
   } catch(e) {
     console.log('[Quicket Direct] blocked:', e.message);
   }
