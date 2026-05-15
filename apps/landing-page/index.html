@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
 <meta name="description" content="Pulsify — Feel the Vibe 🇿🇦 South Africa's live event discovery platform"/>
-<meta name="build-version" content="v2.9.2-20260515-webgl-check"/>
+<meta name="build-version" content="v2.9.3-20260515-quicket-direct-squads-fix"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
@@ -1332,7 +1332,8 @@ async function loadQuicketEvents(city, genre) {
     const events = json.events || [];
     console.log('[Quicket] Loaded', events.length, 'events. Total from API:', json.total, 'Source:', json.source);
     if (!events.length) {
-      console.warn('[Quicket] No events returned. Server may be rejecting auth or location filter is too narrow. Check Vercel function logs for [Quicket] entries.');
+      // Server IP may be blocked by Quicket — try direct browser fetch instead
+      await loadQuicketDirect(container, city, genre);
       return;
     }
 
@@ -1358,6 +1359,62 @@ async function loadQuicketEvents(city, genre) {
     container.appendChild(section);
     eventsForMap = [...eventsForMap, ...fresh];
   } catch(e) { /* Quicket unavailable — silently skip */ }
+}
+
+// Direct browser-side Quicket fetch — bypasses Vercel IP restriction.
+// Silently fails if Quicket blocks CORS (no regression from current state).
+async function loadQuicketDirect(container, city, genre) {
+  try {
+    const cities = city === 'kzn' ? ['Durban','Pietermaritzburg','Umhlanga'] :
+                   city === 'jhb' || city === 'johannesburg' ? ['Johannesburg','Sandton','Pretoria'] :
+                   city === 'all' ? ['Durban','Johannesburg'] : [city];
+    const today = new Date().toISOString().split('T')[0];
+    const params = new URLSearchParams({
+      usertoken: '7f03069e38b5802980c9ca620dd14dff',
+      pagesize: '50', page: '1',
+      location: cities[0], country: 'ZA', startDate: today
+    });
+    if (genre && genre !== 'all' && genre !== 'free') params.append('search', genre);
+    const resp = await fetch('https://api.quicket.co.za/api/events?' + params, {
+      headers: { Accept: 'application/json' }
+    });
+    if (!resp.ok) return;
+    const json = await resp.json();
+    const rows = json?.data || json?.events || json?.results || (Array.isArray(json) ? json : []);
+    if (!rows.length) return;
+    const normalizeQ = (item) => {
+      const id = String(item.id || item.eventId || item.EventId || '');
+      if (!id) return null;
+      const dateRaw = item.startDate || item.start_date || item.EventStartDate || item.StartDate || '';
+      const date_local = dateRaw ? dateRaw.split('T')[0] : '';
+      const price = item.minPrice ?? item.MinPrice ?? item.min_price ?? 0;
+      return {
+        id: 'q-' + id,
+        title: item.name || item.title || item.EventName || item.Name || 'Event',
+        date_local, city: cities[0],
+        venue_name: item.venue?.name || item.VenueName || item.venueName || item.location || '',
+        image_url: item.imageUrl || item.image || item.ImageUrl || item.ImageURL || '',
+        genre: (item.categoryName || item.category || item.CategoryName || 'general').toLowerCase(),
+        is_free: price === 0 || !!(item.isFree || item.IsFree),
+        price_min: price, hype_score: 65,
+        url: item.url || item.eventUrl || `https://www.quicket.co.za/events/${id}`,
+        source: 'quicket',
+      };
+    };
+    const events = rows.map(normalizeQ).filter(Boolean).filter(e => genre !== 'free' || e.is_free);
+    if (!events.length) return;
+    const existingIds = new Set([...container.querySelectorAll('[data-evid]')].map(el => el.dataset.evid));
+    const fresh = events.filter(e => !existingIds.has(e.id));
+    if (!fresh.length) return;
+    const section = document.createElement('div');
+    section.innerHTML = `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);padding:20px 0 8px;display:flex;align-items:center;gap:8px"><img src="https://www.quicket.co.za/favicon.ico" width="14" height="14" style="border-radius:3px" onerror="this.style.display='none'"/> Events from Quicket</div>` +
+      fresh.slice(0, 60).map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
+    container.appendChild(section);
+    eventsForMap = [...eventsForMap, ...fresh];
+    console.log('[Quicket Direct]', fresh.length, 'events loaded');
+  } catch(e) {
+    console.log('[Quicket Direct] blocked:', e.message);
+  }
 }
 
 function buildCard(ev, idx) {
