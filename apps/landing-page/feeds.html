@@ -215,6 +215,8 @@ function getSB() {
   return _sbClient;
 }
 
+async function safeJson(r) { try { const t = await r.text(); return t ? JSON.parse(t) : {}; } catch(e) { return {}; } }
+
 let _session = null;
 let _profile  = null;
 let _token    = null;
@@ -480,13 +482,13 @@ async function loadComments(postId) {
   if (lEl) lEl.innerHTML = '<div style="padding:10px 14px;font-size:.74rem;color:var(--mu)">Loading comments…</div>';
   try {
     const res  = await fetch('/api/comments?entity_id=' + encodeURIComponent(postId) + '&entity_type=post');
-    const json = await res.json();
+    const json = await safeJson(res);
     const top  = (json.comments || []).map(c => ({ ...c, profile: c.profile || {} }));
     _cmtCache[postId] = top;
     const totalCount = (json.flat || []).length;
     const cEl = document.getElementById('cc-'+postId);
     if (cEl) cEl.textContent = fn(totalCount);
-    if (lEl) lEl.innerHTML = buildCmts(top, postId);
+    if (lEl) lEl.innerHTML = top.length ? buildCmts(top, postId) : '<div style="padding:14px;text-align:center;font-size:.74rem;color:var(--mu)">Be the first to comment</div>';
   } catch(e) {
     if (lEl) lEl.innerHTML = '<div style="padding:10px 14px;font-size:.74rem;color:var(--mu)">Could not load comments</div>';
   }
@@ -550,11 +552,12 @@ async function doComment(postId) {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
       body: JSON.stringify({ entity_id: postId, entity_type: 'post', body: txt, parent_id: reply?.parent_id || undefined }),
     });
-    if (!res.ok) throw new Error('post failed');
+    const json = await safeJson(res);
+    if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
     // Re-sync from server to pick up real id + DB trigger side-effects
     loadComments(postId);
   } catch(e) {
-    showToast('Could not post comment', 'err');
+    showToast('Could not post comment: ' + e.message, 'err');
   }
 }
 

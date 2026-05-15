@@ -9,6 +9,19 @@ const sb = () => createClient(SUPA_URL, SUPA_SVC,
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
+// User-scoped client: passes the caller's JWT so auth.uid() works in RLS.
+// Use this for INSERT/UPDATE/DELETE on tables where RLS depends on auth.uid().
+// Falls back to service-role client if no token (and SVC key may also be missing).
+const sbAs = (token) => {
+  if (!token) return sb();
+  return createClient(SUPA_URL, SUPA_ANON, {
+    global: { headers: { Authorization: 'Bearer ' + token } },
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
+};
+
+const tokenFrom = (req) => (req.headers.authorization || '').replace('Bearer ', '').trim();
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
@@ -675,7 +688,7 @@ module.exports = async (req, res) => {
     // Notification creation is handled by trg_notif_on_comment (DB
     // trigger); do NOT create one here or it will double-fire.
     if (url === '/comments' && req.method === 'POST') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -687,7 +700,7 @@ module.exports = async (req, res) => {
       const insertRow = { user_id: user.id, entity_id, entity_type, body: text };
       if (parent_id) insertRow.parent_id = parent_id;
 
-      const { data: comment, error } = await sb().from('comments')
+      const { data: comment, error } = await sbAs(token).from('comments')
         .insert(insertRow).select().single();
 
       if (error) return res.status(400).json({ error: error.message });
@@ -1565,17 +1578,19 @@ module.exports = async (req, res) => {
 
     // POST /squads — create a squad
     if (url === '/squads' && req.method === 'POST') {
+      const token = tokenFrom(req);
       const auth = await authUser(req);
       if (!auth) return res.status(401).json({ error: 'Unauthorized' });
       const { name, description, is_public = true, template_type = 'general' } = req.body || {};
       if (!name || !name.trim()) return res.status(400).json({ error: 'name is required' });
-      const { data: squad, error } = await sb()
+      const userClient = sbAs(token);
+      const { data: squad, error } = await userClient
         .from('squads')
         .insert({ name: name.trim(), description: description?.trim() || null, creator_id: auth.user.id, is_public, template_type })
         .select('id, name, description, avatar_url, is_public, member_count, total_points, template_type, template_config, created_at')
         .single();
       if (error) return res.status(400).json({ error: error.message });
-      await sb().from('squad_members').insert({ squad_id: squad.id, user_id: auth.user.id, role: 'admin' });
+      await userClient.from('squad_members').insert({ squad_id: squad.id, user_id: auth.user.id, role: 'admin' });
       return res.status(201).json({ squad });
     }
 
@@ -1592,19 +1607,21 @@ module.exports = async (req, res) => {
 
     // POST /squads/checkin — squad check-in awards 20 pts
     if (url === '/squads/checkin' && req.method === 'POST') {
+      const token = tokenFrom(req);
       const auth = await authUser(req);
       if (!auth) return res.status(401).json({ error: 'Unauthorized' });
       const { squad_id, event_id } = req.body || {};
       if (!squad_id) return res.status(400).json({ error: 'squad_id required' });
-      const { data: membership } = await sb()
+      const userClient = sbAs(token);
+      const { data: membership } = await userClient
         .from('squad_members')
         .select('role')
         .eq('squad_id', squad_id)
         .eq('user_id', auth.user.id)
         .single();
       if (!membership) return res.status(403).json({ error: 'Not a squad member' });
-      await sb().from('squad_points').insert({ squad_id, user_id: auth.user.id, activity_type: 'squad_checkin', points: 20, event_id: event_id || null });
-      await sb().from('squad_activity').insert({ squad_id, user_id: auth.user.id, activity_type: 'squad_checkin', description: 'Squad check-in at event', data: event_id ? { event_id } : null });
+      await userClient.from('squad_points').insert({ squad_id, user_id: auth.user.id, activity_type: 'squad_checkin', points: 20, event_id: event_id || null });
+      await userClient.from('squad_activity').insert({ squad_id, user_id: auth.user.id, activity_type: 'squad_checkin', description: 'Squad check-in at event', data: event_id ? { event_id } : null });
       const { data: updated } = await sb().from('squads').select('total_points').eq('id', squad_id).single();
       return res.status(200).json({ ok: true, total_points: updated?.total_points });
     }
@@ -1614,13 +1631,14 @@ module.exports = async (req, res) => {
 
     // POST /squads/:id/join
     if (squadActionMatch && squadActionMatch[2] === 'join' && req.method === 'POST') {
+      const token = tokenFrom(req);
       const auth = await authUser(req);
       if (!auth) return res.status(401).json({ error: 'Unauthorized' });
       const squadId = squadActionMatch[1];
       const { data: squad } = await sb().from('squads').select('id, is_public, member_count').eq('id', squadId).single();
       if (!squad) return res.status(404).json({ error: 'Squad not found' });
       if (!squad.is_public) return res.status(403).json({ error: 'Squad is private' });
-      const { error } = await sb().from('squad_members').insert({ squad_id: squadId, user_id: auth.user.id, role: 'member' });
+      const { error } = await sbAs(token).from('squad_members').insert({ squad_id: squadId, user_id: auth.user.id, role: 'member' });
       if (error) return res.status(400).json({ error: error.message });
       await sb().from('squads').update({ member_count: squad.member_count + 1 }).eq('id', squadId);
       return res.status(200).json({ ok: true });
@@ -1628,12 +1646,13 @@ module.exports = async (req, res) => {
 
     // POST /squads/:id/leave
     if (squadActionMatch && squadActionMatch[2] === 'leave' && req.method === 'POST') {
+      const token = tokenFrom(req);
       const auth = await authUser(req);
       if (!auth) return res.status(401).json({ error: 'Unauthorized' });
       const squadId = squadActionMatch[1];
       const { data: squad } = await sb().from('squads').select('id, member_count, creator_id').eq('id', squadId).single();
       if (!squad) return res.status(404).json({ error: 'Squad not found' });
-      await sb().from('squad_members').delete().eq('squad_id', squadId).eq('user_id', auth.user.id);
+      await sbAs(token).from('squad_members').delete().eq('squad_id', squadId).eq('user_id', auth.user.id);
       const newCount = Math.max(0, squad.member_count - 1);
       if (newCount === 0) {
         await sb().from('squads').delete().eq('id', squadId);
@@ -1649,6 +1668,7 @@ module.exports = async (req, res) => {
 
     // POST /squads/:id/invite — add a follower to squad
     if (squadActionMatch && squadActionMatch[2] === 'invite' && req.method === 'POST') {
+      const token = tokenFrom(req);
       const auth = await authUser(req);
       if (!auth) return res.status(401).json({ error: 'Unauthorized' });
       const squadId = squadActionMatch[1];
@@ -1656,12 +1676,14 @@ module.exports = async (req, res) => {
       if (!inviteeId) return res.status(400).json({ error: 'user_id required' });
       const { data: membership } = await sb().from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
       if (!membership) return res.status(403).json({ error: 'Not a squad member' });
+      // Inviting another user requires service role (RLS only lets users insert their own row).
+      // Falls back to anon if SVC key not set, in which case admin must enable invites manually.
       const { error } = await sb().from('squad_members').insert({ squad_id: squadId, user_id: inviteeId, role: 'member' });
       if (error) return res.status(400).json({ error: error.message });
       const { data: squad } = await sb().from('squads').select('member_count').eq('id', squadId).single();
       await sb().from('squads').update({ member_count: (squad?.member_count || 1) + 1 }).eq('id', squadId);
-      await sb().from('squad_points').insert({ squad_id: squadId, user_id: auth.user.id, activity_type: 'invite', points: 5 });
-      await sb().from('squad_activity').insert({ squad_id: squadId, user_id: auth.user.id, activity_type: 'invite', description: 'Invited a friend', data: { invitee_id: inviteeId } });
+      await sbAs(token).from('squad_points').insert({ squad_id: squadId, user_id: auth.user.id, activity_type: 'invite', points: 5 });
+      await sbAs(token).from('squad_activity').insert({ squad_id: squadId, user_id: auth.user.id, activity_type: 'invite', description: 'Invited a friend', data: { invitee_id: inviteeId } });
       return res.status(200).json({ ok: true });
     }
 
