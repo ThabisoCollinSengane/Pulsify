@@ -1,0 +1,21 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - main
+      - 'claude/**'
+
+jobs:
+  deploy:
+    name: Vercel Production Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Deploy
+        run: npx vercel --prod --yes --force --token=${{ secrets.VERCEL_TOKEN }}
