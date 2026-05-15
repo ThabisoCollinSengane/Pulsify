@@ -2876,7 +2876,7 @@ async function toggleFollowOverlay(targetId) {
 /* ══════════════════════════════════════════════════
    TICKET CONFIRMATION MODAL
 ══════════════════════════════════════════════════ */
-function showTicketConfirm(booking) {
+async function showTicketConfirm(booking) {
   document.getElementById('tc-event').textContent = booking.event_name || '';
   document.getElementById('tc-ref').textContent   = booking.booking_ref || '';
   document.getElementById('tc-name').textContent  = booking.buyer_name  || '';
@@ -2885,7 +2885,21 @@ function showTicketConfirm(booking) {
   const qrData = encodeURIComponent(booking.qr_data || booking.booking_ref || 'PULSIFY');
   document.getElementById('tc-qr').src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${qrData}&bgcolor=090D1A&color=FF5C00&margin=2`;
   document.getElementById('ticket-confirm-modal').style.display = 'flex';
-  if (_mySquads.length) showSquadCheckinBar(booking.event_id || '');
+  const evId = booking.event_id || '';
+  if (_mySquads.length) {
+    showSquadCheckinBar(evId);
+  } else if (currentUser) {
+    // Squads not yet loaded — fetch silently so check-in bar can appear
+    try {
+      const sb2 = getSB();
+      const session = sb2 ? (await sb2.auth.getSession()).data?.session : null;
+      if (session) {
+        const r = await fetch(API + '/squads', { headers: { Authorization: 'Bearer ' + session.access_token } }).catch(() => null);
+        if (r && r.ok) { const d = await safeJson(r); _mySquads = d.squads || []; }
+      }
+    } catch(e) {}
+    if (_mySquads.length) showSquadCheckinBar(evId);
+  }
 }
 function closeTicketConfirm() { document.getElementById('ticket-confirm-modal').style.display = 'none'; }
 
