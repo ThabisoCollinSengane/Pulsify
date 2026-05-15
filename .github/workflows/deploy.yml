@@ -21,8 +21,12 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Link project
-        run: npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+      - name: Check secrets
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then echo "ERROR: VERCEL_TOKEN secret is not set" && exit 1; fi
+          if [ -z "$VERCEL_ORG_ID" ]; then echo "ERROR: VERCEL_ORG_ID secret is not set" && exit 1; fi
+          if [ -z "$VERCEL_PROJECT_ID" ]; then echo "ERROR: VERCEL_PROJECT_ID secret is not set" && exit 1; fi
+          echo "All secrets present"
 
       - name: Deploy
-        run: npx vercel deploy --prod --force --yes --token=$VERCEL_TOKEN
+        run: npx vercel --prod --yes --force --token=$VERCEL_TOKEN
