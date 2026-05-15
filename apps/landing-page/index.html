@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
 <meta name="description" content="Pulsify — Feel the Vibe 🇿🇦 South Africa's live event discovery platform"/>
-<meta name="build-version" content="v2.9.1-20260515-debug-map-quicket"/>
+<meta name="build-version" content="v2.9.2-20260515-webgl-check"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
@@ -1857,25 +1857,46 @@ function handleDiscSearch(val) { /* future: search businesses */ }
 /* ══════════════════════════════════════════════════
    MAP
 ══════════════════════════════════════════════════ */
+function _showMapErr(msg) {
+  const mc = document.getElementById('mc'); if (!mc) return;
+  hideMapSplash();
+  if (document.getElementById('map-err-msg')) return;
+  const d = document.createElement('div');
+  d.id = 'map-err-msg';
+  d.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;background:#05080F;z-index:10';
+  d.innerHTML = `<div style="font-size:2.2rem;margin-bottom:14px">🗺️</div>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;margin-bottom:8px">Map couldn't load</div>
+    <div style="font-size:.7rem;color:var(--mu);max-width:280px;line-height:1.5">${msg}</div>`;
+  mc.appendChild(d);
+}
 function initMap() {
   if (mapInited) return; mapInited = true;
   if (!window.mapboxgl) {
-    document.getElementById('mc').innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Map unavailable</div>';
+    _showMapErr('Map library failed to load. Check your internet connection.');
+    return;
+  }
+  if (!mapboxgl.supported()) {
+    _showMapErr('Your browser does not support WebGL, which is required for the map. Try Chrome or Firefox.');
     return;
   }
   mapboxgl.accessToken = MAPBOX_TOKEN;
-  mapObj = new mapboxgl.Map({
-    container: 'mc',
-    style: 'mapbox://styles/mapbox/navigation-night-v1',
-    center: [30.9753, -29.8587], // Durban, KZN
-    zoom: 10,
-    minZoom: 5,
-    maxZoom: 18,
-    dragRotate: false,
-    pitchWithRotate: false,
-    touchPitch: false,
-    maxBounds: [[14, -36], [34, -20]]
-  });
+  try {
+    mapObj = new mapboxgl.Map({
+      container: 'mc',
+      style: 'mapbox://styles/mapbox/navigation-night-v1',
+      center: [30.9753, -29.8587],
+      zoom: 10,
+      minZoom: 5,
+      maxZoom: 18,
+      dragRotate: false,
+      pitchWithRotate: false,
+      touchPitch: false,
+      maxBounds: [[14, -36], [34, -20]]
+    });
+  } catch(e) {
+    _showMapErr('Map init failed: ' + (e.message || e));
+    return;
+  }
   mapObj.touchZoomRotate.disableRotation();
   
   // Add controls
@@ -1911,38 +1932,18 @@ function initMap() {
     const errMsg = e.error?.message || e.error?.toString() || 'Unknown error';
     const errStatus = e.error?.status;
     console.error('[Map error]', errStatus, errMsg, e);
-    hideMapSplash();
-    const mc = document.getElementById('mc');
-    if (mc && !document.getElementById('map-err-msg')) {
-      const d = document.createElement('div');
-      d.id = 'map-err-msg';
-      let reason = 'Check your internet connection and try again';
-      if (errStatus === 401 || /401|unauthorized/i.test(errMsg)) reason = 'Mapbox token is invalid or expired. Get a new one at mapbox.com/account/access-tokens';
-      else if (errStatus === 403 || /403|forbidden/i.test(errMsg)) reason = 'Mapbox token is restricted to a different domain. Add ' + location.hostname + ' at mapbox.com/account/access-tokens';
-      else if (/load.*style|style.*load/i.test(errMsg)) reason = 'Map style failed to load. The Mapbox token may be invalid.';
-      else reason = 'Map error: ' + errMsg.slice(0, 120);
-      d.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;background:#05080F;z-index:10;pointer-events:none';
-      d.innerHTML = `<div style="font-size:2.2rem;margin-bottom:14px">🗺️</div>
-        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;margin-bottom:8px">Map couldn't load</div>
-        <div style="font-size:.7rem;color:var(--mu);max-width:280px;line-height:1.5">${reason}</div>`;
-      mc.appendChild(d);
-    }
+    let reason;
+    if (errStatus === 401 || /401|unauthorized/i.test(errMsg)) reason = 'Mapbox token is invalid or expired. Get a new one at mapbox.com/account/access-tokens';
+    else if (errStatus === 403 || /403|forbidden/i.test(errMsg)) reason = 'Mapbox token is restricted to a different domain. Add ' + location.hostname + ' at mapbox.com/account/access-tokens';
+    else if (/load.*style|style.*load/i.test(errMsg)) reason = 'Map style failed to load. The Mapbox token may be invalid.';
+    else reason = 'Map error: ' + errMsg.slice(0, 120);
+    _showMapErr(reason);
   });
 
   // Fallback: if load event hasn't fired within 12s, assume failure
   const _mapTimeout = setTimeout(() => {
     if (!mapObj.loaded()) {
-      hideMapSplash();
-      const mc = document.getElementById('mc');
-      if (mc && !document.getElementById('map-err-msg')) {
-        const d = document.createElement('div');
-        d.id = 'map-err-msg';
-        d.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;background:#05080F;z-index:10;pointer-events:none';
-        d.innerHTML = `<div style="font-size:2.2rem;margin-bottom:14px">🗺️</div>
-          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;margin-bottom:8px">Map timed out</div>
-          <div style="font-size:.75rem;color:var(--mu);max-width:240px;line-height:1.5">Could not load map tiles. Check your Mapbox token at mapbox.com/account/access-tokens and ensure your domain is allowed.</div>`;
-        mc.appendChild(d);
-      }
+      _showMapErr('Map timed out. Could not load tiles — check your internet connection.');
     }
   }, 12000);
   mapObj.once('load', () => clearTimeout(_mapTimeout));
