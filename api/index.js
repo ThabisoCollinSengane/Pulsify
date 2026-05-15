@@ -540,18 +540,20 @@ module.exports = async (req, res) => {
 
     /* ─── POST /reactions ────────────────────────────────── */
     if (url === '/reactions' && req.method === 'POST') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
       const { entity_type, entity_id, type = 'like' } = req.body || {};
       if (!entity_type || !entity_id) return res.status(400).json({ error: 'entity_type and entity_id required' });
 
-      const { data: existing } = await sb().from('reactions')
+      const userClient = sbAs(token);
+
+      const { data: existing } = await userClient.from('reactions')
         .select('id').eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type).maybeSingle();
 
       if (existing) {
-        await sb().from('reactions').delete().eq('id', existing.id);
+        await userClient.from('reactions').delete().eq('id', existing.id);
         if (entity_type === 'post') {
           const { data: p } = await sb().from('posts').select('likes_count').eq('id', entity_id).single();
           await sb().from('posts').update({ likes_count: Math.max(0, (p?.likes_count || 1) - 1) }).eq('id', entity_id);
@@ -559,7 +561,8 @@ module.exports = async (req, res) => {
         return res.status(200).json({ liked: false });
       }
 
-      await sb().from('reactions').insert({ user_id: user.id, entity_type, entity_id, type });
+      const { error: insErr } = await userClient.from('reactions').insert({ user_id: user.id, entity_type, entity_id, type });
+      if (insErr) return res.status(400).json({ error: insErr.message });
 
       if (entity_type === 'post') {
         const { data: p } = await sb().from('posts').select('user_id,likes_count').eq('id', entity_id).single();
@@ -582,19 +585,21 @@ module.exports = async (req, res) => {
 
     /* ─── DELETE /reactions ──────────────────────────────── */
     if (url === '/reactions' && req.method === 'DELETE') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
       const { entity_id, type = 'like' } = req.body || {};
       if (!entity_id) return res.status(400).json({ error: 'entity_id required' });
 
-      const { data: existing } = await sb().from('reactions')
+      const userClient = sbAs(token);
+
+      const { data: existing } = await userClient.from('reactions')
         .select('id,entity_type').eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type).maybeSingle();
 
       if (!existing) return res.status(200).json({ liked: false });
 
-      await sb().from('reactions').delete().eq('id', existing.id);
+      await userClient.from('reactions').delete().eq('id', existing.id);
       if (existing.entity_type === 'post') {
         const { data: p } = await sb().from('posts').select('likes_count').eq('id', entity_id).single();
         await sb().from('posts').update({ likes_count: Math.max(0, (p?.likes_count || 1) - 1) }).eq('id', entity_id);
