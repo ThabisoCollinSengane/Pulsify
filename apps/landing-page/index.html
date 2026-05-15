@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
 <meta name="description" content="Pulsify — Feel the Vibe 🇿🇦 South Africa's live event discovery platform"/>
-<meta name="build-version" content="v2.9.4-20260515-map-heat-squads-rls"/>
+<meta name="build-version" content="v2.9.5-20260515-squads-rls-likes-map"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
@@ -1940,7 +1940,7 @@ function initMap() {
   try {
     mapObj = new mapboxgl.Map({
       container: 'mc',
-      style: 'mapbox://styles/mapbox/navigation-night-v1',
+      style: 'mapbox://styles/mapbox/dark-v11',
       center: [30.9753, -29.8587],
       zoom: 10,
       minZoom: 5,
@@ -2578,7 +2578,16 @@ async function toggleLike(btn, entityId, entityType = 'event') {
   ico.textContent = liked ? '❤️' : '🤍';
   cntEl.textContent = fn(liked ? currentNum + 1 : Math.max(0, currentNum - 1));
 
-  const token = localStorage.getItem('p_token') || '';
+  // Always use the live session token — localStorage p_token goes stale when
+  // Supabase silently refreshes the access token every ~1 hour.
+  let token = '';
+  try {
+    const sb2 = getSB();
+    const { data: { session } } = await sb2.auth.getSession();
+    token = session?.access_token || localStorage.getItem('p_token') || '';
+    if (session?.access_token) localStorage.setItem('p_token', session.access_token);
+  } catch(_) { token = localStorage.getItem('p_token') || ''; }
+
   try {
     const res = await fetch('/api/reactions', {
       method: liked ? 'POST' : 'DELETE',
@@ -3343,6 +3352,9 @@ async function initSupabaseSession() {
   } catch(e) { console.warn('initSupabaseSession:', e.message); }
 
   sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'TOKEN_REFRESHED' && session) {
+      localStorage.setItem('p_token', session.access_token);
+    }
     if (event === 'SIGNED_IN' && session) {
       try {
         localStorage.setItem('p_token', session.access_token);
