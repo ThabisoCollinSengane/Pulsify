@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
 <meta name="description" content="Pulsify — Feel the Vibe 🇿🇦 South Africa's live event discovery platform"/>
-<meta name="build-version" content="v2.9.3-20260515-quicket-direct-squads-fix"/>
+<meta name="build-version" content="v2.9.4-20260515-map-heat-squads-rls"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
@@ -1988,6 +1988,9 @@ function initMap() {
   mapObj.on('error', (e) => {
     const errMsg = e.error?.message || e.error?.toString() || 'Unknown error';
     const errStatus = e.error?.status;
+    // Ignore non-fatal layer/source manipulation errors — these come from
+    // removeLayer/addLayer calls on layers that may not exist yet.
+    if (/does not exist in the map'?s style|already.*exist|no.*layer|no.*source/i.test(errMsg)) return;
     console.error('[Map error]', errStatus, errMsg, e);
     let reason;
     if (errStatus === 401 || /401|unauthorized/i.test(errMsg)) reason = 'Mapbox token is invalid or expired. Get a new one at mapbox.com/account/access-tokens';
@@ -2218,7 +2221,8 @@ function addHeatmap() {
   
   if (!features.length) return;
   
-  try { mapObj.removeLayer('heat'); mapObj.removeSource('heat'); } catch(e) {}
+  if (mapObj.getLayer('heat'))  mapObj.removeLayer('heat');
+  if (mapObj.getSource('heat')) mapObj.removeSource('heat');
   
   mapObj.addSource('heat', { 
     type: 'geojson', 
