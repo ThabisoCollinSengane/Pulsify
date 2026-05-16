@@ -1,5 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
+const { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail } = require('./email');
 
 const SUPA_URL  = process.env.SUPABASE_URL  || 'https://cjzewfvtdayjgjdpdmln.supabase.co';
 const SUPA_ANON = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
@@ -467,13 +468,18 @@ module.exports = async (req, res) => {
       const { data: existing } = await sb().from('profiles').select('*').eq('id', user.id).single();
       if (existing) return res.status(200).json({ profile: existing });
 
+      const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Pulsify User';
       const { data: created } = await sb().from('profiles').insert({
         id:           user.id,
+        email:        user.email,
         username:     `user_${user.id.slice(0, 8)}`,
-        display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Pulsify User',
+        display_name: displayName,
         avatar_url:   user.user_metadata?.avatar_url || null,
         city:         'Durban',
       }).select().single();
+
+      // Non-blocking welcome email
+      sendWelcomeEmail(user.email, displayName).catch(e => console.error('[email/welcome]', e.message));
 
       return res.status(200).json({ profile: created, created: true });
     }
@@ -1041,19 +1047,23 @@ module.exports = async (req, res) => {
       if (profileError && profileError.code !== 'PGRST116') throw profileError;
 
       if (!profile) {
+        const bizName = user.user_metadata?.full_name || user.email.split('@')[0];
         const { data: newProfile, error: createError } = await supabase.from('profiles').insert({
           id: user.id, email: user.email,
-          display_name: user.user_metadata?.full_name || user.email.split('@')[0],
+          display_name: bizName,
           avatar_url: user.user_metadata?.avatar_url,
           role: 'business'
         }).select().single();
         if (createError) throw createError;
         profile = newProfile;
-        
+
         const { data: bizCheck } = await supabase.from('businesses').select('id').eq('id', profile.id).maybeSingle();
         if (!bizCheck) {
-          await supabase.from('businesses').insert({ id: profile.id, owner_id: profile.id, name: profile.display_name, category: 'other', is_active: true });
+          await supabase.from('businesses').insert({ id: profile.id, owner_id: profile.id, name: bizName, category: 'other', is_active: true });
         }
+
+        // Non-blocking welcome email for new business accounts
+        sendWelcomeEmail(user.email, bizName).catch(e => console.error('[email/welcome-biz]', e.message));
       } else if (!['business', 'admin', 'organizer'].includes(profile.role)) {
         const { data: updatedProfile, error: updateError } = await supabase.from('profiles').update({ role: 'business' }).eq('id', user.id).select().single();
         if (updateError) throw updateError;
@@ -1339,6 +1349,18 @@ module.exports = async (req, res) => {
         read:              false,
       });
       await logAdminAction(auth.user.id, adminName, action === 'approve' ? 'verif_approve' : 'verif_reject', targetId, data?.display_name || targetId, { notes });
+
+      // Non-blocking verification result email
+      const targetEmail = data?.email;
+      const targetName  = data?.display_name;
+      if (targetEmail) {
+        if (action === 'approve') {
+          sendVerifApprovedEmail(targetEmail, targetName).catch(e => console.error('[email/verif]', e.message));
+        } else {
+          sendVerifRejectedEmail(targetEmail, targetName, notes).catch(e => console.error('[email/verif]', e.message));
+        }
+      }
+
       return res.status(200).json({ success: true, profile: data });
     }
 
