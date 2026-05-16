@@ -329,6 +329,8 @@ async function checkAuth() {
 }
 checkAuth();
 
+async function safeJson(r) { try { const t = await r.text(); return t ? JSON.parse(t) : {}; } catch(e) { return {}; } }
+
 function authHeaders() {
   const t = getToken();
   return t ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` }
@@ -396,7 +398,7 @@ async function loadLeads() {
       document.getElementById('leads-container').innerHTML = `<div class="loading">API ${r.status}: ${errText}</div>`;
       return;
     }
-    const { leads, total, stats } = await r.json();
+    const { leads, total, stats } = await safeJson(r);
     updateStats(stats || { total: 0, new: 0, contacted: 0, converted: 0, ignored: 0 });
     renderTable(leads || []);
     renderPagination(total || 0, limit);

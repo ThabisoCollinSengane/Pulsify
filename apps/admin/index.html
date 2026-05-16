@@ -585,6 +585,8 @@ let editId    = null;
 let currentTab = 'users';
 let adminToken = null;
 
+async function safeJson(r) { try { const t = await r.text(); return t ? JSON.parse(t) : {}; } catch(e) { return {}; } }
+
 /* ── Auth ── */
 async function adminLogin() {
   const email = document.getElementById('admin-email').value.trim();
@@ -629,9 +631,24 @@ function showAuthMsg(m, t) { const el=document.getElementById('auth-msg'); el.te
 async function checkSession() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return;
-  const { data: prof, error: profErr } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
-  // If role check is blocked by RLS, allow through; if role is explicitly non-admin, reject
-  if (!profErr && prof?.role && prof.role !== 'admin') return;
+  const { data: prof, error: profErr } = await sb.from('profiles').select('role,display_name').eq('id', session.user.id).single();
+  // If a session exists and we can see role !== admin, surface the reason
+  // instead of silently leaving the user staring at the login form.
+  if (!profErr && prof?.role && prof.role !== 'admin') {
+    showAuthMsg(`Signed in as ${session.user.email} but role is "${prof.role}". Admin access required — contact support to be promoted.`, 'err');
+    // Show a one-click "Sign out and use a different account" button
+    const gate = document.getElementById('auth-gate');
+    if (gate && !document.getElementById('admin-switch-btn')) {
+      const btn = document.createElement('button');
+      btn.id = 'admin-switch-btn';
+      btn.textContent = 'Sign out and use a different account';
+      btn.className = 'btn-sec';
+      btn.style.cssText = 'width:100%;margin-top:10px';
+      btn.onclick = async () => { await sb.auth.signOut(); location.reload(); };
+      gate.appendChild(btn);
+    }
+    return;
+  }
   adminToken = session.access_token;
   showAdminUI();
 }
@@ -674,7 +691,7 @@ async function loadVerifications() {
   document.getElementById('verif-list').innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div>';
   try {
     const r = await fetch('/api/admin/verifications', { headers: { Authorization: 'Bearer ' + adminToken } });
-    const json = await r.json();
+    const json = await safeJson(r);
     if (!r.ok) { showVerifMsg(json.error || 'Failed to load', 'err'); return; }
     ALL_VERIF = json.verifications || [];
     renderVerifList();
@@ -732,7 +749,7 @@ async function reviewVerif(userId, action) {
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
       body: JSON.stringify({ action }),
     });
-    const json = await r.json();
+    const json = await safeJson(r);
     if (!r.ok) { showVerifMsg(json.error || 'Failed', 'err'); return; }
     showVerifMsg(`✅ Account ${action === 'approve' ? 'approved and verified' : 'rejected'} successfully.`, 'ok');
     loadVerifications();
@@ -877,7 +894,7 @@ async function geocodeSelected() {
       `https://nominatim.openstreetmap.org/search?` + new URLSearchParams({ q: query, format: 'json', limit: 1, countrycodes: 'za' }),
       { headers: { 'User-Agent': 'Pulsify/2.0 Admin' } }
     );
-    const results = await r.json();
+    const results = await safeJson(r);
     if (!results.length) { appendLog('No results found. Try a more specific address.', 'err'); return; }
 
     const lat = parseFloat(results[0].lat);
@@ -961,7 +978,7 @@ async function runBulkGeocode() {
         `https://nominatim.openstreetmap.org/search?` + new URLSearchParams({ q: query, format: 'json', limit: 1, countrycodes: 'za' }),
         { headers: { 'User-Agent': 'Pulsify/2.0 Admin' } }
       );
-      const results = await r.json();
+      const results = await safeJson(r);
       if (!results.length) { failed++; continue; }
       const lat = parseFloat(results[0].lat);
       const lon = parseFloat(results[0].lon);
@@ -992,7 +1009,7 @@ async function loadUsers() {
   document.getElementById('users-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>';
   try {
     const r = await fetch('/api/admin/users', { headers: { Authorization: 'Bearer ' + adminToken } });
-    const json = await r.json();
+    const json = await safeJson(r);
     if (!r.ok) { showUserMsg('Failed to load: ' + (json.error || r.statusText), 'err'); return; }
     ALL_USERS = json.users || [];
     updateUserStats();
@@ -1103,7 +1120,7 @@ async function toggleSuspend(userId, suspend) {
     });
     
     if (!res.ok) {
-      const err = await res.json();
+      const err = await safeJson(res);
       throw new Error(err.error || 'Failed to update user');
     }
     
@@ -1145,11 +1162,11 @@ async function grantTrial(userId, months) {
     });
     
     if (!res.ok) {
-      const err = await res.json();
+      const err = await safeJson(res);
       throw new Error(err.error || 'Failed to grant trial');
     }
     
-    const { trial_expires_at } = await res.json();
+    const { trial_expires_at } = await safeJson(res);
     const idx = ALL_USERS.findIndex(u => u.id === userId);
     if (idx > -1) { ALL_USERS[idx].trial_expires_at = trial_expires_at; ALL_USERS[idx].subscription_type = 'trial'; }
     updateUserStats();
@@ -1171,7 +1188,7 @@ async function setSubscription(userId, type) {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ subscription_type: type }),
     });
-    if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Failed'); }
+    if (!res.ok) { const e = await safeJson(res); throw new Error(e.error || 'Failed'); }
     const idx = ALL_USERS.findIndex(u => u.id === userId);
     if (idx > -1) {
       ALL_USERS[idx].subscription_type = type;
@@ -1212,7 +1229,7 @@ async function changeRole(userId, role) {
     });
     
     if (!res.ok) {
-      const err = await res.json();
+      const err = await safeJson(res);
       throw new Error(err.error || 'Failed to change role');
     }
     
@@ -1240,7 +1257,7 @@ async function loadLeads(page = 1) {
   const params   = new URLSearchParams({ page, limit: 20, search, status, source });
   try {
     const r    = await fetch(`/api/leads?${params}`, { headers: { Authorization: 'Bearer ' + adminToken } });
-    const json = await r.json();
+    const json = await safeJson(r);
     if (!r.ok) { showLeadsMsg(json.error || 'Failed to load leads', 'err'); return; }
     renderLeadsTable(json.leads || []);
     renderLeadsPagination(json.page, json.has_next);
@@ -1301,7 +1318,7 @@ async function advanceLead(id, newStatus) {
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
       body: JSON.stringify({ status: newStatus }),
     });
-    if (!r.ok) { const j = await r.json(); showLeadsMsg(j.error || 'Failed', 'err'); return; }
+    if (!r.ok) { const j = await safeJson(r); showLeadsMsg(j.error || 'Failed', 'err'); return; }
     loadLeads(leadsCurrentPage);
   } catch(e) { showLeadsMsg('Error: ' + e.message, 'err'); }
 }
@@ -1318,7 +1335,7 @@ async function loadPendingEvents() {
   const filter = document.getElementById('evt-filter')?.value || 'pending';
   try {
     const r = await fetch(`/api/admin/events?filter=${filter}`, { headers: { Authorization: 'Bearer ' + adminToken } });
-    const json = await r.json();
+    const json = await safeJson(r);
     if (!r.ok) { showEvtMsg(json.error || 'Failed to load events', 'err'); return; }
     ALL_EVENTS = json.events || [];
     renderEventsList();
@@ -1360,7 +1377,7 @@ async function reviewEvent(eventId, approve) {
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
       body: JSON.stringify({ approved: approve }),
     });
-    const json = await r.json();
+    const json = await safeJson(r);
     if (!r.ok) { showEvtMsg(json.error || 'Failed', 'err'); return; }
     showEvtMsg(`✅ Event ${approve ? 'approved' : 'rejected'} successfully.`, 'ok');
     loadPendingEvents();
@@ -1377,7 +1394,7 @@ async function loadBanners() {
   el.innerHTML = '<div style="color:var(--mu);padding:20px 0">Loading…</div>';
   try {
     const r = await fetch('/api/admin/banners', { headers: { Authorization: 'Bearer ' + adminToken } });
-    const { banners, error } = await r.json();
+    const { banners, error } = await safeJson(r);
     if (!r.ok) { el.innerHTML = `<div style="color:var(--err)">${esc(error)}</div>`; return; }
     if (!banners.length) { el.innerHTML = '<div style="color:var(--mu);padding:20px 0">No banners yet.</div>'; return; }
     el.innerHTML = banners.map(b => {
@@ -1420,7 +1437,7 @@ async function createBanner() {
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
       body: JSON.stringify({ title, subtitle: subtitle || null, target_url: target_url || null, target_type, bg_color, image_url: image_url || null, expires_at }),
     });
-    const { banner, error } = await r.json();
+    const { banner, error } = await safeJson(r);
     if (!r.ok) { showBanMsg(error, 'err'); return; }
     showBanMsg('Banner created!', 'ok');
     ['bn-title','bn-subtitle','bn-url','bn-image','bn-expires'].forEach(id => document.getElementById(id).value = '');
@@ -1485,7 +1502,7 @@ async function sendAdminNotification() {
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
       body: JSON.stringify({ title, body, url: targetUrl, target }),
     });
-    const d = await r.json();
+    const d = await safeJson(r);
     if (!r.ok) return showNotifMsg(d.error || 'Failed to send', 'err');
     showNotifMsg(`✅ Sent to ${d.notif_sent} user${d.notif_sent !== 1 ? 's' : ''}${d.push_sent ? ` · ${d.push_sent} push delivered` : ''}.`, 'ok');
     document.getElementById('notif-title').value = '';
@@ -1559,7 +1576,7 @@ async function loadReports() {
   const type   = document.getElementById('report-type-filter')?.value || 'all';
   try {
     const r = await fetch(`/api/admin/reports?status=${status}&type=${type}`, { headers: { Authorization: 'Bearer ' + adminToken } });
-    const json = await r.json();
+    const json = await safeJson(r);
     if (!r.ok) { el.innerHTML = `<div style="padding:20px;color:var(--pk)">${escHtml(json.error)}</div>`; return; }
     const reports = json.reports || [];
     if (!reports.length) { el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">No reports found.</div>'; return; }
@@ -1601,7 +1618,7 @@ async function updateReport(type, id, status) {
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
       body: JSON.stringify({ status }),
     });
-    if (!r.ok) throw new Error((await r.json()).error);
+    if (!r.ok) throw new Error((await safeJson(r)).error);
     loadReports();
   } catch(e) {
     const msg = document.getElementById('msg-reports');
@@ -1627,7 +1644,7 @@ async function loadAdminPromos() {
   const filter = document.getElementById('promo-admin-filter')?.value || 'pending';
   try {
     const r = await fetch(`/api/admin/promotions?status=${filter}`, { headers: { Authorization: 'Bearer ' + adminToken } });
-    const json = await r.json();
+    const json = await safeJson(r);
     if (!r.ok) { el.innerHTML = `<div style="padding:20px;color:var(--pk)">${escHtml(json.error)}</div>`; return; }
     const promos = json.promotions || [];
 
@@ -1705,7 +1722,7 @@ async function _patchAdminPromo(id, body) {
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
       body: JSON.stringify(body),
     });
-    if (!r.ok) throw new Error((await r.json()).error);
+    if (!r.ok) throw new Error((await safeJson(r)).error);
     loadAdminPromos();
   } catch(e) {
     const msg = document.getElementById('msg-promotions');
@@ -1716,7 +1733,7 @@ async function deleteAdminPromo(id) {
   if (!confirm('Delete this promotion permanently?')) return;
   try {
     const r = await fetch(`/api/admin/promotions/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + adminToken } });
-    if (!r.ok) throw new Error((await r.json()).error);
+    if (!r.ok) throw new Error((await safeJson(r)).error);
     loadAdminPromos();
   } catch(e) {
     const msg = document.getElementById('msg-promotions');

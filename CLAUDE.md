@@ -79,28 +79,44 @@ For multi-step tasks, state a brief plan:
 - profiles.id = Supabase Auth user ID
 
 ### Deploy command
-export VT=$(grep VERCEL_TOKEN /workspaces/Pulsify/.env | cut -d= -f2)
-npx vercel --prod --yes --token=$VT
+npx vercel --prod --yes --force --token=<VT>
+
+**CRITICAL — always use `--force`.** Without it, Vercel's edge cache can serve the old CDN response for `/` even after a successful deploy. `--force` bypasses the cache and guarantees the new bundle is served immediately.
+
+### Deployment gotcha — root index.html shadows the `/` rewrite
+Vercel serves static files with higher priority than `rewrites`. If any `index.html` exists at the repo root, it will be uploaded by the CLI and served for `/`, completely bypassing the `/ → apps/landing-page/index.html` rewrite in `vercel.json`. This is why `.vercelignore` excludes `/index.html`. **Never create or leave an `index.html` at the repo root.**
+
+Diagnosis: if `/diagnose` shows the new build version but `/` still shows old code, a stale static file is being served. Check `.vercelignore` and run with `--force`.
 
 ---
 
-## 6. Workflow with Claude (MCP ↔ Codespaces)
+## 6. Workflow with Claude (MCP ↔ GitHub Actions)
 
-The user works in **GitHub Codespaces** (mobile, browser).
-Claude works in an **MCP environment** with the repo mounted but cannot reach the user's Codespaces directly. Sync happens through Git.
+Claude works in an **MCP environment** with the repo mounted. All deploys happen automatically via GitHub Actions — no Codespaces or terminal required.
 
 ### How edits flow
-1. Claude edits files directly in the MCP repo using Read/Edit/Write — no inline `python3 -c` or `sed` scripts that the user has to paste.
+1. Claude edits files directly in the MCP repo using Read/Edit/Write.
 2. Claude commits + pushes to the assigned branch (e.g. `claude/fix-...`).
-3. User runs **one** command in Codespaces:
-   ```
-   git pull origin <branch>
-   ```
-4. User deploys with the Deploy command above when ready.
+3. GitHub Actions runs `.github/workflows/deploy.yml` automatically and deploys to Vercel production.
+4. Claude can merge the PR via GitHub MCP tools when the work is complete.
+
+### GitHub Actions deploy workflow
+- Triggers on push to `main` or any `claude/**` branch.
+- Requires 3 repository secrets (already configured):
+  - `VERCEL_TOKEN` — authentication token
+  - `VERCEL_ORG_ID` — Vercel team/org ID
+  - `VERCEL_PROJECT_ID` — Vercel project ID
+- Uses `npx vercel --prod --yes --force` (same `--force` flag as manual deploys).
+- Workflow file: `.github/workflows/deploy.yml`
+
+### Manual deploy (fallback if Actions unavailable)
+```
+npx vercel --prod --yes --force --token=<VT>
+```
 
 ### Rules for this workflow
-- **Prefer file edits over scripts.** Don't send the user multi-line Python/sed snippets to run manually — they're fragile on mobile and break on quoting. Edit the file, push, let them pull.
-- **One command at a time** when the user is on mobile. Number commands (Command 1, Command 2) and wait for output before sending the next.
+- **Prefer file edits over scripts.** Edit the file, push — Actions handles the rest.
 - **No broad regex replacements** on `index.html` (Hard rule #6 above).
 - **Always read before editing.** Check the actual file state — past sessions may have left partial changes.
-- If git push fails from MCP, fall back to: write the change, then send the user the exact `git pull` command — never ask them to recreate the edit by hand.
+- **Claude can merge PRs** using the GitHub MCP tools (`mcp__github__merge_pull_request`). Do this when CI is green and work is complete.
+- Subscribe to PR activity with `mcp__github__subscribe_pr_activity` to watch CI and auto-fix failures.

@@ -9,6 +9,19 @@ const sb = () => createClient(SUPA_URL, SUPA_SVC,
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
+// User-scoped client: passes the caller's JWT so auth.uid() works in RLS.
+// Use this for INSERT/UPDATE/DELETE on tables where RLS depends on auth.uid().
+// Falls back to service-role client if no token (and SVC key may also be missing).
+const sbAs = (token) => {
+  if (!token) return sb();
+  return createClient(SUPA_URL, SUPA_ANON, {
+    global: { headers: { Authorization: 'Bearer ' + token } },
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
+};
+
+const tokenFrom = (req) => (req.headers.authorization || '').replace('Bearer ', '').trim();
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
@@ -527,18 +540,20 @@ module.exports = async (req, res) => {
 
     /* ─── POST /reactions ────────────────────────────────── */
     if (url === '/reactions' && req.method === 'POST') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
       const { entity_type, entity_id, type = 'like' } = req.body || {};
       if (!entity_type || !entity_id) return res.status(400).json({ error: 'entity_type and entity_id required' });
 
-      const { data: existing } = await sb().from('reactions')
+      const userClient = sbAs(token);
+
+      const { data: existing } = await userClient.from('reactions')
         .select('id').eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type).maybeSingle();
 
       if (existing) {
-        await sb().from('reactions').delete().eq('id', existing.id);
+        await userClient.from('reactions').delete().eq('id', existing.id);
         if (entity_type === 'post') {
           const { data: p } = await sb().from('posts').select('likes_count').eq('id', entity_id).single();
           await sb().from('posts').update({ likes_count: Math.max(0, (p?.likes_count || 1) - 1) }).eq('id', entity_id);
@@ -546,7 +561,8 @@ module.exports = async (req, res) => {
         return res.status(200).json({ liked: false });
       }
 
-      await sb().from('reactions').insert({ user_id: user.id, entity_type, entity_id, type });
+      const { error: insErr } = await userClient.from('reactions').insert({ user_id: user.id, entity_type, entity_id, type });
+      if (insErr) return res.status(400).json({ error: insErr.message });
 
       if (entity_type === 'post') {
         const { data: p } = await sb().from('posts').select('user_id,likes_count').eq('id', entity_id).single();
@@ -569,19 +585,21 @@ module.exports = async (req, res) => {
 
     /* ─── DELETE /reactions ──────────────────────────────── */
     if (url === '/reactions' && req.method === 'DELETE') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
       const { entity_id, type = 'like' } = req.body || {};
       if (!entity_id) return res.status(400).json({ error: 'entity_id required' });
 
-      const { data: existing } = await sb().from('reactions')
+      const userClient = sbAs(token);
+
+      const { data: existing } = await userClient.from('reactions')
         .select('id,entity_type').eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type).maybeSingle();
 
       if (!existing) return res.status(200).json({ liked: false });
 
-      await sb().from('reactions').delete().eq('id', existing.id);
+      await userClient.from('reactions').delete().eq('id', existing.id);
       if (existing.entity_type === 'post') {
         const { data: p } = await sb().from('posts').select('likes_count').eq('id', entity_id).single();
         await sb().from('posts').update({ likes_count: Math.max(0, (p?.likes_count || 1) - 1) }).eq('id', entity_id);
@@ -631,17 +649,21 @@ module.exports = async (req, res) => {
     }
 
     /* ─── GET /comments ──────────────────────────────────── */
+    // Returns threaded comments: top-level first, replies attached as
+    // `replies[]` on each parent. Production DB uses `body` column;
+    // we alias it to `content` in the response so existing UI callers
+    // keep working.
     if (url === '/comments' && req.method === 'GET') {
       const entity_id   = q.entity_id;
       const entity_type = q.entity_type || 'post';
       if (!entity_id) return res.status(400).json({ error: 'entity_id required' });
 
       const { data, error } = await sb().from('comments')
-        .select('id,user_id,content,created_at')
+        .select('id,user_id,body,parent_id,like_count,created_at')
         .eq('entity_id', entity_id)
         .eq('entity_type', entity_type)
         .order('created_at', { ascending: true })
-        .limit(50);
+        .limit(200);
 
       if (error) return res.status(400).json({ error: error.message });
 
@@ -653,41 +675,47 @@ module.exports = async (req, res) => {
         (profiles || []).forEach(p => { profileMap[p.id] = p; });
       }
 
-      return res.status(200).json({ comments: (data || []).map(c => ({ ...c, profile: profileMap[c.user_id] || null })) });
+      const enriched = (data || []).map(c => ({
+        ...c, content: c.body, profile: profileMap[c.user_id] || null, replies: []
+      }));
+      const byId = Object.fromEntries(enriched.map(c => [c.id, c]));
+      const top = [];
+      for (const c of enriched) {
+        if (c.parent_id && byId[c.parent_id]) byId[c.parent_id].replies.push(c);
+        else top.push(c);
+      }
+      return res.status(200).json({ comments: top, flat: enriched });
     }
 
     /* ─── POST /comments ─────────────────────────────────── */
+    // Accepts {entity_id, entity_type, content|body, parent_id?}.
+    // The DB column is `body` — we accept either name and write to body.
+    // Notification creation is handled by trg_notif_on_comment (DB
+    // trigger); do NOT create one here or it will double-fire.
     if (url === '/comments' && req.method === 'POST') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
-      const { entity_id, entity_type = 'post', content } = req.body || {};
-      if (!entity_id || !content?.trim()) return res.status(400).json({ error: 'entity_id and content required' });
+      const { entity_id, entity_type = 'post', content, body, parent_id } = req.body || {};
+      const text = (body ?? content ?? '').trim();
+      if (!entity_id || !text) return res.status(400).json({ error: 'entity_id and body/content required' });
+      if (text.length > 500) return res.status(400).json({ error: 'comment too long (max 500)' });
 
-      const { data: comment, error } = await sb().from('comments')
-        .insert({ user_id: user.id, entity_id, entity_type, content: content.trim() })
-        .select().single();
+      const insertRow = { user_id: user.id, entity_id, entity_type, body: text };
+      if (parent_id) insertRow.parent_id = parent_id;
+
+      const { data: comment, error } = await sbAs(token).from('comments')
+        .insert(insertRow).select().single();
 
       if (error) return res.status(400).json({ error: error.message });
 
       if (entity_type === 'post') {
-        const { data: p } = await sb().from('posts').select('user_id,comments_count').eq('id', entity_id).single();
-        if (p) {
-          await sb().from('posts').update({ comments_count: (p.comments_count || 0) + 1 }).eq('id', entity_id);
-          if (p.user_id !== user.id) {
-            const { data: prof } = await sb().from('profiles').select('display_name').eq('id', user.id).single();
-            const name = prof?.display_name || 'Someone';
-            await sb().from('notifications').insert({
-              user_id: p.user_id, type: 'comment', from_user_id: user.id,
-              from_display_name: name, entity_id, entity_type: 'post',
-              message: `${name} commented on your post`,
-            });
-          }
-        }
+        const { data: p } = await sb().from('posts').select('comments_count').eq('id', entity_id).single();
+        if (p) await sb().from('posts').update({ comments_count: (p.comments_count || 0) + 1 }).eq('id', entity_id);
       }
 
-      return res.status(200).json({ comment, success: true });
+      return res.status(200).json({ comment: { ...comment, content: comment.body }, success: true });
     }
 
     /* ─── POST /leads/ingest ────────────────────────────── */
@@ -920,61 +948,88 @@ module.exports = async (req, res) => {
 
     /* ─── GET /quicket-events ─────────────────────────────── */
     if (url === '/quicket-events' && req.method === 'GET') {
-      const QUICKET_KEY = process.env.QUICKET_API_KEY;
-      if (!QUICKET_KEY) return res.status(503).json({ error: 'QUICKET_API_KEY not configured' });
+      const QUICKET_KEY = process.env.QUICKET_API_KEY || '7f03069e38b5802980c9ca620dd14dff';
 
-      const city  = q.city  || 'all';   // 'durban' | 'johannesburg' | 'all'
+      const city  = q.city  || 'all';   // 'all' | 'kzn' | 'jhb' | 'durban' | 'johannesburg' | ...
       const genre = q.genre || 'all';
-      const page  = Math.max(1, parseInt(q.page || '1'));
+      const free  = q.free === '1' || q.free === 'true';
+      const limit = Math.min(parseInt(q.limit || '200'), 500);
 
-      // Quicket genre → Pulsify genre
+      // Quicket category/keyword → Pulsify genre
       const GENRE_MAP = {
-        music: 'house', concert: 'house', festival: 'house',
-        amapiano: 'amapiano', gqom: 'gqom',
-        'hip-hop': 'hiphop', hiphop: 'hiphop', hip_hop: 'hiphop', rap: 'hiphop',
-        house: 'house', afrobeats: 'afrobeats', afrohouse: 'afrohouse',
-        rock: 'rock', gospel: 'gospel', jazz: 'jazz',
-        comedy: 'comedy', sport: 'sport', sports: 'sport',
-        maskandi: 'maskandi',
+        music:'house', concert:'house', live:'live',
+        amapiano:'amapiano', gqom:'gqom',
+        'hip-hop':'hiphop', hiphop:'hiphop', hip_hop:'hiphop', rap:'hiphop',
+        house:'house', afrobeats:'afrobeats', afrohouse:'afrohouse',
+        rock:'rock', gospel:'gospel', jazz:'jazz',
+        maskandi:'maskandi', kwaito:'kwaito',
+        reggae:'reggae', soul:'soul', rnb:'rnb',
+        comedy:'comedy', sport:'sport', sports:'sport',
+        festival:'festival', nightlife:'nightlife',
+        theatre:'theatre', theater:'theatre',
+        outdoor:'outdoor', adventure:'outdoor', hiking:'outdoor', camping:'outdoor',
+        ceremonies:'ceremonies', ceremony:'ceremonies', wedding:'ceremonies',
+        workshop:'workshop', course:'workshop', training:'workshop', class:'workshop', seminar:'workshop',
+        food:'food', cuisine:'food', dining:'food', tasting:'food', shisanyama:'shisanyama',
+        cultural:'cultural', heritage:'cultural', traditional:'cultural',
+        business:'business', conference:'business', networking:'business', expo:'business',
+        fashion:'fashion', style:'fashion',
+        wellness:'wellness', yoga:'wellness', fitness:'wellness', meditation:'wellness', health:'wellness',
+        art:'art', exhibition:'art', gallery:'art',
+        market:'market', flea:'market', craft:'market',
+        kids:'kids', family:'kids', children:'kids',
+        charity:'charity', fundraiser:'charity', cause:'charity',
+        technology:'tech', tech:'tech',
+        film:'film', movie:'film', cinema:'film',
+        dance:'dance', ballet:'dance',
       };
 
-      // Pulsify genre → Quicket category query string
-      const PULSIFY_TO_QCT = {
-        amapiano: 'amapiano', gqom: 'gqom', hiphop: 'hip-hop',
-        house: 'house music', afrobeats: 'afrobeats', rock: 'rock',
-        gospel: 'gospel', jazz: 'jazz', comedy: 'comedy', sport: 'sport',
-      };
+      // Cities to fetch — biased toward KZN + JHB metros
+      const KZN = ['Durban', 'Pietermaritzburg', 'Umhlanga'];
+      const JHB = ['Johannesburg', 'Sandton', 'Pretoria'];
+      let citiesToFetch;
+      if (city === 'all')              citiesToFetch = [...KZN, ...JHB];
+      else if (city === 'kzn')         citiesToFetch = KZN;
+      else if (city === 'jhb' || city === 'johannesburg') citiesToFetch = JHB;
+      else if (city === 'durban')      citiesToFetch = ['Durban'];
+      else                              citiesToFetch = [city];
 
-      const citiesToFetch = city === 'all'
-        ? ['Durban', 'Johannesburg']
-        : city === 'johannesburg' ? ['Johannesburg'] : ['Durban'];
+      const PAGES_PER_CITY = 2;
+      const PAGE_SIZE      = 50;
 
-      const quicketFetch = async (fetchCity) => {
+      const quicketFetch = async (fetchCity, page) => {
+        // usertoken must be a query param, not a header
         const params = new URLSearchParams({
-          pagesize: '50',
-          page: String(page),
-          location: fetchCity,
-          country: 'ZA',
+          usertoken: QUICKET_KEY,
+          pagesize:  String(PAGE_SIZE),
+          page:      String(page),
+          location:  fetchCity,
+          country:   'ZA',
           startDate: new Date().toISOString().split('T')[0],
-          ...(genre !== 'all' && PULSIFY_TO_QCT[genre] ? { category: PULSIFY_TO_QCT[genre] } : {}),
         });
+        if (genre !== 'all') params.append('search', genre);
 
-        const resp = await fetch(`https://api.quicket.co.za/api/events?${params}`, {
-          headers: { 'X-API-Key': QUICKET_KEY, 'Accept': 'application/json' },
-          signal: AbortSignal.timeout(8000),
-        });
-
-        if (!resp.ok) {
-          console.warn(`[Quicket] ${fetchCity} → HTTP ${resp.status}: ${await resp.text().catch(()=>'')}`);
+        try {
+          const resp = await fetch(`https://api.quicket.co.za/api/events?${params}`, {
+            headers: { 'Accept': 'application/json' },
+            signal: AbortSignal.timeout(10000),
+          });
+          if (!resp.ok) {
+            const body = await resp.text().catch(() => '');
+            console.warn(`[Quicket] ${fetchCity} p${page} → HTTP ${resp.status}`, body.slice(0, 200));
+            return [];
+          }
+          const json = await resp.json();
+          const rows = json?.data || json?.events || json?.results || (Array.isArray(json) ? json : []);
+          console.log(`[Quicket] ${fetchCity} p${page} → ${rows.length} events`);
+          return rows;
+        } catch(e) {
+          console.warn(`[Quicket] ${fetchCity} p${page} fetch error: ${e.message}`);
           return [];
         }
-        const json = await resp.json();
-        // Quicket returns { data: [...] } or { events: [...] } or directly an array
-        return json?.data || json?.events || (Array.isArray(json) ? json : []);
       };
 
       const normalize = (item, fetchCity) => {
-        // Handle multiple possible Quicket response shapes
         const id         = item.id || item.event_id || item.EventId;
         const title      = item.title || item.name || item.EventName;
         const venue      = item.venue?.name || item.venueName || item.venue_name || item.Venue || '';
@@ -985,9 +1040,10 @@ module.exports = async (req, res) => {
         const url_       = item.url || item.eventUrl || item.event_url || `https://www.quicket.co.za/events/${id}`;
         const priceRaw   = item.minPrice ?? item.min_price ?? item.ticketMinPrice ?? item.price_min ?? 0;
         const catRaw     = (item.category || item.categories?.[0]?.name || item.genre || '').toLowerCase().replace(/\s+/g, '');
-        const mappedGenre = GENRE_MAP[catRaw] || 'other';
+        const mappedGenre = GENRE_MAP[catRaw] || (catRaw || 'other');
         const lat        = parseFloat(item.venue?.latitude  || item.latitude  || item.lat  || 0) || null;
         const lon        = parseFloat(item.venue?.longitude || item.longitude || item.lon || 0) || null;
+        const priceNum   = typeof priceRaw === 'number' ? priceRaw : parseFloat(priceRaw) || 0;
 
         if (!id || !title || !start) return null;
 
@@ -999,8 +1055,8 @@ module.exports = async (req, res) => {
           venue_city:    cityVal,
           venue_lat:     lat,
           venue_lon:     lon,
-          price_min:     typeof priceRaw === 'number' ? priceRaw : parseFloat(priceRaw) || 0,
-          is_free:       (priceRaw === 0 || priceRaw === '0' || priceRaw === 'Free'),
+          price_min:     priceNum,
+          is_free:       priceNum === 0 || priceRaw === 'Free' || priceRaw === 'free',
           image_url:     image,
           genre:         mappedGenre,
           description:   desc,
@@ -1012,12 +1068,32 @@ module.exports = async (req, res) => {
       };
 
       try {
-        const raw = (await Promise.all(citiesToFetch.map(c => quicketFetch(c)))).flat();
-        const events = raw.map((item, i) => normalize(item, citiesToFetch[i % citiesToFetch.length])).filter(Boolean);
-        // Sort: soonest first
-        events.sort((a, b) => new Date(a.date_local) - new Date(b.date_local));
-        res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate=3600');
-        return res.status(200).json({ events, total: events.length, source: 'quicket' });
+        const tasks = [];
+        for (const c of citiesToFetch) {
+          for (let p = 1; p <= PAGES_PER_CITY; p++) {
+            tasks.push(quicketFetch(c, p).then(items => items.map(i => normalize(i, c)).filter(Boolean)));
+          }
+        }
+        const batches = await Promise.all(tasks);
+        const seen = new Set();
+        let events = [];
+        for (const batch of batches) {
+          for (const ev of batch) {
+            if (seen.has(ev.id)) continue;
+            seen.add(ev.id);
+            events.push(ev);
+          }
+        }
+        if (free) events = events.filter(e => e.is_free);
+        // Free events first, then by date ascending
+        events.sort((a, b) => {
+          if (a.is_free !== b.is_free) return a.is_free ? -1 : 1;
+          return new Date(a.date_local) - new Date(b.date_local);
+        });
+        events = events.slice(0, limit);
+        // Don't cache while we're debugging the integration — re-enable s-maxage=1800 once stable
+        res.setHeader('Cache-Control', 'no-store');
+        return res.status(200).json({ events, total: events.length, source: 'quicket', cities_tried: citiesToFetch });
       } catch(e) {
         console.error('[Quicket]', e.message);
         return res.status(502).json({ error: 'Failed to fetch Quicket events', detail: e.message });
@@ -1296,6 +1372,9 @@ module.exports = async (req, res) => {
       const days = Math.min(Math.max(parseInt(duration_days) || 7, 1), 90);
       const ends_at = new Date(Date.now() + days * 86400000).toISOString();
 
+      // Trusted submitters (or admins) bypass the approval queue
+      const autoApprove = role === 'admin' || !!auth.profile.is_trusted_submitter;
+
       const { data: promo, error } = await sb().from('promotions').insert({
         title, organiser_name: organiser_name || auth.profile.display_name || null,
         venue_name: venue_name || null, venue_city: venue_city || null,
@@ -1306,14 +1385,14 @@ module.exports = async (req, res) => {
         city_targets: Array.isArray(city_targets) ? city_targets : [],
         genre_targets: Array.isArray(genre_targets) ? genre_targets : [],
         placement, priority: 0,
-        is_active: false,  // admin must approve
+        is_active: autoApprove,
         starts_at: new Date().toISOString(), ends_at,
         owner_id: auth.user.id, owner_role: role,
         event_id: event_id || null,
       }).select().single();
 
       if (error) return res.status(400).json({ error: error.message });
-      return res.status(201).json({ promotion: promo });
+      return res.status(201).json({ promotion: promo, auto_approved: autoApprove });
     }
 
     /* ─── GET /promotions/mine ───────────────────────────── */
@@ -1398,6 +1477,35 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
+    /* ─── GET /admin/trusted-submitters ──────────────────── */
+    if (url === '/admin/trusted-submitters' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const { data, error } = await sb().from('profiles')
+        .select('id, display_name, username, role, is_trusted_submitter, avatar_url')
+        .in('role', ['business','organizer'])
+        .order('is_trusted_submitter', { ascending: false })
+        .order('display_name', { ascending: true })
+        .limit(200);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ submitters: data || [] });
+    }
+
+    /* ─── PATCH /admin/trusted-submitters/:userId ────────── */
+    const trustedMatch = url.match(/^\/admin\/trusted-submitters\/([^/]+)$/);
+    if (trustedMatch && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const { is_trusted_submitter } = req.body || {};
+      const { data, error } = await sb().from('profiles')
+        .update({ is_trusted_submitter: !!is_trusted_submitter })
+        .eq('id', trustedMatch[1])
+        .select('id, is_trusted_submitter').single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ profile: data });
+    }
+
+
     /* ─── POST /report-event | /report-business | /report-post ── */
     const REPORT_TABLES = {
       event:    { table: 'event_reports',    idCol: 'event_id',    nameCol: 'event_name' },
@@ -1465,6 +1573,171 @@ module.exports = async (req, res) => {
       const { error } = await sb().from(REPORT_TABLES[type].table).update({ status }).eq('id', id);
       if (error) return res.status(400).json({ error: error.message });
       return res.status(200).json({ ok: true });
+    }
+
+    /* ─── SQUADS ─────────────────────────────────────────── */
+
+    // GET /squads — list current user's squads
+    if (url === '/squads' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { data: memberships } = await sb()
+        .from('squad_members')
+        .select('squad_id, role, joined_at, squads(id, name, description, avatar_url, is_public, member_count, total_points, template_type, created_at)')
+        .eq('user_id', auth.user.id);
+      return res.status(200).json({ squads: (memberships || []).map(m => ({ ...m.squads, role: m.role, joined_at: m.joined_at })) });
+    }
+
+    // POST /squads — create a squad
+    if (url === '/squads' && req.method === 'POST') {
+      const token = tokenFrom(req);
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { name, description, is_public = true, template_type = 'general' } = req.body || {};
+      if (!name || !name.trim()) return res.status(400).json({ error: 'name is required' });
+      const userClient = sbAs(token);
+      const { data: squad, error } = await userClient
+        .from('squads')
+        .insert({ name: name.trim(), description: description?.trim() || null, creator_id: auth.user.id, is_public, template_type })
+        .select('id, name, description, avatar_url, is_public, member_count, total_points, template_type, template_config, created_at')
+        .single();
+      if (error) return res.status(400).json({ error: error.message });
+      await userClient.from('squad_members').insert({ squad_id: squad.id, user_id: auth.user.id, role: 'admin' });
+      return res.status(201).json({ squad });
+    }
+
+    // GET /squads/leaderboard — top squads by total_points
+    if (url === '/squads/leaderboard' && req.method === 'GET') {
+      const { data } = await sb()
+        .from('squads')
+        .select('id, name, avatar_url, member_count, total_points')
+        .eq('is_public', true)
+        .order('total_points', { ascending: false })
+        .limit(10);
+      return res.status(200).json({ leaderboard: data || [] });
+    }
+
+    // POST /squads/checkin — squad check-in awards 20 pts
+    if (url === '/squads/checkin' && req.method === 'POST') {
+      const token = tokenFrom(req);
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { squad_id, event_id } = req.body || {};
+      if (!squad_id) return res.status(400).json({ error: 'squad_id required' });
+      const userClient = sbAs(token);
+      const { data: membership } = await userClient
+        .from('squad_members')
+        .select('role')
+        .eq('squad_id', squad_id)
+        .eq('user_id', auth.user.id)
+        .single();
+      if (!membership) return res.status(403).json({ error: 'Not a squad member' });
+      await userClient.from('squad_points').insert({ squad_id, user_id: auth.user.id, activity_type: 'squad_checkin', points: 20, event_id: event_id || null });
+      await userClient.from('squad_activity').insert({ squad_id, user_id: auth.user.id, activity_type: 'squad_checkin', description: 'Squad check-in at event', data: event_id ? { event_id } : null });
+      const { data: updated } = await sb().from('squads').select('total_points').eq('id', squad_id).single();
+      return res.status(200).json({ ok: true, total_points: updated?.total_points });
+    }
+
+    const squadDetailMatch = url.match(/^\/squads\/([^/]+)$/);
+    const squadActionMatch = url.match(/^\/squads\/([^/]+)\/(join|leave|invite)$/);
+
+    // POST /squads/:id/join
+    if (squadActionMatch && squadActionMatch[2] === 'join' && req.method === 'POST') {
+      const token = tokenFrom(req);
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const squadId = squadActionMatch[1];
+      const { data: squad } = await sb().from('squads').select('id, is_public, member_count').eq('id', squadId).single();
+      if (!squad) return res.status(404).json({ error: 'Squad not found' });
+      if (!squad.is_public) return res.status(403).json({ error: 'Squad is private' });
+      const { error } = await sbAs(token).from('squad_members').insert({ squad_id: squadId, user_id: auth.user.id, role: 'member' });
+      if (error) return res.status(400).json({ error: error.message });
+      await sb().from('squads').update({ member_count: squad.member_count + 1 }).eq('id', squadId);
+      return res.status(200).json({ ok: true });
+    }
+
+    // POST /squads/:id/leave
+    if (squadActionMatch && squadActionMatch[2] === 'leave' && req.method === 'POST') {
+      const token = tokenFrom(req);
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const squadId = squadActionMatch[1];
+      const { data: squad } = await sb().from('squads').select('id, member_count, creator_id').eq('id', squadId).single();
+      if (!squad) return res.status(404).json({ error: 'Squad not found' });
+      await sbAs(token).from('squad_members').delete().eq('squad_id', squadId).eq('user_id', auth.user.id);
+      const newCount = Math.max(0, squad.member_count - 1);
+      if (newCount === 0) {
+        await sb().from('squads').delete().eq('id', squadId);
+      } else {
+        await sb().from('squads').update({ member_count: newCount }).eq('id', squadId);
+        if (squad.creator_id === auth.user.id) {
+          const { data: nextAdmin } = await sb().from('squad_members').select('user_id').eq('squad_id', squadId).limit(1).single();
+          if (nextAdmin) await sb().from('squad_members').update({ role: 'admin' }).eq('squad_id', squadId).eq('user_id', nextAdmin.user_id);
+        }
+      }
+      return res.status(200).json({ ok: true });
+    }
+
+    // POST /squads/:id/invite — add a follower to squad
+    if (squadActionMatch && squadActionMatch[2] === 'invite' && req.method === 'POST') {
+      const token = tokenFrom(req);
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const squadId = squadActionMatch[1];
+      const { user_id: inviteeId } = req.body || {};
+      if (!inviteeId) return res.status(400).json({ error: 'user_id required' });
+      const { data: membership } = await sb().from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
+      if (!membership) return res.status(403).json({ error: 'Not a squad member' });
+      // Inviting another user requires service role (RLS only lets users insert their own row).
+      // Falls back to anon if SVC key not set, in which case admin must enable invites manually.
+      const { error } = await sb().from('squad_members').insert({ squad_id: squadId, user_id: inviteeId, role: 'member' });
+      if (error) return res.status(400).json({ error: error.message });
+      const { data: squad } = await sb().from('squads').select('member_count').eq('id', squadId).single();
+      await sb().from('squads').update({ member_count: (squad?.member_count || 1) + 1 }).eq('id', squadId);
+      await sbAs(token).from('squad_points').insert({ squad_id: squadId, user_id: auth.user.id, activity_type: 'invite', points: 5 });
+      await sbAs(token).from('squad_activity').insert({ squad_id: squadId, user_id: auth.user.id, activity_type: 'invite', description: 'Invited a friend', data: { invitee_id: inviteeId } });
+      return res.status(200).json({ ok: true });
+    }
+
+    // PATCH /squads/:id — update squad config (admin only)
+    if (squadDetailMatch && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const squadId = squadDetailMatch[1];
+      const { data: membership } = await sb().from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
+      if (!membership || membership.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const { name, description, is_public, template_config } = req.body || {};
+      const updates = {};
+      if (name) updates.name = name.trim();
+      if (description !== undefined) updates.description = description;
+      if (is_public !== undefined) updates.is_public = is_public;
+      if (template_config) updates.template_config = template_config;
+      const { error } = await sb().from('squads').update(updates).eq('id', squadId);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ ok: true });
+    }
+
+    // GET /squads/:id — squad detail with per-member points
+    if (squadDetailMatch && req.method === 'GET') {
+      const auth = await authUser(req);
+      const squadId = squadDetailMatch[1];
+      const { data: squad } = await sb().from('squads').select('id, name, description, avatar_url, is_public, member_count, total_points, template_type, template_config, creator_id, created_at').eq('id', squadId).single();
+      if (!squad) return res.status(404).json({ error: 'Squad not found' });
+      const { data: members } = await sb().from('squad_members').select('role, joined_at, profiles(id, display_name, username, avatar_url)').eq('squad_id', squadId);
+      const { data: activity } = await sb().from('squad_activity').select('id, activity_type, description, created_at, profiles(display_name, avatar_url)').eq('squad_id', squadId).order('created_at', { ascending: false }).limit(10);
+      const { data: allPoints } = await sb().from('squad_points').select('user_id, points').eq('squad_id', squadId);
+      const memberPoints = {};
+      (allPoints || []).forEach(p => { memberPoints[p.user_id] = (memberPoints[p.user_id] || 0) + p.points; });
+      const { data: checkins } = await sb().from('squad_points').select('id').eq('squad_id', squadId).eq('activity_type', 'squad_checkin');
+      const { data: invites } = await sb().from('squad_points').select('id').eq('squad_id', squadId).eq('activity_type', 'invite');
+      const goals = [
+        { label: 'Attend 5 events together', current: (checkins || []).length, target: 5 },
+        { label: 'Reach 100 squad points', current: squad.total_points, target: 100 },
+        { label: 'Grow to 5 members', current: squad.member_count, target: 5 },
+        { label: 'Invite 3 friends', current: (invites || []).length, target: 3 },
+      ];
+      const isMember = auth ? (members || []).some(m => m.profiles?.id === auth.user.id) : false;
+      return res.status(200).json({ squad, members: members || [], activity: activity || [], goals, isMember, memberPoints });
     }
 
     /* ─── GET /health ────────────────────────────────────── */

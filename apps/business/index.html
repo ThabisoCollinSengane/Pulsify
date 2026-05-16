@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
 <meta name="build-version" content="v2.1.0-20260513"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
@@ -32,7 +32,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .nd.show{display:block}
 
 /* ── BOTTOM NAV ── */
-.bn{position:fixed;bottom:0;left:0;right:0;height:var(--bh);z-index:900;background:rgba(5,8,15,.97);backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;align-items:stretch}
+.bn{position:fixed;bottom:0;left:0;right:0;height:auto;min-height:var(--bh);padding-bottom:env(safe-area-inset-bottom, 0px);z-index:900;background:rgba(5,8,15,.97);backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;align-items:stretch}
 .bb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:transparent;border:none;cursor:pointer;padding:8px 2px;position:relative;-webkit-tap-highlight-color:transparent;transition:all .2s}
 .bb-ico{font-size:1.25rem;line-height:1;transition:transform .2s}
 .bb.active .bb-ico{transform:scale(1.15)}
@@ -257,10 +257,15 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <!-- ══ EVENTS ══ -->
 <div class="panel" id="tab-events">
   <div class="sec-head">
-    <div><div class="sec-title">Events</div><div class="sec-sub">Visible on the Pulsify home feed</div></div>
+    <div><div class="sec-title">Your Events</div><div class="sec-sub">Visible on the Pulsify home feed</div></div>
     <button class="btn-primary" onclick="openSheet('event-sheet')">+ Event</button>
   </div>
   <div id="events-list"></div>
+
+  <div class="sec-head" style="margin-top:24px">
+    <div><div class="sec-title">🌍 Discover</div><div class="sec-sub">Upcoming events on Pulsify</div></div>
+  </div>
+  <div id="discover-list" style="padding:0 14px"><div style="padding:30px 0;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div></div>
 </div>
 
 <!-- ══ MENU MANAGER ══ -->
@@ -809,6 +814,7 @@ function previewPost() {
 // ── Boot ─────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
   let s = localStorage.getItem('biz_session');
+  let _sessionUser = null, _sessionRole = null;
 
   // Bridge: if no biz_session but user has a live Supabase session, create one.
   // Falls back to localStorage p_user role if RLS blocks the profile query.
@@ -817,12 +823,14 @@ window.addEventListener('DOMContentLoaded', async () => {
       const sb = getSB();
       const { data: { session } } = await sb.auth.getSession();
       if (session) {
+        _sessionUser = session.user;
         const { data: profile } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
         let role = profile?.role;
         if (!role) {
           // RLS blocked profile read — try localStorage p_user
           try { role = JSON.parse(localStorage.getItem('p_user') || '{}').role; } catch(e) {}
         }
+        _sessionRole = role || null;
         if (role && ['business','admin'].includes(role)) {
           const bridged = {
             id: session.user.id, email: session.user.email,
@@ -837,6 +845,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     } catch(e) { console.warn('[business] bridge failed', e); }
   }
 
+  // Signed in but wrong role → show friendly gate (don't silently redirect)
+  if (!s && _sessionUser) { showNoBusinessAccountGate(_sessionUser, _sessionRole); return; }
   if (!s) { window.location.href = '/signin'; return; }
   BIZ = JSON.parse(s);
   history.replaceState({ tab: 'home' }, '');
@@ -876,11 +886,95 @@ function showTab(name, _noPush) {
   if (!_noPush) history.pushState({ tab: name }, '');
   if (name === 'analytics') renderAnalytics();
   if (name === 'promote')   loadBizPromotions();
+  if (name === 'events')    loadDiscoverEvents();
+}
+
+// ═══════════ DISCOVER (public events catalog) ═══════════
+let _discoverLoaded = false;
+async function loadDiscoverEvents() {
+  if (_discoverLoaded) return;
+  const el = document.getElementById('discover-list'); if (!el) return;
+  try {
+    const sb = getSB(); if (!sb) throw new Error('no SDK');
+    const today = new Date().toISOString().split('T')[0];
+    const { data, error } = await sb.from('events')
+      .select('id,name,date_local,time_local,venue_name,venue_city,price_min,is_free,image_url,genre,organiser_name')
+      .gte('date_local', today)
+      .order('date_local', { ascending: true })
+      .limit(40);
+    if (error) throw error;
+    const events = data || [];
+    if (!events.length) {
+      el.innerHTML = '<div style="padding:30px 0;text-align:center;color:var(--mu);font-size:.82rem">No upcoming events yet 🎟</div>';
+      return;
+    }
+    el.innerHTML = events.map(renderDiscoverCard).join('');
+    _discoverLoaded = true;
+  } catch(e) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--pk);font-size:.78rem">Could not load events. <button class="btn-sec" style="margin-left:8px;padding:5px 12px;font-size:.7rem" onclick="_discoverLoaded=false;loadDiscoverEvents()">Retry</button></div>';
+  }
+}
+function renderDiscoverCard(ev) {
+  const xe = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const price = ev.is_free ? 'FREE' : (ev.price_min ? 'R' + ev.price_min : 'TBA');
+  const d = ev.date_local ? new Date(ev.date_local) : null;
+  const date = d ? d.toLocaleDateString('en-ZA', { day:'numeric', month:'short' }) : '';
+  const time = ev.time_local ? ev.time_local.slice(0,5) : '';
+  const url = '/?eid=' + encodeURIComponent(ev.id);
+  const img = ev.image_url
+    ? `<img src="${xe(ev.image_url)}" loading="lazy" style="width:100%;height:120px;object-fit:cover;border-radius:12px;margin-bottom:8px" onerror="this.style.display='none'"/>`
+    : `<div style="width:100%;height:120px;background:linear-gradient(135deg,rgba(176,38,255,.18),rgba(255,92,0,.14));border-radius:12px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:2.4rem">🎟</div>`;
+  return `<a href="${url}" style="display:block;background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:10px;text-decoration:none;color:inherit">
+    ${img}
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.92rem;margin-bottom:4px;color:var(--tx)">${xe(ev.name)}</div>
+    <div style="font-size:.72rem;color:var(--mu2);margin-bottom:3px">📍 ${xe(ev.venue_city || '')}${ev.venue_name ? ' · ' + xe(ev.venue_name) : ''}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+      <div style="font-size:.7rem;color:var(--mu)">📅 ${xe(date)}${time ? ' · ' + xe(time) : ''}${ev.genre ? ' · ' + xe(ev.genre) : ''}</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:${ev.is_free ? 'var(--li)' : 'var(--or)'}">${price}</div>
+    </div>
+  </a>`;
 }
 function openSheet(id)  { document.getElementById(id).classList.add('open'); }
 function closeSheet(id) { document.getElementById(id).classList.remove('open'); }
 function toast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast ' + type + ' show'; setTimeout(() => t.className = 'toast', 2600); }
 async function doLogout() {
+  try { const sb = getSB(); if (sb) await sb.auth.signOut(); } catch(e) {}
+  ['biz_session','p_user','p_profile','p_token'].forEach(k => localStorage.removeItem(k));
+  window.location.href = '/signin';
+}
+
+// Friendly gate for signed-in users without a business account
+function showNoBusinessAccountGate(user, role) {
+  const roleLabel = role ? `<code style="background:rgba(255,255,255,.06);padding:2px 6px;border-radius:4px">${role}</code>` : 'standard user';
+  document.body.innerHTML = `
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif">
+      <div style="max-width:420px;width:100%;background:var(--surf);border:1px solid var(--border);border-radius:20px;padding:28px;text-align:center">
+        <div style="font-size:3rem;margin-bottom:12px">🏢</div>
+        <h1 style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.02em;margin-bottom:8px">You don't have a business account</h1>
+        <p style="color:var(--mu);font-size:.9rem;line-height:1.5;margin-bottom:20px">
+          You're signed in as <strong>${user.email || 'a user'}</strong> (${roleLabel}). The business dashboard is only available to accounts with the <strong>business</strong> role.
+        </p>
+        <button onclick="createBusinessAccount()" style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:13px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;margin-bottom:10px">Create a business account</button>
+        <button onclick="window.location.href='/feeds'" style="width:100%;background:var(--surf2);border:1px solid var(--border2);border-radius:50px;padding:11px;font-family:'Syne',sans-serif;font-size:.82rem;color:var(--tx);cursor:pointer;margin-bottom:10px">Back to feeds</button>
+        <button onclick="doLogoutInline()" style="background:none;border:none;color:var(--mu);font-size:.78rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;padding:6px">Sign out</button>
+      </div>
+    </div>`;
+}
+async function createBusinessAccount() {
+  try {
+    const sb = getSB();
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = '/signin'; return; }
+    const res = await fetch('/api/auth/ensure-business-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ role: 'business' })
+    });
+    if (!res.ok) { alert('Could not create business account. Please try again.'); return; }
+    window.location.reload();
+  } catch(e) { alert('Network error. Please try again.'); }
+}
+async function doLogoutInline() {
   try { const sb = getSB(); if (sb) await sb.auth.signOut(); } catch(e) {}
   ['biz_session','p_user','p_profile','p_token'].forEach(k => localStorage.removeItem(k));
   window.location.href = '/signin';
@@ -1117,6 +1211,7 @@ const SUPA_URL  = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
 const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
 let _sbC = null;
 function getSB() { if (!_sbC && window.supabase) _sbC = window.supabase.createClient(SUPA_URL, SUPA_ANON); return _sbC; }
+async function safeJson(r) { try { const t = await r.text(); return t ? JSON.parse(t) : {}; } catch(e) { return {}; } }
 
 // ════════════════════════════════════════════════════════════
 //  POSTS — synced to Supabase posts table
@@ -1724,7 +1819,7 @@ async function initSocialNotifBell() {
   async function refreshDot() {
     try {
       const r = await fetch('/api/notifications/count', { headers: { 'Authorization': 'Bearer ' + tok } });
-      const j = await r.json();
+      const j = await safeJson(r);
       const dot = document.getElementById('sn-dot');
       if (dot) dot.style.display = (j.count > 0) ? 'block' : 'none';
     } catch {}
@@ -1746,7 +1841,7 @@ async function openSNPanel() {
   list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu);font-size:.8rem">Loading…</div>';
   try {
     const r = await fetch('/api/notifications?limit=30', { headers: { 'Authorization': 'Bearer ' + session.access_token } });
-    const { notifications } = await r.json();
+    const { notifications } = await safeJson(r);
     if (!notifications?.length) { list.innerHTML = '<div style="padding:30px;text-align:center;color:var(--mu)">No notifications yet.</div>'; return; }
     const ICON = { like:'❤️', comment:'💬', follow:'👤', event:'🎟', order:'📦' };
     list.innerHTML = notifications.map(n => `<div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border)"><div style="width:38px;height:38px;border-radius:50%;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">${ICON[n.type]||'🔔'}</div><div style="flex:1;min-width:0"><div style="font-size:.82rem;line-height:1.4;color:var(--tx)">${n.message||''}</div><div style="font-size:.68rem;color:var(--mu);margin-top:3px">${new Date(n.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div></div></div>`).join('');
@@ -1811,7 +1906,7 @@ async function handleQrResult(orderRef) {
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
         body: JSON.stringify({ qr_data: orderRef }),
       });
-      const d = await r.json();
+      const d = await safeJson(r);
       if (r.status === 409) {
         res.innerHTML = `<div style="background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.3);border-radius:14px;padding:16px;text-align:center">
           <div style="font-size:2rem;margin-bottom:8px">⚠️</div>
@@ -1921,8 +2016,8 @@ async function submitBizPromo() {
         city_targets: cityTargets, genre_targets: [],
       }),
     });
-    const json = await r.json();
-    if (!r.ok) throw new Error(json.error);
+    const json = await safeJson(r);
+    if (!r.ok) throw new Error(json.error || 'Submission failed');
     _bizPromoMsg('✅ Submitted! Admin will review and activate your promotion shortly.', true);
     document.getElementById('biz-promo-title').value = '';
     document.getElementById('biz-promo-city').value  = '';
@@ -1938,8 +2033,11 @@ async function submitBizPromo() {
 
 async function loadBizPromotions() {
   const sb = getSB();
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) loadBizPromoMine(session.access_token);
+  if (!sb) return;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) loadBizPromoMine(session.access_token);
+  } catch(e) { console.warn('loadBizPromotions:', e.message); }
 }
 
 async function loadBizPromoMine(token) {
@@ -1947,7 +2045,11 @@ async function loadBizPromoMine(token) {
   if (!el) return;
   try {
     const r = await fetch('/api/promotions/mine', { headers: { 'Authorization': 'Bearer ' + token } });
-    const { promotions } = await r.json();
+    if (!r.ok) {
+      el.innerHTML = '<div style="padding:16px 0;text-align:center;color:var(--mu);font-size:.8rem">No promotions yet.</div>';
+      return;
+    }
+    const { promotions } = await safeJson(r);
     if (!promotions?.length) { el.innerHTML = '<div style="padding:16px 0;text-align:center;color:var(--mu);font-size:.8rem">No promotions yet.</div>'; return; }
     const xb = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     el.innerHTML = promotions.map(p => `

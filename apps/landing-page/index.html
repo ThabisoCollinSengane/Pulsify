@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
 <meta name="description" content="Pulsify — Feel the Vibe 🇿🇦 South Africa's live event discovery platform"/>
-<meta name="build-version" content="v2.4.0-20260514"/>
+<meta name="build-version" content="v2.9.9-20260516-ci-deploy"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
@@ -349,6 +349,58 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   50%{transform:scale(1.6);opacity:0}
 }
 
+/* ── SQUAD GAMIFICATION ── */
+.sq-sub-tabs{display:flex;gap:0;padding:0;border-bottom:1px solid var(--border);background:var(--bg)}
+.sq-stab{flex:1;background:transparent;border:none;border-bottom:3px solid transparent;padding:12px 0 11px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;color:var(--mu);cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.sq-stab.active{color:var(--or);border-bottom-color:var(--or)}
+.sq-card{background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color .2s;-webkit-tap-highlight-color:transparent}
+.sq-card:active{border-color:var(--or)}
+.sq-card-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.sq-card-name{font-family:'Syne',sans-serif;font-size:.92rem;font-weight:700}
+.sq-card-role{background:rgba(176,38,255,.15);color:var(--pu);border-radius:50px;padding:2px 10px;font-size:.65rem;font-family:'Syne',sans-serif;font-weight:700}
+.sq-card-meta{font-size:.72rem;color:var(--mu);display:flex;gap:12px}
+.sq-pts{font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;color:var(--li)}
+.sq-create-btn{width:100%;padding:13px;background:rgba(176,38,255,.1);border:1.5px dashed rgba(176,38,255,.4);border-radius:14px;color:var(--pu);font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;margin-bottom:12px;-webkit-tap-highlight-color:transparent}
+.sq-create-form{background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px}
+.sq-input{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--tx);font-size:.84rem;outline:none;font-family:'DM Sans',sans-serif;margin-bottom:10px;box-sizing:border-box}
+.sq-input:focus{border-color:var(--pu)}
+.sq-goal-bar{background:rgba(255,255,255,.05);border-radius:50px;height:6px;overflow:hidden;margin-top:5px}
+.sq-goal-fill{height:100%;background:linear-gradient(90deg,#B026FF,#FF5C00);border-radius:50px;transition:width .6s ease}
+.sq-lb-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.sq-lb-row:last-child{border-bottom:none}
+.sq-lb-rank{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;width:22px;text-align:center;color:var(--mu)}
+.sq-lb-rank.gold{color:#FFD700}.sq-lb-rank.silver{color:#C0C0C0}.sq-lb-rank.bronze{color:#CD7F32}
+.sq-member-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;flex-shrink:0;overflow:hidden}
+.sq-checkin-btn{width:100%;padding:12px 14px;background:rgba(176,38,255,.12);border:1.5px solid rgba(176,38,255,.4);border-radius:12px;color:var(--pu);font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:8px;box-sizing:border-box}
+.sq-select{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--tx);font-size:.82rem;outline:none;margin-bottom:8px;box-sizing:border-box}
+.sq-tab-chip{flex-shrink:0;padding:8px 14px;border-radius:50px;border:1.5px solid var(--border);background:transparent;color:var(--mu);font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:all .2s}
+.sq-tab-chip.active{background:var(--or);border-color:var(--or);color:#fff}
+.sq-add-tab{flex-shrink:0;width:34px;height:34px;border-radius:50%;border:1.5px dashed rgba(176,38,255,.45);background:transparent;color:var(--pu);font-size:1.3rem;cursor:pointer;display:flex;align-items:center;justify-content:center;align-self:center;-webkit-tap-highlight-color:transparent;transition:border-color .2s}
+.sq-add-tab:active{border-color:var(--pu)}
+.sq-tmpl-card{background:var(--surf);border:1.5px solid var(--border);border-radius:14px;padding:12px;cursor:pointer;text-align:center;-webkit-tap-highlight-color:transparent;transition:border-color .2s}
+.sq-tmpl-card.active{border-color:var(--or);background:rgba(255,92,0,.07)}
+.sq-tmpl-card:active{border-color:var(--or)}
+
+/* ── MAP FILTER CHIPS ── */
+.mcb{flex-shrink:0;background:rgba(10,14,26,.82);backdrop-filter:blur(20px);border:1.5px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);padding:6px 14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.mcb.active{background:linear-gradient(135deg,var(--pu),var(--or));color:#fff;border-color:transparent;box-shadow:0 4px 18px rgba(176,38,255,.45)}
+
+/* ── MAP SPLASH (PULSIFY MAP EXPLORE) ── */
+#map-splash{position:absolute;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:radial-gradient(ellipse at center,#0c0f1f 0%,#05080F 70%);animation:msIn .35s ease-out;text-align:center;padding:24px;pointer-events:none}
+#map-splash.ms-fade{animation:msOut .45s ease-in forwards;pointer-events:none}
+.ms-pulse{position:relative;width:110px;height:110px;display:flex;align-items:center;justify-content:center}
+.ms-pulse::before,.ms-pulse::after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid var(--or);box-shadow:0 0 30px rgba(255,92,0,.55);animation:msRing 1.8s ease-out infinite}
+.ms-pulse::after{animation-delay:.9s;border-color:var(--pu);box-shadow:0 0 30px rgba(176,38,255,.55)}
+.ms-dot{width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,var(--or) 55%,var(--pu));box-shadow:0 0 50px var(--or),0 0 90px rgba(176,38,255,.6);animation:msDot 1.6s ease-in-out infinite}
+.ms-title{font-family:'Bebas Neue',sans-serif;font-size:2.6rem;letter-spacing:.18em;background:linear-gradient(135deg,#FF5C00,#B026FF);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1;text-shadow:0 0 30px rgba(255,92,0,.35)}
+.ms-sub{font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;letter-spacing:.5em;color:var(--cy);margin-top:-4px;text-shadow:0 0 12px rgba(0,229,255,.6);padding-left:.5em}
+.ms-sub2{font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--mu);letter-spacing:.05em;margin-top:6px;animation:msPulseText 1.6s ease-in-out infinite}
+@keyframes msIn{from{opacity:0}to{opacity:1}}
+@keyframes msOut{from{opacity:1}to{opacity:0}}
+@keyframes msRing{0%{transform:scale(.65);opacity:1}100%{transform:scale(1.9);opacity:0}}
+@keyframes msDot{0%,100%{transform:scale(1);box-shadow:0 0 50px var(--or),0 0 90px rgba(176,38,255,.6)}50%{transform:scale(1.12);box-shadow:0 0 70px var(--or),0 0 120px rgba(176,38,255,.8)}}
+@keyframes msPulseText{0%,100%{opacity:.55}50%{opacity:1}}
+
 </style>
 </head>
 <body>
@@ -409,12 +461,26 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     </div>
     <div class="cr">
       <button class="chip active" onclick="setGenre(this,'all')">✦ All</button>
+      <button class="chip" onclick="setGenre(this,'free')">✅ Free</button>
       <button class="chip" onclick="setGenre(this,'gqom')">🔊 Gqom</button>
       <button class="chip" onclick="setGenre(this,'amapiano')">🎶 Amapiano</button>
       <button class="chip" onclick="setGenre(this,'nightlife')">🌙 Nightlife</button>
       <button class="chip" onclick="setGenre(this,'sport')">⚽ Sport</button>
+      <button class="chip" onclick="setGenre(this,'outdoor')">🏞️ Outdoor</button>
+      <button class="chip" onclick="setGenre(this,'ceremonies')">💍 Ceremonies</button>
+      <button class="chip" onclick="setGenre(this,'workshop')">🛠️ Workshop</button>
+      <button class="chip" onclick="setGenre(this,'food')">🍴 Food</button>
+      <button class="chip" onclick="setGenre(this,'cultural')">🥁 Cultural</button>
+      <button class="chip" onclick="setGenre(this,'business')">💼 Business</button>
+      <button class="chip" onclick="setGenre(this,'wellness')">🧘 Wellness</button>
+      <button class="chip" onclick="setGenre(this,'art')">🎨 Art</button>
+      <button class="chip" onclick="setGenre(this,'market')">🛍️ Market</button>
+      <button class="chip" onclick="setGenre(this,'kids')">🧸 Kids</button>
+      <button class="chip" onclick="setGenre(this,'charity')">❤️ Charity</button>
+      <button class="chip" onclick="setGenre(this,'comedy')">😂 Comedy</button>
+      <button class="chip" onclick="setGenre(this,'jazz')">🎷 Jazz</button>
+      <button class="chip" onclick="setGenre(this,'gospel')">🙏 Gospel</button>
       <button class="chip" onclick="setGenre(this,'march')">✊ March</button>
-      <button class="chip" onclick="setGenre(this,'free')">✅ Free</button>
       <button class="chip" onclick="setGenre(this,'student')">🎓 Student</button>
     </div>
     <div class="sl"><span>🏆 Top Spots</span><a onclick="openBizPage();return false">See all →</a></div>
@@ -459,17 +525,23 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 
 <!-- ══ MAP ══ -->
 <div class="panel" id="tab-map" style="overflow:hidden">
-  <!-- Filter bar -->
-  <div style="position:absolute;top:0;left:0;right:0;z-index:50;background:rgba(5,8,15,.94);backdrop-filter:blur(18px);padding:8px 12px 7px;border-bottom:1px solid var(--border2)">
-    <div style="display:flex;gap:6px">
-      <select id="map-cat" onchange="applyMapFilters()" style="flex:1;background:rgba(13,20,36,.9);border:1px solid var(--border2);border-radius:50px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;padding:7px 10px;outline:none;cursor:pointer;-webkit-appearance:none"><option value="all">✦ All Types</option><option value="event">🎟 Events</option><option value="shisanyama">🔥 Shisanyama</option><option value="bar">🍻 Bar</option><option value="club">💿 Club</option><option value="hotel">🏨 Hotel</option><option value="bnb">🛏 BnB</option></select>
-      <select id="map-genre" onchange="applyMapFilters()" style="flex:1;background:rgba(13,20,36,.9);border:1px solid var(--border2);border-radius:50px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;padding:7px 10px;outline:none;cursor:pointer;-webkit-appearance:none"><option value="all">🎵 All Genres</option><option value="gqom">🔊 Gqom</option><option value="amapiano">🎶 Amapiano</option><option value="sport">⚽ Sport</option><option value="march">✊ March</option><option value="jazz">🎷 Jazz</option></select>
-      <select id="map-radius" onchange="applyMapFilters()" style="flex:1;background:rgba(13,20,36,.9);border:1px solid var(--border2);border-radius:50px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;padding:7px 10px;outline:none;cursor:pointer;-webkit-appearance:none"><option value="0">📍 All Areas</option><option value="30">30 km</option><option value="50">50 km</option><option value="100">100 km</option></select>
-    </div>
+  <!-- Header bar -->
+  <div style="position:absolute;top:0;left:0;right:0;height:56px;z-index:50;background:linear-gradient(135deg,rgba(176,38,255,.95),rgba(255,92,0,.95));backdrop-filter:blur(24px);display:flex;align-items:center;padding:0 14px;gap:10px">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.06em;color:#fff;flex:1;text-shadow:0 2px 8px rgba(0,0,0,.4)">📍 PULSIFY MAP</div>
+    <div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.15);border-radius:50px;padding:4px 12px;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:800;color:#fff;letter-spacing:.04em"><b id="map-cnt" style="color:var(--li)">0</b>&nbsp;spots</div>
+  </div>
+  <!-- Filter chips -->
+  <div style="position:absolute;top:56px;left:0;right:0;z-index:49;display:flex;gap:6px;padding:8px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none">
+    <button class="mcb active" onclick="setMapFilter('all',this)">✦ All</button>
+    <button class="mcb" onclick="setMapFilter('event',this)">🎟 Events</button>
+    <button class="mcb" onclick="setMapFilter('business',this)">🏪 Businesses</button>
+    <button class="mcb" onclick="setMapFilter('shisanyama',this)">🔥 Shisanyama</button>
+    <button class="mcb" onclick="setMapFilter('restaurant',this)">🍴 Restaurants</button>
+    <button class="mcb" onclick="setMapFilter('nightclub',this)">🎵 Nightlife</button>
   </div>
 
-  <!-- Map canvas — fills from filter bar to bottom nav -->
-  <div id="mc" style="position:absolute;top:48px;left:0;right:0;bottom:0;overflow:hidden;will-change:transform;background:#05080F"></div>
+  <!-- Map canvas — fills from filter chips to bottom nav -->
+  <div id="mc" style="position:absolute;top:112px;left:0;right:0;bottom:0;overflow:hidden;will-change:transform;background:#05080F"></div>
 
   <!-- Legend — collapsible, bottom-left -->
   <div id="map-legend" style="position:absolute;bottom:14px;left:12px;z-index:100;background:rgba(5,8,15,.93);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;pointer-events:auto">
@@ -512,16 +584,26 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 
 <!-- ══ SQUAD ══ -->
 <div class="panel" id="tab-squad">
-  <div style="padding:14px 16px 8px">
-    <div class="sw" style="padding:0; margin-bottom:12px">
+  <div class="sq-sub-tabs">
+    <button class="sq-stab active" id="stab-friends" onclick="showSquadSubTab('friends')">👥 Friends</button>
+    <button class="sq-stab" id="stab-squads" onclick="showSquadSubTab('squads')">🏆 Squads</button>
+  </div>
+  <!-- Friends sub-pane -->
+  <div id="squad-friends-pane" style="padding:12px 16px 8px">
+    <div class="sw" style="padding:0;margin-bottom:12px">
       <span class="sic">🔍</span>
-      <input class="si" type="search" id="friend-search" placeholder="Search friend, business or event organizer" autocomplete="off" oninput="searchUsers(this.value)"/>
+      <input class="si" type="search" id="friend-search" placeholder="Search friends, businesses, organizers" autocomplete="off" oninput="searchUsers(this.value)"/>
     </div>
     <div id="search-results" style="margin-top:12px"></div>
     <div style="margin-top:16px">
       <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">✨ People You May Know</div>
       <div id="squad-content"></div>
     </div>
+  </div>
+  <!-- Squads sub-pane -->
+  <div id="squad-squads-pane" style="display:none;padding:0 0 80px;overflow-y:auto">
+    <div id="sq-tabs-row" style="display:flex;gap:6px;overflow-x:auto;padding:10px 16px;border-bottom:1px solid var(--border);scrollbar-width:none"></div>
+    <div id="sq-workspace" style="padding:14px 16px"></div>
   </div>
 </div><!-- ══ BOTTOM NAV ══ -->
 <!-- BUSINESSES FULL PAGE OVERLAY -->
@@ -588,6 +670,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
       </button>
     </div>
     <div style="padding:0 14px 20px">
+      <button id="promo-btn" onclick="openPromoManager()" style="display:none;width:100%;background:linear-gradient(135deg,rgba(255,92,0,.1),rgba(255,45,120,.08));border:1px solid rgba(255,92,0,.3);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">📣</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Promotions</div><div style="font-size:.68rem;color:var(--mu)">Create and manage promos</div></div></div>
+        <span style="color:var(--or);font-size:.8rem">→</span>
+      </button>
+      <button id="admin-promo-btn" onclick="openAdminPromos()" style="display:none;width:100%;background:linear-gradient(135deg,rgba(176,38,255,.1),rgba(0,229,255,.08));border:1px solid rgba(176,38,255,.3);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">👮</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Admin · Approve Promos</div><div style="font-size:.68rem;color:var(--mu)">Review pending submissions</div></div></div>
+        <span style="color:#B026FF;font-size:.8rem">→</span>
+      </button>
       <button onclick="openFAQ()" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">❓</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Help & FAQ</div><div style="font-size:.68rem;color:var(--mu)">Get help and answers</div></div></div>
         <span style="color:var(--or);font-size:.8rem">→</span>
@@ -600,7 +690,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 <nav class="bn">
   <button class="bb active" data-tab="home" onclick="showTab('home')"><svg viewBox="0 0 24 24"><path d="M12 3C12 3 4 9.5 4 15a8 8 0 0016 0C20 9.5 12 3 12 3Z"/><path d="M12 10v5M9.5 13h5"/></svg><span class="bl">Home</span></button>
   <button class="bb" data-tab="discover" onclick="showTab('discover')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"/></svg><span class="bl">Discover</span></button>
-  <button class="bb" data-tab="map" onclick="window.location.href='/map'"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3M9 20V7m6 13l5.447-2.724A1 1 0 0021 16.382V5.618a1 1 0 00-1.447-.894L15 7m0 13V7M9 7l6-3"/></svg><span class="bl">Map</span></button>
+  <button class="bb" data-tab="map" onclick="showTab('map')"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3M9 20V7m6 13l5.447-2.724A1 1 0 0021 16.382V5.618a1 1 0 00-1.447-.894L15 7m0 13V7M9 7l6-3"/></svg><span class="bl">Map</span></button>
   <button class="bb" data-tab="tickets" onclick="showTab('tickets')"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M16 7v-.5a3.5 3.5 0 00-7 0V7M16 17v.5a3.5 3.5 0 01-7 0V17"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span class="bl">Bookings</span></button>
   <button class="bb" data-tab="squad" onclick="showTab('squad')"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M18 20c0-2.2-1.3-4.1-3-5"/></svg><span class="bl">Friends</span></button>
   <button class="bb" data-tab="profile" onclick="showTab('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg><span class="bl">Profile</span></button>
@@ -702,6 +792,22 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
           <div class="faq-a">Featured businesses appear at the top of search results with a ⭐ badge, get priority on the map, and receive detailed analytics. Plans start at R299/month. Contact us for custom packages! 🌟</div>
         </div>
         <div class="faq-item" onclick="toggleFAQ(this)">
+          <div class="faq-q">How do I promote my venue (BnB, club, shisanyama)?</div>
+          <div class="faq-a">Open <b>Profile → 📣 Promotions</b>. Pick the template that matches: <b>🏡 BnB</b> for stays, <b>🪩 Club Night</b> for Fri/Sat parties, <b>🔥 Shisanyama</b> for Sunday sessions. Each template pre-fills sensible defaults (price, placement, duration) so you can launch in under a minute. Submit and wait for admin approval. 📣</div>
+        </div>
+        <div class="faq-item" onclick="toggleFAQ(this)">
+          <div class="faq-q">What makes a great BnB / Stay promo?</div>
+          <div class="faq-a">Show the space — exterior + interior + the view. Mention <b>weekend rate</b>, location (city + suburb), and what makes it different (pool, braai, sea view). Add a WhatsApp or booking link. Best run window: 14 days. 🏡</div>
+        </div>
+        <div class="faq-item" onclick="toggleFAQ(this)">
+          <div class="faq-q">What makes a great Club Night promo?</div>
+          <div class="faq-a">Lead with the <b>headline DJ or lineup</b>. Pin the date + door time clearly. Mention door price + dress code. Use a high-energy image with the venue branding. Featured placement (weekend hero) works best — run it Wed–Sat. 🪩</div>
+        </div>
+        <div class="faq-item" onclick="toggleFAQ(this)">
+          <div class="faq-q">What makes a great Shisanyama promo?</div>
+          <div class="faq-a">Sunday afternoon is prime. Lead with the <b>food + drinks special</b> (e.g. "Pap & wors R65, double Hennessy R120"). Add the resident DJ or live act. Feed-injected placement reaches casual scrollers — set the run for 14 days to cover recurring Sundays. 🔥</div>
+        </div>
+        <div class="faq-item" onclick="toggleFAQ(this)">
           <div class="faq-q">Can I manage multiple locations?</div>
           <div class="faq-a">Yes! Business accounts can manage multiple venues from one dashboard. Each location gets its own profile, reviews, and analytics. Perfect for chains and franchises. 📍</div>
         </div>
@@ -732,7 +838,19 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
         </div>
         <div class="faq-item" onclick="toggleFAQ(this)">
           <div class="faq-q">How do I promote my event?</div>
-          <div class="faq-a">Events appear on our homepage, map, and in user feeds. Boost visibility with Featured placement (R499). We also promote top events on social media. Share your event link everywhere! 📣</div>
+          <div class="faq-a">Open <b>Profile → 📣 Promotions</b> and pick the "Event Boost" template. Paste your Event ID, add a hero image and external link, then submit. Once an admin approves it (usually within hours), your promo appears in the Featured carousel and in user feeds. 📣</div>
+        </div>
+        <div class="faq-item" onclick="toggleFAQ(this)">
+          <div class="faq-q">What placements can I choose for my promo?</div>
+          <div class="faq-a"><b>Featured (weekend hero)</b> = top of the homepage carousel, best for Fri/Sat events. <b>Feed-injected</b> = appears mixed into the main feed, best for steady awareness. <b>Both</b> = maximum reach. Pick based on your event's vibe and date. 🎯</div>
+        </div>
+        <div class="faq-item" onclick="toggleFAQ(this)">
+          <div class="faq-q">How long does approval take?</div>
+          <div class="faq-a">Most promos are reviewed within a few hours. You'll see status in <b>Profile → Promotions</b>: <span style="color:#FFB800">● Pending Review</span> means we're looking; <span style="color:var(--li)">● Approved</span> means it's live. We may reject promos that lack images, have broken links, or violate community rules. ⏳</div>
+        </div>
+        <div class="faq-item" onclick="toggleFAQ(this)">
+          <div class="faq-q">Tips for a promo that converts</div>
+          <div class="faq-a">1) Use a sharp hero image (1080×1080 or 16:9). 2) Mention the headline act or vibe in the title. 3) Set a clear price or "FREE" tag. 4) Add a working external link (Quicket, WhatsApp, IG). 5) Time your run window — Fri promos should launch by Wed. 🔥</div>
         </div>
         <div class="faq-item" onclick="toggleFAQ(this)">
           <div class="faq-q">Can I offer discount codes?</div>
@@ -762,6 +880,37 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
         <a href="mailto:help@pulsify.co.za" style="color:var(--or);font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;text-decoration:none">Contact Support →</a>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- PROMO MANAGER OVERLAY (Organizer / Business) -->
+<div id="promo-overlay" style="display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closePromoManager()">
+  <div style="width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;max-height:94vh;display:flex;flex-direction:column;animation:su .25s ease;position:relative">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--border2);margin:10px auto 0;flex-shrink:0"></div>
+    <button onclick="closePromoManager()" style="position:absolute;top:14px;right:14px;background:rgba(0,0,0,.5);border:1px solid var(--border2);color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;z-index:5">✕</button>
+    <div id="promo-overlay-body" style="overflow-y:auto;padding:16px 18px 32px;flex:1;scrollbar-width:none"></div>
+  </div>
+</div>
+
+<!-- ADMIN PROMOS OVERLAY -->
+<div id="admin-promo-overlay" style="display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeAdminPromos()">
+  <div style="width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;max-height:94vh;display:flex;flex-direction:column;animation:su .25s ease;position:relative">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--border2);margin:10px auto 0;flex-shrink:0"></div>
+    <button onclick="closeAdminPromos()" style="position:absolute;top:14px;right:14px;background:rgba(0,0,0,.5);border:1px solid var(--border2);color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;z-index:5">✕</button>
+    <div id="admin-promo-body" style="overflow-y:auto;padding:16px 18px 32px;flex:1;scrollbar-width:none"></div>
+  </div>
+</div>
+
+<!-- SQUAD INVITE OVERLAY -->
+<div id="squad-invite-overlay" style="display:none;position:fixed;inset:0;z-index:2700;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeSquadInvite()">
+  <div style="width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;max-height:80vh;display:flex;flex-direction:column;animation:su .25s ease;position:relative">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--border2);margin:10px auto 0;flex-shrink:0"></div>
+    <button onclick="closeSquadInvite()" style="position:absolute;top:14px;right:14px;background:rgba(0,0,0,.5);border:1px solid var(--border2);color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;z-index:5">✕</button>
+    <div style="padding:18px 18px 8px;flex-shrink:0">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;line-height:1">Invite to Squad</div>
+      <div style="font-size:.76rem;color:var(--mu);margin-top:2px">Tap a friend to add them</div>
+    </div>
+    <div id="squad-invite-body" style="overflow-y:auto;padding:8px 18px 32px;flex:1;scrollbar-width:none"></div>
   </div>
 </div>
 
@@ -807,6 +956,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
         <div style="display:flex;justify-content:space-between"><span style="color:var(--mu)">Total</span><span id="tc-total" style="color:var(--li);font-weight:700"></span></div>
       </div>
       <div style="font-size:.72rem;color:var(--mu);text-align:center;margin-bottom:14px">Show this QR at the door. Confirmation sent to your email.</div>
+      <div id="tc-squad-checkin" style="display:none;margin-bottom:12px"></div>
       <button onclick="closeTicketConfirm()" style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer">Done</button>
     </div>
   </div>
@@ -902,7 +1052,47 @@ function ft(t) {
   return (hr > 12 ? hr - 12 : hr || 12) + ':' + m + (hr >= 12 ? 'PM' : 'AM');
 }
 function gg(g) {
-  const m = { amapiano:'linear-gradient(135deg,#1a0533,#4a0080)', gqom:'linear-gradient(135deg,#1a0015,#5a0035)', sport:'linear-gradient(135deg,#001a0a,#004d22)', sports:'linear-gradient(135deg,#001a0a,#004d22)', march:'linear-gradient(135deg,#0a1a00,#253a00)', nightlife:'linear-gradient(135deg,#1a000d,#3d0026)', jazz:'linear-gradient(135deg,#001a1a,#003535)', shisanyama:'linear-gradient(135deg,#1a0800,#4d1a00)', experience:'linear-gradient(135deg,#001a2a,#003550)', festival:'linear-gradient(135deg,#0a001a,#2a0050)', live:'linear-gradient(135deg,#001a2a,#003050)', comedy:'linear-gradient(135deg,#1a1a00,#4d4d00)', maskandi:'linear-gradient(135deg,#0a1a00,#204000)', afrobeats:'linear-gradient(135deg,#1a0010,#4a0030)', hip:'linear-gradient(135deg,#1a001a,#3a0040)' };
+  const m = {
+    amapiano:'linear-gradient(135deg,#1a0533,#4a0080)',
+    gqom:'linear-gradient(135deg,#1a0015,#5a0035)',
+    sport:'linear-gradient(135deg,#001a0a,#004d22)',
+    sports:'linear-gradient(135deg,#001a0a,#004d22)',
+    march:'linear-gradient(135deg,#0a1a00,#253a00)',
+    nightlife:'linear-gradient(135deg,#1a000d,#3d0026)',
+    jazz:'linear-gradient(135deg,#001a1a,#003535)',
+    shisanyama:'linear-gradient(135deg,#1a0800,#4d1a00)',
+    experience:'linear-gradient(135deg,#001a2a,#003550)',
+    festival:'linear-gradient(135deg,#0a001a,#2a0050)',
+    live:'linear-gradient(135deg,#001a2a,#003050)',
+    comedy:'linear-gradient(135deg,#1a1a00,#4d4d00)',
+    maskandi:'linear-gradient(135deg,#0a1a00,#204000)',
+    afrobeats:'linear-gradient(135deg,#1a0010,#4a0030)',
+    hip:'linear-gradient(135deg,#1a001a,#3a0040)',
+    outdoor:'linear-gradient(135deg,#001a14,#003d2e)',
+    ceremon:'linear-gradient(135deg,#1a0a14,#3d1a2e)',
+    wedding:'linear-gradient(135deg,#1a0a14,#3d1a2e)',
+    workshop:'linear-gradient(135deg,#1a1500,#3d3500)',
+    food:'linear-gradient(135deg,#1a0a00,#3d1a00)',
+    cultural:'linear-gradient(135deg,#1a0500,#4d1a00)',
+    heritage:'linear-gradient(135deg,#1a0500,#4d1a00)',
+    business:'linear-gradient(135deg,#0a0a1a,#1a1a3d)',
+    fashion:'linear-gradient(135deg,#1a000d,#3d0026)',
+    wellness:'linear-gradient(135deg,#001a1a,#003535)',
+    yoga:'linear-gradient(135deg,#001a1a,#003535)',
+    art:'linear-gradient(135deg,#0a001a,#2a0050)',
+    market:'linear-gradient(135deg,#001a0a,#003d1a)',
+    kids:'linear-gradient(135deg,#1a0a0d,#3d1a26)',
+    family:'linear-gradient(135deg,#1a0a0d,#3d1a26)',
+    charity:'linear-gradient(135deg,#1a000d,#3d0026)',
+    tech:'linear-gradient(135deg,#001a2a,#003050)',
+    film:'linear-gradient(135deg,#0d000d,#26002a)',
+    movie:'linear-gradient(135deg,#0d000d,#26002a)',
+    dance:'linear-gradient(135deg,#1a000d,#3d0026)',
+    gospel:'linear-gradient(135deg,#0a1a00,#1f3d00)',
+    rock:'linear-gradient(135deg,#1a000d,#3d0026)',
+    theatre:'linear-gradient(135deg,#1a0a00,#3d1a00)',
+    house:'linear-gradient(135deg,#001a2a,#003050)',
+  };
   const k = Object.keys(m).find(k => (g ?? '').toLowerCase().includes(k));
   return m[k] ?? 'linear-gradient(135deg,#0D1424,#121B30)';
 }
@@ -915,16 +1105,37 @@ function ge(g) {
   if (s.includes('amapiano'))return '🎶';
   if (s.includes('night') || s.includes('club')) return '🌙';
   if (s.includes('hip'))     return '🎤';
-  if (s.includes('food') || s.includes('shisa')) return '🥩';
+  if (s.includes('shisa'))   return '🥩';
+  if (s.includes('food') || s.includes('cuisine') || s.includes('dining') || s.includes('tasting')) return '🍴';
   if (s.includes('comedy'))  return '😂';
-  if (s.includes('experience') || s.includes('cruise')) return '🛥️';
+  if (s.includes('cruise') || s.includes('experience')) return '🛥️';
   if (s.includes('festival')) return '🎉';
-  if (s.includes('market'))  return '🛍️';
+  if (s.includes('market') || s.includes('flea') || s.includes('craft')) return '🛍️';
+  if (s.includes('outdoor') || s.includes('hike') || s.includes('camping') || s.includes('adventure')) return '🏞️';
+  if (s.includes('ceremon') || s.includes('wedding')) return '💍';
+  if (s.includes('workshop') || s.includes('course') || s.includes('training') || s.includes('class') || s.includes('seminar')) return '🛠️';
+  if (s.includes('cultural') || s.includes('heritage') || s.includes('traditional')) return '🥁';
+  if (s.includes('business') || s.includes('conference') || s.includes('expo') || s.includes('network')) return '💼';
+  if (s.includes('fashion') || s.includes('style')) return '👗';
+  if (s.includes('wellness') || s.includes('yoga') || s.includes('fitness') || s.includes('meditation') || s.includes('health')) return '🧘';
+  if (s.includes('art') || s.includes('exhibit') || s.includes('gallery')) return '🎨';
+  if (s.includes('kids') || s.includes('family') || s.includes('children')) return '🧸';
+  if (s.includes('charity') || s.includes('fundrais') || s.includes('cause')) return '❤️';
+  if (s.includes('tech'))    return '💻';
+  if (s.includes('film') || s.includes('movie') || s.includes('cinema')) return '🎬';
+  if (s.includes('dance') || s.includes('ballet')) return '💃';
+  if (s.includes('gospel'))  return '🙏';
+  if (s.includes('rock'))    return '🎸';
+  if (s.includes('theatre') || s.includes('theater')) return '🎭';
+  if (s.includes('maskandi')) return '🪕';
+  if (s.includes('afro'))    return '🎶';
+  if (s.includes('house'))   return '🏠';
   return '🎶';
 }
 function ce(c) { return { restaurant:'🍽️', bar:'🍸', club:'💃', shisanyama:'🥩', hotel:'🏨', bnb:'🏡', venue:'🎪' }[c] ?? '📍'; }
 function cg(c) { return { shisanyama:'linear-gradient(135deg,#1a0800,#4d1a00)', bar:'linear-gradient(135deg,#0d001a,#2a0050)', club:'linear-gradient(135deg,#1a000d,#4a0025)', restaurant:'linear-gradient(135deg,#1a0800,#4d1a00)', hotel:'linear-gradient(135deg,#1a0a2a,#380060)', bnb:'linear-gradient(135deg,#0a1a2a,#00284d)' }[c] ?? 'linear-gradient(135deg,#0D1424,#121B30)'; }
 function showToast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast ' + type + ' show'; setTimeout(() => t.classList.remove('show'), 3000); }
+async function safeJson(res) { try { const t = await res.text(); return t ? JSON.parse(t) : {}; } catch(e) { return {}; } }
 function openModal(id) { document.getElementById(id)?.classList.add('open'); }
 function triggerRev() { const obs = new IntersectionObserver(entries => { entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); }); }, { threshold: .06 }); document.querySelectorAll('.rv:not(.in)').forEach(el => obs.observe(el)); }
 
@@ -948,11 +1159,55 @@ function showTab(name, _noPush) {
   document.getElementById('back-btn').classList.remove('show');
   if (!_noPush) history.pushState({ tab: name, detail: false }, '');
   setTimeout(triggerRev, 80);
-  if (name === 'squad')   renderSquad();
+  if (name === 'squad')   { renderSquad(); showSquadSubTab('friends'); }
   if (name === 'tickets') renderBookings();
   if (name === 'discover') loadDiscover();
   if (name === 'profile') renderProfile();
-  if (name === 'map' && mapInited && mapObj) setTimeout(() => mapObj.resize(), 50);
+  if (name === 'map') {
+    if (!mapInited) {
+      // First open — show splash, init map, ensure business pins
+      showMapSplash();
+      requestAnimationFrame(() => { initMap(); ensureBizForMap(); });
+    } else if (mapObj) {
+      setTimeout(() => mapObj.resize(), 50);
+      // Refresh markers in case bizForMap loaded after first init
+      if (typeof placeMapMarkers === 'function') placeMapMarkers();
+    }
+  }
+}
+// Show "PULSIFY MAP EXPLORE" splash inside the map panel while it boots
+function showMapSplash() {
+  const mc = document.getElementById('mc'); if (!mc) return;
+  if (document.getElementById('map-splash')) return;
+  const splash = document.createElement('div');
+  splash.id = 'map-splash';
+  splash.innerHTML = `
+    <div class="ms-pulse"><div class="ms-dot"></div></div>
+    <div class="ms-title">PULSIFY MAP</div>
+    <div class="ms-sub">EXPLORE</div>
+    <div class="ms-sub2">Loading the streets…</div>`;
+  mc.appendChild(splash);
+}
+function hideMapSplash() {
+  const s = document.getElementById('map-splash');
+  if (!s) return;
+  s.classList.add('ms-fade');
+  setTimeout(() => s.remove(), 460);
+}
+// Make sure bizForMap is populated even if user opens Map before loadFrontline ran
+async function ensureBizForMap() {
+  if (bizForMap && bizForMap.length) return;
+  try {
+    const sb = getSB(); if (!sb) return;
+    const { data } = await sb.from('businesses')
+      .select('id,name,category,subcategory,lat,lon,cover_image_url,city,suburb,is_frontline,rating')
+      .not('lat','is',null).not('lon','is',null).limit(500);
+    bizForMap = (data || []).filter(b => {
+      const la = Number(b.lat), lo = Number(b.lon);
+      return Number.isFinite(la) && Number.isFinite(lo) && la >= -35 && la <= -22 && lo >= 16 && lo <= 33;
+    });
+    if (mapInited && typeof placeMapMarkers === 'function') placeMapMarkers();
+  } catch(e) { /* ignore — map still works with events only */ }
 }
 function showDetailTab(name, _noPush) {
   prevTab = curTab; curTab = name;
@@ -1075,28 +1330,91 @@ async function loadQuicketEvents(city, genre) {
   const container = document.getElementById('events-feed');
   if (!container) return;
   try {
-    const params = new URLSearchParams({ city: city || 'all', genre: genre || 'all', page: '1' });
-    const resp = await fetch('/api/quicket-events?' + params);
+    const params = new URLSearchParams({ city: city || 'all', genre: genre === 'free' ? 'all' : (genre || 'all'), limit: '200', _t: String(Date.now()) });
+    if (genre === 'free') params.append('free', '1');
+    const resp = await fetch('/api/quicket-events?' + params, { cache: 'no-store' });
     if (!resp.ok) {
-      const err = await resp.text();
-      console.warn('[Quicket] API error', resp.status, err);
+      console.warn('[Quicket] API error', resp.status, '— falling back to Edge Function');
+      await loadQuicketDirect(container, city, genre);
       return;
     }
-    const { events } = await resp.json();
-    console.log('[Quicket] Loaded', events?.length || 0, 'events');
-    if (!events?.length) return;
+    const json = await safeJson(resp);
+    const events = json.events || [];
+    console.log('[Quicket] Loaded', events.length, 'events. Total from API:', json.total, 'Source:', json.source);
+    if (!events.length) {
+      // Server IP may be blocked by Quicket — try direct browser fetch instead
+      await loadQuicketDirect(container, city, genre);
+      return;
+    }
 
-    // Filter out any that are already shown
     const existingIds = new Set([...container.querySelectorAll('[data-evid]')].map(el => el.dataset.evid));
     const fresh = events.filter(e => !existingIds.has(e.id));
     if (!fresh.length) return;
 
+    // Split free vs paid for two sub-sections
+    const freeEvs = fresh.filter(e => e.is_free);
+    const paidEvs = fresh.filter(e => !e.is_free);
+
     const section = document.createElement('div');
-    section.innerHTML = `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);padding:16px 0 8px;display:flex;align-items:center;gap:8px"><img src="https://www.quicket.co.za/favicon.ico" width="14" height="14" style="border-radius:3px" onerror="this.style.display='none'"/>More events from Quicket</div>` +
-      fresh.slice(0, 30).map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
+    let html = '';
+    if (freeEvs.length) {
+      html += `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--li);padding:16px 0 8px;display:flex;align-items:center;gap:8px">🆓 Free Events Near You</div>`;
+      html += freeEvs.slice(0, 40).map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
+    }
+    if (paidEvs.length) {
+      html += `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);padding:20px 0 8px;display:flex;align-items:center;gap:8px"><img src="https://www.quicket.co.za/favicon.ico" width="14" height="14" style="border-radius:3px" onerror="this.style.display='none'"/>More events from Quicket</div>`;
+      html += paidEvs.slice(0, 80).map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
+    }
+    section.innerHTML = html;
     container.appendChild(section);
     eventsForMap = [...eventsForMap, ...fresh];
   } catch(e) { /* Quicket unavailable — silently skip */ }
+}
+
+// Quicket via Supabase Edge Function proxy — bypasses Vercel IP block and browser CORS.
+// Edge Function runs on Deno Deploy (different IPs, adds CORS headers).
+async function loadQuicketDirect(container, city, genre) {
+  try {
+    const params = new URLSearchParams({
+      city: city || 'all',
+      genre: genre === 'free' ? 'all' : (genre || 'all'),
+      limit: '200',
+      _t: String(Date.now()),
+    });
+    if (genre === 'free') params.append('free', '1');
+
+    const edgeUrl = 'https://cjzewfvtdayjgjdpdmln.supabase.co/functions/v1/quicket-proxy?' + params;
+    const resp = await fetch(edgeUrl, { cache: 'no-store' });
+    if (!resp.ok) { console.warn('[Quicket Edge] HTTP', resp.status); return; }
+
+    const json = await resp.json();
+    const events = json.events || [];
+    console.log('[Quicket Edge]', events.length, 'events, cities:', json.cities_tried);
+    if (!events.length) return;
+
+    const existingIds = new Set([...container.querySelectorAll('[data-evid]')].map(el => el.dataset.evid));
+    const fresh = events.filter(e => !existingIds.has(e.id));
+    if (!fresh.length) return;
+
+    const freeEvs = fresh.filter(e => e.is_free);
+    const paidEvs = fresh.filter(e => !e.is_free);
+    let html = '';
+    if (freeEvs.length) {
+      html += `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--li);padding:16px 0 8px;display:flex;align-items:center;gap:8px">🆓 Free Events Near You</div>`;
+      html += freeEvs.slice(0, 40).map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
+    }
+    if (paidEvs.length) {
+      html += `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);padding:20px 0 8px;display:flex;align-items:center;gap:8px"><img src="https://www.quicket.co.za/favicon.ico" width="14" height="14" style="border-radius:3px" onerror="this.style.display='none'"/>Events from Quicket</div>`;
+      html += paidEvs.slice(0, 80).map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
+    }
+    if (!html) return;
+    const section = document.createElement('div');
+    section.innerHTML = html;
+    container.appendChild(section);
+    eventsForMap = [...eventsForMap, ...fresh];
+  } catch(e) {
+    console.warn('[Quicket Edge] failed:', e.message);
+  }
 }
 
 function buildCard(ev, idx) {
@@ -1152,7 +1470,7 @@ async function loadPromotions() {
     const params = new URLSearchParams({ city: feedCity || '', genre: feedGenre || '' });
     const r = await fetch('/api/promotions?' + params);
     if (!r.ok) return { featured: [], injected: [] };
-    _cachedPromos = await r.json();
+    _cachedPromos = await safeJson(r);
     return _cachedPromos;
   } catch(e) { return { featured: [], injected: [] }; }
 }
@@ -1464,7 +1782,7 @@ async function initPay(evId) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ event_id: evId, tier_id: selTier?.id || null, quantity: selQty, buyer_name: name, buyer_email: email }),
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error);
 
     // Paystack disabled — show confirmation with QR directly
@@ -1596,25 +1914,46 @@ function handleDiscSearch(val) { /* future: search businesses */ }
 /* ══════════════════════════════════════════════════
    MAP
 ══════════════════════════════════════════════════ */
+function _showMapErr(msg) {
+  const mc = document.getElementById('mc'); if (!mc) return;
+  hideMapSplash();
+  if (document.getElementById('map-err-msg')) return;
+  const d = document.createElement('div');
+  d.id = 'map-err-msg';
+  d.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;background:#05080F;z-index:10';
+  d.innerHTML = `<div style="font-size:2.2rem;margin-bottom:14px">🗺️</div>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;margin-bottom:8px">Map couldn't load</div>
+    <div style="font-size:.7rem;color:var(--mu);max-width:280px;line-height:1.5">${msg}</div>`;
+  mc.appendChild(d);
+}
 function initMap() {
   if (mapInited) return; mapInited = true;
   if (!window.mapboxgl) {
-    document.getElementById('mc').innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Map unavailable</div>';
+    _showMapErr('Map library failed to load. Check your internet connection.');
+    return;
+  }
+  if (!mapboxgl.supported()) {
+    _showMapErr('Your browser does not support WebGL, which is required for the map. Try Chrome or Firefox.');
     return;
   }
   mapboxgl.accessToken = MAPBOX_TOKEN;
-  mapObj = new mapboxgl.Map({
-    container: 'mc',
-    style: 'mapbox://styles/mapbox/navigation-night-v1',
-    center: [30.9753, -29.8587], // Durban, KZN
-    zoom: 10,
-    minZoom: 5,
-    maxZoom: 18,
-    dragRotate: false,
-    pitchWithRotate: false,
-    touchPitch: false,
-    maxBounds: [[14, -36], [34, -20]]
-  });
+  try {
+    mapObj = new mapboxgl.Map({
+      container: 'mc',
+      style: 'mapbox://styles/mapbox/satellite-streets-v12',
+      center: [30.9753, -29.8587],
+      zoom: 10,
+      minZoom: 5,
+      maxZoom: 18,
+      dragRotate: false,
+      pitchWithRotate: false,
+      touchPitch: false,
+      maxBounds: [[14, -36], [34, -20]]
+    });
+  } catch(e) {
+    _showMapErr('Map init failed: ' + (e.message || e));
+    return;
+  }
   mapObj.touchZoomRotate.disableRotation();
   
   // Add controls
@@ -1627,28 +1966,35 @@ function initMap() {
   
   mapObj.on('load', () => {
     mapObj.resize();
-    
-    // Enhanced ocean and water styling
-    const WF = '#0a1929', WL = '#1a3a52';
-    ['water','water-shadow'].forEach(id => {
-      try { if (mapObj.getLayer(id)) mapObj.setPaintProperty(id, 'fill-color', WF); } catch(e) {}
-    });
-    ['waterway'].forEach(id => {
-      try { if (mapObj.getLayer(id)) mapObj.setPaintProperty(id, 'line-color', WL); } catch(e) {}
-    });
-    
-    // Add glow effect to land
-    try {
-      if (mapObj.getLayer('land')) {
-        mapObj.setPaintProperty('land', 'background-color', '#05080F');
-      }
-    } catch(e) {}
-    
-    placeMapMarkers(); 
-    addHeatmap();
-    addPulseAnimation();
+    setTimeout(() => mapObj.resize(), 200);
+    placeMapMarkers();
+    hideMapSplash();
   });
-  
+
+  // If the map fails to load (bad token, network, domain restriction) — show error instead of infinite splash
+  mapObj.on('error', (e) => {
+    const errMsg = e.error?.message || e.error?.toString() || 'Unknown error';
+    const errStatus = e.error?.status;
+    // Ignore non-fatal layer/source manipulation errors — these come from
+    // removeLayer/addLayer calls on layers that may not exist yet.
+    if (/does not exist in the map'?s style|already.*exist|no.*layer|no.*source/i.test(errMsg)) return;
+    console.error('[Map error]', errStatus, errMsg, e);
+    let reason;
+    if (errStatus === 401 || /401|unauthorized/i.test(errMsg)) reason = 'Mapbox token is invalid or expired. Get a new one at mapbox.com/account/access-tokens';
+    else if (errStatus === 403 || /403|forbidden/i.test(errMsg)) reason = 'Mapbox token is restricted to a different domain. Add ' + location.hostname + ' at mapbox.com/account/access-tokens';
+    else if (/load.*style|style.*load/i.test(errMsg)) reason = 'Map style failed to load. The Mapbox token may be invalid.';
+    else reason = 'Map error: ' + errMsg.slice(0, 120);
+    _showMapErr(reason);
+  });
+
+  // Fallback: if load event hasn't fired within 12s, assume failure
+  const _mapTimeout = setTimeout(() => {
+    if (!mapObj.loaded()) {
+      _showMapErr('Map timed out. Could not load tiles — check your internet connection.');
+    }
+  }, 12000);
+  mapObj.once('load', () => clearTimeout(_mapTimeout));
+
   // Close panel on map tap — but NOT if a marker was just tapped
   let _markerJustTapped = false;
   mapObj.on('click', () => { if (_markerJustTapped) { _markerJustTapped = false; return; } closeMapPanel(); });
@@ -1686,20 +2032,28 @@ function _ms(item, type) {
   return {bg:'#555',sh:'100,100,100',ico:'📍', grad:'linear-gradient(135deg, #555, #444)'};
 }
 
+let currentMapFilter = 'all';
+
+function setMapFilter(cat, btn) {
+  currentMapFilter = cat;
+  document.querySelectorAll('.mcb').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (mapInited && mapObj) placeMapMarkers();
+}
+
 function placeMapMarkers() {
   if (!mapObj) return;
   mapMarkers.forEach(m => { try { m.remove(); } catch(e){} });
   mapMarkers = [];
 
-  const catF   = (document.getElementById('map-cat')?.value   || 'all').toLowerCase();
-  const genreF = (document.getElementById('map-genre')?.value  || 'all').toLowerCase();
+  const catF = currentMapFilter;
 
   let evs = eventsForMap.filter(e => e.venue_lat && e.venue_lon);
   let bzs = bizForMap.filter(b => b.lat && b.lon);
 
-  if (catF === 'event')       bzs = [];
-  else if (catF !== 'all') { evs = []; bzs = bzs.filter(b => (b.category||'').toLowerCase() === catF); }
-  if (genreF !== 'all')       evs = evs.filter(e => (e.genre||'').toLowerCase().includes(genreF));
+  if (catF === 'event')      bzs = [];
+  else if (catF === 'business') evs = [];
+  else if (catF !== 'all') { evs = []; bzs = bzs.filter(b => (b.category||'').toLowerCase().includes(catF)); }
 
   [...evs.map(e=>({item:e,type:'event'})), ...bzs.map(b=>({item:b,type:'biz'}))].forEach(({item,type}) => {
     const lat = parseFloat(type==='event' ? item.venue_lat : item.lat);
@@ -1780,8 +2134,11 @@ function placeMapMarkers() {
 
     mapMarkers.push(new mapboxgl.Marker({element: el, anchor: 'center'}).setLngLat([lon, lat]).addTo(mapObj));
   });
-  
-  // Only auto-fit if markers are within KZN/eastern SA (not ocean strays)
+
+  const cntEl = document.getElementById('map-cnt');
+  if (cntEl) cntEl.textContent = mapMarkers.length;
+
+  // Auto-fit to KZN/eastern SA markers
   const kznMarkers = mapMarkers.filter(m => {
     const ll = m.getLngLat();
     return ll.lng >= 28.5 && ll.lng <= 32.5 && ll.lat >= -31 && ll.lat <= -27;
@@ -1862,7 +2219,8 @@ function addHeatmap() {
   
   if (!features.length) return;
   
-  try { mapObj.removeLayer('heat'); mapObj.removeSource('heat'); } catch(e) {}
+  if (mapObj.getLayer('heat'))  mapObj.removeLayer('heat');
+  if (mapObj.getSource('heat')) mapObj.removeSource('heat');
   
   mapObj.addSource('heat', { 
     type: 'geojson', 
@@ -1925,7 +2283,7 @@ function addPulseAnimation() {
   document.head.appendChild(style);
 }
 
-function applyMapFilters() { if(mapInited&&mapObj) placeMapMarkers(); }
+function applyMapFilters() { if(mapInited&&mapObj) placeMapMarkers(); } // kept for compat
 
 /* ══════════════════════════════════════════════════
    AUTH — Supabase
@@ -2005,6 +2363,13 @@ function renderProfile() {
   // Top-right button → Feed
   const ab = document.getElementById('auth-btn');
   if (ab) { ab.textContent = 'Feed'; ab.onclick = () => window.location.href = '/feeds'; }
+
+  // Role-gated menu items
+  const role = (prof?.role || sess?.role || 'user');
+  const promoBtn = document.getElementById('promo-btn');
+  if (promoBtn) promoBtn.style.display = (role === 'business' || role === 'organizer' || role === 'admin') ? 'flex' : 'none';
+  const adminBtn = document.getElementById('admin-promo-btn');
+  if (adminBtn) adminBtn.style.display = (role === 'admin') ? 'flex' : 'none';
 
   currentUser = sess;
 }
@@ -2179,8 +2544,9 @@ async function postComment() {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ entity_id: activeEntityId, entity_type: activeEntityType, content: val }),
     });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Failed to post comment');
+    const json = await safeJson(res);
+    if (!res.ok) throw new Error(json.error || 'Could not save — please retry');
+    if (!json.comment) throw new Error('Could not save — please retry');
 
     const prof = JSON.parse(localStorage.getItem('p_profile') || '{}');
     activeComments.push({
@@ -2210,14 +2576,23 @@ async function toggleLike(btn, entityId, entityType = 'event') {
   ico.textContent = liked ? '❤️' : '🤍';
   cntEl.textContent = fn(liked ? currentNum + 1 : Math.max(0, currentNum - 1));
 
-  const token = localStorage.getItem('p_token') || '';
+  // Always use the live session token — localStorage p_token goes stale when
+  // Supabase silently refreshes the access token every ~1 hour.
+  let token = '';
+  try {
+    const sb2 = getSB();
+    const { data: { session } } = await sb2.auth.getSession();
+    token = session?.access_token || localStorage.getItem('p_token') || '';
+    if (session?.access_token) localStorage.setItem('p_token', session.access_token);
+  } catch(_) { token = localStorage.getItem('p_token') || ''; }
+
   try {
     const res = await fetch('/api/reactions', {
       method: liked ? 'POST' : 'DELETE',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ entity_type: entityType, entity_id: entityId, type: 'like' }),
     });
-    if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+    if (!res.ok) { const j = await safeJson(res); throw new Error(j.error || 'Failed'); }
   } catch(e) {
     console.error('Like error:', e);
     btn.classList.toggle('lk');
@@ -2372,6 +2747,7 @@ async function openNotifPanel() {
 }
 function closeNotifPanel() { document.getElementById('notif-overlay').style.display = 'none'; }
 
+let _notifMap = {};
 async function loadNotifications() {
   const sb = getSB(); const el = document.getElementById('notif-list');
   if (!el) return;
@@ -2386,6 +2762,7 @@ async function loadNotifications() {
       .order('created_at', { ascending: false }).limit(30);
     if (error) throw error;
     const notifs = data || [];
+    _notifMap = Object.fromEntries(notifs.map(n => [n.id, n]));
     const unread = notifs.filter(n => !n.read).length;
     const dot = document.getElementById('notif-dot');
     if (dot) dot.style.display = unread ? 'block' : 'none';
@@ -2418,7 +2795,7 @@ async function loadNotifications() {
         : msg;
 
       return `
-        <div onclick="markNotifRead('${n.id}')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);background:${n.read?'transparent':'rgba(176,38,255,.07)'};cursor:pointer;transition:background .15s" onmouseenter="this.style.background='rgba(255,255,255,.03)'" onmouseleave="this.style.background='${n.read?'transparent':'rgba(176,38,255,.07)'}'">
+        <div onclick="handleNotifClick('${n.id}')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);background:${n.read?'transparent':'rgba(176,38,255,.07)'};cursor:pointer;transition:background .15s" onmouseenter="this.style.background='rgba(255,255,255,.03)'" onmouseleave="this.style.background='${n.read?'transparent':'rgba(176,38,255,.07)'}'">
           <div style="position:relative;flex-shrink:0">
             ${avatarEl}
             <div style="position:absolute;bottom:-1px;right:-1px;width:18px;height:18px;border-radius:50%;background:var(--surf);display:flex;align-items:center;justify-content:center;font-size:.7rem;border:1.5px solid var(--bg2)">${ico[n.type]||'🔔'}</div>
@@ -2439,6 +2816,37 @@ async function markNotifRead(id) {
   const sb = getSB();
   if (!sb || !id) return;
   await sb.from('notifications').update({ read: true }).eq('id', id).eq('user_id', currentUser.id);
+}
+
+// Click on a notification → mark read, close panel, route to the right thing.
+// - follow                 → /user-profile?id={actor}
+// - like/comment on event  → openEv(entity_id)
+// - like/comment on post   → /feeds?pid={entity_id} (+ &cid for replies)
+// - reply                  → same as post/event but adds ?cid={comment_id}
+function handleNotifClick(id) {
+  const n = _notifMap[id]; if (!n) return;
+  markNotifRead(id);
+  closeNotifPanel();
+  const data = n.data || {};
+  const actor = n.from_user_id || data.actor_id;
+  if (n.type === 'follow') {
+    if (actor) window.location.href = `/user-profile?id=${encodeURIComponent(actor)}`;
+    return;
+  }
+  if (n.entity_type === 'event' && n.entity_id) {
+    openEv(n.entity_id);
+    return;
+  }
+  if (n.entity_type === 'post' && n.entity_id) {
+    const cid = data.comment_id;
+    const qs  = cid ? `?pid=${encodeURIComponent(n.entity_id)}&cid=${encodeURIComponent(cid)}`
+                    : `?pid=${encodeURIComponent(n.entity_id)}`;
+    window.location.href = `/feeds${qs}`;
+    return;
+  }
+  if (n.entity_type === 'profile' && actor) {
+    window.location.href = `/user-profile?id=${encodeURIComponent(actor)}`;
+  }
 }
 
 async function markAllNotifsRead() {
@@ -2577,7 +2985,7 @@ async function toggleFollowOverlay(targetId) {
 /* ══════════════════════════════════════════════════
    TICKET CONFIRMATION MODAL
 ══════════════════════════════════════════════════ */
-function showTicketConfirm(booking) {
+async function showTicketConfirm(booking) {
   document.getElementById('tc-event').textContent = booking.event_name || '';
   document.getElementById('tc-ref').textContent   = booking.booking_ref || '';
   document.getElementById('tc-name').textContent  = booking.buyer_name  || '';
@@ -2586,6 +2994,21 @@ function showTicketConfirm(booking) {
   const qrData = encodeURIComponent(booking.qr_data || booking.booking_ref || 'PULSIFY');
   document.getElementById('tc-qr').src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${qrData}&bgcolor=090D1A&color=FF5C00&margin=2`;
   document.getElementById('ticket-confirm-modal').style.display = 'flex';
+  const evId = booking.event_id || '';
+  if (_mySquads.length) {
+    showSquadCheckinBar(evId);
+  } else if (currentUser) {
+    // Squads not yet loaded — fetch silently so check-in bar can appear
+    try {
+      const sb2 = getSB();
+      const session = sb2 ? (await sb2.auth.getSession()).data?.session : null;
+      if (session) {
+        const r = await fetch(API + '/squads', { headers: { Authorization: 'Bearer ' + session.access_token } }).catch(() => null);
+        if (r && r.ok) { const d = await safeJson(r); _mySquads = d.squads || []; }
+      }
+    } catch(e) {}
+    if (_mySquads.length) showSquadCheckinBar(evId);
+  }
 }
 function closeTicketConfirm() { document.getElementById('ticket-confirm-modal').style.display = 'none'; }
 
@@ -2602,6 +3025,307 @@ function closeFAQ() {
 
 function toggleFAQ(item) {
   item.classList.toggle('open');
+}
+
+/* ══════════════════════════════════════════════════
+   PROMOTIONS — Create with Templates (Business/Organizer)
+══════════════════════════════════════════════════ */
+const PROMO_TEMPLATES = [
+  { id:'bnb',         icon:'🏡', label:'BnB / Stay',      tagline:'Weekend getaway · Special rate',
+    fields:{ title:'Weekend Getaway Special', genre:'Stay', is_free:false, price_min:899, placement:'feed_inject', duration_days:14 },
+    hint:'Show off your space. Add a hero image, the nightly rate, and city. Best for weekend & holiday slots.' },
+  { id:'club',        icon:'🪩', label:'Club Night',      tagline:'Friday/Saturday · DJ lineup',
+    fields:{ title:'Saturday Night Sessions', genre:'Amapiano', is_free:false, price_min:100, placement:'featured_weekend', duration_days:7 },
+    hint:'Friday/Saturday nights work best. Mention headline DJs, door price, and dress code.' },
+  { id:'shisanyama', icon:'🔥', label:'Shisanyama',      tagline:'Sunday session · Food + music',
+    fields:{ title:'Sunday Shisanyama Sessions', genre:'House', is_free:true, price_min:0, placement:'feed_inject', duration_days:14 },
+    hint:'Sundays own the shisanyama vibe. Add food specials, drinks deals, and live DJ info.' },
+  { id:'event',       icon:'🎤', label:'Event Boost',     tagline:'Promote an existing event',
+    fields:{ title:'', genre:'', is_free:false, price_min:null, placement:'both', duration_days:7 },
+    hint:'Boost an event you already created. Link it below — title and price will auto-fill from the event.' },
+  { id:'custom',      icon:'✨', label:'Custom Promo',    tagline:'Build from scratch',
+    fields:{ title:'', genre:'', is_free:false, price_min:null, placement:'feed_inject', duration_days:7 },
+    hint:'Full control — fill in every field yourself.' },
+];
+
+function openPromoManager() {
+  const ov = document.getElementById('promo-overlay'); if (!ov) return;
+  ov.style.display = 'flex';
+  renderPromoHome();
+}
+function closePromoManager() {
+  const ov = document.getElementById('promo-overlay'); if (ov) ov.style.display = 'none';
+}
+
+async function renderPromoHome() {
+  const body = document.getElementById('promo-overlay-body'); if (!body) return;
+  body.innerHTML = `
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.03em;margin-bottom:2px">📣 Promotions</div>
+    <div style="font-size:.78rem;color:var(--mu);margin-bottom:18px">Create a promo or manage your active ones</div>
+    <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Quick-start templates</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px">
+      ${PROMO_TEMPLATES.map(t => `<div onclick="openPromoForm('${t.id}')" class="sq-tmpl-card" style="cursor:pointer">
+        <div style="font-size:1.6rem;margin-bottom:5px">${t.icon}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;margin-bottom:2px">${t.label}</div>
+        <div style="font-size:.66rem;color:var(--mu);line-height:1.35">${t.tagline}</div>
+      </div>`).join('')}
+    </div>
+    <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">My promotions</div>
+    <div id="promo-mine-list" style="margin-bottom:18px"><div style="font-size:.78rem;color:var(--mu);padding:14px 0">Loading…</div></div>`;
+  loadMyPromotions();
+}
+
+async function loadMyPromotions() {
+  const list = document.getElementById('promo-mine-list'); if (!list) return;
+  const sb2 = getSB(); if (!sb2) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu);padding:14px 0">Sign in to view</div>'; return; }
+  const session = (await sb2.auth.getSession()).data.session;
+  if (!session) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu);padding:14px 0">Sign in to view</div>'; return; }
+  try {
+    const r = await fetch(API + '/promotions/mine', { headers:{ 'Authorization': 'Bearer ' + session.access_token }});
+    const d = await safeJson(r);
+    const promos = d.promotions || [];
+    if (!promos.length) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu);padding:14px 0;text-align:center">No promotions yet — pick a template above to get started.</div>'; return; }
+    list.innerHTML = promos.map(p => {
+      const status = p.is_active ? '<span style="color:var(--li);font-size:.66rem;font-weight:700">● APPROVED</span>' : '<span style="color:#FFB800;font-size:.66rem;font-weight:700">● PENDING REVIEW</span>';
+      return `<div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
+          <div style="font-family:'Syne',sans-serif;font-size:.86rem;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(p.title)}</div>
+          ${status}
+        </div>
+        <div style="font-size:.72rem;color:var(--mu)">${x(p.venue_city||'')} · ${x(p.genre||'')} · ${x(p.placement)}</div>
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <button onclick="deleteMyPromo('${x(p.id)}')" style="flex:1;background:rgba(255,45,120,.07);border:1px solid rgba(255,45,120,.25);color:var(--pk);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;padding:6px;border-radius:50px;cursor:pointer">Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu);padding:14px 0">Error loading</div>'; }
+}
+
+async function deleteMyPromo(id) {
+  if (!confirm('Delete this promotion?')) return;
+  const sb2 = getSB(); if (!sb2) return;
+  const session = (await sb2.auth.getSession()).data.session;
+  if (!session) return;
+  try {
+    const r = await fetch(API + '/promotions/' + id, { method:'DELETE', headers:{ 'Authorization': 'Bearer ' + session.access_token }});
+    if (r.ok) { showToast('Deleted'); loadMyPromotions(); }
+    else { const d = await safeJson(r); showToast(d.error || 'Failed'); }
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+function openPromoForm(templateId) {
+  const tmpl = PROMO_TEMPLATES.find(t => t.id === templateId) || PROMO_TEMPLATES[PROMO_TEMPLATES.length - 1];
+  const f = tmpl.fields;
+  const body = document.getElementById('promo-overlay-body'); if (!body) return;
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <button onclick="renderPromoHome()" style="background:transparent;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer;padding:0 4px 0 0">←</button>
+      <div style="font-size:1.6rem">${tmpl.icon}</div>
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800">${tmpl.label}</div>
+        <div style="font-size:.7rem;color:var(--mu)">${tmpl.tagline}</div>
+      </div>
+    </div>
+    <div style="background:rgba(255,92,0,.07);border:1px solid rgba(255,92,0,.2);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:.74rem;color:var(--mu2);line-height:1.45">💡 ${tmpl.hint}</div>
+    ${templateId === 'event' ? `<input id="pf-eventid" class="sq-input" placeholder="Event ID (from your dashboard)"/>` : ''}
+    <input id="pf-title" class="sq-input" placeholder="Promo title *" maxlength="80" value="${x(f.title||'')}"/>
+    <input id="pf-venue" class="sq-input" placeholder="Venue / business name" maxlength="60"/>
+    <input id="pf-city" class="sq-input" placeholder="City (e.g. Durban, Joburg)" maxlength="40"/>
+    <input id="pf-date" class="sq-input" type="date" style="color-scheme:dark"/>
+    <input id="pf-time" class="sq-input" type="time" step="60" style="color-scheme:dark"/>
+    <input id="pf-genre" class="sq-input" placeholder="Genre / category" maxlength="40" value="${x(f.genre||'')}"/>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--mu);margin-bottom:10px;cursor:pointer">
+      <input type="checkbox" id="pf-isfree" ${f.is_free?'checked':''} style="width:14px;height:14px"/> Free entry
+    </label>
+    <input id="pf-price" class="sq-input" type="number" min="0" placeholder="Price min (R)" value="${f.price_min ?? ''}"/>
+    <input id="pf-image" class="sq-input" placeholder="Image URL (hero / cover)"/>
+    <input id="pf-url" class="sq-input" placeholder="External link (booking / WhatsApp / IG)"/>
+    <div style="font-size:.72rem;color:var(--mu);margin:6px 0 4px">Placement</div>
+    <select id="pf-placement" class="sq-input" style="background:rgba(255,255,255,.05);color:var(--tx)">
+      <option value="featured_weekend" ${f.placement==='featured_weekend'?'selected':''}>Featured (weekend hero)</option>
+      <option value="feed_inject" ${f.placement==='feed_inject'?'selected':''}>Feed-injected card</option>
+      <option value="both" ${f.placement==='both'?'selected':''}>Both</option>
+    </select>
+    <input id="pf-days" class="sq-input" type="number" min="1" max="90" placeholder="Run duration (days)" value="${f.duration_days||7}"/>
+    <div style="background:rgba(176,38,255,.06);border:1px solid rgba(176,38,255,.2);border-radius:10px;padding:10px 12px;margin:6px 0 14px;font-size:.72rem;color:var(--mu2);line-height:1.45">
+      ⏳ Promos go through admin review before going live. You'll see status in the list above.
+    </div>
+    <button onclick="submitPromo()" style="width:100%;padding:13px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Submit for Review</button>`;
+}
+
+async function submitPromo() {
+  const title = (document.getElementById('pf-title')?.value || '').trim();
+  if (!title) { showToast('Title required'); return; }
+  const body = {
+    title,
+    venue_name: (document.getElementById('pf-venue')?.value || '').trim() || null,
+    venue_city: (document.getElementById('pf-city')?.value || '').trim() || null,
+    date_local: document.getElementById('pf-date')?.value || null,
+    time_local: document.getElementById('pf-time')?.value || null,
+    genre: (document.getElementById('pf-genre')?.value || '').trim() || null,
+    is_free: !!document.getElementById('pf-isfree')?.checked,
+    price_min: parseInt(document.getElementById('pf-price')?.value) || null,
+    image_url: (document.getElementById('pf-image')?.value || '').trim() || null,
+    external_url: (document.getElementById('pf-url')?.value || '').trim() || null,
+    placement: document.getElementById('pf-placement')?.value || 'feed_inject',
+    duration_days: parseInt(document.getElementById('pf-days')?.value) || 7,
+  };
+  const evIdEl = document.getElementById('pf-eventid');
+  if (evIdEl && evIdEl.value.trim()) body.event_id = evIdEl.value.trim();
+  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
+  const session = (await sb2.auth.getSession()).data.session;
+  if (!session) { showToast('Sign in first'); return; }
+  try {
+    const r = await fetch(API + '/promotions/create', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token },
+      body: JSON.stringify(body)
+    });
+    const d = await safeJson(r);
+    if (!r.ok) { showToast(d.error || 'Failed'); return; }
+    showToast(d.auto_approved ? '🚀 Live in feed!' : '✅ Submitted for review');
+    renderPromoHome();
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+/* ══════════════════════════════════════════════════
+   ADMIN — Approve / Reject Promotions
+══════════════════════════════════════════════════ */
+let _adminPromoFilter = 'pending';
+
+function openAdminPromos() {
+  const ov = document.getElementById('admin-promo-overlay'); if (!ov) return;
+  ov.style.display = 'flex';
+  renderAdminPromos();
+}
+function closeAdminPromos() {
+  const ov = document.getElementById('admin-promo-overlay'); if (ov) ov.style.display = 'none';
+}
+
+let _adminView = 'promos';
+
+async function renderAdminPromos() {
+  const body = document.getElementById('admin-promo-body'); if (!body) return;
+  body.innerHTML = `
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.03em;margin-bottom:2px">👮 Admin</div>
+    <div style="font-size:.78rem;color:var(--mu);margin-bottom:14px">Review submissions & trust accounts</div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:10px">
+      <button onclick="setAdminView('promos')" class="sq-stab ${_adminView==='promos'?'active':''}">📣 Promos</button>
+      <button onclick="setAdminView('trusted')" class="sq-stab ${_adminView==='trusted'?'active':''}">⭐ Trusted</button>
+    </div>
+    ${_adminView === 'promos'
+      ? `<div style="display:flex;gap:8px;margin-bottom:14px">
+          <button onclick="setAdminPromoFilter('pending')" class="sq-stab ${_adminPromoFilter==='pending'?'active':''}">⏳ Pending</button>
+          <button onclick="setAdminPromoFilter('active')" class="sq-stab ${_adminPromoFilter==='active'?'active':''}">✅ Active</button>
+        </div>
+        <div id="admin-promo-list"><div style="font-size:.78rem;color:var(--mu);padding:14px 0">Loading…</div></div>`
+      : `<div style="font-size:.74rem;color:var(--mu);margin-bottom:10px;line-height:1.5">Trusted accounts have their promos auto-approved. Use for verified businesses & repeat organizers.</div>
+        <div id="admin-trusted-list"><div style="font-size:.78rem;color:var(--mu);padding:14px 0">Loading…</div></div>`}`;
+  if (_adminView === 'promos') loadAdminPromos(); else loadTrustedSubmitters();
+}
+
+function setAdminView(v) { _adminView = v; renderAdminPromos(); }
+function setAdminPromoFilter(f) { _adminPromoFilter = f; renderAdminPromos(); }
+
+async function loadTrustedSubmitters() {
+  const list = document.getElementById('admin-trusted-list'); if (!list) return;
+  const sb2 = getSB(); if (!sb2) return;
+  const session = (await sb2.auth.getSession()).data?.session;
+  if (!session) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu)">Sign in</div>'; return; }
+  try {
+    const r = await fetch(API + '/admin/trusted-submitters', { headers:{ 'Authorization':'Bearer '+session.access_token }});
+    const d = await safeJson(r);
+    if (!r.ok) { list.innerHTML = '<div style="font-size:.78rem;color:var(--pk);padding:14px 0">'+(d.error||'Failed')+'</div>'; return; }
+    const subs = d.submitters || [];
+    if (!subs.length) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu);padding:24px 0;text-align:center">No business or organizer accounts yet.</div>'; return; }
+    list.innerHTML = subs.map(s => {
+      const ini = (s.display_name || s.username || '?')[0].toUpperCase();
+      const on = !!s.is_trusted_submitter;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div class="sq-member-av">${s.avatar_url ? `<img src="${x(s.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>` : ini}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(s.display_name || s.username || 'User')}</div>
+          <div style="font-size:.68rem;color:var(--mu)">${x(s.role)}${s.username ? ' · @'+x(s.username) : ''}</div>
+        </div>
+        <button onclick="toggleTrusted('${x(s.id)}', ${on}, this)" style="background:${on?'rgba(198,255,74,.15)':'transparent'};border:1px solid ${on?'rgba(198,255,74,.4)':'var(--border2)'};color:${on?'var(--li)':'var(--mu2)'};font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;padding:6px 14px;border-radius:50px;cursor:pointer">${on?'✓ Trusted':'+ Trust'}</button>
+      </div>`;
+    }).join('');
+  } catch(e) { list.innerHTML = '<div style="font-size:.78rem;color:var(--pk);padding:14px 0">Network error</div>'; }
+}
+
+async function toggleTrusted(userId, currentlyOn, btn) {
+  const sb2 = getSB(); const session = (await sb2.auth.getSession()).data?.session;
+  if (!session) return;
+  btn.disabled = true;
+  try {
+    const r = await fetch(API + '/admin/trusted-submitters/' + userId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ is_trusted_submitter: !currentlyOn })
+    });
+    if (r.ok) { showToast(currentlyOn ? 'Trust removed' : '⭐ Account trusted'); loadTrustedSubmitters(); }
+    else { const d = await safeJson(r); showToast(d.error || 'Failed'); btn.disabled = false; }
+  } catch(e) { btn.disabled = false; showToast('Network error'); }
+}
+
+async function loadAdminPromos() {
+  const list = document.getElementById('admin-promo-list'); if (!list) return;
+  const sb2 = getSB(); if (!sb2) return;
+  const session = (await sb2.auth.getSession()).data.session;
+  if (!session) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu)">Sign in</div>'; return; }
+  try {
+    const r = await fetch(API + '/admin/promotions?status=' + _adminPromoFilter, { headers:{ 'Authorization':'Bearer '+session.access_token }});
+    const d = await safeJson(r);
+    if (!r.ok) { list.innerHTML = '<div style="font-size:.78rem;color:var(--pk);padding:14px 0">'+(d.error||'Failed')+'</div>'; return; }
+    const promos = d.promotions || [];
+    if (!promos.length) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu);padding:24px 0;text-align:center">No promotions in this view.</div>'; return; }
+    list.innerHTML = promos.map(p => `<div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px">
+      ${p.image_url ? `<img src="${x(p.image_url)}" style="width:100%;height:140px;object-fit:cover;border-radius:10px;margin-bottom:10px" onerror="this.style.display='none'"/>` : ''}
+      <div style="font-family:'Syne',sans-serif;font-size:.92rem;font-weight:800;margin-bottom:4px">${x(p.title)}</div>
+      <div style="font-size:.74rem;color:var(--mu2);margin-bottom:6px">${x(p.venue_name||'—')} · ${x(p.venue_city||'—')}</div>
+      <div style="font-size:.7rem;color:var(--mu);margin-bottom:4px">📅 ${x(p.date_local||'—')} ${x(p.time_local||'')}</div>
+      <div style="font-size:.7rem;color:var(--mu);margin-bottom:4px">🎵 ${x(p.genre||'—')} · ${p.is_free?'FREE':'R'+(p.price_min||'—')}</div>
+      <div style="font-size:.7rem;color:var(--mu);margin-bottom:4px">📍 Placement: <span style="color:var(--tx)">${x(p.placement)}</span></div>
+      <div style="font-size:.7rem;color:var(--mu);margin-bottom:10px">👤 Owner: ${x(p.owner_role||'')}</div>
+      ${p.external_url ? `<a href="${x(p.external_url)}" target="_blank" rel="noopener" style="font-size:.72rem;color:var(--or);text-decoration:none;display:inline-block;margin-bottom:10px">🔗 ${x(p.external_url.substring(0,40))}…</a>` : ''}
+      <div style="display:flex;gap:6px">
+        ${!p.is_active ? `<button onclick="approvePromo('${x(p.id)}')" style="flex:1;background:linear-gradient(135deg,#C6FF4A,#00E5FF);border:none;color:#0a0a0a;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;padding:8px;border-radius:50px;cursor:pointer">✅ Approve</button>` : `<button onclick="unpublishPromo('${x(p.id)}')" style="flex:1;background:rgba(255,255,255,.08);border:1px solid var(--border2);color:var(--mu2);font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;padding:8px;border-radius:50px;cursor:pointer">⏸ Unpublish</button>`}
+        <button onclick="rejectPromo('${x(p.id)}')" style="flex:1;background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.3);color:var(--pk);font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;padding:8px;border-radius:50px;cursor:pointer">🗑 Reject</button>
+      </div>
+    </div>`).join('');
+  } catch(e) { list.innerHTML = '<div style="font-size:.78rem;color:var(--pk);padding:14px 0">Error: '+e.message+'</div>'; }
+}
+
+async function approvePromo(id) {
+  const sb2 = getSB(); const session = (await sb2.auth.getSession()).data.session; if (!session) return;
+  try {
+    const r = await fetch(API + '/admin/promotions/' + id, {
+      method:'PATCH',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token },
+      body: JSON.stringify({ is_active: true })
+    });
+    if (r.ok) { showToast('✅ Approved'); loadAdminPromos(); }
+    else { const d = await safeJson(r); showToast(d.error || 'Failed'); }
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+async function unpublishPromo(id) {
+  const sb2 = getSB(); const session = (await sb2.auth.getSession()).data.session; if (!session) return;
+  try {
+    const r = await fetch(API + '/admin/promotions/' + id, {
+      method:'PATCH',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token },
+      body: JSON.stringify({ is_active: false })
+    });
+    if (r.ok) { showToast('Unpublished'); loadAdminPromos(); }
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+async function rejectPromo(id) {
+  if (!confirm('Reject and delete this promotion?')) return;
+  const sb2 = getSB(); const session = (await sb2.auth.getSession()).data.session; if (!session) return;
+  try {
+    const r = await fetch(API + '/admin/promotions/' + id, { method:'DELETE', headers:{ 'Authorization':'Bearer '+session.access_token }});
+    if (r.ok) { showToast('Rejected'); loadAdminPromos(); }
+  } catch(e) { showToast('Error: ' + e.message); }
 }
 
 /* ── Supabase session sync on load ── */
@@ -2626,6 +3350,9 @@ async function initSupabaseSession() {
   } catch(e) { console.warn('initSupabaseSession:', e.message); }
 
   sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'TOKEN_REFRESHED' && session) {
+      localStorage.setItem('p_token', session.access_token);
+    }
     if (event === 'SIGNED_IN' && session) {
       try {
         localStorage.setItem('p_token', session.access_token);
@@ -2640,7 +3367,7 @@ async function initSupabaseSession() {
               headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
               body: JSON.stringify({ profile: pending })
             });
-            const d = await r.json().catch(() => ({}));
+            const d = await safeJson(r).catch(() => ({}));
             const profile = d.profile || pending;
             localStorage.setItem('p_user', JSON.stringify({
               id: session.user.id, email: session.user.email,
@@ -2873,7 +3600,7 @@ async function submitReport() {
     body[cfg.idKey]   = _reportTargetId;
     body[cfg.nameKey] = _reportTargetName;
     const r = await fetch(cfg.endpoint, { method: 'POST', headers, body: JSON.stringify(body) });
-    if (!r.ok) throw new Error((await r.json()).error || 'Failed');
+    if (!r.ok) throw new Error((await safeJson(r)).error || 'Failed');
     msg.style.cssText = 'display:block;background:rgba(198,255,74,.1);color:#C6FF4A;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px';
     msg.textContent = '✅ Report submitted. Our team will review it shortly.';
     btn.textContent = 'Reported';
@@ -2884,6 +3611,479 @@ async function submitReport() {
     btn.disabled = false; btn.textContent = 'Submit Report';
   }
 }
+
+/* ══ SQUADS & GAMIFICATION ════════════════════════════════════ */
+
+const SQUAD_TEMPLATES = [
+  { type:'general',       icon:'👥', color:'#FF5C00', label:'Friends Crew',   desc:'Going out together',           roles:['*'] },
+  { type:'event_team',    icon:'📅', color:'#00E5FF', label:'Event Team',     desc:'Staff & volunteers',           roles:['organizer','*'] },
+  { type:'business_team', icon:'🏢', color:'#B026FF', label:'Business Team',  desc:'Departments & teamwork',       roles:['business'] },
+];
+function _userRole() { try { return JSON.parse(localStorage.getItem('p_user'))?.role || 'user'; } catch(e) { return 'user'; } }
+function getTemplateOptions() { const r = _userRole(); return SQUAD_TEMPLATES.filter(t => t.roles.includes('*') || t.roles.includes(r)); }
+function getTemplate(type) { return SQUAD_TEMPLATES.find(t => t.type === type) || SQUAD_TEMPLATES[0]; }
+
+let _squadsLoaded = false;
+let _mySquads = [];
+let _activeSquadTab = null;
+
+function showSquadSubTab(tab) {
+  document.querySelectorAll('.sq-stab').forEach(b => b.classList.toggle('active', b.id === 'stab-' + tab));
+  const fp = document.getElementById('squad-friends-pane');
+  const sp = document.getElementById('squad-squads-pane');
+  if (fp) fp.style.display = tab === 'friends' ? '' : 'none';
+  if (sp) sp.style.display = tab === 'squads' ? '' : 'none';
+  if (tab === 'squads' && !_squadsLoaded) loadSquads();
+}
+
+async function loadSquads() {
+  _squadsLoaded = true;
+  const workspace = document.getElementById('sq-workspace');
+
+  let uid = currentUser?.id || null;
+  if (!uid) {
+    try { const s = JSON.parse(localStorage.getItem('p_user')); uid = s?.id || null; } catch(e) {}
+  }
+
+  if (!uid) {
+    if (workspace) workspace.innerHTML = '<div style="padding:24px;text-align:center;color:var(--mu);font-size:.84rem">Sign in to use Squads.<br><a href="/signin" style="color:var(--or);font-family:\'Syne\',sans-serif;font-weight:700">Sign in →</a></div>';
+    _squadsLoaded = false;
+    return;
+  }
+  if (workspace) workspace.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Loading…</div>';
+  try {
+    const sb2 = getSB();
+    let session = null;
+    try { session = sb2 ? (await sb2.auth.getSession()).data?.session : null; } catch(e) {}
+    const headers = { 'Content-Type': 'application/json' };
+    if (session) headers['Authorization'] = 'Bearer ' + session.access_token;
+    const myRes = await fetch(API + '/squads', { headers }).catch(() => null);
+    let mySquads = [];
+    if (myRes && myRes.ok) {
+      const d = await safeJson(myRes); mySquads = d.squads || [];
+    }
+    _mySquads = mySquads;
+    renderSquadTabs(mySquads);
+    if (mySquads.length) {
+      const targetId = _activeSquadTab && mySquads.find(s => s.id === _activeSquadTab) ? _activeSquadTab : mySquads[0].id;
+      showSquadTab(targetId);
+    } else {
+      showSquadEmptyState(workspace);
+    }
+  } catch(e) {
+    console.error('[loadSquads]', e);
+    _squadsLoaded = false;
+    if (workspace) workspace.innerHTML = `<div style="padding:24px;text-align:center">
+      <div style="font-size:.8rem;color:var(--mu);margin-bottom:14px">Could not connect. Check your connection.</div>
+      <button onclick="_squadsLoaded=false;showSquadSubTab('squads')" style="background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;padding:10px 24px;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem;cursor:pointer">Retry</button>
+    </div>`;
+  }
+}
+
+function renderSquadTabs(squads) {
+  const tabsRow = document.getElementById('sq-tabs-row');
+  if (!tabsRow) return;
+  tabsRow.innerHTML = squads.map(s => {
+    const tmpl = getTemplate(s.template_type || 'general');
+    return `<button class="sq-tab-chip" id="sq-chip-${x(s.id)}" onclick="showSquadTab('${x(s.id)}')">${tmpl.icon} ${x(s.name)}</button>`;
+  }).join('') + `<button class="sq-add-tab" title="New Squad" onclick="showCreateForm()">+</button>`;
+}
+
+async function showSquadTab(squadId) {
+  _activeSquadTab = squadId;
+  document.querySelectorAll('.sq-tab-chip').forEach(c => c.classList.toggle('active', c.id === 'sq-chip-' + squadId));
+  const workspace = document.getElementById('sq-workspace');
+  if (workspace) workspace.innerHTML = '<div style="padding:20px;font-size:.78rem;color:var(--mu)">Loading…</div>';
+  try {
+    const r = await fetch(API + '/squads/' + squadId);
+    if (!r.ok) throw new Error('Failed');
+    const detail = await safeJson(r);
+    renderSquadWorkspace(detail, workspace);
+  } catch(e) {
+    if (workspace) workspace.innerHTML = `<div style="padding:20px;text-align:center;color:var(--mu);font-size:.84rem">Failed to load.<br><button onclick="showSquadTab('${squadId}')" style="background:transparent;border:none;color:var(--or);cursor:pointer;font-family:'Syne',sans-serif;font-weight:700">Retry</button></div>`;
+  }
+}
+
+function renderSquadWorkspace(detail, container) {
+  if (!container) return;
+  const { squad, members, activity, goals, isMember } = detail;
+  const tmpl = getTemplate(squad.template_type || 'general');
+  const pts = squad.total_points || 0;
+
+  const membersHtml = `<div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin:18px 0 10px">Members (${members.length})</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      ${members.map(m => { const p=m.profiles||{}; const ini=(p.display_name||'?')[0].toUpperCase();
+        return `<div style="display:flex;align-items:center;gap:8px"><div class="sq-member-av">${p.avatar_url?`<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>`:ini}</div><div><div style="font-size:.78rem;font-weight:700">${x(p.display_name||p.username||'?')}</div><div style="font-size:.68rem;color:var(--mu)">${m.role==='admin'?'👑 Admin':'Member'}</div></div></div>`;
+      }).join('')}
+    </div>`;
+
+  const goalsHtml = (goals && goals.length) ? `
+    <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin:18px 0 10px">🎯 Squad Goals</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+      ${goals.map(g => {
+        const pct = Math.min(100, Math.round((g.current / g.target) * 100));
+        const done = g.current >= g.target;
+        return `<div style="background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div style="font-size:.76rem;font-weight:600">${done?'✅ ':''}${x(g.label)}</div>
+            <div style="font-size:.7rem;color:var(--mu)">${g.current}/${g.target}</div>
+          </div>
+          <div style="height:5px;background:rgba(255,255,255,.07);border-radius:50px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${done?'var(--li)':'linear-gradient(90deg,#B026FF,#FF5C00)'};border-radius:50px;transition:width .4s"></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  const inviteBtn = isMember
+    ? `<button onclick="openSquadInvite('${x(squad.id)}')" style="width:100%;padding:11px;background:rgba(0,229,255,.08);border:1.5px solid rgba(0,229,255,.3);border-radius:50px;color:var(--cy);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;margin-bottom:8px">＋ Invite Friends</button>`
+    : '';
+
+  const actionsHtml = isMember
+    ? `<button onclick="leaveSquad('${x(squad.id)}')" style="width:100%;padding:11px;background:rgba(255,45,120,.1);border:1.5px solid rgba(255,45,120,.3);border-radius:50px;color:var(--pk);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer">Leave Squad</button>`
+    : `<button onclick="joinSquad('${x(squad.id)}')" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer">Join Squad</button>`;
+
+  container.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+      <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,${tmpl.color}22,${tmpl.color}55);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0">${tmpl.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(squad.name)}</div>
+        <div style="font-size:.72rem;color:var(--mu)">👥 ${squad.member_count} · ${squad.is_public?'🌍 Public':'🔒 Private'}</div>
+      </div>
+    </div>
+    ${squad.description ? `<div style="font-size:.82rem;color:var(--mu2);margin-bottom:14px;line-height:1.5">${x(squad.description)}</div>` : ''}
+    <div style="background:linear-gradient(135deg,rgba(176,38,255,.08),rgba(255,92,0,.05));border:1px solid rgba(176,38,255,.2);border-radius:14px;padding:14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu)">Squad Wallet</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;line-height:1;margin-top:2px">⚡ ${pts} pts</div>
+        <div style="font-size:.68rem;color:var(--mu);margin-top:4px">Use these for partner discounts</div>
+      </div>
+    </div>
+    ${goalsHtml}${membersHtml}${inviteBtn}${actionsHtml}`;
+}
+
+async function showSquadEmptyState(container) {
+  if (!container) return;
+  container.innerHTML = `
+    <div style="padding:32px 16px 20px;text-align:center">
+      <div style="font-size:3rem;margin-bottom:10px">👥</div>
+      <div style="font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800;margin-bottom:6px">No squads yet</div>
+      <div style="font-size:.78rem;color:var(--mu);margin-bottom:20px;line-height:1.5">Create a squad with your friends — earn points together to unlock discounts at partner venues.</div>
+      <button onclick="showCreateForm()" style="background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;padding:12px 28px;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer">+ Create a Squad</button>
+    </div>
+    <div id="sq-leaderboard-section" style="padding:0 4px 16px">
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">🏆 Top Squads This Week</div>
+      <div id="sq-lb-list"><div style="font-size:.76rem;color:var(--mu)">Loading…</div></div>
+    </div>`;
+  try {
+    const r = await fetch(API + '/squads/leaderboard');
+    if (!r.ok) return;
+    const { leaderboard } = await safeJson(r);
+    const el = document.getElementById('sq-lb-list');
+    if (!el) return;
+    if (!leaderboard || !leaderboard.length) { el.innerHTML = '<div style="font-size:.76rem;color:var(--mu)">No squads yet — be the first!</div>'; return; }
+    el.innerHTML = leaderboard.map((s, i) => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surf);border:1px solid var(--border);border-radius:10px;margin-bottom:6px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:${i===0?'#FFD700':i===1?'#C0C0C0':i===2?'#CD7F32':'var(--mu)'};min-width:22px">${i+1}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(s.name)}</div>
+          <div style="font-size:.68rem;color:var(--mu)">👥 ${s.member_count || 0} members</div>
+        </div>
+        <div style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;color:var(--or)">⚡ ${s.total_points || 0}</div>
+      </div>`).join('');
+  } catch(e) { /* leaderboard non-critical */ }
+}
+
+function showCreateForm() {
+  const workspace = document.getElementById('sq-workspace');
+  const tabsRow = document.getElementById('sq-tabs-row');
+  if (!workspace) return;
+  const templates = getTemplateOptions();
+  const defType = templates[0]?.type || 'general';
+  document.querySelectorAll('.sq-tab-chip').forEach(c => c.classList.remove('active'));
+  if (!document.getElementById('sq-chip-new') && tabsRow) {
+    const newChip = document.createElement('button');
+    newChip.className = 'sq-tab-chip active'; newChip.id = 'sq-chip-new';
+    newChip.textContent = '+ New';
+    const addBtn = tabsRow.querySelector('.sq-add-tab');
+    if (addBtn) tabsRow.insertBefore(newChip, addBtn); else tabsRow.appendChild(newChip);
+  }
+  _activeSquadTab = null;
+  workspace.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <button onclick="cancelCreateForm()" style="background:transparent;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer;padding:0 4px 0 0">←</button>
+      <div style="font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800">New Squad</div>
+    </div>
+    <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Choose a template</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+      ${templates.map(t => `<div class="sq-tmpl-card ${t.type===defType?'active':''}" id="stmpl-${t.type}" onclick="selectTemplate('${t.type}')">
+        <div style="font-size:1.5rem;margin-bottom:5px">${t.icon}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;margin-bottom:2px">${t.label}</div>
+        <div style="font-size:.66rem;color:var(--mu);line-height:1.35">${t.desc}</div>
+      </div>`).join('')}
+    </div>
+    <input id="sq-new-name" class="sq-input" placeholder="Squad name (required)" maxlength="40"/>
+    <input id="sq-new-desc" class="sq-input" placeholder="Description (optional)" maxlength="120"/>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--mu);margin-bottom:14px;cursor:pointer">
+      <input type="checkbox" id="sq-new-public" checked style="width:14px;height:14px"/> Public squad
+    </label>
+    <input type="hidden" id="sq-new-template" value="${defType}"/>
+    <button onclick="createSquad()" style="width:100%;padding:13px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Create Squad</button>`;
+}
+
+function selectTemplate(type) {
+  document.querySelectorAll('.sq-tmpl-card').forEach(c => c.classList.toggle('active', c.id === 'stmpl-' + type));
+  const inp = document.getElementById('sq-new-template');
+  if (inp) inp.value = type;
+}
+
+function cancelCreateForm() {
+  const chip = document.getElementById('sq-chip-new');
+  if (chip) chip.remove();
+  if (_mySquads.length) showSquadTab(_mySquads[0].id);
+  else showSquadEmptyState(document.getElementById('sq-workspace'));
+}
+
+async function createSquad() {
+  const name = (document.getElementById('sq-new-name')?.value || '').trim();
+  if (!name) { showToast('Squad name required'); return; }
+  const desc = (document.getElementById('sq-new-desc')?.value || '').trim();
+  const isPublic = document.getElementById('sq-new-public')?.checked ?? true;
+  const templateType = document.getElementById('sq-new-template')?.value || 'general';
+  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
+  const session = (await sb2.auth.getSession()).data.session;
+  if (!session) { showToast('Sign in first'); return; }
+  try {
+    const r = await fetch(API + '/squads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ name, description: desc || null, is_public: isPublic, template_type: templateType })
+    });
+    const d = await safeJson(r);
+    if (!r.ok) { showToast(d.error || 'Failed to create'); return; }
+    showToast('🎉 Squad created!');
+    const chip = document.getElementById('sq-chip-new');
+    if (chip) chip.remove();
+    _squadsLoaded = false;
+    loadSquads();
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+function showEventInfoForm(squadId) {
+  const workspace = document.getElementById('sq-workspace');
+  if (!workspace) return;
+  workspace.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <button onclick="showSquadTab('${squadId}')" style="background:transparent;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer;padding:0 4px 0 0">←</button>
+      <div style="font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800">Event Info</div>
+    </div>
+    <input id="eif-name" class="sq-input" placeholder="Event name (required)"/>
+    <input id="eif-date" class="sq-input" type="date" style="color-scheme:dark"/>
+    <input id="eif-venue" class="sq-input" placeholder="Venue (optional)"/>
+    <button onclick="saveEventInfo('${squadId}')" style="width:100%;padding:13px;background:linear-gradient(135deg,#00E5FF,#B026FF);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Save Event Info</button>`;
+}
+
+async function saveEventInfo(squadId) {
+  const name = (document.getElementById('eif-name')?.value || '').trim();
+  if (!name) { showToast('Event name required'); return; }
+  const date = document.getElementById('eif-date')?.value;
+  const venue = (document.getElementById('eif-venue')?.value || '').trim();
+  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
+  const session = (await sb2.auth.getSession()).data.session;
+  if (!session) { showToast('Sign in first'); return; }
+  try {
+    const r = await fetch(API + '/squads/' + squadId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ template_config: { event_name: name, event_date: date || null, venue: venue || null } })
+    });
+    if (r.ok) { showToast('✅ Event info saved'); showSquadTab(squadId); }
+    else { const d = await safeJson(r); showToast(d.error || 'Failed'); }
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+async function _patchSquadConfig(squadId, configPatch, okMsg) {
+  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return false; }
+  const session = (await sb2.auth.getSession()).data.session;
+  if (!session) { showToast('Sign in first'); return false; }
+  try {
+    const r = await fetch(API + '/squads/' + squadId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ template_config: configPatch })
+    });
+    if (r.ok) { showToast(okMsg || '✅ Saved'); showSquadTab(squadId); return true; }
+    const d = await safeJson(r); showToast(d.error || 'Failed'); return false;
+  } catch(e) { showToast('Error: ' + e.message); return false; }
+}
+
+function showBusinessTeamForm(squadId) {
+  const ws = document.getElementById('sq-workspace'); if (!ws) return;
+  ws.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <button onclick="showSquadTab('${x(squadId)}')" style="background:transparent;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer;padding:0 4px 0 0">←</button>
+      <div style="font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800">Team Objectives</div>
+    </div>
+    <input id="bt-dept" class="sq-input" placeholder="Department (e.g. Sales, Ops)" maxlength="40"/>
+    <textarea id="bt-objs" class="sq-input" placeholder="Objectives — one per line" maxlength="600" style="min-height:120px;resize:vertical;font-family:inherit"></textarea>
+    <div style="font-size:.7rem;color:var(--mu);margin-bottom:14px">Each line becomes a bullet point.</div>
+    <button onclick="saveBusinessTeam('${x(squadId)}')" style="width:100%;padding:13px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Save Objectives</button>`;
+}
+async function saveBusinessTeam(squadId) {
+  const dept = (document.getElementById('bt-dept')?.value || '').trim();
+  const raw  = (document.getElementById('bt-objs')?.value || '').trim();
+  const objectives = raw ? raw.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 12) : [];
+  await _patchSquadConfig(squadId, { department: dept || null, objectives }, '✅ Objectives saved');
+}
+
+let _inviteSquadId = null;
+
+function openSquadInvite(squadId) {
+  _inviteSquadId = squadId;
+  const ov = document.getElementById('squad-invite-overlay'); if (!ov) return;
+  ov.style.display = 'flex';
+  loadSquadInviteList();
+}
+function closeSquadInvite() {
+  const ov = document.getElementById('squad-invite-overlay'); if (ov) ov.style.display = 'none';
+  _inviteSquadId = null;
+}
+
+async function loadSquadInviteList() {
+  const body = document.getElementById('squad-invite-body'); if (!body) return;
+  body.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu);font-size:.8rem">Loading…</div>';
+  const sb2 = getSB(); if (!sb2) { body.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu);font-size:.8rem">Sign in to invite friends</div>'; return; }
+  const session = (await sb2.auth.getSession()).data?.session;
+  if (!session) { body.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu);font-size:.8rem">Sign in to invite friends</div>'; return; }
+  const uid = session.user.id;
+  try {
+    const [followsRes, membersRes] = await Promise.all([
+      sb2.from('follows').select('following_id, profiles:following_id(id, display_name, username, avatar_url)').eq('follower_id', uid),
+      sb2.from('squad_members').select('user_id').eq('squad_id', _inviteSquadId)
+    ]);
+    const memberIds = new Set((membersRes.data || []).map(m => m.user_id));
+    const candidates = (followsRes.data || [])
+      .map(f => f.profiles)
+      .filter(p => p && !memberIds.has(p.id));
+    if (!candidates.length) {
+      body.innerHTML = `<div style="padding:30px 16px;text-align:center">
+        <div style="font-size:2.4rem;margin-bottom:8px">👋</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;margin-bottom:4px">No one to invite</div>
+        <div style="font-size:.74rem;color:var(--mu);line-height:1.5">Follow some friends first — they'll show up here so you can add them to your squad.</div>
+      </div>`;
+      return;
+    }
+    body.innerHTML = candidates.map(p => {
+      const ini = (p.display_name || p.username || '?')[0].toUpperCase();
+      return `<div id="inv-row-${x(p.id)}" style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div class="sq-member-av">${p.avatar_url ? `<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>` : ini}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(p.display_name || p.username || 'User')}</div>
+          ${p.username ? `<div style="font-size:.7rem;color:var(--mu)">@${x(p.username)}</div>` : ''}
+        </div>
+        <button onclick="inviteToSquad('${x(p.id)}', this)" style="background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;padding:7px 16px;cursor:pointer">＋ Invite</button>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    console.error('[squad invite]', e);
+    body.innerHTML = '<div style="padding:20px;text-align:center;color:var(--pk);font-size:.8rem">Could not load — please retry</div>';
+  }
+}
+
+async function inviteToSquad(userId, btn) {
+  if (!_inviteSquadId) return;
+  btn.disabled = true; btn.textContent = '…';
+  const sb2 = getSB(); const session = (await sb2.auth.getSession()).data?.session;
+  if (!session) { showToast('Sign in first'); btn.disabled = false; btn.textContent = '＋ Invite'; return; }
+  try {
+    const r = await fetch(API + '/squads/' + _inviteSquadId + '/invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ user_id: userId })
+    });
+    const d = await safeJson(r);
+    if (!r.ok) { showToast(d.error || 'Could not invite'); btn.disabled = false; btn.textContent = '＋ Invite'; return; }
+    btn.textContent = '✓ Added';
+    btn.style.background = 'rgba(198,255,74,.15)';
+    btn.style.color = 'var(--li)';
+    const row = document.getElementById('inv-row-' + userId);
+    if (row) setTimeout(() => { row.style.opacity = '0.4'; }, 300);
+    _squadsLoaded = false;
+  } catch(e) {
+    btn.disabled = false; btn.textContent = '＋ Invite';
+    showToast('Network error');
+  }
+}
+
+async function joinSquad(squadId) {
+  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
+  const session = (await sb2.auth.getSession()).data.session;
+  if (!session) { showToast('Sign in first'); return; }
+  try {
+    const r = await fetch(API + '/squads/' + squadId + '/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token }
+    });
+    const d = await safeJson(r);
+    if (!r.ok) { showToast(d.error || 'Failed to join'); return; }
+    showToast('🎉 Joined squad!');
+    _squadsLoaded = false;
+    showSquadTab(squadId);
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+async function leaveSquad(squadId) {
+  if (!confirm('Leave this squad?')) return;
+  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
+  const session = (await sb2.auth.getSession()).data.session;
+  if (!session) { showToast('Sign in first'); return; }
+  try {
+    const r = await fetch(API + '/squads/' + squadId + '/leave', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token }
+    });
+    if (!r.ok) { const d = await safeJson(r); showToast(d.error || 'Failed'); return; }
+    showToast('Left squad');
+    _squadsLoaded = false;
+    loadSquads();
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
+async function showSquadCheckinBar(eventId) {
+  if (!currentUser || !_mySquads.length) return;
+  const el = document.getElementById('tc-squad-checkin');
+  if (!el) return;
+  const opts = _mySquads.map(s => `<option value="${x(s.id)}">${x(s.name)} (⚡${s.total_points} pts)</option>`).join('');
+  el.style.display = '';
+  el.innerHTML = `<div style="background:rgba(176,38,255,.08);border:1px solid rgba(176,38,255,.25);border-radius:12px;padding:12px">
+    <div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--pu);margin-bottom:8px;letter-spacing:.08em">🏆 SQUAD CHECK-IN</div>
+    <select id="sq-checkin-select" class="sq-select">${opts}</select>
+    <button onclick="doSquadCheckin('${eventId}')" class="sq-checkin-btn">⚡ Check in with squad <span style="margin-left:auto;background:rgba(176,38,255,.25);padding:2px 10px;border-radius:50px;font-size:.7rem">+20 pts</span></button>
+  </div>`;
+}
+
+async function doSquadCheckin(eventId) {
+  const squadId = document.getElementById('sq-checkin-select')?.value;
+  if (!squadId) return;
+  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
+  const session = (await sb2.auth.getSession()).data.session;
+  if (!session) { showToast('Sign in first'); return; }
+  try {
+    const r = await fetch(API + '/squads/checkin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ squad_id: squadId, event_id: eventId || null })
+    });
+    const d = await safeJson(r);
+    if (!r.ok) { showToast(d.error || 'Failed'); return; }
+    const sq = _mySquads.find(s => s.id === squadId);
+    showToast('⚡ +20 pts added to ' + (sq?.name || 'your squad') + '!');
+    const el = document.getElementById('tc-squad-checkin');
+    if (el) el.innerHTML = '<div style="text-align:center;padding:10px;font-size:.8rem;color:var(--li);font-family:\'Syne\',sans-serif;font-weight:700">✅ Squad checked in! ⚡ +20 pts earned</div>';
+    _squadsLoaded = false;
+  } catch(e) { showToast('Error: ' + e.message); }
+}
+
 
 </script>
 </body>

@@ -46,16 +46,11 @@ CREATE TABLE IF NOT EXISTS reactions (
 );
 CREATE INDEX IF NOT EXISTS idx_reactions_entity ON reactions(entity_id);
 
--- Comments (on posts, events)
-CREATE TABLE IF NOT EXISTS comments (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id     UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  entity_type TEXT NOT NULL,
-  entity_id   UUID NOT NULL,
-  content     TEXT NOT NULL,
-  created_at  TIMESTAMPTZ DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_comments_entity ON comments(entity_type, entity_id);
+-- Comments: canonical definition lives in schema.sql (uses `body` column,
+-- TEXT entity_id, has parent_id for threading + like_count). Do NOT
+-- re-declare here — the older `content`/UUID variant caused a schema split
+-- in 2026-05-14 (likes/comments writing to wrong table). Production already
+-- has the correct shape; keep schema.sql as the source of truth.
 
 -- Follows
 CREATE TABLE IF NOT EXISTS follows (

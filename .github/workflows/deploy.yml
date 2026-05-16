@@ -1,0 +1,32 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - main
+      - 'claude/**'
+
+jobs:
+  deploy:
+    name: Vercel Production Deploy
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check secrets
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then echo "ERROR: VERCEL_TOKEN secret is not set" && exit 1; fi
+          if [ -z "$VERCEL_ORG_ID" ]; then echo "ERROR: VERCEL_ORG_ID secret is not set" && exit 1; fi
+          if [ -z "$VERCEL_PROJECT_ID" ]; then echo "ERROR: VERCEL_PROJECT_ID secret is not set" && exit 1; fi
+          echo "All secrets present"
+
+      - name: Deploy
+        run: npx vercel --prod --yes --force --token=$VERCEL_TOKEN
