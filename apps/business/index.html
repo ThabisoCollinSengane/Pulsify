@@ -497,8 +497,14 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
       <textarea class="ff" id="ev-desc" placeholder="Describe the event…" rows="3"></textarea>
       <label class="ff-label">Lineup (comma separated)</label>
       <input class="ff" type="text" id="ev-lineup" placeholder="DJ Lag, Bello No Gallo"/>
-      <label class="ff-label">Banner Image URL (optional)</label>
-      <input class="ff" type="url" id="ev-img" placeholder="https://…/banner.jpg"/>
+      <label class="ff-label">Banner Image (optional)</label>
+      <div id="ev-img-preview" style="display:none;border-radius:10px;overflow:hidden;height:90px;background:#111;margin-bottom:8px"><img id="ev-img-thumb" style="width:100%;height:100%;object-fit:cover"/></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button type="button" class="btn-primary" style="padding:8px 14px;font-size:.78rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--tx)" onclick="document.getElementById('ev-img-file').click()">📷 Choose Image</button>
+        <span id="ev-img-name" style="font-size:.72rem;color:var(--mu2)">No file chosen</span>
+      </div>
+      <input type="file" id="ev-img-file" accept="image/*" style="display:none" onchange="previewEvImg(this)"/>
+      <input type="hidden" id="ev-img"/>
       <button class="btn-primary" style="width:100%" onclick="submitEvent()">Save Event 🎟</button>
     </div>
   </div>
@@ -1389,6 +1395,25 @@ function renderEvents() {
   }).join('');
 }
 
+function previewEvImg(input) {
+  const file = input.files[0]; if (!file) return;
+  document.getElementById('ev-img-name').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('ev-img-thumb').src = e.target.result;
+    document.getElementById('ev-img-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadToUploads(file, folder) {
+  const ext  = file.name.split('.').pop().toLowerCase();
+  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { data, error } = await sb.storage.from('uploads').upload(path, file, { upsert: false });
+  if (error) throw new Error(error.message);
+  return sb.storage.from('uploads').getPublicUrl(data.path).data.publicUrl;
+}
+
 async function submitEvent() {
   const id   = document.getElementById('ev-edit-id').value;
   const name = document.getElementById('ev-name').value.trim();
@@ -1401,7 +1426,12 @@ async function submitEvent() {
   const city  = document.getElementById('ev-city').value.trim();
   const genre = document.getElementById('ev-genre').value.trim();
   const desc  = document.getElementById('ev-desc').value.trim();
-  const imgUrl = document.getElementById('ev-img').value.trim();
+  let imgUrl = document.getElementById('ev-img').value.trim();
+  const evImgFile = document.getElementById('ev-img-file')?.files[0];
+  if (evImgFile) {
+    try { imgUrl = await uploadToUploads(evImgFile, 'events'); }
+    catch(e) { toast('Image upload failed: ' + e.message, 'err'); return; }
+  }
 
   const ev = {
     id: id || 'ev_' + Date.now(), name,

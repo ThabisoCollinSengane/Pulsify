@@ -454,8 +454,14 @@ tr:hover td{background:rgba(255,255,255,.02)}
         </div>
       </div>
       <div style="margin-bottom:10px">
-        <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Image URL (optional)</div>
-        <input class="inp" id="bn-image" placeholder="https://... (banner background image)" style="width:100%"/>
+        <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Banner Image (optional)</div>
+        <div id="bn-img-preview" style="display:none;margin-bottom:8px;border-radius:10px;overflow:hidden;height:80px;background:#111"><img id="bn-img-thumb" style="width:100%;height:100%;object-fit:cover"/></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button type="button" class="btn btn-surf" style="padding:9px 14px;font-size:.78rem" onclick="document.getElementById('bn-img-file').click()">📷 Choose Image</button>
+          <span id="bn-img-name" style="font-size:.72rem;color:var(--mu)">No file chosen</span>
+        </div>
+        <input type="file" id="bn-img-file" accept="image/*" style="display:none" onchange="previewBannerImg(this)"/>
+        <input type="hidden" id="bn-image"/>
       </div>
       <div id="msg-banners" class="msg" style="margin-bottom:10px"></div>
       <button class="btn-sm" onclick="createBanner()" style="background:var(--or);color:#fff;border:none;padding:10px 22px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer">+ Create Banner</button>
@@ -1471,13 +1477,39 @@ async function loadBanners() {
   } catch(e) { el.innerHTML = `<div style="color:var(--err)">Error: ${esc(e.message)}</div>`; }
 }
 
+function previewBannerImg(input) {
+  const file = input.files[0]; if (!file) return;
+  document.getElementById('bn-img-name').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('bn-img-thumb').src = e.target.result;
+    document.getElementById('bn-img-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadToStorage(file, folder) {
+  const ext  = file.name.split('.').pop().toLowerCase();
+  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { data, error } = await sb.storage.from('uploads').upload(path, file, { upsert: false });
+  if (error) throw new Error(error.message);
+  return sb.storage.from('uploads').getPublicUrl(data.path).data.publicUrl;
+}
+
 async function createBanner() {
   const title     = document.getElementById('bn-title').value.trim();
   const subtitle  = document.getElementById('bn-subtitle').value.trim();
   const target_url = document.getElementById('bn-url').value.trim();
   const target_type = document.getElementById('bn-type').value;
   const bg_color  = document.getElementById('bn-color').value;
-  const image_url = document.getElementById('bn-image').value.trim();
+  let image_url   = document.getElementById('bn-image').value.trim();
+
+  // Upload file if selected
+  const fileInput = document.getElementById('bn-img-file');
+  if (fileInput.files[0]) {
+    try { image_url = await uploadToStorage(fileInput.files[0], 'banners'); }
+    catch(e) { showBanMsg('Image upload failed: ' + e.message, 'err'); return; }
+  }
   const expiresRaw = document.getElementById('bn-expires').value;
   const expires_at = expiresRaw ? new Date(expiresRaw).toISOString() : null;
 

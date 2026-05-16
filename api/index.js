@@ -768,9 +768,9 @@ module.exports = async (req, res) => {
 
     /* ─── GET /leads ─────────────────────────────────────── */
     if (url === '/leads' && req.method === 'GET') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
-      const user  = await verifyToken(token);
-      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const token = tokenFrom(req);
 
       const page     = Math.max(1, parseInt(q.page   || '1'));
       const limit    = Math.min(100, parseInt(q.limit || '20'));
@@ -781,7 +781,7 @@ module.exports = async (req, res) => {
       const province = q.province || '';
       const search   = q.search   || '';
 
-      let query = sb().from('scraped_leads')
+      let query = sbAs(token).from('scraped_leads')
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
@@ -801,10 +801,10 @@ module.exports = async (req, res) => {
         { count: convertedCount },
         { count: ignoredCount },
       ] = await Promise.all([
-        sb().from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'new'),
-        sb().from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'contacted'),
-        sb().from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'converted'),
-        sb().from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'ignored'),
+        sbAs(token).from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'new'),
+        sbAs(token).from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'contacted'),
+        sbAs(token).from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'converted'),
+        sbAs(token).from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'ignored'),
       ]);
 
       return res.status(200).json({
@@ -825,16 +825,16 @@ module.exports = async (req, res) => {
     /* ─── PATCH /leads/:id ───────────────────────────────── */
     const leadId = url.match(/^\/leads\/([^/]+)$/)?.[1];
     if (leadId && req.method === 'PATCH') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
-      const user  = await verifyToken(token);
-      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+      const auth2 = await authUser(req);
+      if (!auth2 || auth2.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const leadToken = tokenFrom(req);
 
       const { status, notes } = req.body || {};
       const updates = { updated_at: new Date().toISOString() };
       if (status !== undefined) updates.status = status;
       if (notes  !== undefined) updates.notes  = notes;
 
-      const { data, error } = await sb().from('scraped_leads')
+      const { data, error } = await sbAs(leadToken).from('scraped_leads')
         .update(updates).eq('id', leadId).select().single();
 
       if (error) return res.status(400).json({ error: error.message });
@@ -1217,7 +1217,8 @@ module.exports = async (req, res) => {
     if (url === '/admin/banners' && req.method === 'GET') {
       const auth = await authUser(req);
       if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
-      const { data, error } = await sb().from('banners').select('*').order('created_at', { ascending: false });
+      const token = tokenFrom(req);
+      const { data, error } = await sbAs(token).from('banners').select('*').order('created_at', { ascending: false });
       if (error) return res.status(400).json({ error: error.message });
       return res.status(200).json({ banners: data });
     }
@@ -1228,7 +1229,8 @@ module.exports = async (req, res) => {
       if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
       const { title, subtitle, target_url, target_type, image_url, bg_color, expires_at } = req.body || {};
       if (!title) return res.status(400).json({ error: 'title is required' });
-      const { data, error } = await sb().from('banners').insert({
+      const token = tokenFrom(req);
+      const { data, error } = await sbAs(token).from('banners').insert({
         title, subtitle: subtitle || null, target_url: target_url || null,
         target_type: target_type || 'external', image_url: image_url || null,
         bg_color: bg_color || '#FF5C00', is_active: true,
@@ -1469,8 +1471,9 @@ module.exports = async (req, res) => {
     if (url === '/admin/promotions' && req.method === 'GET') {
       const auth = await authUser(req);
       if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const token = tokenFrom(req);
       const statusFilter = q.status || 'pending';
-      let query = sb().from('promotions').select('*').order('created_at', { ascending: false });
+      let query = sbAs(token).from('promotions').select('*').order('created_at', { ascending: false });
       if (statusFilter === 'pending')  query = query.eq('is_active', false);
       else if (statusFilter === 'active') query = query.eq('is_active', true);
       const { data, error } = await query;
@@ -1567,9 +1570,10 @@ module.exports = async (req, res) => {
       const type   = req.query?.type   || 'event';
       const types  = type === 'all' ? ['event','business','post'] : [type];
       if (types.some(t => !REPORT_TABLES[t])) return res.status(400).json({ error: 'invalid type' });
+      const token = tokenFrom(req);
       const results = await Promise.all(types.map(async (t) => {
         const cfg = REPORT_TABLES[t];
-        let q = sb().from(cfg.table).select('*').order('created_at', { ascending: false });
+        let q = sbAs(token).from(cfg.table).select('*').order('created_at', { ascending: false });
         if (status !== 'all') q = q.eq('status', status);
         const { data, error } = await q;
         if (error) throw error;
