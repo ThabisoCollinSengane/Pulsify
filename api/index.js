@@ -1223,21 +1223,35 @@ module.exports = async (req, res) => {
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
       const body = req.body || {};
-      const { error } = await sb()
-        .from('profiles')
-        .update({
-          verif_status:  'pending',
-          verif_request: JSON.stringify({
-            ...body,
-            user_id: user.id,
-            submitted_at: new Date().toISOString(),
-          }),
-        })
-        .eq('id', user.id);
+      const { face_scan_url, id_doc_url, ...rest } = body;
+      const updatePayload = {
+        verif_status:  'pending',
+        verif_request: JSON.stringify({
+          ...rest,
+          user_id: user.id,
+          submitted_at: new Date().toISOString(),
+        }),
+      };
+      if (face_scan_url) updatePayload.face_scan_url = face_scan_url;
+      if (id_doc_url)    updatePayload.id_doc_url    = id_doc_url;
 
-      if (error) {
-        console.warn('[verify-request] profiles update failed:', error.message, '— saving to fallback');
+      const { error } = await sb().from('profiles').update(updatePayload).eq('id', user.id);
+
+      // Notify admin about new verification request
+      const { data: admins } = await sb().from('profiles').select('id').eq('role', 'admin');
+      for (const admin of admins || []) {
+        await sb().from('notifications').insert({
+          user_id:           admin.id,
+          type:              'system',
+          from_display_name: 'Pulsify System',
+          message:           `New verification request from ${user.email || 'a user'}.`,
+          entity_type:       'verification',
+          entity_id:         user.id,
+          read:              false,
+        });
       }
+
+      if (error) console.warn('[verify-request] profiles update failed:', error.message);
       return res.status(200).json({ success: true, status: 'pending' });
     }
 
@@ -1249,7 +1263,7 @@ module.exports = async (req, res) => {
       }
       const { data, error } = await sb()
         .from('profiles')
-        .select('id,email,display_name,role,verif_status,verif_request,is_verified,created_at')
+        .select('id,email,display_name,role,verif_status,verif_request,is_verified,face_scan_url,id_doc_url,created_at')
         .in('verif_status', ['pending', 'approved', 'rejected'])
         .order('created_at', { ascending: false });
       if (error) return res.status(400).json({ error: error.message });
@@ -1307,6 +1321,24 @@ module.exports = async (req, res) => {
       };
       const { data, error } = await sb().from('profiles').update(updates).eq('id', targetId).select().single();
       if (error) return res.status(400).json({ error: error.message });
+
+      // Notify the user about verification result
+      const adminName = auth.profile.display_name || 'Pulsify Admin';
+      const msg = action === 'approve'
+        ? '🎉 Your profile has been verified! Your Pulsify verified badge is now active.'
+        : `Your verification application was not approved. ${notes ? 'Reason: ' + notes : 'Please re-apply with complete and accurate information.'}`;
+      await sb().from('notifications').insert({
+        user_id:           targetId,
+        type:              'verification',
+        from_user_id:      auth.user.id,
+        from_display_name: adminName,
+        message:           msg,
+        entity_type:       'profile',
+        entity_id:         targetId,
+        data:              { action, notes: notes || null },
+        read:              false,
+      });
+      await logAdminAction(auth.user.id, adminName, action === 'approve' ? 'verif_approve' : 'verif_reject', targetId, data?.display_name || targetId, { notes });
       return res.status(200).json({ success: true, profile: data });
     }
 

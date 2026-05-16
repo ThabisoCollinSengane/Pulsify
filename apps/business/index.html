@@ -107,6 +107,11 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 .setting-card{background:var(--surf2);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:10px}
 .setting-card-row{display:flex;align-items:center;justify-content:space-between}
 .setting-card-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+/* ── Pulsify verified badge ── */
+.puls-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);box-shadow:0 0 8px rgba(255,92,0,.5);position:relative;vertical-align:middle;margin-left:5px;flex-shrink:0;cursor:default}
+.puls-badge::before{content:'';position:absolute;inset:-4px;border-radius:50%;background:linear-gradient(135deg,rgba(255,92,0,.35),rgba(255,45,120,.35));animation:puls-ring 2.2s ease-out infinite;z-index:-1}
+.puls-badge::after{content:'';width:7px;height:7px;border-radius:50%;background:#fff;opacity:.95}
+@keyframes puls-ring{0%{transform:scale(1);opacity:.5}70%{transform:scale(1.9);opacity:0}100%{transform:scale(1.9);opacity:0}}
 /* ── FAQ ── */
 .faq-item{border:1px solid var(--border);border-radius:12px;margin-bottom:8px;overflow:hidden}
 .faq-q{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
@@ -310,7 +315,31 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <div><div class="sec-title">Promote Your Business</div><div class="sec-sub">Get featured in the event feed</div></div>
   </div>
   <div style="padding:0 14px 80px">
-    <div style="font-size:.78rem;color:var(--mu);margin-bottom:16px;line-height:1.6">Your promotion appears in the "Featured This Weekend" section or injected into the homepage feed. All promotions are reviewed by our team before going live.</div>
+    <div style="font-size:.78rem;color:var(--mu);margin-bottom:14px;line-height:1.6">Boost your business across the Pulsify feed and discovery sections. Pick a template to get started fast, then fill in the details below. All promotions are reviewed before going live.</div>
+
+    <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Quick-Start Templates</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+      <div onclick="applyBizPromoTemplate('bnb')" style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer">
+        <div style="font-size:1.5rem;margin-bottom:6px">🏠</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">BnB / Stay</div>
+        <div style="font-size:.66rem;color:var(--mu);margin-top:2px">Weekend getaway · Special rate</div>
+      </div>
+      <div onclick="applyBizPromoTemplate('club')" style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer">
+        <div style="font-size:1.5rem;margin-bottom:6px">🪩</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">Club Night</div>
+        <div style="font-size:.66rem;color:var(--mu);margin-top:2px">Friday/Saturday · DJ lineup</div>
+      </div>
+      <div onclick="applyBizPromoTemplate('shisanyama')" style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer">
+        <div style="font-size:1.5rem;margin-bottom:6px">🔥</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">Shisanyama</div>
+        <div style="font-size:.66rem;color:var(--mu);margin-top:2px">Sunday session · Food + music</div>
+      </div>
+      <div onclick="applyBizPromoTemplate('custom')" style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer">
+        <div style="font-size:1.5rem;margin-bottom:6px">✨</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">Custom Promo</div>
+        <div style="font-size:.66rem;color:var(--mu);margin-top:2px">Build from scratch</div>
+      </div>
+    </div>
 
     <div id="promo-msg-biz" style="display:none;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:14px"></div>
 
@@ -585,6 +614,28 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
       <input class="ff" id="vf-address" placeholder="Street, suburb, city"/>
       <label class="ff-label">Business Description *</label>
       <textarea class="ff" id="vf-desc" rows="3" placeholder="What does your business do?"></textarea>
+      <label class="ff-label">Face Scan (Selfie) *</label>
+      <div style="margin-bottom:12px">
+        <div style="position:relative;border-radius:14px;overflow:hidden;background:#000;margin-bottom:8px;min-height:150px;display:flex;align-items:center;justify-content:center">
+          <video id="vf-video" autoplay playsinline muted style="width:100%;border-radius:14px;display:none"></video>
+          <canvas id="vf-canvas" style="display:none"></canvas>
+          <img id="vf-preview" style="width:100%;border-radius:14px;display:none"/>
+          <div id="vf-cam-placeholder" style="color:var(--mu);font-size:.78rem;padding:20px;text-align:center">📸 Take a selfie to confirm your identity</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button type="button" class="btn-sec" style="flex:1;padding:9px;font-size:.74rem" onclick="startVfCam()">📷 Camera</button>
+          <button type="button" id="vf-capture-btn" class="btn-primary" style="flex:1;padding:9px;font-size:.74rem;display:none" onclick="captureVfFace()">✔ Capture</button>
+          <button type="button" id="vf-retake-btn" class="btn-sec" style="flex:1;padding:9px;font-size:.74rem;display:none" onclick="retakeVfFace()">🔄 Retake</button>
+        </div>
+      </div>
+      <label class="ff-label">SA ID Document (photo or scan) *</label>
+      <div style="margin-bottom:14px">
+        <label style="display:block;border:2px dashed var(--border);border-radius:12px;padding:14px;text-align:center;cursor:pointer;font-size:.76rem;color:var(--mu)">
+          <span id="vf-id-doc-label">📄 Tap to upload ID document (JPG, PNG or PDF)</span>
+          <input type="file" id="vf-id-doc" accept="image/*,application/pdf" style="display:none" onchange="previewVfIdDoc(event)"/>
+        </label>
+        <img id="vf-id-doc-preview" style="display:none;width:100%;border-radius:10px;margin-top:8px;max-height:140px;object-fit:contain"/>
+      </div>
       <button class="btn-primary" style="width:100%;margin-top:6px" onclick="submitVerification()">Submit for Verification 🏆</button>
     </div>
   </div>
@@ -706,21 +757,77 @@ function setRegistered(val) {
 
 // ── Verification ─────────────────────────────────────────────
 async function loadVerifStatus() {
-  const saved = load('verif', {});
-  if (saved.status) {
-    const labels = { pending: '⏳ Pending review', approved: '✅ Verified', rejected: '❌ Not approved' };
-    const el = document.getElementById('biz-verif-status');
-    if (el) el.textContent = labels[saved.status] || 'Not verified';
-    const btn = document.getElementById('biz-verif-btn');
-    if (btn && saved.status === 'approved') { btn.textContent = '✅ Verified'; btn.disabled = true; }
-    if (btn && saved.status === 'pending')  { btn.textContent = '⏳ Pending'; btn.disabled = true; }
-  }
+  try {
+    const sb = getSB(); if (!sb) return;
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      const { data: prof } = await sb.from('profiles').select('verif_status,is_verified').eq('id', session.user.id).single();
+      if (prof) {
+        const labels = { pending: '⏳ Pending review', approved: '✅ Verified', rejected: '❌ Not approved — reapply' };
+        const el = document.getElementById('biz-verif-status');
+        if (el) el.textContent = labels[prof.verif_status] || 'Not verified';
+        const btn = document.getElementById('biz-verif-btn');
+        if (btn) {
+          if (prof.is_verified)                    { btn.textContent = '✅ Verified'; btn.disabled = true; }
+          else if (prof.verif_status === 'pending')  { btn.textContent = '⏳ Pending'; btn.disabled = true; }
+          else if (prof.verif_status === 'rejected') { btn.textContent = 'Reapply →'; btn.disabled = false; }
+        }
+        save('verif', { status: prof.verif_status });
+      }
+    }
+  } catch(e) { console.warn('[verif status]', e); }
   const pm = load('payment', {});
   if (pm.bank) {
     const el = document.getElementById('biz-payment-status');
     if (el) el.textContent = `${pm.bank} ••••${(pm.account||'').slice(-4)}`;
     const btn = document.getElementById('biz-payment-btn');
     if (btn) btn.textContent = 'Edit →';
+  }
+}
+
+// ── Business face scan + ID doc ──────────────────────────────
+let _vfFaceScanBlob = null;
+let _vfIdDocFile    = null;
+let _vfStream       = null;
+
+async function startVfCam() {
+  try {
+    _vfStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+    const vid = document.getElementById('vf-video');
+    vid.srcObject = _vfStream; vid.style.display = 'block';
+    document.getElementById('vf-cam-placeholder').style.display = 'none';
+    document.getElementById('vf-preview').style.display = 'none';
+    document.getElementById('vf-capture-btn').style.display = 'block';
+    document.getElementById('vf-retake-btn').style.display = 'none';
+  } catch(e) { showMsg('verif-msg', 'Camera not available: ' + e.message, 'err'); }
+}
+function captureVfFace() {
+  const vid = document.getElementById('vf-video');
+  const canvas = document.getElementById('vf-canvas');
+  canvas.width = vid.videoWidth || 640; canvas.height = vid.videoHeight || 480;
+  canvas.getContext('2d').drawImage(vid, 0, 0);
+  canvas.toBlob(blob => {
+    _vfFaceScanBlob = blob;
+    const prev = document.getElementById('vf-preview');
+    prev.src = URL.createObjectURL(blob); prev.style.display = 'block';
+    document.getElementById('vf-video').style.display = 'none';
+    document.getElementById('vf-capture-btn').style.display = 'none';
+    document.getElementById('vf-retake-btn').style.display = 'block';
+    if (_vfStream) _vfStream.getTracks().forEach(t => t.stop());
+  }, 'image/jpeg', 0.8);
+}
+function retakeVfFace() {
+  _vfFaceScanBlob = null;
+  document.getElementById('vf-preview').style.display = 'none';
+  document.getElementById('vf-retake-btn').style.display = 'none';
+  startVfCam();
+}
+function previewVfIdDoc(e) {
+  _vfIdDocFile = e.target.files[0]; if (!_vfIdDocFile) return;
+  document.getElementById('vf-id-doc-label').textContent = '✅ ' + _vfIdDocFile.name;
+  if (_vfIdDocFile.type.startsWith('image/')) {
+    const prev = document.getElementById('vf-id-doc-preview');
+    prev.src = URL.createObjectURL(_vfIdDocFile); prev.style.display = 'block';
   }
 }
 
@@ -733,32 +840,43 @@ async function submitVerification() {
   if (!contact || !idNum || !phone || !address || !desc) {
     showMsg('verif-msg', 'Please fill in all required fields.', 'err'); return;
   }
-  const payload = {
-    is_registered: _isRegistered,
-    company: _isRegistered ? document.getElementById('vf-company').value.trim() : '',
-    reg_num: _isRegistered ? document.getElementById('vf-reg-num').value.trim() : '',
-    entity:  _isRegistered ? document.getElementById('vf-entity').value : '',
-    contact, id_number: idNum, phone, address, description: desc,
-    business_name: BIZ?.name || '',
-    submitted_at: new Date().toISOString(),
-  };
-  const sb = getSB();
-  if (sb) {
-    try {
-      const { data: { session } } = await sb.auth.getSession();
-      if (session) {
-        await fetch('/api/verify-request', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-          body: JSON.stringify(payload),
-        });
-      }
-    } catch(e) { console.warn('[verif]', e); }
-  }
-  save('verif', { status: 'pending', ...payload });
-  showMsg('verif-msg', '✅ Submitted! We\'ll review within 1–3 business days.', 'ok');
-  loadVerifStatus();
-  setTimeout(() => closeSheet('verify-sheet'), 2200);
+  if (!_vfFaceScanBlob) { showMsg('verif-msg', 'Please take a selfie photo first.', 'err'); return; }
+  if (!_vfIdDocFile)    { showMsg('verif-msg', 'Please upload your ID document.', 'err'); return; }
+  showMsg('verif-msg', '⏳ Uploading documents…', 'ok');
+  try {
+    const sb = getSB(); if (!sb) throw new Error('Not initialised');
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { showMsg('verif-msg', 'Please sign in first.', 'err'); return; }
+    const uid = session.user.id;
+    const facePath = `${uid}/face_${Date.now()}.jpg`;
+    await sb.storage.from('verification-docs').upload(facePath, _vfFaceScanBlob, { contentType: 'image/jpeg', upsert: true });
+    const { data: { publicUrl: faceScanUrl } } = sb.storage.from('verification-docs').getPublicUrl(facePath);
+    const ext = (_vfIdDocFile.name.split('.').pop() || 'jpg').toLowerCase();
+    const idPath = `${uid}/id_doc_${Date.now()}.${ext}`;
+    await sb.storage.from('verification-docs').upload(idPath, _vfIdDocFile, { upsert: true });
+    const { data: { publicUrl: idDocUrl } } = sb.storage.from('verification-docs').getPublicUrl(idPath);
+    const payload = {
+      is_registered: _isRegistered,
+      company: _isRegistered ? document.getElementById('vf-company').value.trim() : '',
+      reg_num: _isRegistered ? document.getElementById('vf-reg-num').value.trim() : '',
+      entity:  _isRegistered ? document.getElementById('vf-entity').value : '',
+      contact, id_number: idNum, phone, address, description: desc,
+      business_name: BIZ?.name || '',
+      face_scan_url: faceScanUrl,
+      id_doc_url:    idDocUrl,
+      submitted_at: new Date().toISOString(),
+    };
+    const r = await fetch('/api/verify-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error((await r.json()).error || 'Submission failed');
+    save('verif', { status: 'pending', ...payload });
+    showMsg('verif-msg', '✅ Submitted! We\'ll review within 1–3 business days.', 'ok');
+    await loadVerifStatus();
+    setTimeout(() => closeSheet('verify-sheet'), 2400);
+  } catch(e) { showMsg('verif-msg', 'Upload failed: ' + e.message, 'err'); }
 }
 
 // ── Payment Method ───────────────────────────────────────────
@@ -893,6 +1011,7 @@ function showTab(name, _noPush) {
   if (name === 'analytics') renderAnalytics();
   if (name === 'promote')   loadBizPromotions();
   if (name === 'events')    loadDiscoverEvents();
+  if (name === 'profile')   renderBizFAQ();
 }
 
 // ═══════════ DISCOVER (public events catalog) ═══════════
@@ -2010,6 +2129,25 @@ function _bizPromoMsg(text, ok) {
   el.style.cssText = 'display:block;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:14px;background:' +
     (ok ? 'rgba(198,255,74,.1);color:#C6FF4A' : 'rgba(255,45,120,.12);color:#FF2D78');
   el.textContent = text;
+}
+
+function applyBizPromoTemplate(type) {
+  const templates = {
+    bnb:        { headline: 'Weekend Getaway — Special Rate', placement: 'both',              duration: '14' },
+    club:       { headline: 'Club Night — DJ Lineup This Weekend', placement: 'featured_weekend', duration: '7' },
+    shisanyama: { headline: 'Sunday Shisanyama — Food & Music',    placement: 'both',              duration: '7' },
+    custom:     { headline: '',                                    placement: 'feed_inject',       duration: '7' },
+  };
+  const t = templates[type] || templates.custom;
+  const titleEl = document.getElementById('biz-promo-title');
+  if (titleEl && !titleEl.value) titleEl.value = t.headline;
+  const placementEl = document.getElementById('biz-promo-placement');
+  if (placementEl) placementEl.value = t.placement;
+  const durationEl = document.getElementById('biz-promo-duration');
+  if (durationEl) durationEl.value = t.duration;
+  document.getElementById('biz-promo-title')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const msgEl = document.getElementById('promo-msg-biz');
+  if (msgEl) { msgEl.style.display = 'block'; msgEl.style.background = 'rgba(198,255,74,.1)'; msgEl.style.color = '#c6ff4a'; msgEl.textContent = '✅ Template applied — fill in any remaining details and submit.'; setTimeout(() => { msgEl.style.display = 'none'; }, 3000); }
 }
 
 async function submitBizPromo() {

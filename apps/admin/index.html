@@ -114,6 +114,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
   /* Hide lower-priority columns on mobile */
   .hide-mobile{display:none!important}
 }
+.puls-badge{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);box-shadow:0 0 6px rgba(255,92,0,.4);position:relative;vertical-align:middle;margin-left:4px;flex-shrink:0}
+.puls-badge::before{content:'';position:absolute;inset:-3px;border-radius:50%;background:linear-gradient(135deg,rgba(255,92,0,.3),rgba(255,45,120,.3));animation:puls-ring 2.2s ease-out infinite;z-index:-1}
+.puls-badge::after{content:'';width:6px;height:6px;border-radius:50%;background:#fff;opacity:.95}
+@keyframes puls-ring{0%{transform:scale(1);opacity:.5}70%{transform:scale(1.9);opacity:0}100%{transform:scale(1.9);opacity:0}}
 </style>
 </head>
 <body>
@@ -900,6 +904,11 @@ function renderVerifList() {
         <div><strong>Address:</strong> ${esc(req.address || '—')}</div>
       </div>
       ${req.description ? `<div style="font-size:.75rem;color:var(--mu2);margin-bottom:12px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:8px">${esc(req.description)}</div>` : ''}
+      ${(req.face_scan_url || req.id_doc_url || v.face_scan_url || v.id_doc_url) ? `
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        ${(req.face_scan_url || v.face_scan_url) ? `<div><div style="font-size:.62rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Face Scan</div><a href="${req.face_scan_url || v.face_scan_url}" target="_blank"><img src="${req.face_scan_url || v.face_scan_url}" style="height:100px;border-radius:10px;object-fit:cover;border:1px solid var(--border)" onerror="this.style.opacity='.3'"/></a></div>` : ''}
+        ${(req.id_doc_url || v.id_doc_url) ? `<div><div style="font-size:.62rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">ID Document</div><a href="${req.id_doc_url || v.id_doc_url}" target="_blank"><img src="${req.id_doc_url || v.id_doc_url}" style="height:100px;border-radius:10px;object-fit:cover;border:1px solid var(--border)" onerror="this.parentElement.innerHTML='<span style=\\'font-size:.74rem;color:var(--or)\\'>📄 View Doc</span>'"/></a></div>` : ''}
+      </div>` : ''}
       ${v.verif_status === 'pending' ? `<div style="display:flex;gap:8px">
         <button class="btn btn-li" onclick="reviewVerif('${v.id}','approve')" style="flex:1">✅ Approve &amp; Verify</button>
         <button class="btn btn-pk" onclick="reviewVerif('${v.id}','reject')" style="flex:1">❌ Reject</button>

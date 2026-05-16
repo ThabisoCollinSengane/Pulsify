@@ -95,6 +95,11 @@ select.inp option{background:#0D1424}
 .sn-title{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.03em}
 .sn-close{width:30px;height:30px;border-radius:50%;background:var(--surf);border:none;color:var(--tx);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .sn-body{overflow-y:auto;padding:0 18px 32px;flex:1}
+/* ── Pulsify verified badge ── */
+.puls-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);box-shadow:0 0 8px rgba(255,92,0,.5);position:relative;vertical-align:middle;margin-left:5px;flex-shrink:0;cursor:default}
+.puls-badge::before{content:'';position:absolute;inset:-4px;border-radius:50%;background:linear-gradient(135deg,rgba(255,92,0,.35),rgba(255,45,120,.35));animation:puls-ring 2.2s ease-out infinite;z-index:-1}
+.puls-badge::after{content:'';width:7px;height:7px;border-radius:50%;background:#fff;opacity:.95}
+@keyframes puls-ring{0%{transform:scale(1);opacity:.5}70%{transform:scale(1.9);opacity:0}100%{transform:scale(1.9);opacity:0}}
 </style>
 </head>
 <body>
@@ -199,8 +204,33 @@ select.inp option{background:#0D1424}
     <div class="card">
       <div class="card-body">
         <div class="section-label">🚀 Promote Your Event</div>
-        <div style="font-size:.76rem;color:var(--mu);margin-bottom:14px;line-height:1.5">Your promotion will appear in the "Featured This Weekend" section or injected into the event feed. All promotions are reviewed before going live.</div>
+        <div style="font-size:.76rem;color:var(--mu);margin-bottom:14px;line-height:1.5">Boost your event across the Pulsify feed and discovery sections. Pick a template to get started instantly, or fill in the form manually below. All promotions are reviewed before going live.</div>
 
+        <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Quick-Start Templates</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+          <div onclick="applyOrgPromoTemplate('event_boost')" style="background:var(--surf2);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer;active:opacity:.8">
+            <div style="font-size:1.5rem;margin-bottom:6px">🎤</div>
+            <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">Event Boost</div>
+            <div style="font-size:.66rem;color:var(--mu);margin-top:2px">Promote an existing event</div>
+          </div>
+          <div onclick="applyOrgPromoTemplate('weekend_special')" style="background:var(--surf2);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer">
+            <div style="font-size:1.5rem;margin-bottom:6px">🪩</div>
+            <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">Weekend Special</div>
+            <div style="font-size:.66rem;color:var(--mu);margin-top:2px">Friday/Saturday night event</div>
+          </div>
+          <div onclick="applyOrgPromoTemplate('new_event')" style="background:var(--surf2);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer">
+            <div style="font-size:1.5rem;margin-bottom:6px">🎉</div>
+            <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">New Event Launch</div>
+            <div style="font-size:.66rem;color:var(--mu);margin-top:2px">First-time announcement</div>
+          </div>
+          <div onclick="applyOrgPromoTemplate('custom')" style="background:var(--surf2);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer">
+            <div style="font-size:1.5rem;margin-bottom:6px">✨</div>
+            <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">Custom Promo</div>
+            <div style="font-size:.66rem;color:var(--mu);margin-top:2px">Build from scratch</div>
+          </div>
+        </div>
+
+        <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Your Details</div>
         <div id="promo-msg-org" style="display:none;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px"></div>
 
         <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Pick an event to promote</div>
@@ -372,6 +402,28 @@ select.inp option{background:#0D1424}
       </div>
       <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Address *</div>
       <input class="inp" id="ovf-address" style="width:100%;margin-bottom:10px" placeholder="Physical business address"/>
+      <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Face Scan (Selfie) *</div>
+      <div style="margin-bottom:14px">
+        <div id="ovf-cam-area" style="position:relative;border-radius:14px;overflow:hidden;background:#000;margin-bottom:8px;min-height:160px;display:flex;align-items:center;justify-content:center">
+          <video id="ovf-video" autoplay playsinline muted style="width:100%;display:block;border-radius:14px;display:none"></video>
+          <canvas id="ovf-canvas" style="display:none"></canvas>
+          <img id="ovf-preview" style="width:100%;border-radius:14px;display:none"/>
+          <div id="ovf-cam-placeholder" style="color:var(--mu);font-size:.78rem;padding:20px;text-align:center">📸 Take a selfie to confirm your identity</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button type="button" class="btn-sec" style="flex:1;padding:9px;font-size:.74rem" onclick="startOvfCam()">📷 Open Camera</button>
+          <button type="button" id="ovf-capture-btn" class="btn-primary" style="flex:1;padding:9px;font-size:.74rem;display:none" onclick="captureOvfFace()">✔ Capture</button>
+          <button type="button" id="ovf-retake-btn" class="btn-sec" style="flex:1;padding:9px;font-size:.74rem;display:none" onclick="retakeOvfFace()">🔄 Retake</button>
+        </div>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">SA ID Document (photo or scan) *</div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;border:2px dashed var(--border);border-radius:12px;padding:16px;text-align:center;cursor:pointer;font-size:.76rem;color:var(--mu)">
+          <span id="ovf-id-doc-label">📄 Tap to upload ID document (JPG, PNG or PDF)</span>
+          <input type="file" id="ovf-id-doc" accept="image/*,application/pdf" style="display:none" onchange="previewOvfIdDoc(event)"/>
+        </label>
+        <img id="ovf-id-doc-preview" style="display:none;width:100%;border-radius:10px;margin-top:8px;max-height:160px;object-fit:contain"/>
+      </div>
       <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">About Your Events *</div>
       <textarea class="inp" id="ovf-desc" style="width:100%;min-height:80px;margin-bottom:14px;resize:vertical" placeholder="What kind of events do you organise?"></textarea>
       <button class="btn-primary" style="width:100%" onclick="submitOrgVerification()">Submit for Verification 🏆</button>
@@ -513,16 +565,29 @@ function setOrgRegistered(val) {
 // ── Org Verification ─────────────────────────────────────────
 function showOrgMsg(id, text, type) { const el = document.getElementById(id); if (!el) return; el.textContent = text; el.className = 'msg show msg-' + type; }
 
-function loadOrgSettingsStatus() {
+async function loadOrgSettingsStatus() {
   try {
-    const verif = JSON.parse(localStorage.getItem('org_verif') || '{}');
-    if (verif.status) {
-      const labels = { pending: '⏳ Pending review', approved: '✅ Verified', rejected: '❌ Not approved' };
-      const el = document.getElementById('org-verif-status');
-      if (el) el.textContent = labels[verif.status] || 'Not verified';
-      const btn = document.getElementById('org-verif-btn');
-      if (btn && verif.status !== 'rejected') { btn.textContent = verif.status === 'approved' ? '✅ Verified' : '⏳ Pending'; btn.disabled = true; }
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      const { data: prof } = await sb.from('profiles').select('verif_status,is_verified').eq('id', session.user.id).single();
+      if (prof) {
+        const labels = { pending: '⏳ Pending review', approved: '✅ Verified', rejected: '❌ Not approved — reapply' };
+        const el = document.getElementById('org-verif-status');
+        if (el) el.textContent = labels[prof.verif_status] || 'Not verified';
+        const btn = document.getElementById('org-verif-btn');
+        if (btn) {
+          if (prof.is_verified)                  { btn.textContent = '✅ Verified'; btn.disabled = true; }
+          else if (prof.verif_status === 'pending') { btn.textContent = '⏳ Pending'; btn.disabled = true; }
+          else if (prof.verif_status === 'rejected') { btn.textContent = 'Reapply →'; btn.disabled = false; }
+        }
+        // Also update localStorage so offline reads are consistent
+        const local = JSON.parse(localStorage.getItem('org_verif') || '{}');
+        localStorage.setItem('org_verif', JSON.stringify({ ...local, status: prof.verif_status }));
+      }
     }
+  } catch(e) { console.warn('[verif status]', e); }
+  // Payment status (still from localStorage)
+  try {
     const pm = JSON.parse(localStorage.getItem('org_payment') || '{}');
     if (pm.bank) {
       const el = document.getElementById('org-payment-status');
@@ -531,6 +596,69 @@ function loadOrgSettingsStatus() {
       if (btn) btn.textContent = 'Edit →';
     }
   } catch(e) {}
+}
+
+// ── Org Verification — face scan + ID doc ────────────────────
+let _ovfFaceScanBlob = null;
+let _ovfIdDocFile    = null;
+let _ovfStream       = null;
+
+async function startOvfCam() {
+  try {
+    _ovfStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+    const vid = document.getElementById('ovf-video');
+    vid.srcObject = _ovfStream;
+    vid.style.display = 'block';
+    document.getElementById('ovf-cam-placeholder').style.display = 'none';
+    document.getElementById('ovf-preview').style.display = 'none';
+    document.getElementById('ovf-capture-btn').style.display = 'block';
+    document.getElementById('ovf-retake-btn').style.display = 'none';
+  } catch(e) { toast('Camera not available: ' + e.message, 'err'); }
+}
+
+function captureOvfFace() {
+  const vid = document.getElementById('ovf-video');
+  const canvas = document.getElementById('ovf-canvas');
+  canvas.width = vid.videoWidth || 640;
+  canvas.height = vid.videoHeight || 480;
+  canvas.getContext('2d').drawImage(vid, 0, 0);
+  canvas.toBlob(blob => {
+    _ovfFaceScanBlob = blob;
+    const prev = document.getElementById('ovf-preview');
+    prev.src = URL.createObjectURL(blob);
+    prev.style.display = 'block';
+    vid.style.display = 'none';
+    document.getElementById('ovf-capture-btn').style.display = 'none';
+    document.getElementById('ovf-retake-btn').style.display = 'block';
+    if (_ovfStream) _ovfStream.getTracks().forEach(t => t.stop());
+  }, 'image/jpeg', 0.8);
+}
+
+function retakeOvfFace() {
+  _ovfFaceScanBlob = null;
+  document.getElementById('ovf-preview').style.display = 'none';
+  document.getElementById('ovf-retake-btn').style.display = 'none';
+  startOvfCam();
+}
+
+function previewOvfIdDoc(e) {
+  _ovfIdDocFile = e.target.files[0];
+  if (!_ovfIdDocFile) return;
+  document.getElementById('ovf-id-doc-label').textContent = '✅ ' + _ovfIdDocFile.name;
+  if (_ovfIdDocFile.type.startsWith('image/')) {
+    const prev = document.getElementById('ovf-id-doc-preview');
+    prev.src = URL.createObjectURL(_ovfIdDocFile);
+    prev.style.display = 'block';
+  }
+}
+
+async function uploadVerifDoc(file, folder, uid) {
+  const ext  = file.name.split('.').pop() || 'jpg';
+  const path = `${uid}/${folder}_${Date.now()}.${ext}`;
+  const { data, error } = await sb.storage.from('verification-docs').upload(path, file, { upsert: true });
+  if (error) throw error;
+  const { data: { publicUrl } } = sb.storage.from('verification-docs').getPublicUrl(path);
+  return publicUrl;
 }
 
 async function submitOrgVerification() {
@@ -542,29 +670,51 @@ async function submitOrgVerification() {
   if (!contact || !idNum || !phone || !address || !desc) {
     showOrgMsg('org-verif-msg', 'Please fill in all required fields.', 'err'); return;
   }
-  const payload = {
-    is_registered: _orgIsRegistered,
-    company: _orgIsRegistered ? document.getElementById('ovf-company').value.trim() : '',
-    reg_num: _orgIsRegistered ? document.getElementById('ovf-reg').value.trim() : '',
-    entity:  _orgIsRegistered ? document.getElementById('ovf-entity').value : '',
-    contact, id_number: idNum, phone, address, description: desc,
-    business_name: currentProfile?.display_name || '',
-    submitted_at: new Date().toISOString(),
-  };
+  if (!_ovfFaceScanBlob) {
+    showOrgMsg('org-verif-msg', 'Please take a selfie photo first.', 'err'); return;
+  }
+  if (!_ovfIdDocFile) {
+    showOrgMsg('org-verif-msg', 'Please upload your ID document.', 'err'); return;
+  }
+  showOrgMsg('org-verif-msg', '⏳ Uploading documents…', 'ok');
   try {
     const { data: { session } } = await sb.auth.getSession();
-    if (session) {
-      await fetch('/api/verify-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-        body: JSON.stringify(payload),
-      });
-    }
-  } catch(e) { console.warn('[verif]', e); }
-  localStorage.setItem('org_verif', JSON.stringify({ status: 'pending', ...payload }));
-  showOrgMsg('org-verif-msg', '✅ Submitted! We\'ll review within 1–3 business days.', 'ok');
-  loadOrgSettingsStatus();
-  setTimeout(() => closeOrgSheet('org-verify-sheet'), 2200);
+    if (!session) { showOrgMsg('org-verif-msg', 'Please sign in first.', 'err'); return; }
+    const uid = session.user.id;
+    // Upload face scan
+    const facePath = `${uid}/face_${Date.now()}.jpg`;
+    await sb.storage.from('verification-docs').upload(facePath, _ovfFaceScanBlob, { contentType: 'image/jpeg', upsert: true });
+    const { data: { publicUrl: faceScanUrl } } = sb.storage.from('verification-docs').getPublicUrl(facePath);
+    // Upload ID doc
+    const ext = (_ovfIdDocFile.name.split('.').pop() || 'jpg').toLowerCase();
+    const idPath = `${uid}/id_doc_${Date.now()}.${ext}`;
+    await sb.storage.from('verification-docs').upload(idPath, _ovfIdDocFile, { upsert: true });
+    const { data: { publicUrl: idDocUrl } } = sb.storage.from('verification-docs').getPublicUrl(idPath);
+
+    const payload = {
+      is_registered: _orgIsRegistered,
+      company: _orgIsRegistered ? document.getElementById('ovf-company').value.trim() : '',
+      reg_num: _orgIsRegistered ? document.getElementById('ovf-reg').value.trim() : '',
+      entity:  _orgIsRegistered ? document.getElementById('ovf-entity').value : '',
+      contact, id_number: idNum, phone, address, description: desc,
+      business_name: currentProfile?.display_name || '',
+      face_scan_url: faceScanUrl,
+      id_doc_url:    idDocUrl,
+      submitted_at: new Date().toISOString(),
+    };
+
+    await fetch('/api/verify-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify(payload),
+    });
+    localStorage.setItem('org_verif', JSON.stringify({ status: 'pending', ...payload }));
+    showOrgMsg('org-verif-msg', '✅ Submitted! We\'ll review within 1–3 business days.', 'ok');
+    loadOrgSettingsStatus();
+    setTimeout(() => closeOrgSheet('org-verify-sheet'), 2400);
+  } catch(e) {
+    showOrgMsg('org-verif-msg', 'Upload failed: ' + e.message, 'err');
+  }
 }
 
 function submitOrgPayment() {
@@ -1106,6 +1256,24 @@ function closeOrgQrScanner() {
 /* ══════════════════════════════════════════════════
    PROMOTIONS — ORGANIZER
 ══════════════════════════════════════════════════ */
+function applyOrgPromoTemplate(type) {
+  const placementEl = document.getElementById('promo-placement');
+  const durationEl  = document.getElementById('promo-duration');
+  if (type === 'event_boost' || type === 'new_event') {
+    if (placementEl) placementEl.value = 'both';
+    if (durationEl)  durationEl.value  = '7';
+  } else if (type === 'weekend_special') {
+    if (placementEl) placementEl.value = 'featured_weekend';
+    if (durationEl)  durationEl.value  = '7';
+  } else {
+    if (placementEl) placementEl.value = 'feed_inject';
+    if (durationEl)  durationEl.value  = '14';
+  }
+  document.getElementById('promo-event-sel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const msg = document.getElementById('promo-msg-org');
+  if (msg) { msg.style.display = 'block'; msg.style.background = 'rgba(198,255,74,.1)'; msg.style.color = '#c6ff4a'; msg.textContent = '✅ Template applied — select your event and submit.'; setTimeout(() => { msg.style.display = 'none'; }, 3000); }
+}
+
 async function loadOrgPromoEvents() {
   const sel = document.getElementById('promo-event-sel');
   if (!sel || sel.options.length > 1) return;
