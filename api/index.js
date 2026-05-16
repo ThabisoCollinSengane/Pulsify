@@ -2181,6 +2181,42 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, ts: Date.now(), url: SUPA_URL });
     }
 
+    /* ─── PATCH /profile/socials ──────────────────────────── */
+    if (url === '/profile/socials' && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { social_links } = req.body || {};
+      if (!social_links || typeof social_links !== 'object') return res.status(400).json({ error: 'social_links object required' });
+      const allowed = ['whatsapp','instagram','tiktok','facebook','x'];
+      const clean = {};
+      for (const k of allowed) clean[k] = (social_links[k] || '').trim().slice(0, 500);
+      const { data, error } = await sb().from('profiles').update({ social_links: clean }).eq('id', auth.user.id).select('social_links').single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ social_links: data.social_links });
+    }
+
+    /* ─── GET /admin/app-settings ─────────────────────────── */
+    if (url === '/admin/app-settings' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const { data } = await sb().from('app_settings').select('*');
+      const settings = Object.fromEntries((data || []).map(r => [r.key, r.value]));
+      return res.status(200).json({ settings });
+    }
+
+    /* ─── PATCH /admin/app-settings ───────────────────────── */
+    if (url === '/admin/app-settings' && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const { key, value } = req.body || {};
+      if (!key || value === undefined) return res.status(400).json({ error: 'key and value required' });
+      const { data, error } = await sb().from('app_settings')
+        .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+        .select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ setting: data });
+    }
+
     /* ─── GET /config ─────────────────────────────────────── */
     if (url === '/config' && req.method === 'GET') {
       return res.status(200).json({

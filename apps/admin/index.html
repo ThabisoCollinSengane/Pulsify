@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-<title>Pulsify Admin — Business Coordinates</title>
+<title>Pulsefy Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
@@ -426,7 +426,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <!-- Admin note input -->
         <textarea id="le-modal-note" class="inp" placeholder="Admin note (optional)…" rows="2" style="margin-bottom:12px;font-family:inherit;resize:vertical"></textarea>
         <div id="le-modal-actions" style="display:flex;gap:10px">
-          <button onclick="approveLeadEvent()" style="flex:1;padding:13px;background:linear-gradient(135deg,#00e5ff,#00b8cc);border:none;border-radius:50px;color:#000;font-family:'Syne',sans-serif;font-weight:800;font-size:.85rem;cursor:pointer">✅ Post to Pulsify</button>
+          <button onclick="approveLeadEvent()" style="flex:1;padding:13px;background:linear-gradient(135deg,#00e5ff,#00b8cc);border:none;border-radius:50px;color:#000;font-family:'Syne',sans-serif;font-weight:800;font-size:.85rem;cursor:pointer">✅ Post to Pulsefy</button>
           <button onclick="rejectLeadEvent()" style="flex:1;padding:13px;background:rgba(255,45,120,.12);border:1.5px solid rgba(255,45,120,.4);border-radius:50px;color:var(--pk);font-family:'Syne',sans-serif;font-weight:800;font-size:.85rem;cursor:pointer">✕ Reject</button>
         </div>
         <button onclick="closeLeModal()" style="width:100%;margin-top:10px;padding:11px;background:transparent;border:1px solid var(--border);border-radius:50px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.8rem;cursor:pointer">Close</button>
@@ -733,6 +733,14 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <div id="delete-result" style="display:none;font-size:.76rem;padding:8px 12px;border-radius:8px;margin-bottom:12px"></div>
         <button onclick="deleteMockEvents()" id="delete-mock-btn" class="btn btn-pk" style="width:100%">🗑 Delete Mock Events</button>
       </div>
+
+      <!-- Pulsefy Social Links -->
+      <div style="background:var(--surf,#1a1a1a);border:1px solid var(--border,#2a2a2a);border-radius:16px;padding:20px;margin-bottom:16px" id="admin-social-card">
+        <div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#808080;margin-bottom:16px">🔗 Pulsefy Social Links</div>
+        <div id="admin-social-inputs"></div>
+        <button onclick="saveAdminSocialLinks()" style="width:100%;padding:12px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;margin-top:8px">Save Social Links</button>
+        <div id="admin-social-status" style="font-size:.72rem;color:#808080;text-align:center;margin-top:8px"></div>
+      </div>
     </div>
   </div>
 
@@ -848,7 +856,7 @@ function switchTab(tab, btn) {
   else if (tab === 'notifications') { loadNotifHistory(); loadActivityLog(); }
   else if (tab === 'reports') loadReports();
   else if (tab === 'promotions') loadAdminPromos();
-  else if (tab === 'system') loadSystemStats();
+  else if (tab === 'system') { loadSystemStats(); loadAdminSocialLinks(); }
 }
 
 async function signOutAdmin() { await sb.auth.signOut(); location.reload(); }
@@ -1623,7 +1631,7 @@ async function approveLeadEvent() {
     const j = await safeJson(r);
     if (!r.ok) { alert(j.error || 'Failed to approve'); return; }
     closeLeModal();
-    showToastAdmin('✅ Event posted to Pulsify!');
+    showToastAdmin('✅ Event posted to Pulsefy!');
     loadLeadEvents();
   } catch(e) { alert('Network error: ' + e.message); }
 }
@@ -2333,6 +2341,54 @@ async function deleteAdminPromo(id) {
     const msg = document.getElementById('msg-promotions');
     if (msg) { msg.textContent = e.message; msg.className = 'msg show msg-err'; setTimeout(() => msg.classList.remove('show'), 4000); }
   }
+}
+
+// ── Admin Social Links ─────────────────────────────────────────
+const _SOCIALS = [
+  { key:'whatsapp',  label:'WhatsApp',  color:'#25D366', bg:'rgba(37,211,102,.12)',  border:'rgba(37,211,102,.3)',   ph:'Phone: +27123456789' },
+  { key:'instagram', label:'Instagram', color:'#E4405F', bg:'rgba(228,64,95,.1)',    border:'rgba(228,64,95,.3)',    ph:'@yourhandle or URL' },
+  { key:'tiktok',    label:'TikTok',    color:'#ffffff', bg:'rgba(255,255,255,.06)', border:'rgba(255,255,255,.15)', ph:'@yourhandle or URL' },
+  { key:'facebook',  label:'Facebook',  color:'#1877F2', bg:'rgba(24,119,242,.1)',   border:'rgba(24,119,242,.3)',   ph:'Page name or URL' },
+  { key:'x',         label:'X (Twitter)',color:'#ffffff',bg:'rgba(255,255,255,.06)', border:'rgba(255,255,255,.15)', ph:'@yourhandle or URL' },
+];
+const _SOCIAL_SVGS = {
+  whatsapp:  '<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884z"/></svg>',
+  instagram: '<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>',
+  tiktok:    '<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.27 8.27 0 004.84 1.55V6.79a4.85 4.85 0 01-1.07-.1z"/></svg>',
+  facebook:  '<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
+  x:         '<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>',
+};
+
+async function loadAdminSocialLinks() {
+  const el = document.getElementById('admin-social-inputs');
+  if (!el) return;
+  let current = {};
+  try {
+    const token = localStorage.getItem('admin_token') || '';
+    const r = await fetch('/api/admin/app-settings', { headers: { Authorization: 'Bearer ' + token } });
+    const d = await r.json();
+    current = d.settings?.social_links || {};
+  } catch(e) {}
+  el.innerHTML = _SOCIALS.map(s => `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="width:34px;height:34px;border-radius:50%;background:${s.bg};border:1.5px solid ${s.border};display:flex;align-items:center;justify-content:center;color:${s.color};flex-shrink:0">${_SOCIAL_SVGS[s.key]}</div>
+      <input id="asl-${s.key}" style="flex:1;background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:9px 12px;color:#fff;font-size:.8rem;outline:none" placeholder="${s.ph}" value="${current[s.key]||''}"/>
+    </div>`).join('');
+}
+
+async function saveAdminSocialLinks() {
+  const token = localStorage.getItem('admin_token') || '';
+  const links = {};
+  _SOCIALS.forEach(s => { links[s.key] = (document.getElementById('asl-'+s.key)?.value||'').trim(); });
+  const st = document.getElementById('admin-social-status');
+  try {
+    const r = await fetch('/api/admin/app-settings', {
+      method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({ key:'social_links', value:links })
+    });
+    if (r.ok) { if (st) st.textContent = '✅ Saved!'; setTimeout(() => { if(st) st.textContent=''; }, 3000); }
+    else { if (st) st.textContent = '❌ Save failed'; }
+  } catch(e) { if (st) st.textContent = '❌ Error: '+e.message; }
 }
 </script>
 </body>

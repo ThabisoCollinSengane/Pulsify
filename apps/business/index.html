@@ -461,6 +461,14 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
       </div>
       <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Add your bank account to receive payouts from orders and bookings.</div>
     </div>
+
+    <!-- Social Links -->
+    <div class="section-label" style="margin-top:14px">Social Links</div>
+    <div class="setting-card" id="biz-social-card">
+      <div id="biz-social-inputs"></div>
+      <button onclick="saveBizSocialLinks()" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;margin-top:6px">Save Social Links</button>
+      <div id="biz-social-status" style="font-size:.7rem;color:var(--mu);text-align:center;margin-top:6px"></div>
+    </div>
   </div>
 
   <!-- FAQ -->
@@ -481,7 +489,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <div class="sheet-handle"></div>
     <div class="sheet-head"><div class="sheet-title">New Post</div><button class="sheet-close" onclick="closeSheet('post-sheet')">✕</button></div>
     <div class="sheet-body">
-      <div class="info-box">Posts appear on the Pulsify feed for all your followers.</div>
+      <div class="info-box">Posts appear on the Pulsefy feed for all your followers.</div>
       <label class="ff-label">Photos (up to 5)</label>
       <div id="biz-img-drop" onclick="document.getElementById('biz-img-file').click()" style="height:80px;background:rgba(255,255,255,.03);border:1.5px dashed rgba(0,229,255,.3);border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-bottom:8px;flex-direction:column;gap:4px">
         <span style="font-size:1.4rem">📷</span>
@@ -506,7 +514,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <div class="sheet-head"><div class="sheet-title" id="ev-sheet-title">New Event</div><button class="sheet-close" onclick="closeSheet('event-sheet')">✕</button></div>
     <div class="sheet-body">
       <input type="hidden" id="ev-edit-id"/>
-      <div class="info-box">Events appear on the shared Pulsify discover feed for all users.</div>
+      <div class="info-box">Events appear on the shared Pulsefy discover feed for all users.</div>
       <label class="ff-label">Event Name *</label>
       <input class="ff" type="text" id="ev-name" placeholder="e.g. Gqom Friday Night"/>
       <div class="ff-row">
@@ -580,7 +588,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <div class="sheet-handle"></div>
     <div class="sheet-head"><div class="sheet-title">Verify Profile</div><button class="sheet-close" onclick="closeSheet('verify-sheet')">✕</button></div>
     <div class="sheet-body">
-      <div class="info-box">⏱ Verification takes <strong>1–3 business days</strong>. You'll be notified once reviewed. Verified accounts get a ✅ badge visible to all Pulsify users.</div>
+      <div class="info-box">⏱ Verification takes <strong>1–3 business days</strong>. You'll be notified once reviewed. Verified accounts get a ✅ badge visible to all Pulsefy users.</div>
       <div id="verif-msg" class="msg"></div>
       <label class="ff-label">Is your business registered? *</label>
       <div style="display:flex;gap:8px;margin-bottom:14px">
@@ -727,7 +735,7 @@ const BIZ_FAQ = [
   { q: 'How long does profile verification take?', a: 'Verified applications are reviewed within 1–3 business days. You\'ll receive a notification once reviewed.' },
   { q: 'How do customers find my menu?', a: 'Share your public menu link found in the Profile tab. Customers can browse and place pickup orders directly from it.' },
   { q: 'When do I receive payouts?', a: 'Payouts are processed weekly to your registered bank account once you have added a payment method.' },
-  { q: 'Can I post upcoming events?', a: 'Yes! Tap "New Event" to publish events to the shared Pulsify discovery feed visible to all users.' },
+  { q: 'Can I post upcoming events?', a: 'Yes! Tap "New Event" to publish events to the shared Pulsefy discovery feed visible to all users.' },
   { q: 'How do I update my business hours?', a: 'Include your trading hours in your Tagline / Description in the Profile tab.' },
   { q: 'Can I delete a post?', a: 'Yes, go to the Posts tab, find the post and tap the Delete button.' },
 ];
@@ -1013,6 +1021,7 @@ function showTab(name, _noPush) {
   if (name === 'promote')   loadBizPromotions();
   if (name === 'events')    loadDiscoverEvents();
   if (name === 'profile')   renderBizFAQ();
+  if (name === 'profile')   loadBizSocialLinks();
 }
 
 // ═══════════ DISCOVER (public events catalog) ═══════════
@@ -1430,7 +1439,7 @@ async function renderPosts() {
   // Fallback to localStorage
   if (!posts.length) posts = load('posts', []).slice().reverse().map(p => ({ ...p, _supa: false }));
 
-  if (!posts.length) { el.innerHTML = emptyState('📸', 'No posts yet', 'Create your first post to share updates with your followers on the Pulsify feed.'); return; }
+  if (!posts.length) { el.innerHTML = emptyState('📸', 'No posts yet', 'Create your first post to share updates with your followers on the Pulsefy feed.'); return; }
   el.innerHTML = posts.map(p => `
     <div class="post-card">
       ${p.img ? `<img class="post-img" src="${xe(p.img)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : '<div class="post-img-placeholder">📷</div>'}
@@ -1524,7 +1533,7 @@ async function deletePost(id, isSupa) {
 function renderEvents() {
   const evs = load('events', []);
   const el  = document.getElementById('events-list');
-  if (!evs.length) { el.innerHTML = emptyState('🎉', 'No events yet', 'Create your first event. It will appear on the Pulsify home feed for all users to discover.'); return; }
+  if (!evs.length) { el.innerHTML = emptyState('🎉', 'No events yet', 'Create your first event. It will appear on the Pulsefy home feed for all users to discover.'); return; }
   el.innerHTML = evs.slice().reverse().map(ev => {
     const emo = GENRE_EMOJI[(ev.genre || '').toLowerCase()] || '🎉';
     return `<div class="ev-row">
@@ -1888,7 +1897,7 @@ function renderOrders() {
         <select class="status-sel" onchange="updateOrderStatus('${o.id}',this.value)">
           ${['pending','ready','completed','cancelled'].map(s=>`<option value="${s}"${o.status===s?' selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
         </select>
-        ${phone ? `<br/><a href="https://wa.me/27${phone.replace(/\D/g,'').slice(-9)}?text=${encodeURIComponent('Hi '+o.customer_name+'! Your Pulsify order '+ref+' at '+BIZ.name+' is READY for pickup! 🎉')}" target="_blank" style="font-size:.62rem;color:var(--te);text-decoration:none">💬 Notify</a>` : ''}
+        ${phone ? `<br/><a href="https://wa.me/27${phone.replace(/\D/g,'').slice(-9)}?text=${encodeURIComponent('Hi '+o.customer_name+'! Your Pulsefy order '+ref+' at '+BIZ.name+' is READY for pickup! 🎉')}" target="_blank" style="font-size:.62rem;color:var(--te);text-decoration:none">💬 Notify</a>` : ''}
       </td>
     </tr>`;
   }).join('');
@@ -1980,7 +1989,7 @@ function startOrderPoller() {
 }
 
 function requestNotifPermission() { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); }
-function sendBrowserNotif(msg) { if ('Notification' in window && Notification.permission === 'granted') new Notification('Pulsify Business', { body:msg }); }
+function sendBrowserNotif(msg) { if ('Notification' in window && Notification.permission === 'granted') new Notification('Pulsefy Business', { body:msg }); }
 
 // ════════════════════════════════════════════════════════════
 //  UTILS
@@ -2270,6 +2279,51 @@ async function deleteBizPromo(btn) {
   btn.disabled = true; btn.textContent = '…';
   const r = await fetch('/api/promotions/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
   if (r.ok) loadBizPromoMine(token); else { btn.disabled = false; btn.textContent = 'Delete'; }
+}
+
+// ── Business Social Links ─────────────────────────────────────
+const _BIZ_SOCIALS = [
+  { key:'whatsapp',  label:'WhatsApp',  color:'#25D366', bg:'rgba(37,211,102,.12)',  border:'rgba(37,211,102,.3)',   ph:'+27123456789',      svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884z"/></svg>' },
+  { key:'instagram', label:'Instagram', color:'#E4405F', bg:'rgba(228,64,95,.1)',    border:'rgba(228,64,95,.3)',    ph:'@yourhandle',       svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>' },
+  { key:'tiktok',    label:'TikTok',    color:'#ffffff', bg:'rgba(255,255,255,.06)', border:'rgba(255,255,255,.15)', ph:'@yourhandle',       svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.27 8.27 0 004.84 1.55V6.79a4.85 4.85 0 01-1.07-.1z"/></svg>' },
+  { key:'facebook',  label:'Facebook',  color:'#1877F2', bg:'rgba(24,119,242,.1)',   border:'rgba(24,119,242,.3)',   ph:'Page name or URL',  svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>' },
+  { key:'x',         label:'X',         color:'#ffffff', bg:'rgba(255,255,255,.06)', border:'rgba(255,255,255,.15)', ph:'@yourhandle',       svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>' },
+];
+
+async function loadBizSocialLinks() {
+  const el = document.getElementById('biz-social-inputs');
+  if (!el) return;
+  const sb = getSB(); if (!sb) return;
+  let current = {};
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      const { data: prof } = await sb.from('profiles').select('social_links').eq('id', session.user.id).single();
+      current = prof?.social_links || {};
+    }
+  } catch(e) {}
+  el.innerHTML = _BIZ_SOCIALS.map(s => `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
+      <div style="width:34px;height:34px;border-radius:50%;background:${s.bg};border:1.5px solid ${s.border};display:flex;align-items:center;justify-content:center;color:${s.color};flex-shrink:0">${s.svg}</div>
+      <input id="bsl-${s.key}" class="inp" style="flex:1;margin:0" placeholder="${s.label}: ${s.ph}" value="${current[s.key]||''}"/>
+    </div>`).join('');
+}
+
+async function saveBizSocialLinks() {
+  const sb = getSB(); if (!sb) return;
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+  const links = {};
+  _BIZ_SOCIALS.forEach(s => { links[s.key] = (document.getElementById('bsl-'+s.key)?.value||'').trim(); });
+  const st = document.getElementById('biz-social-status');
+  try {
+    const r = await fetch('/api/profile/socials', {
+      method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+      body: JSON.stringify({ social_links: links })
+    });
+    if (r.ok) { toast('Social links saved!'); if (st) st.textContent=''; }
+    else { const d=await r.json(); if (st) st.textContent='❌ '+(d.error||'Save failed'); }
+  } catch(e) { if (st) st.textContent='❌ Error'; }
 }
 </script>
 
