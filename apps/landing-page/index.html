@@ -1866,7 +1866,7 @@ async function initPay(evId) {
           const br = await fetch(API + '/ticket/purchase', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ event_id: evId, tier_id: selTier?.id || null, quantity: selQty, buyer_name: name, buyer_email: email }),
+            body: JSON.stringify({ event_id: evId, tier_id: selTier?.id || null, quantity: selQty, buyer_name: name, buyer_email: email, user_id: currentUser?.id || null }),
           });
           const bd = await br.json();
           showTicketConfirm({ ...bd, quantity: selQty });
@@ -1884,7 +1884,7 @@ async function initPay(evId) {
     const res  = await fetch(API + '/ticket/purchase', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event_id: evId, tier_id: selTier?.id || null, quantity: selQty, buyer_name: name, buyer_email: email }),
+      body: JSON.stringify({ event_id: evId, tier_id: selTier?.id || null, quantity: selQty, buyer_name: name, buyer_email: email, user_id: currentUser?.id || null }),
     });
     const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error);
@@ -1942,7 +1942,8 @@ async function openBiz(bizId) {
         <button class="rb" onclick="shareIt('${x(b.name)}')"><span class="ri">🔗</span><span class="rl">Share</span></button>
         <button class="rb" onclick="openReportModal('business','${x(b.id)}','${x(b.name).replace(/'/g,'\\\'')}')"><span class="ri">🚩</span><span class="rl">Report</span></button>
       </div>
-      <div class="bztb"><div class="bzt active" onclick="switchBT(this,'bp-info')">ℹ️ Info</div><div class="bzt" onclick="switchBT(this,'bp-gallery')">📸 Gallery</div></div>
+      <div class="bztb"><div class="bzt active" onclick="switchBT(this,'bp-info')">ℹ️ Info</div><div class="bzt" onclick="switchBT(this,'bp-menu');loadBizMenu('${x(b.id)}','${x(b.name)}')">🍽 Menu</div><div class="bzt" onclick="switchBT(this,'bp-gallery')">📸 Gallery</div></div>
+      <div class="bzp" id="bp-menu"><div id="biz-menu-body" style="padding:4px 0"><div style="padding:20px;text-align:center;color:var(--mu);font-size:.78rem">Tap to load menu</div></div></div>
       <div class="bzp active" id="bp-info">
         <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px">
           <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">About</div>
@@ -1966,6 +1967,111 @@ async function openBiz(bizId) {
   }
 }
 function switchBT(tab, paneId) { tab.closest('.bztb').querySelectorAll('.bzt').forEach(t => t.classList.remove('active')); tab.classList.add('active'); document.querySelectorAll('.bzp').forEach(p => p.classList.remove('active')); document.getElementById(paneId)?.classList.add('active'); }
+
+let _bizCart = {};
+
+async function loadBizMenu(bizId, bizName) {
+  _bizCart = {};
+  const el = document.getElementById('biz-menu-body');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu);font-size:.78rem">Loading…</div>';
+  const sb = getSB();
+  const { data: items } = await sb.from('menu_items').select('*').eq('business_id', bizId).eq('is_available', true).order('category').order('sort_order');
+  if (!items || !items.length) {
+    el.innerHTML = '<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu)">No menu available yet.</div>';
+    return;
+  }
+  const bycat = {};
+  items.forEach(i => { const c = i.category || 'Menu'; (bycat[c] = bycat[c] || []).push(i); });
+  el.innerHTML = Object.entries(bycat).map(([cat, catItems]) => `
+    <div style="margin-bottom:18px">
+      <div style="font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--or);margin-bottom:8px">${x(cat)}</div>
+      ${catItems.map(item => `
+        <div style="display:flex;gap:10px;align-items:center;padding:10px;background:var(--surf);border:1px solid var(--border);border-radius:12px;margin-bottom:6px">
+          ${item.image_url
+            ? `<img src="${x(item.image_url)}" style="width:54px;height:54px;border-radius:8px;object-fit:cover;flex-shrink:0" loading="lazy">`
+            : `<div style="width:54px;height:54px;border-radius:8px;background:var(--surf2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem">🍽</div>`}
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx);margin-bottom:2px">${x(item.name)}</div>
+            ${item.description ? `<div style="font-size:.7rem;color:var(--mu2);line-height:1.3;margin-bottom:4px">${x(item.description)}</div>` : ''}
+            <div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:800;color:var(--or)">R${(item.price || 0).toFixed(2)}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">
+            <button onclick="_cartAdd('${x(item.id)}',${+(item.price||0)},${JSON.stringify(item.name)},${JSON.stringify(bizId)},${JSON.stringify(bizName)})" style="width:32px;height:32px;border-radius:50%;background:var(--or);border:none;color:#fff;font-size:1.3rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">+</button>
+            <span id="cq-${x(item.id)}" style="font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--tx)">0</span>
+          </div>
+        </div>`).join('')}
+    </div>`).join('') + `
+  <div id="biz-cart-bar" style="display:none;position:sticky;bottom:0;background:var(--bg2);border-top:1px solid var(--border2);padding:10px 0 4px;margin-top:4px">
+    <button onclick="showPickupOrderForm()" style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:13px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer">🛒 Place Order — <span id="cart-total">R0.00</span></button>
+  </div>`;
+}
+
+function _cartAdd(itemId, price, name, bizId, bizName) {
+  if (!_bizCart[itemId]) _bizCart[itemId] = { qty: 0, price, name, bizId, bizName };
+  _bizCart[itemId].qty++;
+  const qel = document.getElementById('cq-' + itemId);
+  if (qel) qel.textContent = _bizCart[itemId].qty;
+  const total = Object.values(_bizCart).reduce((s, i) => s + i.qty * i.price, 0);
+  const bar = document.getElementById('biz-cart-bar');
+  if (bar) bar.style.display = total > 0 ? 'block' : 'none';
+  const tot = document.getElementById('cart-total');
+  if (tot) tot.textContent = 'R' + total.toFixed(2);
+}
+
+function showPickupOrderForm() {
+  const total = Object.values(_bizCart).reduce((s, i) => s + i.qty * i.price, 0);
+  if (!total) return;
+  const firstItem = Object.values(_bizCart)[0];
+  const bizName = firstItem?.bizName || '';
+  const bizId   = firstItem?.bizId   || '';
+  const summary = Object.values(_bizCart).filter(v => v.qty > 0).map(v => `${v.qty}× ${v.name}`).join(', ');
+  document.getElementById('pickup-form-overlay')?.remove();
+  const ov = document.createElement('div');
+  ov.id = 'pickup-form-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center';
+  ov.onclick = e => { if (e.target === ov) ov.remove(); };
+  ov.innerHTML = `
+    <div style="width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;padding:20px 18px 36px;animation:su .25s ease">
+      <div style="width:40px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 14px"></div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.04em;margin-bottom:4px">📦 Pickup Order</div>
+      <div style="font-size:.72rem;color:var(--mu2);margin-bottom:14px">${x(bizName)} · ${x(summary)}</div>
+      <input id="po-name"  placeholder="Your name *" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;color:var(--tx);font-size:.84rem;margin-bottom:8px;box-sizing:border-box;outline:none"/>
+      <input id="po-phone" placeholder="Phone number *" type="tel" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;color:var(--tx);font-size:.84rem;margin-bottom:8px;box-sizing:border-box;outline:none"/>
+      <input id="po-time"  placeholder="Preferred pickup time (e.g. 1:30pm)" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;color:var(--tx);font-size:.84rem;margin-bottom:8px;box-sizing:border-box;outline:none"/>
+      <textarea id="po-notes" placeholder="Special instructions (optional)" rows="2" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;color:var(--tx);font-size:.84rem;margin-bottom:14px;box-sizing:border-box;outline:none;resize:none;font-family:inherit"></textarea>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(176,38,255,.08);border:1px solid rgba(176,38,255,.2);border-radius:10px;margin-bottom:14px">
+        <span style="font-size:.8rem;color:var(--mu2)">Total</span>
+        <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.05rem;color:var(--or)">R${total.toFixed(2)}</span>
+      </div>
+      <button onclick="submitPickupOrder('${x(bizId)}')" style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:14px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer">Confirm Order →</button>
+    </div>`;
+  document.body.appendChild(ov);
+}
+
+async function submitPickupOrder(bizId) {
+  const name  = document.getElementById('po-name')?.value?.trim();
+  const phone = document.getElementById('po-phone')?.value?.trim();
+  const time  = document.getElementById('po-time')?.value?.trim();
+  const notes = document.getElementById('po-notes')?.value?.trim();
+  if (!name || !phone) { showToast('Name and phone are required', 'err'); return; }
+  const total = Object.values(_bizCart).reduce((s, i) => s + i.qty * i.price, 0);
+  const items = Object.entries(_bizCart).filter(([, v]) => v.qty > 0).map(([id, v]) => ({ id, name: v.name, qty: v.qty, price: v.price }));
+  let token = '';
+  try { const sb2 = getSB(); const { data: { session } } = await sb2.auth.getSession(); token = session?.access_token || ''; } catch (_) {}
+  const res = await fetch('/api/pickup-orders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ business_id: bizId || Object.values(_bizCart)[0]?.bizId, customer_name: name, customer_phone: phone, items, notes, pickup_time: time, total }),
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) { showToast(j.error || 'Order failed', 'err'); return; }
+  document.getElementById('pickup-form-overlay')?.remove();
+  _bizCart = {};
+  const bar = document.getElementById('biz-cart-bar');
+  if (bar) bar.style.display = 'none';
+  showToast(`✅ Order placed! Ref: ${j.order_ref}`);
+}
 
 /* ══════════════════════════════════════════════════
    DISCOVER TAB
@@ -2958,32 +3064,51 @@ async function loadNotifications() {
       (profs || []).forEach(p => { avatarMap[p.id] = p.avatar_url; });
     }
 
-    const ico = {follow:'👤',like:'❤️',repost:'🔁',comment:'💬',ticket:'🎟',business_post:'📢',account:'⚙️'};
+    const ico = {follow:'👤',like:'❤️',repost:'🔁',comment:'💬',ticket:'🎟',business_post:'📢',account:'⚙️',order:'📦',payment:'💳',squad_invite:'👥',squad_plan:'📅'};
+    const tclr = {follow:'#B026FF',like:'#FF2D78',comment:'#00E5FF',ticket:'#FF5C00',repost:'#C6FF4A',order:'#00D4AA',payment:'#FF5C00',squad_invite:'#B026FF',squad_plan:'#B026FF'};
+
+    // Batch-fetch entity thumbnails for richer cards
+    const evIds   = [...new Set(notifs.filter(n=>n.entity_type==='events'&&n.entity_id).map(n=>n.entity_id))];
+    const postIds = [...new Set(notifs.filter(n=>n.entity_type==='post'&&n.entity_id).map(n=>n.entity_id))];
+    let entityThumbMap = {};
+    await Promise.all([
+      evIds.length   ? sb.from('events').select('id,image_url').in('id',evIds).then(({data})=>(data||[]).forEach(e=>{entityThumbMap[e.id]=e.image_url})) : null,
+      postIds.length ? sb.from('posts').select('id,image_url').in('id',postIds).then(({data})=>(data||[]).forEach(p=>{entityThumbMap[p.id]=firstImg(p.image_url)})) : null,
+    ].filter(Boolean));
 
     el.innerHTML = notifs.map(n => {
-      const avatar = n.from_user_id ? avatarMap[n.from_user_id] : null;
-      const avatarEl = avatar
-        ? `<img src="${x(avatar)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid var(--border2)">`
-        : `<div style="width:40px;height:40px;border-radius:50%;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;border:1.5px solid var(--border2)">${ico[n.type]||'🔔'}</div>`;
+      const avatar  = n.from_user_id ? avatarMap[n.from_user_id] : null;
+      const icoChar = ico[n.type] || '🔔';
+      const bColor  = tclr[n.type] || '#B026FF';
 
-      // Bold the actor's name inside the message
-      const name = n.from_display_name || '';
-      const msg  = x(n.message || '');
-      const boldMsg = name
-        ? msg.replace(x(name), `<span style="font-weight:700;color:var(--tx)">${x(name)}</span>`)
-        : msg;
+      const avatarEl = avatar
+        ? `<img src="${x(avatar)}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+        : `<div style="width:48px;height:48px;border-radius:50%;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">${icoChar}</div>`;
+
+      const actorName = n.from_display_name || '';
+      const rawMsg    = n.message || '';
+      let msgHtml;
+      if (actorName && rawMsg.startsWith(actorName)) {
+        msgHtml = `<span style="font-weight:700;color:var(--tx)">${x(actorName)}</span><span style="color:var(--mu2)"> ${x(rawMsg.slice(actorName.length).trimStart())}</span>`;
+      } else {
+        msgHtml = `<span style="color:var(--mu2)">${x(rawMsg)}</span>`;
+      }
+
+      const thumb   = n.entity_id ? entityThumbMap[n.entity_id] : null;
+      const thumbEl = thumb ? `<img src="${x(thumb)}" style="width:46px;height:46px;border-radius:8px;object-fit:cover;flex-shrink:0">` : '';
 
       return `
-        <div onclick="handleNotifClick('${n.id}')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);background:${n.read?'transparent':'rgba(176,38,255,.07)'};cursor:pointer;transition:background .15s" onmouseenter="this.style.background='rgba(255,255,255,.03)'" onmouseleave="this.style.background='${n.read?'transparent':'rgba(176,38,255,.07)'}'">
+        <div onclick="handleNotifClick('${n.id}')" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border);background:${n.read?'transparent':'rgba(176,38,255,.06)'};cursor:pointer;border-left:3px solid ${n.read?'transparent':bColor};transition:background .15s" onmouseenter="this.style.background='rgba(255,255,255,.04)'" onmouseleave="this.style.background='${n.read?'transparent':'rgba(176,38,255,.06)'}'">
           <div style="position:relative;flex-shrink:0">
             ${avatarEl}
-            <div style="position:absolute;bottom:-1px;right:-1px;width:18px;height:18px;border-radius:50%;background:var(--surf);display:flex;align-items:center;justify-content:center;font-size:.7rem;border:1.5px solid var(--bg2)">${ico[n.type]||'🔔'}</div>
+            <div style="position:absolute;bottom:0;right:-2px;width:20px;height:20px;border-radius:50%;background:${bColor};display:flex;align-items:center;justify-content:center;font-size:.65rem;border:2px solid var(--bg2)">${icoChar}</div>
           </div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:.79rem;color:var(--mu2);line-height:1.45">${boldMsg}</div>
-            <div style="font-size:.63rem;color:var(--mu);margin-top:3px">${timeAgoShort(n.created_at)}</div>
+            <div style="font-size:.8rem;line-height:1.42">${msgHtml}</div>
+            <div style="font-size:.62rem;color:${n.read?'var(--mu)':bColor};margin-top:3px;font-weight:${n.read?'400':'600'}">${timeAgoShort(n.created_at)}</div>
           </div>
-          ${!n.read?'<div style="width:8px;height:8px;border-radius:50%;background:var(--or);flex-shrink:0;box-shadow:0 0 6px var(--or)"></div>':''}
+          ${thumbEl}
+          ${!n.read?`<div style="width:9px;height:9px;border-radius:50%;background:${bColor};flex-shrink:0;box-shadow:0 0 6px ${bColor}"></div>`:''}
         </div>`;
     }).join('');
   } catch(e) {
@@ -3143,13 +3268,15 @@ async function openProfile(userId) {
       ? 'linear-gradient(135deg,#FF5C00,#FF2D78)'
       : 'linear-gradient(135deg,#B026FF,#FF5C00)';
 
-    const postsHtml = recent_posts.length ? recent_posts.map(p => `
-      <div style="border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surf);margin-bottom:10px">
-        ${firstImg(p.image_url) ? `<div style="position:relative;width:100%;aspect-ratio:1;background:#000;overflow:hidden"><img src="${x(firstImg(p.image_url))}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'"/>${imgCount(p.image_url)>1?`<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.7);color:#fff;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;padding:3px 8px;border-radius:50px">📷 ${imgCount(p.image_url)}</span>`:''}</div>` : ''}
-        ${p.caption ? `<div style="padding:10px 12px;font-size:.82rem;color:var(--tx);line-height:1.45">${x(p.caption)}</div>` : ''}
-        <div style="padding:6px 12px 10px;font-size:.62rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.08em;text-transform:uppercase">${timeAgoShort(p.created_at)}</div>
-      </div>
-    `).join('') : '<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu);border:1px dashed var(--border);border-radius:12px">No posts yet</div>';
+    const postsHtml = recent_posts.filter(p => firstImg(p.image_url)).length
+      ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px;border-radius:10px;overflow:hidden">
+          ${recent_posts.filter(p => firstImg(p.image_url)).slice(0,9).map(p => `
+            <div onclick="openPost('${x(p.id)}')" style="aspect-ratio:1;background:var(--surf2);overflow:hidden;cursor:pointer;position:relative">
+              <img src="${x(firstImg(p.image_url))}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.background='var(--surf2)'"/>
+              ${imgCount(p.image_url)>1?`<span style="position:absolute;bottom:4px;right:5px;font-size:.58rem">📷</span>`:''}
+            </div>`).join('')}
+        </div>`
+      : '<div style="padding:20px;text-align:center;font-size:.78rem;color:var(--mu);border:1px dashed var(--border);border-radius:12px">No photos yet</div>';
 
     const prefsHtml = (profile.genres && profile.genres.length)
       ? `<div style="margin-bottom:14px"><div style="font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Vibe</div><div style="display:flex;flex-wrap:wrap;gap:6px">${profile.genres.map(g => `<span style="padding:4px 10px;border-radius:50px;background:rgba(176,38,255,.12);border:1px solid rgba(176,38,255,.25);color:var(--tx);font-size:.68rem">${x(g)}</span>`).join('')}</div></div>`
@@ -3180,11 +3307,113 @@ async function openProfile(userId) {
         <div style="flex:1;text-align:center;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:10px 4px"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--or);line-height:1">${following_count}</div><div style="font-size:.58rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-top:3px">Following</div></div>
       </div>
       ${prefsHtml}
-      <div style="font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Recent Posts</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu)">📷 Photos</div>
+        ${posts_count > 6 ? `<button onclick="openAllPhotos('${userId}')" style="background:none;border:none;color:var(--or);font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;cursor:pointer">See all ${posts_count} →</button>` : ''}
+      </div>
       ${postsHtml}`;
   } catch(e) {
     body.innerHTML = `<div style="padding:40px;text-align:center;color:var(--mu)">${x(e.message)}</div>`;
   }
+}
+
+async function openPost(postId) {
+  const sb = getSB(); if (!sb) return;
+  const ov = document.getElementById('comments-overlay');
+  const listEl = document.getElementById('comments-list');
+  const titleEl = document.getElementById('comment-title');
+  if (!ov || !listEl) return;
+
+  ov.style.display = 'flex';
+  titleEl.textContent = 'Post';
+  listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu)">Loading…</div>';
+
+  const [{ data: post }, { data: cmts }] = await Promise.all([
+    sb.from('posts').select('id,user_id,caption,image_url,like_count,comment_count,created_at,profiles(display_name,avatar_url,username)').eq('id', postId).single(),
+    sb.from('comments').select('id,body,created_at,profiles(display_name,avatar_url)').eq('entity_id', postId).eq('entity_type','post').order('created_at',{ascending:true}).limit(50),
+  ]);
+  if (!post) { listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu)">Post not found</div>'; return; }
+
+  const img = firstImg(post.image_url);
+  const name = x(post.profiles?.display_name || post.profiles?.username || 'User');
+  const av = post.profiles?.avatar_url;
+
+  // Check if current user liked this post
+  let liked = false;
+  if (currentUser) {
+    const { data: rxn } = await sb.from('reactions').select('user_id').eq('entity_id', postId).eq('entity_type','post').eq('user_id', currentUser.id).maybeSingle();
+    liked = !!rxn;
+  }
+
+  const commentsHtml = (cmts||[]).length
+    ? cmts.map(c => `
+      <div style="display:flex;gap:10px;padding:6px 0;align-items:flex-start">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--surf2);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.9rem">
+          ${c.profiles?.avatar_url ? `<img src="${x(c.profiles.avatar_url)}" style="width:100%;height:100%;object-fit:cover">` : '👤'}
+        </div>
+        <div style="flex:1;min-width:0;background:var(--surf);border-radius:12px;padding:8px 10px">
+          <div style="font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;color:var(--tx);margin-bottom:2px">${x(c.profiles?.display_name||'User')}</div>
+          <div style="font-size:.8rem;color:var(--mu2);line-height:1.4">${x(c.body||'')}</div>
+          <div style="font-size:.6rem;color:var(--mu);margin-top:3px">${timeAgoShort(c.created_at)}</div>
+        </div>
+      </div>`).join('')
+    : '<div style="padding:16px 0;text-align:center;font-size:.78rem;color:var(--mu)">No comments yet</div>';
+
+  listEl.innerHTML = `
+    ${img ? `<div style="width:100%;max-height:320px;overflow:hidden;border-radius:10px;margin-bottom:12px"><img src="${x(img)}" style="width:100%;object-fit:cover;display:block" loading="lazy"/></div>` : ''}
+    <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--surf2);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center">
+        ${av ? `<img src="${x(av)}" style="width:100%;height:100%;object-fit:cover">` : '👤'}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">${name}</div>
+        ${post.caption ? `<div style="font-size:.82rem;color:var(--mu2);line-height:1.45;margin-top:2px">${x(post.caption)}</div>` : ''}
+        <div style="font-size:.62rem;color:var(--mu);margin-top:3px">${timeAgoShort(post.created_at)}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+      <button class="ab ${liked?'lk':''}" onclick="toggleLike(this,'${x(postId)}','post')" style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:50px;padding:6px 14px;color:var(--tx);font-size:.78rem;cursor:pointer">
+        <span class="ai">${liked?'❤️':'🤍'}</span><span>${fn(post.like_count||0)}</span>
+      </button>
+      <div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:50px;padding:6px 14px;font-size:.78rem;color:var(--mu2)">💬 ${fn(post.comment_count||0)}</div>
+    </div>
+    <div style="font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Comments</div>
+    ${commentsHtml}`;
+
+  // Wire comment input to post
+  const inp = document.getElementById('comment-input');
+  if (inp) {
+    inp.dataset.postId = postId;
+    inp.dataset.postTitle = post.caption?.slice(0,40) || 'Post';
+    inp.dataset.postType = 'post';
+    inp.onkeydown = (e) => { if(e.key==='Enter') postComment(); };
+  }
+  // Override comment-title for the sheet header
+  titleEl.textContent = post.caption?.slice(0,30) || 'Post';
+}
+
+async function openAllPhotos(userId) {
+  const sb = getSB(); if (!sb) return;
+  const ov = document.getElementById('prof-overlay');
+  const body = document.getElementById('prof-overlay-body');
+  if (!ov || !body) return;
+  ov.style.display = 'flex';
+  body.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu)">Loading photos…</div>';
+  const { data: posts } = await sb.from('posts').select('id,image_url,caption,created_at').eq('user_id', userId).order('created_at',{ascending:false}).limit(100);
+  const photoPosts = (posts||[]).filter(p => firstImg(p.image_url));
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <button onclick="closeProfOverlay()" style="background:none;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer;padding:0">←</button>
+      <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu)">All Photos (${photoPosts.length})</div>
+    </div>
+    ${photoPosts.length
+      ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px;border-radius:10px;overflow:hidden">
+          ${photoPosts.map(p=>`
+            <div onclick="openPost('${x(p.id)}')" style="aspect-ratio:1;background:var(--surf2);overflow:hidden;cursor:pointer;position:relative">
+              <img src="${x(firstImg(p.image_url))}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.background='var(--surf2)'"/>
+            </div>`).join('')}
+        </div>`
+      : '<div style="padding:40px;text-align:center;color:var(--mu)">No photos yet</div>'}`;
 }
 
 function closeProfOverlay() { document.getElementById('prof-overlay').style.display = 'none'; }

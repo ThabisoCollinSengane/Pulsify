@@ -360,6 +360,18 @@ module.exports = async (req, res) => {
 
       if (bErr) return res.status(400).json({ error: bErr.message });
 
+      // Notify the buyer if they're a registered user
+      const { user_id } = body;
+      if (user_id) {
+        await sb().from('notifications').insert({
+          user_id, type: 'ticket',
+          from_display_name: 'Pulsefy',
+          entity_id: event_id, entity_type: 'events',
+          message: `Your ticket for ${ev.name} is confirmed! Ref: ${booking_ref}${unit_price > 0 ? ` · R${total_paid.toFixed(2)}` : ' · FREE'}`,
+          data: { booking_ref, tier_name: tier?.name || null },
+        }).catch(() => {});
+      }
+
       return res.status(200).json({
         success:     true,
         booking_ref,
@@ -2328,6 +2340,38 @@ module.exports = async (req, res) => {
         if (prof?.email) sendPaymentConfirmEmail(prof.email, prof.display_name, payment.amount, payment.type).catch(() => {});
       }
       return;
+    }
+
+    /* ─── GET /businesses/:id/menu ──────────────────────── */
+    const menuBizId = url.match(/^\/businesses\/([^/]+)\/menu$/)?.[1];
+    if (menuBizId && req.method === 'GET') {
+      const { data, error } = await sb().from('menu_items').select('*').eq('business_id', menuBizId).eq('is_available', true).order('category').order('sort_order');
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ items: data || [] });
+    }
+
+    /* ─── POST /pickup-orders ────────────────────────────── */
+    if (url === '/pickup-orders' && req.method === 'POST') {
+      const { business_id, customer_name, customer_phone, items, notes, pickup_time, total } = req.body || {};
+      if (!business_id || !customer_name || !customer_phone || !items?.length)
+        return res.status(400).json({ error: 'business_id, customer_name, customer_phone, items required' });
+      const order_ref = `ORD-${Date.now()}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
+      const { data: order, error: oErr } = await sb().from('pickup_orders').insert({
+        order_ref, business_id, customer_name, customer_phone,
+        items, notes: notes || null, pickup_time: pickup_time || null,
+        total: +total || 0, status: 'pending',
+      }).select().single();
+      if (oErr) return res.status(400).json({ error: oErr.message });
+      const { data: biz } = await sb().from('businesses').select('owner_id,name').eq('id', business_id).maybeSingle();
+      if (biz?.owner_id) {
+        await sb().from('notifications').insert({
+          user_id: biz.owner_id, type: 'order',
+          from_display_name: customer_name,
+          entity_id: order.id, entity_type: 'pickup_order',
+          message: `${customer_name} placed a pickup order — R${(+total || 0).toFixed(2)} · Ref: ${order_ref}`,
+        }).catch(() => {});
+      }
+      return res.status(200).json({ success: true, order_ref, order_id: order.id });
     }
 
     return res.status(404).json({ error: `Route not found: ${req.method} ${url}` });
