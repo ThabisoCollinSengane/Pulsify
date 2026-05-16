@@ -511,7 +511,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     <button class="chip" onclick="setDiscCat(this,'hotel')">🏨 Hotels</button>
     <button class="chip" onclick="setDiscCat(this,'bnb')">🏡 BnB</button>
   </div>
-  <div class="sl"><span>📍 Places near you</span><a href="/map">View map →</a></div>
+  <div class="cr" id="disc-loc-row">
+    <button class="chip" id="nm-btn" onclick="toggleNearMe()">📍 Near Me</button>
+    <button class="chip active" id="nm-5km" onclick="setNearMeRadius(5,this)" style="display:none">5km</button>
+    <button class="chip" id="nm-10km" onclick="setNearMeRadius(10,this)" style="display:none">10km</button>
+    <button class="chip" id="nm-25km" onclick="setNearMeRadius(25,this)" style="display:none">25km</button>
+    <button class="chip" id="nm-50km" onclick="setNearMeRadius(50,this)" style="display:none">50km</button>
+  </div>
+  <div class="sl"><span id="disc-biz-hdr">📍 Places near you</span><a href="/map">View map →</a></div>
   <div class="hs" id="disc-biz-row"></div>
   <div class="sl"><span>🎉 Events</span><a onclick="openFAQ()" style="cursor:pointer">❓ Help & FAQ</a></div>
   <div class="dg2" id="disc-events"></div>
@@ -984,6 +991,10 @@ let feedTotalPages = 1;
 let feedGenre      = 'all';
 let feedCity       = 'all';
 let discCat        = 'all';
+let nearMeActive   = false;
+let nearMeRadius   = 5;
+let userLat        = null;
+let userLon        = null;
 let mapInited      = false;
 let mapObj         = null;
 let mapMarkers     = [];
@@ -1539,7 +1550,11 @@ function updatePagination() {
     pg.style.display = 'none';
   }
 }
-function changePage(delta) { feedPage += delta; loadFeed(); }
+function changePage(delta) {
+  feedPage += delta;
+  loadFeed();
+  document.getElementById('tab-home')?.scrollTo({ top: 0, behavior: 'smooth' });
+}
 function setGenre(btn, genre) {
   document.querySelectorAll('.cr .chip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -1875,6 +1890,51 @@ function switchBT(tab, paneId) { tab.closest('.bztb').querySelectorAll('.bzt').f
    DISCOVER TAB
 ══════════════════════════════════════════════════ */
 let discLoaded = false;
+
+function _haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.asin(Math.sqrt(a));
+}
+
+function toggleNearMe() {
+  const btn = document.getElementById('nm-btn');
+  const radIds = ['nm-5km','nm-10km','nm-25km','nm-50km'];
+  if (nearMeActive) {
+    nearMeActive = false;
+    btn.classList.remove('active');
+    radIds.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+    const hdr = document.getElementById('disc-biz-hdr');
+    if (hdr) hdr.textContent = '📍 Places near you';
+    loadDiscover();
+    return;
+  }
+  if (!navigator.geolocation) { alert('Geolocation is not supported by your browser.'); return; }
+  btn.textContent = '⏳ Locating…';
+  navigator.geolocation.getCurrentPosition(pos => {
+    userLat = pos.coords.latitude;
+    userLon = pos.coords.longitude;
+    nearMeActive = true;
+    btn.textContent = '📍 Near Me';
+    btn.classList.add('active');
+    radIds.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = ''; });
+    const active5 = document.getElementById('nm-5km');
+    if (active5) { radIds.forEach(id => document.getElementById(id)?.classList.remove('active')); active5.classList.add('active'); }
+    nearMeRadius = 5;
+    loadDiscover();
+  }, () => {
+    btn.textContent = '📍 Near Me';
+    alert('Location access denied. Please enable location in your browser settings.');
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
+function setNearMeRadius(km, btn) {
+  nearMeRadius = km;
+  ['nm-5km','nm-10km','nm-25km','nm-50km'].forEach(id => document.getElementById(id)?.classList.remove('active'));
+  btn.classList.add('active');
+  loadDiscover();
+}
+
 async function loadDiscover(cat) {
   if (!cat) cat = discCat;
   try {
@@ -1883,18 +1943,39 @@ async function loadDiscover(cat) {
     let bq = sb.from('businesses')
       .select('id,name,category,suburb,city,lat,lon,rating,review_count,price_range,cover_image_url,is_frontline,frontline_rank,tagline')
       .order('is_frontline', { ascending: false })
-      .order('rating', { ascending: false, nullsFirst: false }).limit(20);
+      .order('rating', { ascending: false, nullsFirst: false }).limit(nearMeActive ? 200 : 20);
     if (cat && cat !== 'all') bq = bq.eq('category', cat);
-    if (feedCity && feedCity !== 'all') bq = bq.ilike('city', `%${feedCity}%`);
+    if (!nearMeActive && feedCity && feedCity !== 'all') bq = bq.ilike('city', `%${feedCity}%`);
     let eq = sb.from('events')
-      .select('id,name,date_local,image_url,genre,is_free,price_min,hype_score,venue_city')
+      .select('id,name,date_local,image_url,genre,is_free,price_min,hype_score,venue_city,venue_lat,venue_lon')
       .gte('date_local', today)
-      .order('hype_score', { ascending: false, nullsFirst: false }).limit(20);
-    const [{ data: bizList }, { data: evList }] = await Promise.all([bq, eq]);
+      .order('hype_score', { ascending: false, nullsFirst: false }).limit(nearMeActive ? 200 : 20);
+    const [{ data: rawBiz }, { data: rawEv }] = await Promise.all([bq, eq]);
+
+    let bizList = rawBiz || [];
+    let evList  = rawEv  || [];
+
+    if (nearMeActive && userLat && userLon) {
+      bizList = bizList
+        .filter(b => b.lat && b.lon && _haversineKm(userLat, userLon, b.lat, b.lon) <= nearMeRadius)
+        .sort((a, b) => _haversineKm(userLat, userLon, a.lat, a.lon) - _haversineKm(userLat, userLon, b.lat, b.lon));
+      evList = evList.filter(ev => {
+        if (!ev.venue_lat || !ev.venue_lon) return false;
+        return _haversineKm(userLat, userLon, ev.venue_lat, ev.venue_lon) <= nearMeRadius;
+      });
+      const hdr = document.getElementById('disc-biz-hdr');
+      if (hdr) hdr.textContent = `📍 Within ${nearMeRadius}km`;
+    } else {
+      const hdr = document.getElementById('disc-biz-hdr');
+      if (hdr) hdr.textContent = '📍 Places near you';
+    }
+
     const dr = document.getElementById('disc-biz-row');
-    if (dr) dr.innerHTML = (bizList || []).map(b => buildBizCard(b)).join('');
+    if (dr) dr.innerHTML = bizList.length
+      ? bizList.map(b => buildBizCard(b)).join('')
+      : (nearMeActive ? '<p style="padding:16px;color:var(--mu);font-size:.8rem">No places found within ' + nearMeRadius + 'km.</p>' : '');
     const de = document.getElementById('disc-events');
-    if (de) de.innerHTML = (evList || []).map(ev => `
+    if (de) de.innerHTML = evList.map(ev => `
       <div class="de" onclick="openEv('${ev.id}')">
         <div class="det" style="background:${gg(ev.genre)}">${ev.image_url ? `<img src="${ev.image_url}" loading="lazy" onerror="this.style.display='none'"/>` : ge(ev.genre)}<span class="ddb">${fdate(ev.date_local)}</span></div>
         <div class="deb"><div class="den">${x(ev.name)}</div><div class="dec">${x(ev.venue_city)}</div>
