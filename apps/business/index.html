@@ -7,11 +7,12 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
-<title>Pulsify Business Dashboard</title>
+<title>Pulsefy Business Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--te:#00D4AA;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0;--th:58px;--bh:68px}
@@ -253,7 +254,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <!-- ══ POSTS ══ -->
 <div class="panel" id="tab-posts">
   <div class="sec-head">
-    <div><div class="sec-title">Posts</div><div class="sec-sub">Content shared to the Pulsify feed</div></div>
+    <div><div class="sec-title">Posts</div><div class="sec-sub">Content shared to the Pulsefy feed</div></div>
     <button class="btn-primary" onclick="openSheet('post-sheet')">+ Post</button>
   </div>
   <div id="posts-list"></div>
@@ -262,13 +263,13 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <!-- ══ EVENTS ══ -->
 <div class="panel" id="tab-events">
   <div class="sec-head">
-    <div><div class="sec-title">Your Events</div><div class="sec-sub">Visible on the Pulsify home feed</div></div>
+    <div><div class="sec-title">Your Events</div><div class="sec-sub">Visible on the Pulsefy home feed</div></div>
     <button class="btn-primary" onclick="openSheet('event-sheet')">+ Event</button>
   </div>
   <div id="events-list"></div>
 
   <div class="sec-head" style="margin-top:24px">
-    <div><div class="sec-title">🌍 Discover</div><div class="sec-sub">Upcoming events on Pulsify</div></div>
+    <div><div class="sec-title">🌍 Discover</div><div class="sec-sub">Upcoming events on Pulsefy</div></div>
   </div>
   <div id="discover-list" style="padding:0 14px"><div style="padding:30px 0;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div></div>
 </div>
@@ -441,7 +442,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
             <div style="font-size:.68rem;color:var(--mu)">R499/month — currently on free plan</div>
           </div>
         </div>
-        <a href="https://wa.me/27000000000?text=Hi%20Pulsify%2C%20I%27d%20like%20to%20upgrade%20my%20business%20to%20Premium." target="_blank" class="btn-sec" style="padding:6px 12px;font-size:.72rem;text-decoration:none">Upgrade →</a>
+        <button id="biz-sub-btn" class="btn-sec" style="padding:6px 12px;font-size:.72rem" onclick="upgradeBizToPremium()">Upgrade →</button>
       </div>
       <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">⭐ Featured on map · Unlimited menu items · Analytics dashboard · Priority support</div>
     </div>
@@ -467,7 +468,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <div class="section-label">FAQ & Support</div>
     <div id="faq-biz"></div>
     <div style="margin-top:14px;text-align:center">
-      <a href="mailto:support@pulsify.co.za" style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;color:var(--or);text-decoration:none">✉️ Contact Support</a>
+      <a href="mailto:hello@pulsefy.co.za" style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;color:var(--or);text-decoration:none">✉️ Contact Support</a>
     </div>
   </div>
 </div>
@@ -1122,6 +1123,36 @@ function setGreeting() {
   document.getElementById('home-date').textContent = new Date().toLocaleDateString('en-ZA', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 }
 
+let _paystackPK = '';
+fetch('/api/config').then(r => r.json()).then(d => { _paystackPK = d.paystackPublicKey || ''; }).catch(() => {});
+
+async function upgradeBizToPremium() {
+  const sb = getSB(); if (!sb) return;
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { toast('Please sign in first', 'err'); return; }
+  const handler = PaystackPop.setup({
+    key:      _paystackPK,
+    email:    session.user.email,
+    amount:   49900, // R499 in cents
+    currency: 'ZAR',
+    ref:      'BIZ_SUB_' + Date.now(),
+    metadata: { user_id: session.user.id, type: 'subscription_business' },
+    label:    'Business Premium Plan',
+    callback: async function(res) {
+      const btn = document.getElementById('biz-sub-btn');
+      if (btn) { btn.textContent = 'Verifying…'; btn.disabled = true; }
+      try {
+        const r = await fetch(`/api/payments/verify?ref=${res.reference}`, { headers: { Authorization: 'Bearer ' + session.access_token } });
+        const d = await r.json();
+        if (d.success) { toast('🎉 Premium activated!'); checkSubscriptionBanner(); }
+        else { toast('Verification failed — contact support', 'err'); if (btn) { btn.textContent = 'Upgrade →'; btn.disabled = false; } }
+      } catch(e) { toast('Verification error', 'err'); if (btn) { btn.textContent = 'Upgrade →'; btn.disabled = false; } }
+    },
+    onClose: function() {},
+  });
+  handler.openIframe();
+}
+
 // ════════════════════════════════════════════════════════════
 //  STATS
 // ════════════════════════════════════════════════════════════
@@ -1141,13 +1172,13 @@ async function checkSubscriptionBanner() {
     banner.style.background = 'rgba(255,184,0,.1)';
     banner.style.border = '1px solid rgba(255,184,0,.3)';
     banner.style.color = '#FFB800';
-    banner.innerHTML = `⏰ <strong>Your trial expires in ${daysLeft} day${daysLeft===1?'':'s'}</strong> — contact us to keep your premium features. <a href="mailto:support@pulsify.co.za" style="color:#FFB800;font-weight:700">Upgrade →</a>`;
+    banner.innerHTML = `⏰ <strong>Your trial expires in ${daysLeft} day${daysLeft===1?'':'s'}</strong> — contact us to keep your premium features. <a href="mailto:hello@pulsefy.co.za" style="color:#FFB800;font-weight:700">Upgrade →</a>`;
   } else if (subType === 'trial' && daysLeft !== null && daysLeft <= 0) {
     banner.style.display = 'block';
     banner.style.background = 'rgba(255,45,120,.08)';
     banner.style.border = '1px solid rgba(255,45,120,.25)';
     banner.style.color = '#FF2D78';
-    banner.innerHTML = `🚫 <strong>Your trial has expired.</strong> You're now on the free plan. <a href="mailto:support@pulsify.co.za" style="color:#FF2D78;font-weight:700">Upgrade to Premium →</a>`;
+    banner.innerHTML = `🚫 <strong>Your trial has expired.</strong> You're now on the free plan. <a href="mailto:hello@pulsefy.co.za" style="color:#FF2D78;font-weight:700">Upgrade to Premium →</a>`;
   } else if (subType === 'premium') {
     banner.style.display = 'block';
     banner.style.background = 'rgba(176,38,255,.08)';
@@ -1194,7 +1225,7 @@ async function renderAnalytics() {
       <div style="font-size:3rem;margin-bottom:12px">💎</div>
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:6px">Premium Feature</div>
       <div style="font-size:.8rem;color:var(--mu2);line-height:1.6;margin-bottom:20px">Analytics is available on the Premium plan.<br/>Get revenue charts, order trends, and customer insights.</div>
-      <a href="mailto:support@pulsify.co.za?subject=Premium%20Upgrade" style="background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;padding:12px 28px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;text-decoration:none">Upgrade — R499/month</a>
+      <a href="mailto:hello@pulsefy.co.za?subject=Premium%20Upgrade" style="background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;padding:12px 28px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;text-decoration:none">Upgrade — R499/month</a>
     </div>`;
     return;
   }

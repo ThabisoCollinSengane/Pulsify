@@ -1,6 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
-const { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail } = require('./email');
+const { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail } = require('./email');
 
 const SUPA_URL  = process.env.SUPABASE_URL  || 'https://cjzewfvtdayjgjdpdmln.supabase.co';
 const SUPA_ANON = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
@@ -441,16 +441,20 @@ module.exports = async (req, res) => {
       if (sig !== hash) return res.status(401).json({ error: 'Invalid signature' });
 
       if (req.body?.event === 'charge.success') {
-        const ref  = req.body.data?.reference;
-        const meta = req.body.data?.metadata || {};
+        const ref    = req.body.data?.reference;
+        const meta   = req.body.data?.metadata || {};
+        const userId = meta.user_id || null;
         if (meta.booking_id) {
-          await Promise.all([
-            sb().from('bookings').update({ status: 'confirmed', paystack_ref: ref }).eq('id', meta.booking_id),
-            sb().from('payments').upsert({
-              paystack_ref: ref, booking_id: meta.booking_id, type: 'ticket',
-              amount_kobo: req.body.data?.amount, status: 'success', metadata: meta,
-            }, { onConflict: 'paystack_ref' }),
-          ]);
+          await sb().from('bookings').update({ status: 'confirmed' }).eq('id', meta.booking_id);
+        }
+        if (userId && ref) {
+          await sb().from('payments').upsert({
+            user_id: userId, reference: ref, type: meta.type || 'ticket',
+            entity_id: meta.booking_id || meta.entity_id || null,
+            amount: req.body.data?.amount || 0, status: 'success',
+            completed_at: new Date().toISOString(),
+            metadata: { paystack: req.body.data },
+          }, { onConflict: 'reference' });
         }
       }
       return res.status(200).json({ received: true });
@@ -2175,6 +2179,119 @@ module.exports = async (req, res) => {
     /* ─── GET /health ────────────────────────────────────── */
     if (url === '/health' && req.method === 'GET') {
       return res.status(200).json({ ok: true, ts: Date.now(), url: SUPA_URL });
+    }
+
+    /* ─── GET /config ─────────────────────────────────────── */
+    if (url === '/config' && req.method === 'GET') {
+      return res.status(200).json({
+        paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY || '',
+        appName: 'Pulsefy',
+      });
+    }
+
+    /* ─── POST /payments/initiate ─────────────────────────── */
+    if (url === '/payments/initiate' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { user, profile } = auth;
+      const { type, entity_id, amount, email } = req.body || {};
+      if (!type || !amount || !email) return res.status(400).json({ error: 'type, amount, and email required' });
+      if (!['ticket','subscription_organizer','subscription_business','promotion'].includes(type))
+        return res.status(400).json({ error: 'Invalid payment type' });
+      if (!Number.isInteger(amount) || amount < 1) return res.status(400).json({ error: 'amount must be a positive integer in cents' });
+
+      const psRes = await fetch('https://api.paystack.co/transaction/initialize', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, amount, currency: 'ZAR', metadata: { user_id: user.id, type, entity_id: entity_id || null, display_name: profile.display_name } }),
+      });
+      if (!psRes.ok) { const b = await psRes.json().catch(() => ({})); return res.status(502).json({ error: b.message || 'Paystack error' }); }
+      const psData = await psRes.json();
+      if (!psData.status) return res.status(502).json({ error: psData.message || 'Paystack error' });
+
+      const { reference, authorization_url } = psData.data;
+      const { error: dbErr } = await sb().from('payments').insert({
+        user_id: user.id, reference, amount, currency: 'ZAR', type,
+        entity_id: entity_id || null, status: 'pending', metadata: { email },
+      });
+      if (dbErr) return res.status(400).json({ error: dbErr.message });
+      return res.status(200).json({ reference, authorization_url });
+    }
+
+    /* ─── GET /payments/verify ────────────────────────────── */
+    if (url === '/payments/verify' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { user, profile } = auth;
+      const ref = q.ref || '';
+      if (!ref) return res.status(400).json({ error: 'ref query parameter required' });
+
+      const { data: payment } = await sb().from('payments').select('*').eq('reference', ref).eq('user_id', user.id).single();
+      if (!payment) return res.status(404).json({ error: 'Payment not found' });
+      if (payment.status === 'success') return res.status(200).json({ success: true, payment });
+
+      const psRes = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(ref)}`, {
+        headers: { 'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
+      });
+      if (!psRes.ok) { const b = await psRes.json().catch(() => ({})); return res.status(502).json({ error: b.message || 'Paystack verify error' }); }
+      const psData = await psRes.json();
+      const newStatus = psData.data?.status === 'success' ? 'success' : 'failed';
+      const now = new Date().toISOString();
+
+      const { data: updated } = await sb().from('payments')
+        .update({ status: newStatus, completed_at: now, metadata: { ...payment.metadata, paystack: psData.data } })
+        .eq('id', payment.id).select().single();
+
+      if (newStatus === 'success') {
+        if (['subscription_organizer','subscription_business'].includes(payment.type)) {
+          await sb().from('profiles').update({ subscription_type: 'premium' }).eq('id', user.id);
+        }
+        await sb().from('notifications').insert({
+          user_id: user.id, type: 'payment', from_user_id: user.id, from_display_name: 'Pulsefy',
+          entity_id: payment.id, entity_type: 'payment',
+          message: `Payment of R${(payment.amount / 100).toFixed(2)} confirmed ✅`,
+        });
+        await logAdminAction(user.id, profile.display_name || user.email, 'payment_success', payment.id,
+          `${payment.type} — R${(payment.amount / 100).toFixed(2)}`, { reference: ref });
+        const userEmail = profile.email || user.email;
+        if (userEmail) sendPaymentConfirmEmail(userEmail, profile.display_name, payment.amount, payment.type).catch(() => {});
+      }
+      return res.status(200).json({ success: newStatus === 'success', payment: updated });
+    }
+
+    /* ─── POST /payments/webhook ──────────────────────────── */
+    if (url === '/payments/webhook' && req.method === 'POST') {
+      const sig  = req.headers['x-paystack-signature'] || '';
+      const hash = crypto.createHmac('sha512', process.env.PAYSTACK_SECRET_KEY || '')
+        .update(JSON.stringify(req.body)).digest('hex');
+      if (sig !== hash) return res.status(401).json({ error: 'Invalid signature' });
+      res.status(200).json({ received: true });
+
+      if (req.body?.event === 'charge.success') {
+        const ref  = req.body.data?.reference;
+        const meta = req.body.data?.metadata || {};
+        if (!ref) return;
+        const { data: payment } = await sb().from('payments').select('*').eq('reference', ref).maybeSingle();
+        if (!payment || payment.status === 'success') return;
+        const now = new Date().toISOString();
+        await sb().from('payments').update({
+          status: 'success', completed_at: now, metadata: { ...payment.metadata, paystack: req.body.data },
+        }).eq('id', payment.id);
+
+        if (['subscription_organizer','subscription_business'].includes(payment.type)) {
+          await sb().from('profiles').update({ subscription_type: 'premium' }).eq('id', payment.user_id);
+        }
+        await sb().from('notifications').insert({
+          user_id: payment.user_id, type: 'payment', from_user_id: payment.user_id, from_display_name: 'Pulsefy',
+          entity_id: payment.id, entity_type: 'payment',
+          message: `Payment of R${(payment.amount / 100).toFixed(2)} confirmed ✅`,
+        });
+        await logAdminAction(payment.user_id, meta.display_name || 'User', 'payment_success', payment.id,
+          `${payment.type} — R${(payment.amount / 100).toFixed(2)}`, { reference: ref });
+        const { data: prof } = await sb().from('profiles').select('email,display_name').eq('id', payment.user_id).single();
+        if (prof?.email) sendPaymentConfirmEmail(prof.email, prof.display_name, payment.amount, payment.type).catch(() => {});
+      }
+      return;
     }
 
     return res.status(404).json({ error: `Route not found: ${req.method} ${url}` });
