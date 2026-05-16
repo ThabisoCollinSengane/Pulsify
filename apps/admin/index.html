@@ -711,6 +711,17 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <div id="seed-result" style="display:none;font-size:.76rem;padding:8px 12px;border-radius:8px;margin-bottom:12px"></div>
         <button onclick="runQuicketSeed()" id="seed-btn" class="btn btn-or" style="width:100%">🎟 Seed Quicket Events Now</button>
       </div>
+      <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:12px">Lead Scrapers</div>
+      <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px">
+        <div style="font-size:.88rem;font-weight:700;margin-bottom:4px">Scrape Venues via OpenStreetMap</div>
+        <div style="font-size:.76rem;color:var(--mu);margin-bottom:10px;line-height:1.5">Scrapes clubs, shisanyamas, BnBs, hotels and event venues from OpenStreetMap — no API key needed. Results appear in the Leads tab.</div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:.72rem;color:var(--mu);display:block;margin-bottom:4px">Cities to scrape (comma-separated)</label>
+          <input id="osm-cities" value="Durban,Johannesburg,Cape Town,Pretoria" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--txt);font-size:.8rem">
+        </div>
+        <div id="osm-result" style="display:none;font-size:.76rem;padding:8px 12px;border-radius:8px;margin-bottom:12px"></div>
+        <button onclick="runOsmScrape()" id="osm-btn" class="btn btn-or" style="width:100%">📍 Run OSM Venue Scraper</button>
+      </div>
       <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:12px">Mock Data</div>
       <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:16px">
         <div style="font-size:.88rem;font-weight:700;margin-bottom:4px">Delete Manual / Mock Events</div>
@@ -2274,6 +2285,33 @@ async function deleteMockEvents() {
     res.textContent = 'Error: ' + e.message;
   }
   btn.disabled = false; btn.textContent = '🗑 Delete Mock Events';
+}
+
+async function runOsmScrape() {
+  const btn = document.getElementById('osm-btn');
+  const res = document.getElementById('osm-result');
+  const cities = document.getElementById('osm-cities').value.trim() || 'Durban,Johannesburg';
+  btn.disabled = true; btn.textContent = '⏳ Scraping venues…';
+  res.style.display = 'none';
+  try {
+    const r = await fetch(`/api/admin/scrape?cities=${encodeURIComponent(cities)}`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    const d = await safeJson(r);
+    res.style.display = 'block';
+    if (r.ok && d.success) {
+      res.style.background = 'rgba(198,255,74,.1)'; res.style.border = '1px solid rgba(198,255,74,.3)'; res.style.color = '#c6ff4a';
+      res.textContent = `✅ Inserted: ${d.inserted}  Skipped (dup): ${d.skipped}  Errors: ${d.errors}  Cities: ${d.cities_done?.join(', ')}`;
+    } else {
+      res.style.background = 'rgba(255,45,120,.1)'; res.style.border = '1px solid rgba(255,45,120,.3)'; res.style.color = 'var(--pk)';
+      res.textContent = `Error: ${d.error || JSON.stringify(d)}`;
+    }
+  } catch(e) {
+    res.style.display = 'block'; res.style.background = 'rgba(255,45,120,.1)'; res.style.border = '1px solid rgba(255,45,120,.3)'; res.style.color = 'var(--pk)';
+    res.textContent = 'Network error: ' + e.message;
+  }
+  btn.disabled = false; btn.textContent = '📍 Run OSM Venue Scraper';
 }
 
 async function deleteAdminPromo(id) {

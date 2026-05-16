@@ -1310,6 +1310,97 @@ module.exports = async (req, res) => {
       return res.status(200).json({ success: true, profile: data });
     }
 
+
+    /* ─── POST /admin/scrape ── OSM venue scraper (no API key needed) ─ */
+    if (url === '/admin/scrape' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+
+      const cities = q.cities ? q.cities.split(',') : ['Durban','Johannesburg'];
+      const results = { inserted: 0, skipped: 0, errors: 0, cities_done: [] };
+
+      // Venue type queries for OSM Overpass
+      const VENUE_TYPES = [
+        { filter: '["amenity"="nightclub"]',  category: 'club',        label: 'Club/Nightclub' },
+        { filter: '["amenity"="bar"]',         category: 'bar',         label: 'Bar/Tavern' },
+        { filter: '["amenity"="restaurant"]["cuisine"~"braai|shisa|grill|south_african|african",i]', category: 'shisanyama', label: 'Shisanyama/Braai' },
+        { filter: '["tourism"="guest_house"]', category: 'bnb',         label: 'Guest House/BnB' },
+        { filter: '["tourism"="hostel"]',      category: 'bnb',         label: 'Hostel' },
+        { filter: '["tourism"="hotel"]',       category: 'hotel',       label: 'Hotel' },
+        { filter: '["amenity"="events_venue"]',category: 'venue',       label: 'Events Venue' },
+        { filter: '["leisure"="dance"]',        category: 'dance_venue', label: 'Dance Venue' },
+      ];
+
+      // Bounding boxes: [south, west, north, east]
+      const CITY_BOXES = {
+        'Durban':         '-30.1,30.7,-29.6,31.2',
+        'Johannesburg':   '-26.4,27.8,-25.9,28.3',
+        'Cape Town':      '-34.2,18.3,-33.7,18.7',
+        'Pretoria':       '-25.9,28.0,-25.6,28.4',
+        'Sandton':        '-26.2,28.0,-26.0,28.2',
+        'KwaMashu':       '-29.8,30.9,-29.7,31.0',
+        'Umlazi':         '-29.97,30.87,-29.87,30.97',
+      };
+
+      const overpassFetch = async (query) => {
+        const body = 'data=' + encodeURIComponent(query);
+        try {
+          const r = await fetch('https://overpass-api.de/api/interpreter', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Pulsify/1.0' },
+            body,
+            signal: AbortSignal.timeout(20000),
+          });
+          if (!r.ok) return [];
+          const j = await r.json();
+          return j.elements || [];
+        } catch { return []; }
+      };
+
+      for (const city of cities) {
+        const bbox = CITY_BOXES[city];
+        if (!bbox) continue;
+        const province = { 'Durban':'KZN','KwaMashu':'KZN','Umlazi':'KZN','Johannesburg':'GP','Sandton':'GP','Cape Town':'WC','Pretoria':'GP' }[city] || null;
+
+        for (const vt of VENUE_TYPES) {
+          const overpassQuery = `[out:json][timeout:20];(node${vt.filter}(${bbox});way${vt.filter}(${bbox}););out body;`;
+          const elements = await overpassFetch(overpassQuery);
+
+          for (const el of elements) {
+            const tags = el.tags || {};
+            const name = tags.name || tags['name:en'];
+            if (!name) continue;
+
+            // skip if already in DB
+            const { count } = await sb().from('scraped_leads')
+              .select('id', { count: 'exact', head: true }).eq('name', name).eq('city', city);
+            if (count > 0) { results.skipped++; continue; }
+
+            const { error } = await sb().from('scraped_leads').insert({
+              name,
+              category:  vt.category,
+              city,
+              province,
+              phone:     tags.phone || tags['contact:phone'] || null,
+              website:   tags.website || tags['contact:website'] || null,
+              instagram: tags['contact:instagram'] || null,
+              facebook:  tags['contact:facebook'] || null,
+              description: tags.description || `${vt.label} in ${city}`,
+              source:    'osm',
+              status:    'new',
+            });
+
+            if (error) results.errors++;
+            else results.inserted++;
+          }
+        }
+        results.cities_done.push(city);
+      }
+
+      await logAdminAction(auth.user.id, auth.profile.display_name || 'Admin', 'scrape_osm', null, null, results);
+      return res.status(200).json({ success: true, ...results });
+    }
+
     /* ─── GET /admin/banners ─────────────────────────────── */
     if (url === '/admin/banners' && req.method === 'GET') {
       const auth = await authUser(req);
