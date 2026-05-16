@@ -302,21 +302,22 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .bp-price{font-size:.62rem;color:var(--mu)}
 
 /* ── Map slide panel ── */
-#map-panel{position:absolute;bottom:0;left:0;right:0;z-index:200;background:rgba(5,8,15,.97);backdrop-filter:blur(28px);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.12);border-bottom:none;padding:18px 16px 20px;transform:translateY(110%);transition:transform .32s cubic-bezier(.4,0,.2,1);pointer-events:none;max-width:520px;margin:0 auto}
+#map-panel{position:absolute;bottom:0;left:0;right:0;z-index:200;background:rgba(5,8,15,.98);backdrop-filter:blur(32px);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.12);border-bottom:none;overflow:hidden;transform:translateY(110%);transition:transform .35s cubic-bezier(.4,0,.2,1);pointer-events:none;max-width:520px;margin:0 auto}
 #map-panel.open{transform:translateY(0);pointer-events:auto}
-.mp-handle{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.15);margin:0 auto 16px}
-.mp-type{font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--or);margin-bottom:6px}
-.mp-row{display:flex;gap:14px;align-items:flex-start;margin-bottom:12px}
-.mp-thumb{width:68px;height:68px;border-radius:14px;overflow:hidden;flex-shrink:0;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.8rem;border:1.5px solid rgba(255,255,255,.1)}
-.mp-thumb img{width:100%;height:100%;object-fit:cover}
-.mp-info{flex:1;min-width:0}
-.mp-name{font-family:'Syne',sans-serif;font-size:.92rem;font-weight:800;line-height:1.25;margin-bottom:4px}
-.mp-sub{font-size:.72rem;color:var(--mu2);line-height:1.5}
-.mp-price{font-family:'Syne',sans-serif;font-size:.86rem;font-weight:700;color:var(--or);margin-top:5px}
-.mp-close{position:absolute;top:14px;right:16px;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);border:none;color:var(--mu2);font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
-.mp-cta{width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:13px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:4px}
+.mp-hero{width:100%;height:190px;object-fit:cover;display:block;background:var(--surf2)}
+.mp-hero-placeholder{width:100%;height:190px;display:flex;align-items:center;justify-content:center;font-size:3.5rem}
+.mp-hero-wrap{position:relative;overflow:hidden}
+.mp-hero-grad{position:absolute;bottom:0;left:0;right:0;height:80px;background:linear-gradient(to top,rgba(5,8,15,1) 0%,rgba(5,8,15,0) 100%)}
+.mp-handle{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.15);margin:0 auto 12px}
+.mp-body{padding:0 16px 18px}
+.mp-type{font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--or);margin-bottom:5px}
+.mp-name{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:800;line-height:1.25;margin-bottom:5px}
+.mp-sub{font-size:.72rem;color:var(--mu2);line-height:1.55;margin-bottom:6px}
+.mp-price{font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;color:var(--or);margin-bottom:10px}
+.mp-close{position:absolute;top:12px;right:12px;z-index:10;width:30px;height:30px;border-radius:50%;background:rgba(5,8,15,.6);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.15);color:#fff;font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.mp-cta{width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:13px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer;transition:opacity .2s}
 .mp-cta:active{opacity:.85}
-.mp-divider{height:1px;background:var(--border);margin:10px 0}
+.mp-divider{height:1px;background:var(--border);margin:10px 0 12px}
 /* Legend toggle */
 #map-legend-toggle{cursor:pointer;-webkit-tap-highlight-color:transparent}
 #map-legend-body{transition:all .25s}
@@ -421,6 +422,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     <button class="sb" id="auth-btn" onclick="window.location.href='/signin'">Sign In</button>
   </div>
 </header>
+
+<!-- BETA BANNER — slides over the ticker, cycles every 20s -->
+<div id="beta-banner" style="position:fixed;top:var(--th);left:0;right:0;height:var(--tk);z-index:750;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(90deg,#1a0a00,#2d1500,#1a0a00);border-bottom:1px solid rgba(255,92,0,.4);transform:translateY(-100%);transition:transform .4s cubic-bezier(.4,0,.2,1);pointer-events:none">
+  <span style="font-size:.62rem;font-weight:800;font-family:'Syne',sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#FF5C00">⚠ BETA</span>
+  <span style="width:1px;height:12px;background:rgba(255,92,0,.4)"></span>
+  <span style="font-size:.6rem;font-family:'Syne',sans-serif;font-weight:600;color:rgba(255,200,140,.85);letter-spacing:.03em">You're in our beta — events &amp; data are real. Expect occasional hiccups.</span>
+</div>
 
 <!-- TICKER -->
 <div class="tkr">
@@ -539,13 +547,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 
 <!-- ══ MAP ══ -->
 <div class="panel" id="tab-map" style="overflow:hidden">
-  <!-- Header bar -->
-  <div style="position:absolute;top:0;left:0;right:0;height:56px;z-index:50;background:linear-gradient(135deg,rgba(176,38,255,.95),rgba(255,92,0,.95));backdrop-filter:blur(24px);display:flex;align-items:center;padding:0 14px;gap:10px">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.06em;color:#fff;flex:1;text-shadow:0 2px 8px rgba(0,0,0,.4)">📍 PULSIFY MAP</div>
-    <div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.15);border-radius:50px;padding:4px 12px;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:800;color:#fff;letter-spacing:.04em"><b id="map-cnt" style="color:var(--li)">0</b>&nbsp;spots</div>
+  <!-- Header bar — floats over map -->
+  <div style="position:absolute;top:0;left:0;right:0;height:56px;z-index:50;background:linear-gradient(180deg,rgba(5,8,15,.85) 0%,rgba(5,8,15,0) 100%);backdrop-filter:blur(12px);display:flex;align-items:center;padding:0 14px;gap:10px">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.06em;color:#fff;flex:1;text-shadow:0 2px 8px rgba(0,0,0,.6)">📍 PULSEFY MAP</div>
+    <div style="display:flex;align-items:center;gap:5px;background:rgba(5,8,15,.6);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);border-radius:50px;padding:4px 12px;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:800;color:#fff;letter-spacing:.04em"><b id="map-cnt" style="color:var(--li)">0</b>&nbsp;spots</div>
   </div>
-  <!-- Filter chips -->
-  <div style="position:absolute;top:56px;left:0;right:0;z-index:49;display:flex;gap:6px;padding:8px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none">
+  <!-- Filter chips — floats over map -->
+  <div style="position:absolute;top:56px;left:0;right:0;z-index:49;display:flex;gap:6px;padding:8px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;background:linear-gradient(180deg,rgba(5,8,15,.6) 0%,rgba(5,8,15,0) 100%);backdrop-filter:blur(4px)">
     <button class="mcb active" onclick="setMapFilter('all',this)">✦ All</button>
     <button class="mcb" onclick="setMapFilter('event',this)">🎟 Events</button>
     <button class="mcb" onclick="setMapFilter('business',this)">🏪 Businesses</button>
@@ -554,8 +562,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     <button class="mcb" onclick="setMapFilter('nightclub',this)">🎵 Nightlife</button>
   </div>
 
-  <!-- Map canvas — fills from filter chips to bottom nav -->
-  <div id="mc" style="position:absolute;top:112px;left:0;right:0;bottom:0;overflow:hidden;will-change:transform;background:#05080F"></div>
+  <!-- Map canvas — truly full screen; header + chips float on top -->
+  <div id="mc" style="position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;will-change:transform;background:#05080F"></div>
 
   <!-- Legend — collapsible, bottom-left -->
   <div id="map-legend" style="position:absolute;bottom:14px;left:12px;z-index:100;background:rgba(5,8,15,.93);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;pointer-events:auto">
@@ -575,9 +583,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     </div>
   </div>
 
-  <!-- Slide-up info panel — appears on marker tap -->
+  <!-- Slide-up card — appears on marker tap -->
   <div id="map-panel">
-    <div class="mp-handle"></div>
     <button class="mp-close" onclick="closeMapPanel()">✕</button>
     <div id="mp-content"></div>
   </div>
@@ -2310,39 +2317,51 @@ function showMapPanel(item, type, s) {
   const mp    = document.getElementById('mp-content');
   if (!panel || !mp) return;
 
-  const isEv     = type === 'event';
-  const img      = item.image_url || item.cover_image_url || '';
-  const name     = x(item.name || '');
-  const cat      = isEv ? (item.genre || 'Event') : (item.category || 'Place');
-  const sub      = isEv
-    ? (typeof fdate==='function' ? fdate(item.date_local) : (item.date_local||''))
-      + (item.time_local ? ' · ' + item.time_local : '')
-      + (item.venue_name ? '<br>' + x(item.venue_name) : '')
-    : ((item.rating ? '⭐ ' + item.rating : '') + (item.suburb||item.city ? ' · ' + x(item.suburb||item.city) : ''))
-      + (item.phone ? '<br><a href="tel:' + x(item.phone) + '" onclick="event.stopPropagation()" style="color:var(--cy);text-decoration:none">' + x(item.phone) + '</a>' : '');
+  const isEv = type === 'event';
+  const img  = item.image_url || item.cover_image_url || '';
+  const name = x(item.name || '');
+  const cat  = isEv ? (item.genre || 'Event') : (item.category || 'Place');
+
+  const sub = isEv
+    ? [
+        typeof fdate === 'function' ? fdate(item.date_local) : (item.date_local || ''),
+        item.time_local || '',
+        item.venue_name ? '📍 ' + x(item.venue_name) : '',
+        item.organiser_name ? '🎤 ' + x(item.organiser_name) : ''
+      ].filter(Boolean).join(' &nbsp;·&nbsp; ')
+    : [
+        item.rating ? '⭐ ' + item.rating : '',
+        item.suburb || item.city ? x(item.suburb || item.city) : '',
+        item.phone ? `<a href="tel:${x(item.phone)}" onclick="event.stopPropagation()" style="color:var(--cy);text-decoration:none">📞 ${x(item.phone)}</a>` : ''
+      ].filter(Boolean).join(' &nbsp;·&nbsp; ');
 
   const price = isEv
-    ? (item.is_free ? '<span style="color:var(--li)">FREE</span>'
+    ? (item.is_free ? '<span style="color:var(--li);font-size:.82rem;font-weight:800">✓ FREE</span>'
        : item.price_min ? '<span style="color:var(--or)">From R' + item.price_min + '</span>' : '')
     : (item.price_range ? '<span style="color:var(--mu)">' + x(item.price_range) + '</span>' : '');
 
+  const heroHtml = img
+    ? `<img class="mp-hero" src="${x(img)}" loading="lazy" onerror="this.outerHTML='<div class=mp-hero-placeholder style=background:${s.bg}>${s.ico}</div>'">`
+    : `<div class="mp-hero-placeholder" style="background:${s.grad||s.bg}">${s.ico}</div>`;
+
   mp.innerHTML = `
-    <div class="mp-type">${x(cat)}</div>
-    <div class="mp-row">
-      <div class="mp-thumb" style="background:${s.bg}">
-        ${img ? `<img src="${x(img)}" loading="lazy" onerror="this.parentElement.textContent='${s.ico}'"/>` : s.ico}
-      </div>
-      <div class="mp-info">
-        <div class="mp-name">${name}</div>
-        <div class="mp-sub">${sub}</div>
-        ${price ? `<div class="mp-price">${price}</div>` : ''}
-      </div>
+    <div class="mp-hero-wrap">
+      ${heroHtml}
+      <div class="mp-hero-grad"></div>
     </div>
-    ${price && isEv ? '' : ''}
-    <div class="mp-divider"></div>
-    <button class="mp-cta" onclick="${isEv ? `openEv('${x(item.id)}');closeMapPanel()` : `openBiz('${x(item.id)}');closeMapPanel()`}">
-      ${isEv ? '🎟 View Event & Buy Tickets →' : '📍 View Full Profile →'}
-    </button>`;
+    <div style="padding:12px 16px 4px;display:flex;align-items:center;gap:8px">
+      <div class="mp-handle" style="margin:0"></div>
+    </div>
+    <div class="mp-body">
+      <div class="mp-type">${x(cat)}</div>
+      <div class="mp-name">${name}</div>
+      ${sub ? `<div class="mp-sub">${sub}</div>` : ''}
+      ${price ? `<div class="mp-price">${price}</div>` : ''}
+      <div class="mp-divider"></div>
+      <button class="mp-cta" onclick="${isEv ? `openEv('${x(item.id)}');closeMapPanel()` : `openBiz('${x(item.id)}');closeMapPanel()`}">
+        ${isEv ? '🎟 View Event & Buy Tickets →' : '📍 View Full Profile →'}
+      </button>
+    </div>`;
 
   panel.classList.add('open');
 }
@@ -3630,6 +3649,18 @@ document.addEventListener('DOMContentLoaded', initSupabaseSession);
     }
   } catch(e) {}
 })();
+// Beta banner: slides in for 6s every 20s
+(function betaBanner() {
+  const b = document.getElementById('beta-banner');
+  if (!b) return;
+  function show() {
+    b.style.transform = 'translateY(0)';
+    setTimeout(() => { b.style.transform = 'translateY(-100%)'; }, 6000);
+  }
+  setTimeout(show, 3000); // first show after 3s
+  setInterval(show, 20000);
+})();
+
 window.addEventListener('DOMContentLoaded', () => {
   history.replaceState({ tab: 'home', detail: false }, '');
   // Load live data immediately
