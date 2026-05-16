@@ -59,6 +59,16 @@ async function authUser(req) {
   }
 }
 
+async function logAdminAction(adminId, adminName, actionType, targetId, targetName, details) {
+  try {
+    await sb().from('admin_activity_log').insert({
+      admin_id: adminId, admin_name: adminName || 'Admin',
+      action_type: actionType, target_id: String(targetId || ''),
+      target_name: targetName || null, details: details || null,
+    });
+  } catch(e) { /* non-fatal */ }
+}
+
 module.exports = async (req, res) => {
   Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -863,7 +873,15 @@ module.exports = async (req, res) => {
         .single();
       
       if (error) throw error;
-      
+
+      // Log the admin action
+      const adminName = auth.profile.display_name || auth.user.email || 'Admin';
+      const targetName = data.display_name || data.email || userId;
+      if (updates.suspended === true)  await logAdminAction(auth.user.id, adminName, 'suspend',               userId, targetName, updates);
+      if (updates.suspended === false) await logAdminAction(auth.user.id, adminName, 'unsuspend',             userId, targetName, updates);
+      if (updates.role)                await logAdminAction(auth.user.id, adminName, 'role_change',           userId, targetName, updates);
+      if (updates.subscription_type)   await logAdminAction(auth.user.id, adminName, 'subscription_change',  userId, targetName, updates);
+
       return res.status(200).json({ success: true, profile: data });
     }
 
@@ -1160,13 +1178,17 @@ module.exports = async (req, res) => {
       if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
       const eventId = adminEventMatch[1];
       const { approved } = req.body || {};
+      const { data: evtRow } = await sb().from('events').select('name,organiser_name').eq('id', eventId).single();
+      const adminName = auth.profile.display_name || auth.user.email || 'Admin';
       if (approved === false) {
         const { error } = await sb().from('events').delete().eq('id', eventId);
         if (error) return res.status(400).json({ error: error.message });
+        await logAdminAction(auth.user.id, adminName, 'event_reject', eventId, evtRow?.name || eventId, {});
         return res.status(200).json({ success: true, deleted: true });
       }
       const { data, error } = await sb().from('events').update({ approved: true }).eq('id', eventId).select().single();
       if (error) return res.status(400).json({ error: error.message });
+      await logAdminAction(auth.user.id, adminName, 'event_approve', eventId, evtRow?.name || eventId, {});
       return res.status(200).json({ success: true, event: data });
     }
 
@@ -1315,6 +1337,8 @@ module.exports = async (req, res) => {
         } catch(e) { /* web-push not installed or keys invalid */ }
       }
 
+      const adminName2 = auth.profile.display_name || auth.user.email || 'Admin';
+      await logAdminAction(auth.user.id, adminName2, 'notification_broadcast', null, title, { target, recipients: notifs.length });
       return res.status(200).json({ notif_sent: notifs.length, push_sent });
     }
 
@@ -1875,6 +1899,31 @@ module.exports = async (req, res) => {
       ];
       const isMember = auth ? (members || []).some(m => m.profiles?.id === auth.user.id) : false;
       return res.status(200).json({ squad, members: members || [], activity: activity || [], goals, isMember, memberPoints });
+    }
+
+    /* ─── GET /admin/activity-log ───────────────────────── */
+    if (url === '/admin/activity-log' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const limit = Math.min(parseInt(q.limit) || 100, 500);
+      const { data, error } = await sb().from('admin_activity_log')
+        .select('*').order('created_at', { ascending: false }).limit(limit);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ log: data || [] });
+    }
+
+    /* ─── GET /admin/user-notifications/:userId ─────────── */
+    const adminUserNotifsMatch = url.match(/^\/admin\/user-notifications\/([^/]+)$/);
+    if (adminUserNotifsMatch && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const targetUserId = adminUserNotifsMatch[1];
+      const { data, error } = await sb().from('notifications')
+        .select('id,type,title,message,body,read,created_at,from_display_name,entity_type,entity_id')
+        .eq('user_id', targetUserId)
+        .order('created_at', { ascending: false }).limit(50);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ notifications: data || [] });
     }
 
     /* ─── GET /health ────────────────────────────────────── */
