@@ -2384,6 +2384,11 @@ async function handleAuth() {
   const sb = getSB(); if (!sb) return;
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
   if (error) return showToast(error.message, 'err');
+  const { data: chkProf } = await sb.from('profiles').select('suspended').eq('id', data.user.id).single();
+  if (chkProf?.suspended) {
+    await sb.auth.signOut();
+    return showToast('Your account has been suspended. Contact support.', 'err');
+  }
   currentUser = data.user;
   document.getElementById('auth-modal')?.classList.remove('open');
   showToast('✅ Signed in!', 'ok');
@@ -3420,8 +3425,14 @@ async function initSupabaseSession() {
     const { data: { session } } = await sb.auth.getSession();
     if (!session) return;
     const { data: profile } = await sb.from('profiles')
-      .select('id,username,display_name,bio,avatar_url,genres,city,province,role,is_verified')
+      .select('id,username,display_name,bio,avatar_url,genres,city,province,role,is_verified,suspended')
       .eq('id', session.user.id).single();
+    if (profile?.suspended) {
+      await sb.auth.signOut();
+      localStorage.removeItem('p_user'); localStorage.removeItem('p_profile'); localStorage.removeItem('p_token');
+      showToast('Your account has been suspended. Contact support.', 'err');
+      return;
+    }
     if (profile) {
       localStorage.setItem('p_user', JSON.stringify({id:session.user.id,email:session.user.email,display_name:profile.display_name||session.user.email?.split('@')[0],role:profile.role||'user'}));
       localStorage.setItem('p_profile', JSON.stringify(profile));

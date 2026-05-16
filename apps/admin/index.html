@@ -103,6 +103,17 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .role-user{background:rgba(90,88,112,.1);border:1px solid rgba(90,88,112,.2);color:var(--mu2)}
 .trial-badge{background:rgba(198,255,74,.1);border:1px solid rgba(198,255,74,.2);color:var(--li)}
 .suspended-badge{background:rgba(255,45,120,.15);border:1px solid rgba(255,45,120,.3);color:var(--pk)}
+/* Mobile responsive */
+@media(max-width:640px){
+  .stats-bar{grid-template-columns:repeat(2,1fr)}
+  .tab-btn{padding:10px 12px;font-size:.68rem;white-space:nowrap;flex-shrink:0}
+  .search-row{flex-wrap:wrap}
+  .tbl-wrap{overflow-x:auto}
+  th,td{padding:8px 10px}
+  .name-cell{max-width:100px}
+  /* Hide lower-priority columns on mobile */
+  .hide-mobile{display:none!important}
+}
 </style>
 </head>
 <body>
@@ -139,17 +150,17 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <div class="page">
 
   <!-- Tab Navigation -->
-  <div style="display:flex;gap:8px;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:0">
-    <div class="tab-btn active" onclick="switchTab('users')">👥 Users</div>
-    <div class="tab-btn" onclick="switchTab('businesses')">🏢 Businesses</div>
-    <div class="tab-btn" onclick="switchTab('events')">🎉 Events</div>
-    <div class="tab-btn" onclick="switchTab('leads')">📊 Leads</div>
-    <div class="tab-btn" onclick="switchTab('verifications')">🏆 Verifications</div>
-    <div class="tab-btn" onclick="switchTab('banners')">🖼 Banners</div>
-    <div class="tab-btn" onclick="switchTab('notifications')">🔔 Notify</div>
-    <div class="tab-btn" onclick="switchTab('reports')">🚩 Reports</div>
-    <div class="tab-btn" onclick="switchTab('promotions')">🚀 Promotions</div>
-    <div class="tab-btn" onclick="switchTab('system')">⚙️ System</div>
+  <div style="display:flex;gap:0;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none">
+    <div class="tab-btn active" onclick="switchTab('users',this)">👥 Users</div>
+    <div class="tab-btn" onclick="switchTab('businesses',this)">🏢 Biz</div>
+    <div class="tab-btn" onclick="switchTab('events',this)">🎉 Events</div>
+    <div class="tab-btn" onclick="switchTab('leads',this)">📊 Leads</div>
+    <div class="tab-btn" onclick="switchTab('verifications',this)">🏆 Verify</div>
+    <div class="tab-btn" onclick="switchTab('banners',this)">🖼 Banners</div>
+    <div class="tab-btn" onclick="switchTab('notifications',this)">🔔 Notify</div>
+    <div class="tab-btn" onclick="switchTab('reports',this)">🚩 Reports</div>
+    <div class="tab-btn" onclick="switchTab('promotions',this)">🚀 Promos</div>
+    <div class="tab-btn" onclick="switchTab('system',this)">⚙️ System</div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
@@ -189,11 +200,11 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <thead>
           <tr>
             <th>User</th>
-            <th>Email</th>
+            <th class="hide-mobile">Email</th>
             <th>Role</th>
-            <th>Subscription</th>
+            <th class="hide-mobile">Subscription</th>
             <th>Status</th>
-            <th>Joined</th>
+            <th class="hide-mobile">Joined</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -677,11 +688,11 @@ function showAdminUI() {
 }
 
 /* ── Tab switching ── */
-function switchTab(tab) {
+function switchTab(tab, btn) {
   currentTab = tab;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  event.target.classList.add('active');
+  if (btn) btn.classList.add('active');
   document.getElementById(`tab-${tab}`).classList.add('active');
   
   if (tab === 'users' && !ALL_USERS.length) loadUsers();
@@ -1097,11 +1108,11 @@ function renderUsersTable() {
 
     return `<tr>
       <td class="name-cell" title="${esc(u.display_name || 'No name')}">${esc(u.display_name || 'No name')}</td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:.72rem">${esc(u.email)}</td>
+      <td class="hide-mobile" style="font-family:'JetBrains Mono',monospace;font-size:.72rem">${esc(u.email)}</td>
       <td>${roleBadge}</td>
-      <td>${subBadge}</td>
+      <td class="hide-mobile">${subBadge}</td>
       <td>${statusBadge}</td>
-      <td style="font-size:.72rem;color:var(--mu)">${joined}</td>
+      <td class="hide-mobile" style="font-size:.72rem;color:var(--mu)">${joined}</td>
       <td>
         <div class="user-actions">
           ${u.suspended

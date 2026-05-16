@@ -52,6 +52,7 @@ async function authUser(req) {
     const { data: { user }, error } = await userSb.auth.getUser(token);
     if (error || !user) return null;
     const { data: profile } = await sb().from('profiles').select('*').eq('id', user.id).single();
+    if (profile?.suspended) return null;
     return { user, profile: profile || { id: user.id, role: 'user' } };
   } catch(e) {
     return null;
