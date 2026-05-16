@@ -303,13 +303,13 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
   <div id="tab-events" class="tab-content">
     <div style="margin-bottom:20px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Event Approval</div>
-      <div style="font-size:.82rem;color:var(--mu2)">Review and approve events submitted by organizers</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Events</div>
+      <div style="font-size:.82rem;color:var(--mu2)">View and approve all events on the platform</div>
     </div>
     <div class="search-row">
       <select class="inp" id="evt-filter" onchange="loadPendingEvents()" style="max-width:180px">
-        <option value="pending">⏳ Pending</option>
         <option value="all">All Events</option>
+        <option value="pending">⏳ Pending Approval</option>
       </select>
       <button class="btn btn-surf" onclick="loadPendingEvents()">↺ Refresh</button>
     </div>
