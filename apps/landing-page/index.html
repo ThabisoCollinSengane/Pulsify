@@ -1310,7 +1310,7 @@ async function loadFeed(resetPage = false) {
     // Render cards as already-revealed so they're visible even if IntersectionObserver misses them
     const cards = events.map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"'));
     feedEl.innerHTML = cards.join('');
-    const _hp = document.getElementById('tab-home'); if (_hp) _hp.scrollTop = 0;
+    const _hi = document.querySelector('#tab-home .hi'); if (_hi) _hi.scrollTop = 0;
     updatePagination();
     triggerRev();
 
@@ -1446,7 +1446,7 @@ function buildCard(ev, idx) {
   else if (gl.includes('sport')) badge = '<span class="fbg bsp">⚽ ' + fdate(ev.date_local) + '</span>';
   else if (iF)              badge = '<span class="fbg bfr">FREE</span>';
   else                      badge = '<span class="fbg bsn">' + fdate(ev.date_local) + '</span>';
-  const srcLabel = { eventbrite: 'Eventbrite', ticketmaster: 'Ticketmaster' }[ev.source] || '';
+  const srcLabel = { eventbrite: 'Eventbrite', ticketmaster: 'Ticketmaster', quicket: 'Quicket' }[ev.source] || '';
   const btnLbl   = gl.includes('march') ? 'Join March' : (iF ? 'RSVP Free' : 'Get Tickets');
   return `<div class="fc rv" data-evid="${x(ev.id)}" onclick="openEv('${x(ev.id)}')">
     <div class="fh"><div class="fa" style="background:${bg}">${emo}</div>
