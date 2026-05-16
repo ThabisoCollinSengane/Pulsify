@@ -3483,7 +3483,15 @@ async function initSupabaseSession() {
           return;
         }
 
-        // Existing user (e.g. Google OAuth callback)
+        // Only redirect to dashboard on genuine auth callbacks (OAuth / email confirm)
+        // or when on the bare root "/" with no content params — NOT on /feeds, /user-profile etc.
+        const _path = window.location.pathname;
+        const _qs   = window.location.search;
+        const _hash = window.location.hash;
+        const isAuthCallback  = _hash.includes('access_token') || _qs.includes('code=') || _qs.includes('token=');
+        const isBareRoot      = (_path === '/' || _path === '') && !_qs.includes('eid=') && !_qs.includes('bid=') && !_qs.includes('tab=');
+        if (!isAuthCallback && !isBareRoot) return; // browsing other pages — stay
+
         const { data: prof } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
         const role = prof?.role || 'user';
         if (role === 'organizer') { window.location.href = '/organizer'; return; }
