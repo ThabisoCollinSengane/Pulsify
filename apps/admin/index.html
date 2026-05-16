@@ -333,57 +333,145 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <!-- TAB: LEADS -->
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
   <div id="tab-leads" class="tab-content">
-    <div style="margin-bottom:20px">
+    <div style="margin-bottom:16px">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Lead Management</div>
       <div style="font-size:.82rem;color:var(--mu2)">Business and organizer leads from scraping</div>
     </div>
 
-    <div class="stats-bar" id="leads-stats-bar">
-      <div class="stat"><div class="stat-n warn-n" id="ls-new">—</div><div class="stat-l">New</div></div>
-      <div class="stat"><div class="stat-n" id="ls-contacted">—</div><div class="stat-l">Contacted</div></div>
-      <div class="stat"><div class="stat-n ok-n" id="ls-converted">—</div><div class="stat-l">Converted</div></div>
-      <div class="stat"><div class="stat-n bad-n" id="ls-ignored">—</div><div class="stat-l">Ignored</div></div>
+    <!-- Sub-tabs -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px">
+      <button id="leads-sub-leads" onclick="switchLeadsSub('leads')" class="btn btn-or" style="font-size:.78rem;padding:7px 16px">📋 Leads</button>
+      <button id="leads-sub-events" onclick="switchLeadsSub('events')" class="btn btn-surf" style="font-size:.78rem;padding:7px 16px">🎟 Lead Events <span id="le-pending-badge" style="display:none;background:var(--pk);color:#fff;border-radius:50px;padding:1px 7px;font-size:.65rem;margin-left:4px"></span></button>
     </div>
 
-    <div class="search-row" style="flex-wrap:wrap;gap:8px">
-      <input class="inp" id="leads-search" placeholder="Search name, city, email…" oninput="loadLeads(1)" style="flex:1;min-width:180px"/>
-      <select class="inp" id="leads-status" onchange="loadLeads(1)" style="max-width:140px">
-        <option value="all">All Status</option>
-        <option value="new">New</option>
-        <option value="contacted">Contacted</option>
-        <option value="converted">Converted</option>
-        <option value="ignored">Ignored</option>
+    <!-- Sub: Leads list -->
+    <div id="leads-sub-leads-pane">
+      <div class="stats-bar" id="leads-stats-bar">
+        <div class="stat"><div class="stat-n warn-n" id="ls-new">—</div><div class="stat-l">New</div></div>
+        <div class="stat"><div class="stat-n" id="ls-contacted">—</div><div class="stat-l">Contacted</div></div>
+        <div class="stat"><div class="stat-n ok-n" id="ls-converted">—</div><div class="stat-l">Converted</div></div>
+        <div class="stat"><div class="stat-n bad-n" id="ls-ignored">—</div><div class="stat-l">Ignored</div></div>
+      </div>
+      <div class="search-row" style="flex-wrap:wrap;gap:8px">
+        <input class="inp" id="leads-search" placeholder="Search name, city, email…" oninput="loadLeads(1)" style="flex:1;min-width:180px"/>
+        <select class="inp" id="leads-status" onchange="loadLeads(1)" style="max-width:140px">
+          <option value="all">All Status</option>
+          <option value="new">New</option>
+          <option value="contacted">Contacted</option>
+          <option value="converted">Converted</option>
+          <option value="ignored">Ignored</option>
+        </select>
+        <select class="inp" id="leads-source" onchange="loadLeads(1)" style="max-width:150px">
+          <option value="all">All Sources</option>
+          <option value="google_maps">Google Maps</option>
+          <option value="instagram">Instagram</option>
+          <option value="manual">Manual</option>
+        </select>
+        <button class="btn btn-surf" onclick="loadLeads(1)">↺ Refresh</button>
+      </div>
+      <div id="msg-leads" class="msg"></div>
+      <div class="tbl-wrap">
+        <table id="leads-table">
+          <thead><tr>
+            <th>Name</th><th class="hide-mobile">Category</th><th class="hide-mobile">City</th>
+            <th>Contact</th><th class="hide-mobile">Source</th><th>Status</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="leads-tbody">
+            <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="leads-pagination" style="display:flex;justify-content:center;gap:10px;margin-top:16px"></div>
+    </div>
+
+    <!-- Sub: Lead Events -->
+    <div id="leads-sub-events-pane" style="display:none">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <select class="inp" id="le-status-filter" onchange="loadLeadEvents()" style="max-width:160px">
+          <option value="pending">⏳ Pending</option>
+          <option value="approved">✅ Approved</option>
+          <option value="rejected">❌ Rejected</option>
+          <option value="all">All</option>
+        </select>
+        <button class="btn btn-surf" onclick="loadLeadEvents()">↺ Refresh</button>
+        <button class="btn btn-or" onclick="openAddLeadEvent()" style="margin-left:auto">+ Add Lead Event</button>
+      </div>
+      <div id="le-list"><div style="padding:40px;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- Lead Event Preview Modal -->
+  <div id="le-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;overflow-y:auto;padding:20px 12px">
+    <div style="max-width:500px;margin:0 auto;background:var(--bg);border:1px solid var(--border);border-radius:20px;overflow:hidden">
+      <div id="le-modal-img" style="width:100%;height:200px;background:var(--surf);position:relative">
+        <img id="le-modal-img-tag" src="" style="width:100%;height:100%;object-fit:cover;display:none"/>
+        <div id="le-modal-img-placeholder" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:3rem">🎟</div>
+      </div>
+      <div style="padding:20px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px">
+          <div id="le-modal-title" style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.03em;line-height:1.1"></div>
+          <div id="le-modal-genre" style="font-size:.68rem;padding:3px 10px;border-radius:50px;background:rgba(255,92,0,.15);color:var(--or);border:1px solid rgba(255,92,0,.3);white-space:nowrap;margin-top:6px"></div>
+        </div>
+        <div id="le-modal-meta" style="font-size:.78rem;color:var(--mu);margin-bottom:10px;line-height:1.8"></div>
+        <div id="le-modal-desc" style="font-size:.82rem;color:var(--mu2);line-height:1.6;margin-bottom:14px"></div>
+        <div id="le-modal-lead" style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:14px;font-size:.78rem">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.72rem;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Lead / Organiser</div>
+          <div id="le-modal-lead-body"></div>
+        </div>
+        <div id="le-modal-source" style="margin-bottom:16px"></div>
+        <!-- Admin note input -->
+        <textarea id="le-modal-note" class="inp" placeholder="Admin note (optional)…" rows="2" style="margin-bottom:12px;font-family:inherit;resize:vertical"></textarea>
+        <div id="le-modal-actions" style="display:flex;gap:10px">
+          <button onclick="approveLeadEvent()" style="flex:1;padding:13px;background:linear-gradient(135deg,#00e5ff,#00b8cc);border:none;border-radius:50px;color:#000;font-family:'Syne',sans-serif;font-weight:800;font-size:.85rem;cursor:pointer">✅ Post to Pulsify</button>
+          <button onclick="rejectLeadEvent()" style="flex:1;padding:13px;background:rgba(255,45,120,.12);border:1.5px solid rgba(255,45,120,.4);border-radius:50px;color:var(--pk);font-family:'Syne',sans-serif;font-weight:800;font-size:.85rem;cursor:pointer">✕ Reject</button>
+        </div>
+        <button onclick="closeLeModal()" style="width:100%;margin-top:10px;padding:11px;background:transparent;border:1px solid var(--border);border-radius:50px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.8rem;cursor:pointer">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Lead Event Modal -->
+  <div id="le-add-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;overflow-y:auto;padding:20px 12px">
+    <div style="max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:24px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;margin-bottom:16px">Add Lead Event</div>
+      <select class="inp" id="le-add-lead" style="margin-bottom:10px"><option value="">Select Lead…</option></select>
+      <input class="inp" id="le-add-title" placeholder="Event title *" maxlength="120"/>
+      <textarea class="inp" id="le-add-desc" placeholder="Description" rows="3" style="font-family:inherit;resize:vertical"></textarea>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <input class="inp" id="le-add-date" type="date" style="color-scheme:dark"/>
+        <input class="inp" id="le-add-time" type="time" style="color-scheme:dark"/>
+      </div>
+      <input class="inp" id="le-add-venue" placeholder="Venue name"/>
+      <input class="inp" id="le-add-city" placeholder="City"/>
+      <select class="inp" id="le-add-genre">
+        <option value="nightlife">Nightlife</option><option value="amapiano">Amapiano</option>
+        <option value="gqom">Gqom</option><option value="house">House</option>
+        <option value="afrobeats">Afrobeats</option><option value="gospel">Gospel</option>
+        <option value="comedy">Comedy</option><option value="jazz">Jazz</option>
+        <option value="kwaito">Kwaito</option><option value="festival">Festival</option>
+        <option value="hiphop">Hip Hop</option><option value="rnb">R&amp;B</option>
+        <option value="outdoor">Outdoor</option><option value="wellness">Wellness</option>
+        <option value="theatre">Theatre</option><option value="food">Food</option>
       </select>
-      <select class="inp" id="leads-source" onchange="loadLeads(1)" style="max-width:150px">
-        <option value="all">All Sources</option>
-        <option value="google_maps">Google Maps</option>
-        <option value="instagram">Instagram</option>
-        <option value="manual">Manual</option>
-      </select>
-      <button class="btn btn-surf" onclick="loadLeads(1)">↺ Refresh</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--mu2);padding:10px 0"><input type="checkbox" id="le-add-free" onchange="document.getElementById('le-add-price').style.display=this.checked?'none':'block'"/> Free Event</label>
+        <input class="inp" id="le-add-price" type="number" placeholder="Min price (R)" min="0"/>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <div style="flex:1;position:relative">
+          <button type="button" onclick="document.getElementById('le-add-img-file').click()" class="btn btn-surf" style="width:100%">📷 Choose Image</button>
+          <input type="file" id="le-add-img-file" accept="image/*" style="display:none" onchange="previewLeImg(this)"/>
+          <input type="hidden" id="le-add-img"/>
+          <div id="le-add-img-preview" style="display:none;margin-top:6px;border-radius:8px;overflow:hidden;max-height:80px"><img id="le-add-img-thumb" style="width:100%;object-fit:cover"/></div>
+        </div>
+      </div>
+      <input class="inp" id="le-add-src-url" placeholder="Source URL (Instagram, website…)" style="margin-top:8px"/>
+      <input class="inp" id="le-add-organiser" placeholder="Organiser name"/>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button onclick="submitLeadEvent()" class="btn btn-or" style="flex:1;padding:13px">Save Event</button>
+        <button onclick="closeLeAddModal()" class="btn btn-surf" style="padding:13px 20px">Cancel</button>
+      </div>
     </div>
-
-    <div id="msg-leads" class="msg"></div>
-
-    <div class="tbl-wrap">
-      <table id="leads-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Category</th>
-            <th>City</th>
-            <th>Contact</th>
-            <th>Source</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="leads-tbody">
-          <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div id="leads-pagination" style="display:flex;justify-content:center;gap:10px;margin-top:16px"></div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
@@ -1364,6 +1452,7 @@ function renderLeadsTable(leads) {
         <div class="user-actions">
           <button class="btn btn-li" style="padding:5px 10px;font-size:.68rem" onclick="advanceLead('${l.id}','${LEAD_STATUS_NEXT[l.status] || 'contacted'}')">→ ${LEAD_STATUS_LABELS[LEAD_STATUS_NEXT[l.status] || 'contacted']}</button>
           ${l.status !== 'ignored' ? `<button class="btn btn-pk" style="padding:5px 10px;font-size:.68rem" onclick="advanceLead('${l.id}','ignored')">🚫</button>` : ''}
+          <button class="btn btn-or" style="padding:5px 10px;font-size:.68rem" onclick="quickAddEvent('${l.id}','${esc(l.name||'')}')">🎟 +Event</button>
         </div>
       </td>
     </tr>`;
@@ -1393,6 +1482,220 @@ async function advanceLead(id, newStatus) {
 }
 
 function showLeadsMsg(m, t) { const el=document.getElementById('msg-leads'); if(!el) return; el.textContent=m; el.className='msg show msg-'+(t==='err'?'err':'ok'); }
+
+async function quickAddEvent(leadId, leadName) {
+  await openAddLeadEvent();
+  // Pre-select the lead
+  const sel = document.getElementById('le-add-lead');
+  for (let o of sel.options) { if (o.value === leadId) { o.selected = true; break; } }
+  if (leadName) document.getElementById('le-add-organiser').value = leadName;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+/* LEAD EVENTS                                                                       */
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+let _currentLeId = null;
+let _leadsList = [];
+
+function switchLeadsSub(tab) {
+  document.getElementById('leads-sub-leads-pane').style.display  = tab === 'leads'  ? '' : 'none';
+  document.getElementById('leads-sub-events-pane').style.display = tab === 'events' ? '' : 'none';
+  const leBtn = document.getElementById('leads-sub-leads');
+  const evBtn = document.getElementById('leads-sub-events');
+  if (tab === 'leads') { leBtn.className='btn btn-or'; evBtn.className='btn btn-surf'; }
+  else { evBtn.className='btn btn-or'; leBtn.className='btn btn-surf'; loadLeadEvents(); }
+}
+
+async function loadLeadEvents() {
+  const status = document.getElementById('le-status-filter')?.value || 'pending';
+  document.getElementById('le-list').innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div>';
+  try {
+    const r = await fetch(`/api/admin/lead-events?status=${status}`, { headers: { Authorization: 'Bearer ' + adminToken } });
+    const j = await safeJson(r);
+    if (!r.ok) { document.getElementById('le-list').innerHTML = `<div style="padding:20px;color:var(--pk);font-size:.82rem">Error: ${esc(j.error||'Failed to load')}</div>`; return; }
+    renderLeadEvents(j.events || []);
+    // update pending badge
+    const badge = document.getElementById('le-pending-badge');
+    if (status === 'pending' && j.events?.length) { badge.textContent = j.events.length; badge.style.display = 'inline'; }
+    else { badge.style.display = 'none'; }
+  } catch(e) { document.getElementById('le-list').innerHTML = `<div style="padding:20px;color:var(--pk);font-size:.82rem">Network error: ${esc(e.message)}</div>`; }
+}
+
+function renderLeadEvents(events) {
+  const el = document.getElementById('le-list');
+  if (!events.length) { el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu);font-size:.82rem">No lead events found.</div>'; return; }
+  const statusIcon = { pending:'⏳', approved:'✅', rejected:'❌' };
+  el.innerHTML = events.map(ev => {
+    const lead = ev.scraped_leads || {};
+    const dateStr = ev.event_date ? new Date(ev.event_date + 'T00:00:00').toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'}) : 'TBC';
+    return `<div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start">
+      ${ev.image_url ? `<img src="${esc(ev.image_url)}" style="width:64px;height:64px;border-radius:10px;object-fit:cover;flex-shrink:0"/>` : `<div style="width:64px;height:64px;border-radius:10px;background:rgba(255,92,0,.15);display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0">🎟</div>`}
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(ev.title)}</div>
+        <div style="font-size:.72rem;color:var(--mu);margin-top:2px">📅 ${dateStr} &nbsp;·&nbsp; 📍 ${esc(ev.venue_city||'TBC')} &nbsp;·&nbsp; 🎵 ${esc(ev.genre||'—')}</div>
+        <div style="font-size:.7rem;color:var(--mu2);margin-top:2px">Lead: <strong>${esc(lead.name||'—')}</strong>${lead.city ? ' · '+esc(lead.city) : ''}</div>
+        <div style="margin-top:6px;font-size:.7rem;color:${ev.status==='approved'?'#c6ff4a':ev.status==='rejected'?'var(--pk)':'var(--cy)'}">${statusIcon[ev.status]||''} ${ev.status}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+        <button onclick="openLeModal(${JSON.stringify(ev).replace(/'/g,"\\'")})" style="padding:7px 14px;background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.3);border-radius:50px;color:var(--cy);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer;white-space:nowrap">👁 Preview</button>
+        ${ev.status === 'approved' && ev.published_event_id ? `<div style="font-size:.65rem;color:var(--mu);text-align:center">Live ✓</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openLeModal(ev) {
+  _currentLeId = ev.id;
+  const modal = document.getElementById('le-modal');
+  // Image
+  const imgTag = document.getElementById('le-modal-img-tag');
+  const imgPh  = document.getElementById('le-modal-img-placeholder');
+  if (ev.image_url) { imgTag.src = ev.image_url; imgTag.style.display='block'; imgPh.style.display='none'; }
+  else { imgTag.style.display='none'; imgPh.style.display='flex'; }
+  // Core fields
+  document.getElementById('le-modal-title').textContent = ev.title || 'Untitled';
+  document.getElementById('le-modal-genre').textContent = ev.genre || '—';
+  const dateStr = ev.event_date ? new Date(ev.event_date+'T00:00:00').toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'long',year:'numeric'}) : 'Date TBC';
+  const timeStr = ev.event_time ? ev.event_time.slice(0,5) : '';
+  const priceStr = ev.is_free ? 'Free entry' : ev.price_min ? `From R${ev.price_min}` : 'Price TBC';
+  document.getElementById('le-modal-meta').innerHTML = `
+    📅 ${dateStr}${timeStr?' · 🕐 '+timeStr:''}<br>
+    📍 ${ev.venue_name||''} ${ev.venue_city ? '· '+ev.venue_city : ''}<br>
+    🎟 ${priceStr}`;
+  document.getElementById('le-modal-desc').textContent = ev.description || 'No description provided.';
+  // Lead info
+  const lead = ev.scraped_leads || {};
+  const socials = [
+    lead.instagram ? `<a href="https://instagram.com/${lead.instagram.replace('@','')}" target="_blank" style="color:var(--pk)">📸 Instagram</a>` : '',
+    lead.facebook  ? `<a href="${esc(lead.facebook)}" target="_blank" style="color:var(--cy)">👤 Facebook</a>` : '',
+    lead.website   ? `<a href="${esc(lead.website)}" target="_blank" style="color:var(--or)">🌐 Website</a>` : '',
+  ].filter(Boolean).join(' &nbsp; ');
+  document.getElementById('le-modal-lead-body').innerHTML = `
+    <strong>${esc(lead.name||ev.organiser_name||'—')}</strong>${lead.category ? ' · '+esc(lead.category) : ''}${lead.city?' · '+esc(lead.city):''}<br>
+    ${lead.phone ? '📞 '+esc(lead.phone)+' &nbsp; ' : ''}${lead.email ? '✉️ <a href="mailto:'+esc(lead.email)+'" style="color:var(--or)">'+esc(lead.email)+'</a>' : ''}
+    ${socials ? '<br>'+socials : ''}`;
+  // Source URL
+  document.getElementById('le-modal-source').innerHTML = ev.source_url
+    ? `<a href="${esc(ev.source_url)}" target="_blank" style="font-size:.76rem;color:var(--cy)">🔗 View original source →</a>` : '';
+  // Actions visibility
+  const actions = document.getElementById('le-modal-actions');
+  actions.style.display = ev.status === 'pending' ? 'flex' : 'none';
+  document.getElementById('le-modal-note').value = ev.admin_notes || '';
+  modal.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLeModal() {
+  document.getElementById('le-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  _currentLeId = null;
+}
+
+async function approveLeadEvent() {
+  if (!_currentLeId) return;
+  const note = document.getElementById('le-modal-note')?.value.trim() || null;
+  try {
+    const r = await fetch(`/api/admin/lead-events/${_currentLeId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ action: 'approve', admin_notes: note }),
+    });
+    const j = await safeJson(r);
+    if (!r.ok) { alert(j.error || 'Failed to approve'); return; }
+    closeLeModal();
+    showToastAdmin('✅ Event posted to Pulsify!');
+    loadLeadEvents();
+  } catch(e) { alert('Network error: ' + e.message); }
+}
+
+async function rejectLeadEvent() {
+  if (!_currentLeId) return;
+  const note = document.getElementById('le-modal-note')?.value.trim() || null;
+  try {
+    const r = await fetch(`/api/admin/lead-events/${_currentLeId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ action: 'reject', admin_notes: note }),
+    });
+    if (!r.ok) { const j = await safeJson(r); alert(j.error || 'Failed'); return; }
+    closeLeModal();
+    showToastAdmin('Event rejected.');
+    loadLeadEvents();
+  } catch(e) { alert('Network error: ' + e.message); }
+}
+
+function showToastAdmin(msg) {
+  let t = document.getElementById('admin-toast');
+  if (!t) { t = document.createElement('div'); t.id='admin-toast'; t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 20px;border-radius:50px;font-size:.82rem;z-index:99999;opacity:0;transition:opacity .3s'; document.body.appendChild(t); }
+  t.textContent = msg; t.style.opacity = '1';
+  setTimeout(() => { t.style.opacity = '0'; }, 3000);
+}
+
+async function openAddLeadEvent() {
+  // Load leads into the select
+  const sel = document.getElementById('le-add-lead');
+  if (sel.options.length <= 1) {
+    try {
+      const r = await fetch('/api/leads?limit=100', { headers: { Authorization: 'Bearer ' + adminToken } });
+      const j = await safeJson(r);
+      (j.leads || []).forEach(l => { const o = document.createElement('option'); o.value = l.id; o.textContent = l.name + (l.city ? ' ('+l.city+')' : ''); sel.appendChild(o); });
+    } catch(e) {}
+  }
+  document.getElementById('le-add-modal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLeAddModal() {
+  document.getElementById('le-add-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function previewLeImg(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('le-add-img-thumb').src = e.target.result;
+    document.getElementById('le-add-img-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+  // Upload to storage
+  try {
+    const url = await uploadToStorage(file, 'lead-events');
+    document.getElementById('le-add-img').value = url;
+  } catch(e) { console.error('upload', e); }
+}
+
+async function submitLeadEvent() {
+  const leadId = document.getElementById('le-add-lead').value;
+  const title  = document.getElementById('le-add-title').value.trim();
+  if (!leadId) { alert('Select a lead'); return; }
+  if (!title)  { alert('Title is required'); return; }
+  const body = {
+    title, description: document.getElementById('le-add-desc').value.trim()||null,
+    genre: document.getElementById('le-add-genre').value,
+    event_date: document.getElementById('le-add-date').value||null,
+    event_time: document.getElementById('le-add-time').value||null,
+    venue_name: document.getElementById('le-add-venue').value.trim()||null,
+    venue_city: document.getElementById('le-add-city').value.trim()||null,
+    image_url: document.getElementById('le-add-img').value||null,
+    source_url: document.getElementById('le-add-src-url').value.trim()||null,
+    organiser_name: document.getElementById('le-add-organiser').value.trim()||null,
+    is_free: document.getElementById('le-add-free').checked,
+    price_min: document.getElementById('le-add-price').value||null,
+  };
+  try {
+    const r = await fetch(`/api/leads/${leadId}/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify(body),
+    });
+    const j = await safeJson(r);
+    if (!r.ok) { alert(j.error || 'Failed'); return; }
+    closeLeAddModal();
+    showToastAdmin('Event added — review it in Lead Events');
+    switchLeadsSub('events');
+  } catch(e) { alert('Network error: ' + e.message); }
+}
 
 /* ══════════════════════════════════════════════════════════════════════════════════ */
 /* EVENT APPROVAL */

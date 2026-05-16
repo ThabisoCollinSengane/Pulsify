@@ -841,8 +841,105 @@ module.exports = async (req, res) => {
       return res.status(200).json({ lead: data, success: true });
     }
 
+    /* ─── GET /leads/:id/events ─── list events for one lead ─ */
+    const leadEventsListMatch = url.match(/^\/leads\/([^/]+)\/events$/);
+    if (leadEventsListMatch && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const token = tokenFrom(req);
+      const { data, error } = await sbAs(token).from('lead_events')
+        .select('*').eq('lead_id', leadEventsListMatch[1]).order('created_at', { ascending: false });
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ events: data || [] });
+    }
 
-    // PATCH /admin/users/:id - Update user (suspend/activate, change role)
+    /* ─── POST /leads/:id/events ─── add event to lead ──────── */
+    if (leadEventsListMatch && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const token = tokenFrom(req);
+      const { title, description, genre, event_date, event_time, venue_name, venue_city, venue_address, image_url, source_url, organiser_name, is_free, price_min } = req.body || {};
+      if (!title) return res.status(400).json({ error: 'title required' });
+      const { data, error } = await sbAs(token).from('lead_events').insert({
+        lead_id: leadEventsListMatch[1], title, description: description || null,
+        genre: genre || 'nightlife', event_date: event_date || null, event_time: event_time || null,
+        venue_name: venue_name || null, venue_city: venue_city || null, venue_address: venue_address || null,
+        image_url: image_url || null, source_url: source_url || null,
+        organiser_name: organiser_name || null, is_free: !!is_free,
+        price_min: price_min || null, status: 'pending',
+      }).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(201).json({ event: data });
+    }
+
+    /* ─── GET /admin/lead-events ─── all pending lead events ── */
+    if (url === '/admin/lead-events' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const token = tokenFrom(req);
+      const status = q.status || 'pending';
+      let query = sbAs(token).from('lead_events')
+        .select('*, scraped_leads(id, name, category, city, email, phone, instagram, facebook, website)')
+        .order('created_at', { ascending: false });
+      if (status !== 'all') query = query.eq('status', status);
+      const { data, error } = await query;
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ events: data || [] });
+    }
+
+    /* ─── PATCH /admin/lead-events/:id ─── approve/reject ───── */
+    const leadEventMatch = url.match(/^\/admin\/lead-events\/([^/]+)$/);
+    if (leadEventMatch && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const token = tokenFrom(req);
+      const leId = leadEventMatch[1];
+      const { action, admin_notes } = req.body || {};
+
+      if (action === 'reject') {
+        const { error } = await sbAs(token).from('lead_events')
+          .update({ status: 'rejected', admin_notes: admin_notes || null, updated_at: new Date().toISOString() })
+          .eq('id', leId);
+        if (error) return res.status(400).json({ error: error.message });
+        await logAdminAction(auth.user.id, auth.profile.display_name || 'Admin', 'lead_event_reject', leId, null, { admin_notes });
+        return res.status(200).json({ success: true });
+      }
+
+      if (action === 'approve') {
+        // Fetch the lead event + lead info
+        const { data: le } = await sbAs(token).from('lead_events')
+          .select('*, scraped_leads(name, city)').eq('id', leId).single();
+        if (!le) return res.status(404).json({ error: 'Lead event not found' });
+
+        // Publish to events table
+        const eventId = 'lead_' + leId.replace(/-/g, '').slice(0, 16);
+        const { error: evErr } = await sbAs(token).from('events').upsert({
+          id: eventId, source: 'lead', name: le.title,
+          description: le.description || null, organiser_name: le.organiser_name || le.scraped_leads?.name || null,
+          genre: le.genre || 'nightlife', status: 'onsale',
+          date_local: le.event_date || null, time_local: le.event_time || null,
+          venue_name: le.venue_name || null, venue_city: le.venue_city || le.scraped_leads?.city || null,
+          venue_address: le.venue_address || null,
+          image_url: le.image_url || null, is_free: le.is_free || false,
+          price_min: le.price_min || null, external_url: le.source_url || null,
+          hype_score: 65, is_active: true, is_frontline: false,
+          like_count: 0, comment_count: 0, approved: true,
+        }, { onConflict: 'id' });
+        if (evErr) return res.status(400).json({ error: evErr.message });
+
+        // Mark lead event as approved
+        await sbAs(token).from('lead_events')
+          .update({ status: 'approved', published_event_id: eventId, admin_notes: admin_notes || null, updated_at: new Date().toISOString() })
+          .eq('id', leId);
+
+        await logAdminAction(auth.user.id, auth.profile.display_name || 'Admin', 'lead_event_approve', leId, le.title, { published_event_id: eventId });
+        return res.status(200).json({ success: true, published_event_id: eventId });
+      }
+
+      return res.status(400).json({ error: 'action must be approve or reject' });
+    }
+
+
     const adminUserMatch = url.match(/^\/admin\/users\/([^/]+)$/);
     if (adminUserMatch && req.method === 'PATCH') {
       const auth = await authUser(req);
