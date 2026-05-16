@@ -1638,6 +1638,140 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, total_points: updated?.total_points });
     }
 
+    // GET /squads/invites — pending invites for current user
+    if (url === '/squads/invites' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { data: invites } = await sb()
+        .from('squad_invites')
+        .select('id, squad_id, inviter_id, status, created_at, squads(id, name, avatar_url), profiles!squad_invites_inviter_id_fkey(display_name, username, avatar_url)')
+        .eq('invitee_id', auth.user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+      return res.status(200).json({ invites: invites || [] });
+    }
+
+    const squadInviteActionMatch = url.match(/^\/squads\/invites\/([^/]+)\/(accept|reject)$/);
+
+    // POST /squads/invites/:id/accept
+    if (squadInviteActionMatch && squadInviteActionMatch[2] === 'accept' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const inviteId = squadInviteActionMatch[1];
+      const { data: invite } = await sb().from('squad_invites').select('id, squad_id, status').eq('id', inviteId).eq('invitee_id', auth.user.id).single();
+      if (!invite) return res.status(404).json({ error: 'Invite not found' });
+      if (invite.status !== 'pending') return res.status(400).json({ error: 'Invite already processed' });
+      await sb().from('squad_invites').delete().eq('id', inviteId);
+      const { error } = await sb().from('squad_members').insert({ squad_id: invite.squad_id, user_id: auth.user.id, role: 'member' });
+      if (error && !error.message.includes('duplicate')) return res.status(400).json({ error: error.message });
+      const { data: squad } = await sb().from('squads').select('member_count').eq('id', invite.squad_id).single();
+      await sb().from('squads').update({ member_count: (squad?.member_count || 1) + 1 }).eq('id', invite.squad_id);
+      return res.status(200).json({ ok: true });
+    }
+
+    // POST /squads/invites/:id/reject
+    if (squadInviteActionMatch && squadInviteActionMatch[2] === 'reject' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const inviteId = squadInviteActionMatch[1];
+      await sb().from('squad_invites').delete().eq('id', inviteId).eq('invitee_id', auth.user.id);
+      return res.status(200).json({ ok: true });
+    }
+
+    const squadPlanRsvpMatch = url.match(/^\/squads\/([^/]+)\/plans\/([^/]+)\/rsvp$/);
+    const squadPlanDetailMatch = url.match(/^\/squads\/([^/]+)\/plans\/([^/]+)$/);
+    const squadPlansMatch = url.match(/^\/squads\/([^/]+)\/plans$/);
+
+    // POST /squads/:id/plans/:planId/rsvp
+    if (squadPlanRsvpMatch && req.method === 'POST') {
+      const token = tokenFrom(req);
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const [, , planId] = squadPlanRsvpMatch;
+      const { status: rsvpStatus } = req.body || {};
+      if (!['going','maybe','not_going'].includes(rsvpStatus)) return res.status(400).json({ error: 'status must be going|maybe|not_going' });
+      const { error } = await sbAs(token).from('squad_plan_rsvps').upsert({ plan_id: planId, user_id: auth.user.id, status: rsvpStatus }, { onConflict: 'plan_id,user_id' });
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ ok: true });
+    }
+
+    // PATCH /squads/:id/plans/:planId — update plan (creator only)
+    if (squadPlanDetailMatch && req.method === 'PATCH') {
+      const token = tokenFrom(req);
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const [, , planId] = squadPlanDetailMatch;
+      const { title, notes, plan_date, plan_time, location_name, event_id } = req.body || {};
+      const updates = {};
+      if (title) updates.title = title.trim();
+      if (notes !== undefined) updates.notes = notes;
+      if (plan_date) updates.plan_date = plan_date;
+      if (plan_time !== undefined) updates.plan_time = plan_time || null;
+      if (location_name !== undefined) updates.location_name = location_name;
+      if (event_id !== undefined) updates.event_id = event_id || null;
+      const { error } = await sbAs(token).from('squad_plans').update(updates).eq('id', planId).eq('creator_id', auth.user.id);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ ok: true });
+    }
+
+    // DELETE /squads/:id/plans/:planId — delete plan (creator only)
+    if (squadPlanDetailMatch && req.method === 'DELETE') {
+      const token = tokenFrom(req);
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const [, , planId] = squadPlanDetailMatch;
+      const { error } = await sbAs(token).from('squad_plans').delete().eq('id', planId).eq('creator_id', auth.user.id);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ ok: true });
+    }
+
+    // GET /squads/:id/plans — list all plans with RSVPs
+    if (squadPlansMatch && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const squadId = squadPlansMatch[1];
+      const { data: membership } = await sb().from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
+      if (!membership) return res.status(403).json({ error: 'Not a squad member' });
+      const { data: plans } = await sb()
+        .from('squad_plans')
+        .select('id, title, notes, plan_date, plan_time, location_name, event_id, creator_id, created_at, profiles!squad_plans_creator_id_fkey(display_name, avatar_url)')
+        .eq('squad_id', squadId)
+        .order('plan_date', { ascending: true });
+      const planIds = (plans || []).map(p => p.id);
+      let rsvpMap = {};
+      if (planIds.length > 0) {
+        const { data: rsvps } = await sb().from('squad_plan_rsvps').select('plan_id, user_id, status').in('plan_id', planIds);
+        (rsvps || []).forEach(r => { if (!rsvpMap[r.plan_id]) rsvpMap[r.plan_id] = []; rsvpMap[r.plan_id].push(r); });
+      }
+      const result = (plans || []).map(p => ({ ...p, rsvps: rsvpMap[p.id] || [], my_rsvp: (rsvpMap[p.id] || []).find(r => r.user_id === auth.user.id)?.status || null }));
+      return res.status(200).json({ plans: result });
+    }
+
+    // POST /squads/:id/plans — create a plan + notify members
+    if (squadPlansMatch && req.method === 'POST') {
+      const token = tokenFrom(req);
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const squadId = squadPlansMatch[1];
+      const { title, notes, plan_date, plan_time, location_name, event_id } = req.body || {};
+      if (!title?.trim() || !plan_date) return res.status(400).json({ error: 'title and plan_date are required' });
+      const { data: membership } = await sb().from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
+      if (!membership) return res.status(403).json({ error: 'Not a squad member' });
+      const { data: plan, error } = await sbAs(token).from('squad_plans')
+        .insert({ squad_id: squadId, creator_id: auth.user.id, title: title.trim(), notes: notes || null, plan_date, plan_time: plan_time || null, location_name: location_name || null, event_id: event_id || null })
+        .select('id, title, plan_date').single();
+      if (error) return res.status(400).json({ error: error.message });
+      const { data: members } = await sb().from('squad_members').select('user_id').eq('squad_id', squadId).neq('user_id', auth.user.id);
+      const { data: planner } = await sb().from('profiles').select('display_name').eq('id', auth.user.id).single();
+      const plannerName = planner?.display_name || 'Someone';
+      const dateStr = new Date(plan_date + 'T00:00:00').toLocaleDateString('en-ZA', { month: 'short', day: 'numeric' });
+      if (members && members.length > 0) {
+        const notifs = members.map(m => ({ user_id: m.user_id, type: 'squad_plan', from_user_id: auth.user.id, from_display_name: plannerName, entity_id: plan.id, entity_type: 'squad_plan', message: `${plannerName} planned "${title.trim()}" for ${dateStr}`, data: { squad_id: squadId, plan_id: plan.id } }));
+        await sb().from('notifications').insert(notifs);
+      }
+      return res.status(201).json({ plan });
+    }
+
     const squadDetailMatch = url.match(/^\/squads\/([^/]+)$/);
     const squadActionMatch = url.match(/^\/squads\/([^/]+)\/(join|leave|invite)$/);
 
@@ -1678,7 +1812,7 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
-    // POST /squads/:id/invite — add a follower to squad
+    // POST /squads/:id/invite — send invite (pending, notifies invitee)
     if (squadActionMatch && squadActionMatch[2] === 'invite' && req.method === 'POST') {
       const token = tokenFrom(req);
       const auth = await authUser(req);
@@ -1688,14 +1822,16 @@ module.exports = async (req, res) => {
       if (!inviteeId) return res.status(400).json({ error: 'user_id required' });
       const { data: membership } = await sb().from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
       if (!membership) return res.status(403).json({ error: 'Not a squad member' });
-      // Inviting another user requires service role (RLS only lets users insert their own row).
-      // Falls back to anon if SVC key not set, in which case admin must enable invites manually.
-      const { error } = await sb().from('squad_members').insert({ squad_id: squadId, user_id: inviteeId, role: 'member' });
+      const { data: alreadyMember } = await sb().from('squad_members').select('user_id').eq('squad_id', squadId).eq('user_id', inviteeId).single();
+      if (alreadyMember) return res.status(400).json({ error: 'User is already a member' });
+      const { error } = await sb().from('squad_invites').insert({ squad_id: squadId, inviter_id: auth.user.id, invitee_id: inviteeId, status: 'pending' });
       if (error) return res.status(400).json({ error: error.message });
-      const { data: squad } = await sb().from('squads').select('member_count').eq('id', squadId).single();
-      await sb().from('squads').update({ member_count: (squad?.member_count || 1) + 1 }).eq('id', squadId);
-      await sbAs(token).from('squad_points').insert({ squad_id: squadId, user_id: auth.user.id, activity_type: 'invite', points: 5 });
-      await sbAs(token).from('squad_activity').insert({ squad_id: squadId, user_id: auth.user.id, activity_type: 'invite', description: 'Invited a friend', data: { invitee_id: inviteeId } });
+      const [{ data: squad }, { data: inviter }] = await Promise.all([
+        sb().from('squads').select('name').eq('id', squadId).single(),
+        sb().from('profiles').select('display_name').eq('id', auth.user.id).single()
+      ]);
+      await sb().from('notifications').insert({ user_id: inviteeId, type: 'squad_invite', from_user_id: auth.user.id, from_display_name: inviter?.display_name || 'Someone', entity_id: squadId, entity_type: 'squad', message: `${inviter?.display_name || 'Someone'} invited you to join ${squad?.name || 'a squad'}`, data: { squad_id: squadId } });
+      await sbAs(token).from('squad_points').insert({ squad_id: squadId, user_id: auth.user.id, activity_type: 'invite', points: 5 }).catch(() => {});
       return res.status(200).json({ ok: true });
     }
 

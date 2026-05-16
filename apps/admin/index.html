@@ -565,7 +565,22 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">System Settings</div>
       <div style="font-size:.82rem;color:var(--mu2)">Configure system-wide settings</div>
     </div>
-    <div style="padding:40px;text-align:center;color:var(--mu)">System settings coming soon…</div>
+    <div style="max-width:480px">
+      <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:12px">Quicket Events</div>
+      <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px">
+        <div style="font-size:.88rem;font-weight:700;margin-bottom:4px">Seed Events from Quicket API</div>
+        <div style="font-size:.76rem;color:var(--mu);margin-bottom:14px;line-height:1.5">Fetches upcoming SA events (amapiano, gqom, house, etc.) across major cities and upserts them to the events table. Safe to run multiple times.</div>
+        <div id="seed-result" style="display:none;font-size:.76rem;padding:8px 12px;border-radius:8px;margin-bottom:12px"></div>
+        <button onclick="runQuicketSeed()" id="seed-btn" class="btn btn-or" style="width:100%">🎟 Seed Quicket Events Now</button>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:12px">Mock Data</div>
+      <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:16px">
+        <div style="font-size:.88rem;font-weight:700;margin-bottom:4px">Delete Manual / Mock Events</div>
+        <div style="font-size:.76rem;color:var(--mu);margin-bottom:14px;line-height:1.5">Removes all events with source='manual'. Only do this once Quicket events are confirmed live.</div>
+        <div id="delete-result" style="display:none;font-size:.76rem;padding:8px 12px;border-radius:8px;margin-bottom:12px"></div>
+        <button onclick="deleteMockEvents()" id="delete-mock-btn" class="btn btn-pk" style="width:100%">🗑 Delete Mock Events</button>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -1729,6 +1744,46 @@ async function _patchAdminPromo(id, body) {
     if (msg) { msg.textContent = e.message; msg.className = 'msg show msg-err'; setTimeout(() => msg.classList.remove('show'), 4000); }
   }
 }
+async function runQuicketSeed() {
+  const btn = document.getElementById('seed-btn');
+  const res = document.getElementById('seed-result');
+  btn.disabled = true; btn.textContent = '⏳ Seeding…';
+  res.style.display = 'none';
+  try {
+    const r = await fetch('https://cjzewfvtdayjgjdpdmln.supabase.co/functions/v1/seed-quicket-events?secret=pulsify_seed_2026');
+    const d = await r.json();
+    if (r.ok) {
+      res.style.display = 'block'; res.style.background = 'rgba(198,255,74,.1)'; res.style.border = '1px solid rgba(198,255,74,.3)'; res.style.color = '#c6ff4a';
+      res.textContent = `✅ Seeded ${d.seeded||0} events, deleted ${d.deleted||0} expired.`;
+    } else {
+      res.style.display = 'block'; res.style.background = 'rgba(255,45,120,.1)'; res.style.border = '1px solid rgba(255,45,120,.3)'; res.style.color = 'var(--pk)';
+      res.textContent = `Error: ${d.error || JSON.stringify(d)}`;
+    }
+  } catch(e) {
+    res.style.display = 'block'; res.style.background = 'rgba(255,45,120,.1)'; res.style.border = '1px solid rgba(255,45,120,.3)'; res.style.color = 'var(--pk)';
+    res.textContent = 'Network error: ' + e.message;
+  }
+  btn.disabled = false; btn.textContent = '🎟 Seed Quicket Events Now';
+}
+
+async function deleteMockEvents() {
+  const btn = document.getElementById('delete-mock-btn');
+  const res = document.getElementById('delete-result');
+  if (!confirm('This will permanently delete all events with source="manual". Continue?')) return;
+  btn.disabled = true; btn.textContent = '⏳ Deleting…';
+  res.style.display = 'none';
+  try {
+    const { error, count } = await sb.from('events').delete({ count: 'exact' }).eq('source', 'manual');
+    if (error) throw new Error(error.message);
+    res.style.display = 'block'; res.style.background = 'rgba(198,255,74,.1)'; res.style.border = '1px solid rgba(198,255,74,.3)'; res.style.color = '#c6ff4a';
+    res.textContent = `✅ Deleted ${count || 0} mock events.`;
+  } catch(e) {
+    res.style.display = 'block'; res.style.background = 'rgba(255,45,120,.1)'; res.style.border = '1px solid rgba(255,45,120,.3)'; res.style.color = 'var(--pk)';
+    res.textContent = 'Error: ' + e.message;
+  }
+  btn.disabled = false; btn.textContent = '🗑 Delete Mock Events';
+}
+
 async function deleteAdminPromo(id) {
   if (!confirm('Delete this promotion permanently?')) return;
   try {

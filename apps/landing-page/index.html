@@ -3748,6 +3748,7 @@ async function loadSquads() {
     }
     _mySquads = mySquads;
     renderSquadTabs(mySquads);
+    loadInvites();
     if (mySquads.length) {
       const targetId = _activeSquadTab && mySquads.find(s => s.id === _activeSquadTab) ? _activeSquadTab : mySquads[0].id;
       showSquadTab(targetId);
@@ -3788,94 +3789,300 @@ async function showSquadTab(squadId) {
   }
 }
 
+let _sqCurrentSquad = null;
+let _sqCurrentMembers = [];
+let _sqCurrentIsMember = false;
+
 function renderSquadWorkspace(detail, container) {
   if (!container) return;
-  const { squad, members, activity, goals, isMember } = detail;
+  const { squad, members, isMember } = detail;
   const tmpl = getTemplate(squad.template_type || 'general');
-  const pts = squad.total_points || 0;
-
-  const membersHtml = `<div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin:18px 0 10px">Members (${members.length})</div>
-    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px">
-      ${members.map(m => { const p=m.profiles||{}; const ini=(p.display_name||'?')[0].toUpperCase();
-        return `<div style="display:flex;align-items:center;gap:8px"><div class="sq-member-av">${p.avatar_url?`<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>`:ini}</div><div><div style="font-size:.78rem;font-weight:700">${x(p.display_name||p.username||'?')}</div><div style="font-size:.68rem;color:var(--mu)">${m.role==='admin'?'👑 Admin':'Member'}</div></div></div>`;
-      }).join('')}
-    </div>`;
-
-  const goalsHtml = (goals && goals.length) ? `
-    <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin:18px 0 10px">🎯 Squad Goals</div>
-    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
-      ${goals.map(g => {
-        const pct = Math.min(100, Math.round((g.current / g.target) * 100));
-        const done = g.current >= g.target;
-        return `<div style="background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:10px 12px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <div style="font-size:.76rem;font-weight:600">${done?'✅ ':''}${x(g.label)}</div>
-            <div style="font-size:.7rem;color:var(--mu)">${g.current}/${g.target}</div>
-          </div>
-          <div style="height:5px;background:rgba(255,255,255,.07);border-radius:50px;overflow:hidden">
-            <div style="height:100%;width:${pct}%;background:${done?'var(--li)':'linear-gradient(90deg,#B026FF,#FF5C00)'};border-radius:50px;transition:width .4s"></div>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>` : '';
-
-  const inviteBtn = isMember
-    ? `<button onclick="openSquadInvite('${x(squad.id)}')" style="width:100%;padding:11px;background:rgba(0,229,255,.08);border:1.5px solid rgba(0,229,255,.3);border-radius:50px;color:var(--cy);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;margin-bottom:8px">＋ Invite Friends</button>`
-    : '';
-
-  const actionsHtml = isMember
-    ? `<button onclick="leaveSquad('${x(squad.id)}')" style="width:100%;padding:11px;background:rgba(255,45,120,.1);border:1.5px solid rgba(255,45,120,.3);border-radius:50px;color:var(--pk);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer">Leave Squad</button>`
-    : `<button onclick="joinSquad('${x(squad.id)}')" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer">Join Squad</button>`;
+  _sqCurrentSquad = squad;
+  _sqCurrentMembers = members || [];
+  _sqCurrentIsMember = !!isMember;
 
   container.innerHTML = `
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)">
-      <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,${tmpl.color}22,${tmpl.color}55);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0">${tmpl.icon}</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+      <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,${tmpl.color}22,${tmpl.color}55);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">${tmpl.icon}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(squad.name)}</div>
-        <div style="font-size:.72rem;color:var(--mu)">👥 ${squad.member_count} · ${squad.is_public?'🌍 Public':'🔒 Private'}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.98rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(squad.name)}</div>
+        <div style="font-size:.7rem;color:var(--mu)">👥 ${squad.member_count} · ${squad.is_public?'🌍 Public':'🔒 Private'}</div>
       </div>
     </div>
-    ${squad.description ? `<div style="font-size:.82rem;color:var(--mu2);margin-bottom:14px;line-height:1.5">${x(squad.description)}</div>` : ''}
-    <div style="background:linear-gradient(135deg,rgba(176,38,255,.08),rgba(255,92,0,.05));border:1px solid rgba(176,38,255,.2);border-radius:14px;padding:14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
-      <div>
-        <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu)">Squad Wallet</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;line-height:1;margin-top:2px">⚡ ${pts} pts</div>
-        <div style="font-size:.68rem;color:var(--mu);margin-top:4px">Use these for partner discounts</div>
-      </div>
+    ${squad.description ? `<div style="font-size:.8rem;color:var(--mu2);margin-bottom:12px;line-height:1.5">${x(squad.description)}</div>` : ''}
+    <div style="display:flex;gap:6px;margin-bottom:14px">
+      <button id="sqt-plans" onclick="showSqTab('plans','${x(squad.id)}')" style="flex:1;padding:9px 4px;background:rgba(255,92,0,.15);border:1.5px solid rgba(255,92,0,.35);border-radius:10px;color:var(--or);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer">📅 Plans</button>
+      <button id="sqt-chat" onclick="showSqTab('chat','${x(squad.id)}')" style="flex:1;padding:9px 4px;background:transparent;border:1.5px solid var(--border);border-radius:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer">💬 Chat</button>
+      <button id="sqt-members" onclick="showSqTab('members','${x(squad.id)}')" style="flex:1;padding:9px 4px;background:transparent;border:1.5px solid var(--border);border-radius:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer">👥 Members</button>
     </div>
-    ${goalsHtml}${membersHtml}${inviteBtn}${actionsHtml}`;
+    <div id="sq-tab-plans"></div>
+    <div id="sq-tab-chat" style="display:none"></div>
+    <div id="sq-tab-members" style="display:none"></div>`;
+
+  loadSquadPlans(squad.id);
 }
 
-async function showSquadEmptyState(container) {
+function showSqTab(tab, squadId) {
+  ['plans','chat','members'].forEach(t => {
+    const btn = document.getElementById('sqt-' + t);
+    const pane = document.getElementById('sq-tab-' + t);
+    if (btn) {
+      if (t === tab) { btn.style.background='rgba(255,92,0,.15)'; btn.style.borderColor='rgba(255,92,0,.35)'; btn.style.color='var(--or)'; }
+      else { btn.style.background='transparent'; btn.style.borderColor='var(--border)'; btn.style.color='var(--mu)'; }
+    }
+    if (pane) pane.style.display = t === tab ? '' : 'none';
+  });
+  if (tab === 'plans') loadSquadPlans(squadId);
+  else if (tab === 'chat') loadSqChat(squadId);
+  else if (tab === 'members') loadSqMembers(squadId);
+}
+
+async function loadSquadPlans(squadId) {
+  const pane = document.getElementById('sq-tab-plans'); if (!pane) return;
+  pane.innerHTML = '<div style="padding:20px;font-size:.78rem;color:var(--mu)">Loading…</div>';
+  const sb2 = getSB(); let token = null;
+  if (sb2) { try { token = (await sb2.auth.getSession()).data?.session?.access_token; } catch(e){} }
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  try {
+    const r = await fetch(API + '/squads/' + squadId + '/plans', { headers });
+    if (!r.ok) { pane.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Could not load plans.</div>'; return; }
+    const { plans } = await safeJson(r);
+    renderPlansList(pane, plans || [], squadId);
+  } catch(e) { pane.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Could not load plans.</div>'; }
+}
+
+function renderPlansList(pane, plans, squadId) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const upcoming = plans.filter(p => new Date(p.plan_date + 'T00:00:00') >= today);
+  const past = plans.filter(p => new Date(p.plan_date + 'T00:00:00') < today);
+  const createBtn = `<button onclick="showCreatePlanForm('${x(squadId)}')" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;cursor:pointer;margin-bottom:16px">+ Plan an Outing</button>`;
+  if (!plans.length) {
+    pane.innerHTML = createBtn + `<div style="text-align:center;padding:24px 0"><div style="font-size:2.4rem;margin-bottom:8px">📅</div><div style="font-size:.82rem;color:var(--mu)">No outings planned yet.<br>Be the first to plan one!</div></div>`;
+    return;
+  }
+  const renderCard = (p) => {
+    const d = new Date(p.plan_date + 'T00:00:00');
+    const mon = d.toLocaleDateString('en-ZA',{month:'short'}).toUpperCase();
+    const day = d.getDate();
+    const goingCount = (p.rsvps||[]).filter(r=>r.status==='going').length;
+    const maybeCount = (p.rsvps||[]).filter(r=>r.status==='maybe').length;
+    const myRsvp = p.my_rsvp;
+    const rb = (st,lbl,act) => `<button onclick="rsvpPlan('${x(squadId)}','${x(p.id)}','${st}')" style="flex:1;padding:7px 4px;background:${act?'rgba(0,229,255,.15)':'transparent'};border:1.5px solid ${act?'rgba(0,229,255,.4)':'var(--border)'};border-radius:8px;color:${act?'var(--cy)':'var(--mu)'};font-size:.68rem;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer">${lbl}</button>`;
+    return `<div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:10px">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="flex-shrink:0;text-align:center;background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.25);border-radius:10px;padding:6px 10px;min-width:40px">
+          <div style="font-size:.6rem;font-family:'Syne',sans-serif;font-weight:700;color:var(--or)">${mon}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;line-height:1">${day}</div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800;margin-bottom:2px">${x(p.title)}</div>
+          ${p.plan_time?`<div style="font-size:.7rem;color:var(--mu)">🕐 ${p.plan_time.slice(0,5)}</div>`:''}
+          ${p.location_name?`<div style="font-size:.74rem;color:var(--mu2);margin-top:2px">📍 ${x(p.location_name)}</div>`:''}
+          ${p.notes?`<div style="font-size:.72rem;color:var(--mu);margin-top:4px;line-height:1.4">${x(p.notes)}</div>`:''}
+          ${(goingCount||maybeCount)?`<div style="font-size:.68rem;color:var(--mu);margin-top:6px">${goingCount} going · ${maybeCount} maybe</div>`:''}
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px">
+        ${rb('going','✓ Going',myRsvp==='going')}
+        ${rb('maybe','? Maybe',myRsvp==='maybe')}
+        ${rb('not_going',"✗ Can't",myRsvp==='not_going')}
+      </div>
+    </div>`;
+  };
+  let html = createBtn;
+  if (upcoming.length) html += upcoming.map(renderCard).join('');
+  if (past.length) html += `<div style="font-size:.7rem;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin:14px 0 10px;border-top:1px solid var(--border);padding-top:12px">Past Outings</div>` + past.map(renderCard).join('');
+  pane.innerHTML = html;
+}
+
+function showCreatePlanForm(squadId) {
+  const pane = document.getElementById('sq-tab-plans'); if (!pane) return;
+  const today = new Date().toISOString().split('T')[0];
+  pane.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <button onclick="loadSquadPlans('${x(squadId)}')" style="background:transparent;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer;padding:0 4px 0 0">←</button>
+      <div style="font-family:'Syne',sans-serif;font-size:.9rem;font-weight:800">Plan an Outing</div>
+    </div>
+    <input id="plan-title" class="sq-input" placeholder="Outing title (required)" maxlength="80"/>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <input id="plan-date" class="sq-input" type="date" value="${today}" style="color-scheme:dark"/>
+      <input id="plan-time" class="sq-input" type="time" style="color-scheme:dark"/>
+    </div>
+    <input id="plan-location" class="sq-input" placeholder="📍 Location (optional)" maxlength="80"/>
+    <textarea id="plan-notes" class="sq-input" placeholder="📝 Notes (optional)" rows="3" maxlength="500" style="resize:vertical;font-family:inherit;min-height:70px"></textarea>
+    <button onclick="submitPlan('${x(squadId)}')" style="width:100%;padding:12px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer">Save Plan</button>`;
+}
+
+async function submitPlan(squadId) {
+  const title = (document.getElementById('plan-title')?.value||'').trim();
+  const plan_date = document.getElementById('plan-date')?.value;
+  const plan_time = document.getElementById('plan-time')?.value||null;
+  const location_name = (document.getElementById('plan-location')?.value||'').trim()||null;
+  const notes = (document.getElementById('plan-notes')?.value||'').trim()||null;
+  if (!title) { showToast('Title is required'); return; }
+  if (!plan_date) { showToast('Date is required'); return; }
+  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
+  const session = (await sb2.auth.getSession()).data?.session;
+  if (!session) { showToast('Sign in first'); return; }
+  try {
+    const r = await fetch(API + '/squads/' + squadId + '/plans', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ title, plan_date, plan_time, location_name, notes })
+    });
+    const d = await safeJson(r);
+    if (!r.ok) { showToast(d.error || 'Could not save plan'); return; }
+    showToast('✅ Plan saved!');
+    loadSquadPlans(squadId);
+  } catch(e) { showToast('Network error'); }
+}
+
+async function rsvpPlan(squadId, planId, status) {
+  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
+  const session = (await sb2.auth.getSession()).data?.session;
+  if (!session) { showToast('Sign in first'); return; }
+  try {
+    const r = await fetch(API + '/squads/' + squadId + '/plans/' + planId + '/rsvp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ status })
+    });
+    if (r.ok) loadSquadPlans(squadId);
+    else { const d = await safeJson(r); showToast(d.error || 'Could not RSVP'); }
+  } catch(e) { showToast('Network error'); }
+}
+
+async function loadSqChat(squadId) {
+  const pane = document.getElementById('sq-tab-chat'); if (!pane) return;
+  const sb2 = getSB();
+  if (!sb2) { pane.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu);font-size:.8rem">Sign in to chat</div>'; return; }
+  const session = (await sb2.auth.getSession()).data?.session;
+  if (!session) { pane.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu);font-size:.8rem">Sign in to chat</div>'; return; }
+  pane.innerHTML = `
+    <div id="sq-chat-msgs" style="min-height:160px;max-height:340px;overflow-y:auto;padding:4px 0 12px;display:flex;flex-direction:column;gap:8px"></div>
+    <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+      <input id="sq-chat-input" class="sq-input" placeholder="Message…" style="flex:1;margin-bottom:0" onkeydown="if(event.key==='Enter')sendSqMsg('${x(squadId)}')"/>
+      <button onclick="sendSqMsg('${x(squadId)}')" style="padding:10px 16px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.78rem;cursor:pointer;flex-shrink:0">Send</button>
+    </div>`;
+  fetchSqMessages(squadId, session);
+}
+
+async function fetchSqMessages(squadId, session) {
+  const msgEl = document.getElementById('sq-chat-msgs'); if (!msgEl) return;
+  const sb2 = getSB(); if (!sb2) return;
+  const { data: msgs } = await sb2.from('squad_messages').select('id,content,created_at,profiles(display_name,avatar_url)').eq('squad_id', squadId).order('created_at',{ascending:false}).limit(40);
+  const list = (msgs || []).reverse();
+  if (!list.length) { msgEl.innerHTML = '<div style="text-align:center;color:var(--mu);font-size:.76rem;padding:30px 0">No messages yet. Say hi!</div>'; return; }
+  msgEl.innerHTML = list.map(m => {
+    const p = m.profiles||{}; const ini=(p.display_name||'?')[0].toUpperCase();
+    return `<div style="display:flex;align-items:flex-end;gap:8px">
+      <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,92,0,.2);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;overflow:hidden">${p.avatar_url?`<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>`:ini}</div>
+      <div style="max-width:72%;background:var(--surf);border:1px solid var(--border);border-radius:12px 12px 12px 4px;padding:8px 12px">
+        <div style="font-size:.62rem;color:var(--mu);margin-bottom:2px">${x(p.display_name||'?')}</div>
+        <div style="font-size:.8rem;line-height:1.4">${x(m.content)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  msgEl.scrollTop = msgEl.scrollHeight;
+}
+
+async function sendSqMsg(squadId) {
+  const input = document.getElementById('sq-chat-input');
+  const content = (input?.value||'').trim(); if (!content) return;
+  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
+  const session = (await sb2.auth.getSession()).data?.session;
+  if (!session) { showToast('Sign in first'); return; }
+  input.value = '';
+  const { error } = await sb2.from('squad_messages').insert({ squad_id: squadId, user_id: session.user.id, content });
+  if (error) { showToast('Could not send'); input.value = content; return; }
+  fetchSqMessages(squadId, session);
+}
+
+function loadSqMembers(squadId) {
+  const pane = document.getElementById('sq-tab-members'); if (!pane) return;
+  const members = _sqCurrentMembers; const isMember = _sqCurrentIsMember;
+  const membersHtml = members.map(m => {
+    const p=m.profiles||{}; const ini=(p.display_name||'?')[0].toUpperCase();
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,92,0,.15);display:flex;align-items:center;justify-content:center;font-size:.84rem;font-weight:700;flex-shrink:0;overflow:hidden">${p.avatar_url?`<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>`:ini}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(p.display_name||p.username||'?')}</div>
+        ${m.role==='admin'?'<div style="font-size:.66rem;color:var(--or)">👑 Admin</div>':''}
+      </div>
+    </div>`;
+  }).join('');
+  const inviteBtn = isMember ? `<button onclick="openSquadInvite('${x(squadId)}')" style="width:100%;padding:11px;background:rgba(0,229,255,.08);border:1.5px solid rgba(0,229,255,.3);border-radius:50px;color:var(--cy);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;margin-top:14px">+ Invite Friend</button>` : '';
+  const actionBtn = isMember
+    ? `<button onclick="leaveSquad('${x(squadId)}')" style="width:100%;padding:11px;background:rgba(255,45,120,.1);border:1.5px solid rgba(255,45,120,.3);border-radius:50px;color:var(--pk);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;margin-top:8px">Leave Squad</button>`
+    : `<button onclick="joinSquad('${x(squadId)}')" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;margin-top:14px">Join Squad</button>`;
+  pane.innerHTML = `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Members (${members.length})</div>${membersHtml}${inviteBtn}${actionBtn}`;
+}
+
+async function loadInvites() {
+  const sb2 = getSB(); if (!sb2) return;
+  const session = (await sb2.auth.getSession()).data?.session;
+  if (!session) return;
+  try {
+    const r = await fetch(API + '/squads/invites', { headers: { 'Authorization': 'Bearer ' + session.access_token } });
+    if (!r.ok) return;
+    const { invites } = await safeJson(r);
+    renderInvitesBanner(invites || []);
+  } catch(e) {}
+}
+
+function renderInvitesBanner(invites) {
+  const squadsPane = document.getElementById('squad-squads-pane'); if (!squadsPane) return;
+  let banner = document.getElementById('sq-invites-banner');
+  if (!invites.length) { if (banner) banner.remove(); return; }
+  if (!banner) {
+    banner = document.createElement('div'); banner.id = 'sq-invites-banner';
+    squadsPane.insertBefore(banner, squadsPane.firstChild);
+  }
+  banner.innerHTML = `<div style="background:rgba(176,38,255,.1);border:1.5px solid rgba(176,38,255,.3);border-radius:14px;padding:12px 14px;margin-bottom:12px">
+    <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;margin-bottom:10px">📬 ${invites.length} Squad Invite${invites.length>1?'s':''}</div>
+    ${invites.map(inv => {
+      const sq=inv.squads||{}; const by=inv.profiles?.display_name||'Someone';
+      return `<div id="inv-banner-${x(inv.id)}" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07)">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(sq.name||'Squad')}</div>
+          <div style="font-size:.68rem;color:var(--mu)">Invited by ${x(by)}</div>
+        </div>
+        <button onclick="acceptInvite('${x(inv.id)}')" style="padding:6px 12px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">Accept</button>
+        <button onclick="rejectInvite('${x(inv.id)}')" style="padding:6px 10px;background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.3);border-radius:50px;color:var(--pk);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">Decline</button>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+async function acceptInvite(inviteId) {
+  const sb2 = getSB(); if (!sb2) return;
+  const session = (await sb2.auth.getSession()).data?.session; if (!session) return;
+  try {
+    const r = await fetch(API + '/squads/invites/' + inviteId + '/accept', { method: 'POST', headers: { 'Authorization': 'Bearer ' + session.access_token } });
+    if (r.ok) { showToast('✅ Joined squad!'); _squadsLoaded = false; loadSquads(); }
+    else { const d = await safeJson(r); showToast(d.error || 'Could not accept'); }
+  } catch(e) { showToast('Network error'); }
+}
+
+async function rejectInvite(inviteId) {
+  const sb2 = getSB(); if (!sb2) return;
+  const session = (await sb2.auth.getSession()).data?.session; if (!session) return;
+  try {
+    await fetch(API + '/squads/invites/' + inviteId + '/reject', { method: 'POST', headers: { 'Authorization': 'Bearer ' + session.access_token } });
+    const row = document.getElementById('inv-banner-' + inviteId); if (row) row.remove();
+  } catch(e) {}
+}
+
+function showSquadEmptyState(container) {
   if (!container) return;
   container.innerHTML = `
     <div style="padding:32px 16px 20px;text-align:center">
       <div style="font-size:3rem;margin-bottom:10px">👥</div>
       <div style="font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800;margin-bottom:6px">No squads yet</div>
-      <div style="font-size:.78rem;color:var(--mu);margin-bottom:20px;line-height:1.5">Create a squad with your friends — earn points together to unlock discounts at partner venues.</div>
+      <div style="font-size:.78rem;color:var(--mu);margin-bottom:20px;line-height:1.5">Create a squad with your crew and plan outings together — events, road trips, dinners, anything.</div>
       <button onclick="showCreateForm()" style="background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;padding:12px 28px;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer">+ Create a Squad</button>
-    </div>
-    <div id="sq-leaderboard-section" style="padding:0 4px 16px">
-      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">🏆 Top Squads This Week</div>
-      <div id="sq-lb-list"><div style="font-size:.76rem;color:var(--mu)">Loading…</div></div>
     </div>`;
-  try {
-    const r = await fetch(API + '/squads/leaderboard');
-    if (!r.ok) return;
-    const { leaderboard } = await safeJson(r);
-    const el = document.getElementById('sq-lb-list');
-    if (!el) return;
-    if (!leaderboard || !leaderboard.length) { el.innerHTML = '<div style="font-size:.76rem;color:var(--mu)">No squads yet — be the first!</div>'; return; }
-    el.innerHTML = leaderboard.map((s, i) => `
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surf);border:1px solid var(--border);border-radius:10px;margin-bottom:6px">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:${i===0?'#FFD700':i===1?'#C0C0C0':i===2?'#CD7F32':'var(--mu)'};min-width:22px">${i+1}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(s.name)}</div>
-          <div style="font-size:.68rem;color:var(--mu)">👥 ${s.member_count || 0} members</div>
-        </div>
-        <div style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;color:var(--or)">⚡ ${s.total_points || 0}</div>
-      </div>`).join('');
-  } catch(e) { /* leaderboard non-critical */ }
 }
 
 function showCreateForm() {
@@ -4087,7 +4294,7 @@ async function inviteToSquad(userId, btn) {
     });
     const d = await safeJson(r);
     if (!r.ok) { showToast(d.error || 'Could not invite'); btn.disabled = false; btn.textContent = '＋ Invite'; return; }
-    btn.textContent = '✓ Added';
+    btn.textContent = '✓ Invited';
     btn.style.background = 'rgba(198,255,74,.15)';
     btn.style.color = 'var(--li)';
     const row = document.getElementById('inv-row-' + userId);
