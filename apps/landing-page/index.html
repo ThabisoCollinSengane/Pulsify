@@ -1310,6 +1310,7 @@ async function loadFeed(resetPage = false) {
     // Render cards as already-revealed so they're visible even if IntersectionObserver misses them
     const cards = events.map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"'));
     feedEl.innerHTML = cards.join('');
+    const _hp = document.getElementById('tab-home'); if (_hp) _hp.scrollTop = 0;
     updatePagination();
     triggerRev();
 
@@ -1400,22 +1401,25 @@ async function loadQuicketDirect(container, city, genre) {
 
     const json = await resp.json();
     const events = json.events || [];
-    console.log('[Quicket Edge]', events.length, 'events, cities:', json.cities_tried);
+    const src = json.source || 'unknown';
+    console.log('[Quicket Edge]', events.length, 'events, source:', src);
     if (!events.length) return;
 
     const existingIds = new Set([...container.querySelectorAll('[data-evid]')].map(el => el.dataset.evid));
-    const fresh = events.filter(e => !existingIds.has(e.id));
+    const fresh = events.filter(e => !existingIds.has(String(e.id)));
     if (!fresh.length) return;
 
+    const isSupaFallback = src === 'supabase-fallback';
     const freeEvs = fresh.filter(e => e.is_free);
     const paidEvs = fresh.filter(e => !e.is_free);
     let html = '';
     if (freeEvs.length) {
-      html += `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--li);padding:16px 0 8px;display:flex;align-items:center;gap:8px">🆓 Free Events Near You</div>`;
+      html += `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--li);padding:16px 0 8px;display:flex;align-items:center;gap:8px">🆓 Free Events</div>`;
       html += freeEvs.slice(0, 40).map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
     }
     if (paidEvs.length) {
-      html += `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);padding:20px 0 8px;display:flex;align-items:center;gap:8px"><img src="https://www.quicket.co.za/favicon.ico" width="14" height="14" style="border-radius:3px" onerror="this.style.display='none'"/>Events from Quicket</div>`;
+      const lbl = isSupaFallback ? '🎉 More Upcoming Events' : '🎟 Events from Quicket';
+      html += `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);padding:20px 0 8px">${lbl}</div>`;
       html += paidEvs.slice(0, 80).map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"')).join('');
     }
     if (!html) return;
@@ -1444,7 +1448,7 @@ function buildCard(ev, idx) {
   else                      badge = '<span class="fbg bsn">' + fdate(ev.date_local) + '</span>';
   const srcLabel = { eventbrite: 'Eventbrite', ticketmaster: 'Ticketmaster' }[ev.source] || '';
   const btnLbl   = gl.includes('march') ? 'Join March' : (iF ? 'RSVP Free' : 'Get Tickets');
-  return `<div class="fc rv" onclick="openEv('${x(ev.id)}')">
+  return `<div class="fc rv" data-evid="${x(ev.id)}" onclick="openEv('${x(ev.id)}')">
     <div class="fh"><div class="fa" style="background:${bg}">${emo}</div>
       <div style="flex:1;min-width:0"><div class="fo">${x(ev.organiser_name || ev.venue_name || 'Pulsify')}</div>
       <div class="fl">📍 ${x(ev.venue_city)} · ${fdt(ev.date_local, ev.time_local)}</div></div>${badge}</div>
@@ -1553,7 +1557,6 @@ function updatePagination() {
 function changePage(delta) {
   feedPage += delta;
   loadFeed();
-  document.getElementById('tab-home')?.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function setGenre(btn, genre) {
   document.querySelectorAll('.cr .chip').forEach(b => b.classList.remove('active'));
