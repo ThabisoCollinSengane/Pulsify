@@ -123,12 +123,16 @@ body{padding-bottom:32px}
 <div class="tabs">
   <div class="tab active" id="posts-tab" onclick="switchTab(this,'pane-posts')">📸 Posts</div>
   <div class="tab" id="events-tab" onclick="switchTab(this,'pane-events')">🎟 Events</div>
+  <div class="tab" id="activity-tab" onclick="switchTab(this,'pane-activity')">❤️ Activity</div>
 </div>
 <div class="pane active" id="pane-posts">
   <div id="posts-list"></div>
 </div>
 <div class="pane" id="pane-events">
   <div id="events-list"></div>
+</div>
+<div class="pane" id="pane-activity">
+  <div id="activity-list"></div>
 </div>
 <div id="fab-wrapper"></div>
 <div class="modal-ov" id="post-modal" onclick="if(event.target===this)closePostModal()">
@@ -278,6 +282,7 @@ async function loadUserData() {
 
   renderPosts(profile.id);
   renderAttended(profile.id, isOwnProfile);
+  renderActivity(profile.id);
 }
 
 async function checkFollowing(userId) {
@@ -403,6 +408,44 @@ async function renderAttended(userId, isOwnProfile) {
     const { count: savedCount } = await sb.from('saved_items').select('*', { count: 'exact', head: true }).eq('user_id', userId);
     document.getElementById('stat-saved').textContent = savedCount || 0;
   } catch(e) {}
+}
+
+async function renderActivity(userId) {
+  const el = document.getElementById('activity-list');
+  el.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Loading…</div></div>';
+  try {
+    const [{ data: likes }, { data: comments }] = await Promise.all([
+      sb.from('reactions').select('post_id, created_at, posts(id,caption,image_url,event_name)').eq('user_id', userId).eq('type', 'like').order('created_at', { ascending: false }).limit(20),
+      sb.from('comments').select('id, body, content, text, created_at, post_id, posts(id,caption,image_url,event_name)').eq('user_id', userId).order('created_at', { ascending: false }).limit(20),
+    ]);
+    const items = [
+      ...(likes || []).map(r => ({ ...r, _type: 'like', _at: r.created_at, post: r.posts })),
+      ...(comments || []).map(c => ({ ...c, _type: 'comment', _at: c.created_at, post: c.posts })),
+    ].sort((a, b) => new Date(b._at) - new Date(a._at)).slice(0, 30);
+
+    if (!items.length) {
+      el.innerHTML = '<div class="empty"><div class="empty-ico">❤️</div><div class="empty-title">No activity yet</div></div>';
+      return;
+    }
+    el.innerHTML = items.map(it => {
+      const p = it.post || {};
+      const ico = it._type === 'like' ? '❤️' : '💬';
+      const label = it._type === 'like' ? 'Liked a post' : 'Commented';
+      const body = it._type === 'comment' ? escHtml(it.body || it.content || it.text || '') : '';
+      const date = new Date(it._at).toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
+      return `<div class="post" style="display:flex;gap:10px;padding:12px;align-items:flex-start">
+        ${p.image_url ? `<img src="${escHtml(p.image_url)}" style="width:50px;height:50px;border-radius:8px;object-fit:cover;flex-shrink:0"/>` : `<div style="width:50px;height:50px;border-radius:8px;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">${ico}</div>`}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.7rem;color:var(--mu);margin-bottom:3px">${ico} ${label} · ${date}</div>
+          ${p.event_name ? `<div style="font-size:.62rem;color:var(--or);font-weight:700;margin-bottom:2px">🎟 ${escHtml(p.event_name)}</div>` : ''}
+          ${p.caption ? `<div style="font-size:.82rem;color:var(--mu2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(p.caption)}</div>` : ''}
+          ${body ? `<div style="font-size:.82rem;color:var(--tx);font-style:italic">"${body}"</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="empty"><div class="empty-ico">❤️</div><div class="empty-title">Could not load activity</div></div>';
+  }
 }
 
 function switchTab(tab, paneId) {

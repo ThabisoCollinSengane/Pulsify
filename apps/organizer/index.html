@@ -1060,6 +1060,13 @@ async function submitEvent() {
     });
     if (error) throw new Error(error.message);
 
+    if (price > 0) {
+      await sb.from('ticket_tiers').insert({
+        event_id: eventId, name: 'General Admission',
+        price, is_free: false, sort_order: 0
+      }).catch(() => {});
+    }
+
     await fetch('/api/posts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token },
