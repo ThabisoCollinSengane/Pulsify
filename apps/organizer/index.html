@@ -131,6 +131,7 @@ select.inp option{background:#0D1424}
     <div class="tab" onclick="switchTab(this,'pane-event')">🎟 Event</div>
     <div class="tab" onclick="switchTab(this,'pane-myposts')">📋 Posts</div>
     <div class="tab" onclick="switchTab(this,'pane-discover')">🌍 Discover</div>
+    <div class="tab" onclick="window.location.href='/feeds'" title="See what users are saying">📰 Feed</div>
     <div class="tab" onclick="switchTab(this,'pane-scan')">📷 Scan</div>
     <div class="tab" onclick="switchTab(this,'pane-promote')">🚀 Promote</div>
     <div class="tab" onclick="switchTab(this,'pane-settings')">⚙️ Settings</div>
@@ -258,7 +259,10 @@ select.inp option{background:#0D1424}
         <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Target cities <span style="color:var(--mu)">(leave blank = all cities)</span></div>
         <input class="inp" id="promo-cities" placeholder="e.g. Durban, Johannesburg" style="margin-bottom:10px"/>
 
-        <button class="btn-primary" id="promo-btn-org" onclick="submitOrgPromo()" style="width:100%">Submit for Review 🚀</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn-secondary" onclick="previewOrgPromo()" style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);color:var(--tx);padding:11px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer">👁 Preview</button>
+          <button class="btn-primary" id="promo-btn-org" onclick="submitOrgPromo()" style="flex:1.6">Submit for Review 🚀</button>
+        </div>
 
         <div style="margin-top:20px">
           <div class="section-label">Your Promotions</div>
@@ -1372,6 +1376,35 @@ function _promoMsg(el, text, ok) {
   el.textContent = text;
 }
 
+function previewOrgPromo() {
+  const sel = document.getElementById('promo-event-sel');
+  const evId = sel ? sel.value : '';
+  const evOpt = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+  const evName = evOpt ? evOpt.textContent : 'Your Event';
+  const placement = document.getElementById('promo-placement')?.value || 'feed';
+  const cities = (document.getElementById('promo-cities')?.value || 'All cities').trim();
+  if (!evId) { toast('Pick an event to preview', 'err'); return; }
+  let card = document.getElementById('promo-preview-overlay');
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'promo-preview-overlay';
+    card.style.cssText = 'position:fixed;inset:0;z-index:5500;background:rgba(0,0,0,.82);backdrop-filter:blur(12px);display:flex;align-items:flex-end;justify-content:center';
+    card.onclick = (e) => { if (e.target === card) card.remove(); };
+    document.body.appendChild(card);
+  }
+  card.innerHTML = `<div style="width:100%;max-width:440px;background:#0D1424;border:1px solid rgba(255,255,255,.14);border-top-left-radius:20px;border-top-right-radius:20px;padding:18px 18px 24px;max-height:88vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-family:'Syne',sans-serif;font-size:.9rem;font-weight:800">👁 Promotion Preview</div><button onclick="document.getElementById('promo-preview-overlay').remove()" style="background:none;border:none;color:#9997B0;font-size:1.2rem;cursor:pointer">✕</button></div>
+    <div style="font-size:.7rem;color:#9997B0;margin-bottom:12px">This is how your promo will appear in the ${placement === 'feed' ? 'home feed' : placement === 'banner' ? 'banner carousel' : 'feed and banner'} for users in <strong style="color:#FF5C00">${cities}</strong></div>
+    <div style="background:linear-gradient(135deg,#1a0d2e,#0f0a1f);border:1px solid rgba(176,38,255,.3);border-radius:14px;padding:14px;position:relative;margin-bottom:14px">
+      <div style="position:absolute;top:8px;right:10px;background:#FF5C00;color:#fff;border-radius:50px;padding:2px 8px;font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;letter-spacing:.06em">🚀 BOOSTED</div>
+      <div style="font-family:'Syne',sans-serif;font-size:.6rem;color:#FF5C00;letter-spacing:.1em;margin-bottom:6px;text-transform:uppercase">Featured Event</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#fff;line-height:1.1;margin-bottom:8px">${evName.split(' — ')[0] || evName}</div>
+      <button style="background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;padding:7px 16px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700">Get Tickets →</button>
+    </div>
+    <button onclick="document.getElementById('promo-preview-overlay').remove()" style="width:100%;padding:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:#F0EEF8;border-radius:50px;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer">Close Preview</button>
+  </div>`;
+}
+
 async function submitOrgPromo() {
   const sel = document.getElementById('promo-event-sel');
   const placement = document.getElementById('promo-placement').value;
@@ -1497,6 +1530,60 @@ init().then(() => initNotifBell());
     <div class="sn-body" id="sn-list"></div>
   </div>
 </div>
+
+<!-- ── ORGANIZER ONBOARDING ── -->
+<div id="ob-ov" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.82);backdrop-filter:blur(14px);align-items:flex-end;justify-content:center">
+  <div id="ob-card" style="width:100%;max-width:480px;background:#0D1424;border:1px solid rgba(255,255,255,.14);border-top-left-radius:24px;border-top-right-radius:24px;padding:18px 22px 28px;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);max-height:92vh;overflow-y:auto;color:#F0EEF8">
+    <div style="display:flex;justify-content:flex-end"><button onclick="obClose()" style="background:none;border:none;color:#9997B0;font-size:.75rem;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.06em">Skip</button></div>
+    <div id="ob-illust" style="margin:0 auto 14px;min-height:130px;display:flex;align-items:center;justify-content:center"></div>
+    <div id="ob-title" style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;text-align:center;margin-bottom:8px"></div>
+    <div id="ob-body" style="font-size:.84rem;color:#9997B0;text-align:center;line-height:1.6;margin-bottom:18px"></div>
+    <div id="ob-dots" style="display:flex;justify-content:center;gap:5px;margin-bottom:18px"></div>
+    <button id="ob-next" onclick="obNext()" style="width:100%;padding:14px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.92rem;font-weight:700;cursor:pointer">Next</button>
+  </div>
+</div>
+<script>
+const _obIll = {
+  welcome: `<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,#FF5C00,#FF2D78 60%,transparent);display:flex;align-items:center;justify-content:center;font-size:2.4rem">🎪</div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.06em">PULSIFY · ORGANIZER</div></div>`,
+  event: `<div style="width:240px;background:#090D1A;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px"><div style="display:flex;gap:10px;align-items:center;margin-bottom:8px"><div style="background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.3);border-radius:10px;padding:6px 10px;text-align:center"><div style="font-size:.56rem;color:#FF5C00;font-family:'Syne',sans-serif;font-weight:700">SAT</div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#FF5C00;line-height:1">24</div></div><div style="flex:1"><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:800">Amapiano Lounge</div><div style="font-size:.66rem;color:#9997B0">Suncoast Casino · 20:00</div></div></div><button style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;border-radius:50px;padding:8px;font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700">+ New Event</button></div>`,
+  post: `<div style="width:240px;background:#090D1A;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);display:flex;align-items:center;justify-content:center;font-size:.9rem">🎪</div><div style="flex:1"><div style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:800">Your Page<span style="margin-left:5px;color:#FF5C00;font-size:.55rem">VERIFIED</span></div><div style="font-size:.6rem;color:#9997B0">posting · 5 left this month</div></div></div><div style="height:80px;border-radius:8px;background:linear-gradient(135deg,#B026FF,#FF5C00,#FF2D78);margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:1.8rem">📸</div><div style="font-size:.7rem;color:#9997B0">"Tickets are selling fast! Don't miss out 🔥"</div></div>`,
+  promote: `<div style="width:240px;background:linear-gradient(135deg,#1a0d2e,#0f0a1f);border:1px solid rgba(176,38,255,.3);border-radius:14px;padding:14px;position:relative"><div style="position:absolute;top:8px;right:10px;background:#FF5C00;color:#fff;border-radius:50px;padding:2px 8px;font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;letter-spacing:.06em">🚀 BOOSTED</div><div style="font-size:1.8rem;margin-bottom:6px">🚀</div><div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:800;margin-bottom:4px">Top of the Feed</div><div style="font-size:.7rem;color:#9997B0;line-height:1.45">Pay-to-promote puts your event in front of everyone in the home feed, map and homepage carousel</div></div>`,
+  verify: `<div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="position:relative;width:80px;height:80px"><div style="position:absolute;inset:0;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);display:flex;align-items:center;justify-content:center;font-size:2.2rem;font-weight:900;color:#fff;box-shadow:0 0 30px rgba(255,92,0,.5)">✓</div></div><div style="font-family:'Syne',sans-serif;font-size:.92rem;font-weight:800">Get Verified</div><div style="font-size:.66rem;color:#FF5C00;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.1em">VERIFIED ORGANIZER</div></div>`,
+};
+const OB_STEPS = [
+  { ill:'welcome', title:'Welcome, Organizer', body:"Your dashboard manages events, posts, ticket sales and promotions. Quick 60-second tour." },
+  { ill:'event',   title:'Create Events',      body:"Tap '+ New Event' to publish. Free accounts go to admin review first; premium organizers go live instantly." },
+  { ill:'post',    title:'Post Updates',       body:"Share announcements with your followers. Free accounts get 5 posts/month, premium is unlimited." },
+  { ill:'promote', title:'Boost Reach',        body:"Pay-to-promote puts your event at the top of the home feed, map and homepage carousel." },
+  { ill:'verify',  title:'Get Verified',       body:"Submit ID + business docs in Settings → Verification to earn the orange VERIFIED badge that builds trust." },
+];
+let _obIdx = 0;
+function startOnboardingOrg() {
+  if (localStorage.getItem('p_onboarded_organizer')) return;
+  _obIdx = 0;
+  const ov = document.getElementById('ob-ov'); if (!ov) return;
+  ov.style.display = 'flex';
+  requestAnimationFrame(() => { document.getElementById('ob-card').style.transform = 'translateY(0)'; });
+  _obRender();
+}
+function _obRender() {
+  const s = OB_STEPS[_obIdx];
+  document.getElementById('ob-illust').innerHTML = _obIll[s.ill] || '';
+  document.getElementById('ob-title').textContent = s.title;
+  document.getElementById('ob-body').textContent = s.body;
+  document.getElementById('ob-next').textContent = _obIdx === OB_STEPS.length - 1 ? "Let's Go!" : 'Next';
+  document.getElementById('ob-dots').innerHTML = OB_STEPS.map((_,i) => `<div style="width:${i===_obIdx?20:6}px;height:6px;border-radius:3px;background:${i===_obIdx?'#FF5C00':'rgba(255,255,255,.14)'};transition:all .25s"></div>`).join('');
+  const card = document.getElementById('ob-card'); if (card) card.scrollTop = 0;
+}
+function obNext() { _obIdx++; if (_obIdx >= OB_STEPS.length) { obClose(); return; } _obRender(); }
+function obClose() {
+  const card = document.getElementById('ob-card'); if (card) card.style.transform = 'translateY(100%)';
+  setTimeout(() => { const ov = document.getElementById('ob-ov'); if (ov) ov.style.display = 'none'; }, 350);
+  localStorage.setItem('p_onboarded_organizer', '1');
+}
+// Trigger after init runs
+setTimeout(startOnboardingOrg, 1500);
+</script>
 
 </body>
 </html>

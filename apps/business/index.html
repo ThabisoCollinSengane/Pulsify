@@ -372,7 +372,10 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <label class="ff-label">Target cities <span style="color:var(--mu);font-size:.68rem">(comma-separated, blank = everywhere)</span></label>
     <input class="ff" id="biz-promo-cities" placeholder="e.g. Durban, Pietermaritzburg"/>
 
-    <button class="btn-primary" id="biz-promo-btn" onclick="submitBizPromo()" style="width:100%;margin-top:6px">Submit for Review 🚀</button>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button onclick="previewBizPromo()" style="flex:1;padding:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);color:var(--tx);border-radius:50px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer">👁 Preview</button>
+      <button class="btn-primary" id="biz-promo-btn" onclick="submitBizPromo()" style="flex:1.6">Submit for Review 🚀</button>
+    </div>
 
     <div style="margin-top:24px">
       <div class="section-label">Your Promotions</div>
@@ -2196,6 +2199,34 @@ function applyBizPromoTemplate(type) {
   if (msgEl) { msgEl.style.display = 'block'; msgEl.style.background = 'rgba(198,255,74,.1)'; msgEl.style.color = '#c6ff4a'; msgEl.textContent = '✅ Template applied — fill in any remaining details and submit.'; setTimeout(() => { msgEl.style.display = 'none'; }, 3000); }
 }
 
+function previewBizPromo() {
+  const bizSel = document.getElementById('biz-promo-bizsel');
+  const bizName = bizSel && bizSel.selectedIndex >= 0 ? bizSel.options[bizSel.selectedIndex].textContent : 'Your Business';
+  const placement = document.getElementById('biz-promo-placement')?.value || 'feed';
+  const cities = (document.getElementById('biz-promo-cities')?.value || 'All cities').trim();
+  const headline = (document.getElementById('biz-promo-headline')?.value || '').trim();
+  let card = document.getElementById('promo-preview-overlay');
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'promo-preview-overlay';
+    card.style.cssText = 'position:fixed;inset:0;z-index:5500;background:rgba(0,0,0,.82);backdrop-filter:blur(12px);display:flex;align-items:flex-end;justify-content:center';
+    card.onclick = (e) => { if (e.target === card) card.remove(); };
+    document.body.appendChild(card);
+  }
+  card.innerHTML = `<div style="width:100%;max-width:440px;background:#0D1424;border:1px solid rgba(255,255,255,.14);border-top-left-radius:20px;border-top-right-radius:20px;padding:18px 18px 24px;max-height:88vh;overflow-y:auto;color:#F0EEF8">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-family:'Syne',sans-serif;font-size:.9rem;font-weight:800">👁 Promotion Preview</div><button onclick="document.getElementById('promo-preview-overlay').remove()" style="background:none;border:none;color:#9997B0;font-size:1.2rem;cursor:pointer">✕</button></div>
+    <div style="font-size:.7rem;color:#9997B0;margin-bottom:12px">How your promo will appear in the ${placement === 'banner' ? 'banner carousel' : 'home feed'} for users in <strong style="color:#FF5C00">${cities}</strong></div>
+    <div style="background:linear-gradient(135deg,#1a0d2e,#0f0a1f);border:1px solid rgba(176,38,255,.3);border-radius:14px;padding:14px;position:relative;margin-bottom:14px">
+      <div style="position:absolute;top:8px;right:10px;background:#FF5C00;color:#fff;border-radius:50px;padding:2px 8px;font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;letter-spacing:.06em">⭐ FEATURED</div>
+      <div style="font-family:'Syne',sans-serif;font-size:.6rem;color:#FF5C00;letter-spacing:.1em;margin-bottom:6px;text-transform:uppercase">Featured Business</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#fff;line-height:1.1;margin-bottom:6px">${bizName}</div>
+      ${headline ? `<div style="font-size:.78rem;color:#9997B0;margin-bottom:8px">${headline}</div>` : ''}
+      <button style="background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;padding:7px 16px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700">View Spot →</button>
+    </div>
+    <button onclick="document.getElementById('promo-preview-overlay').remove()" style="width:100%;padding:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:#F0EEF8;border-radius:50px;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer">Close Preview</button>
+  </div>`;
+}
+
 async function submitBizPromo() {
   const title     = document.getElementById('biz-promo-title').value.trim();
   const city      = document.getElementById('biz-promo-city').value.trim();
@@ -2360,6 +2391,59 @@ async function saveBizSocialLinks() {
     <div class="sheet-body" id="sn-list"></div>
   </div>
 </div>
+
+<!-- ── BUSINESS ONBOARDING ── -->
+<div id="ob-ov" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.82);backdrop-filter:blur(14px);align-items:flex-end;justify-content:center">
+  <div id="ob-card" style="width:100%;max-width:480px;background:#0D1424;border:1px solid rgba(255,255,255,.14);border-top-left-radius:24px;border-top-right-radius:24px;padding:18px 22px 28px;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);max-height:92vh;overflow-y:auto;color:#F0EEF8">
+    <div style="display:flex;justify-content:flex-end"><button onclick="obClose()" style="background:none;border:none;color:#9997B0;font-size:.75rem;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.06em">Skip</button></div>
+    <div id="ob-illust" style="margin:0 auto 14px;min-height:130px;display:flex;align-items:center;justify-content:center"></div>
+    <div id="ob-title" style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;text-align:center;margin-bottom:8px"></div>
+    <div id="ob-body" style="font-size:.84rem;color:#9997B0;text-align:center;line-height:1.6;margin-bottom:18px"></div>
+    <div id="ob-dots" style="display:flex;justify-content:center;gap:5px;margin-bottom:18px"></div>
+    <button id="ob-next" onclick="obNext()" style="width:100%;padding:14px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.92rem;font-weight:700;cursor:pointer">Next</button>
+  </div>
+</div>
+<script>
+const _obIll = {
+  welcome: `<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,#FF5C00,#FF2D78 60%,transparent);display:flex;align-items:center;justify-content:center;font-size:2.4rem">🏪</div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.06em">PULSIFY · BUSINESS</div></div>`,
+  profile: `<div style="width:240px;background:#090D1A;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px;text-align:center"><div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:1.7rem">🍽</div><div style="font-family:'Syne',sans-serif;font-size:.86rem;font-weight:800;margin-bottom:2px">Your Business</div><div style="font-size:.62rem;color:#9997B0;margin-bottom:6px">📍 Durban · Shisanyama</div><div style="display:flex;gap:5px;justify-content:center"><span style="padding:3px 8px;border-radius:50px;background:rgba(0,229,255,.12);color:#00E5FF;font-size:.58rem;font-family:'Syne',sans-serif;font-weight:700">⏰ Open now</span></div></div>`,
+  menu: `<div style="width:240px;background:#090D1A;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px"><div style="font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:#FF5C00;letter-spacing:.08em;margin-bottom:8px">MENU</div><div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)"><div style="font-size:1.4rem">🍖</div><div style="flex:1"><div style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700">Pap & Wors</div><div style="font-size:.6rem;color:#9997B0">Combo with chakalaka</div></div><div style="color:#C6FF4A;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:800">R65</div></div><div style="display:flex;gap:10px;align-items:center;padding:8px 0"><div style="font-size:1.4rem">🍺</div><div style="flex:1"><div style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700">Castle Lite (Q)</div></div><div style="color:#C6FF4A;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:800">R35</div></div></div>`,
+  order: `<div style="width:240px;background:#090D1A;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:#FF5C00;letter-spacing:.08em">ORDER #1247</div><span style="background:rgba(198,255,74,.12);border:1px solid rgba(198,255,74,.3);color:#C6FF4A;font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;padding:2px 7px;border-radius:50px;letter-spacing:.06em">📦 PICKUP</span></div><div style="font-size:.74rem;color:#F0EEF8;margin-bottom:4px">2× Pap & Wors, 1× Castle Lite</div><div style="font-size:.66rem;color:#9997B0;margin-bottom:10px">Lerato M. · 5min away</div><button style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;border-radius:50px;padding:8px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700">✓ Mark Ready</button></div>`,
+  promote: `<div style="width:240px;background:linear-gradient(135deg,#1a0d2e,#0f0a1f);border:1px solid rgba(176,38,255,.3);border-radius:14px;padding:14px;position:relative"><div style="position:absolute;top:8px;right:10px;background:#FF5C00;color:#fff;border-radius:50px;padding:2px 8px;font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;letter-spacing:.06em">⭐ FEATURED</div><div style="font-size:1.8rem;margin-bottom:6px">🚀</div><div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:800;margin-bottom:4px">Top of the Map</div><div style="font-size:.7rem;color:#9997B0;line-height:1.45">Premium businesses appear at the top of the map and home feed — way more visibility</div></div>`,
+};
+const OB_STEPS = [
+  { ill:'welcome', title:'Welcome, Business', body:'Your dashboard manages menu, orders, posts and promotions. Quick 60-second tour.' },
+  { ill:'profile', title:'Setup Your Profile', body:'Add photos, opening hours and contact details. This is what customers see on the map.' },
+  { ill:'menu',    title:'Add Menu Items',    body:'Build your menu with prices and photos. Customers can order via QR for pickup or table service.' },
+  { ill:'order',   title:'Manage Orders',     body:'Incoming orders appear in real-time. Mark ready when the food is prepped — customers get notified.' },
+  { ill:'promote', title:'Boost Visibility',  body:'Premium businesses (R499/mo) appear at the top of the map and home feed, with unlimited posts.' },
+];
+let _obIdx = 0;
+function startOnboardingBiz() {
+  if (localStorage.getItem('p_onboarded_business')) return;
+  _obIdx = 0;
+  const ov = document.getElementById('ob-ov'); if (!ov) return;
+  ov.style.display = 'flex';
+  requestAnimationFrame(() => { document.getElementById('ob-card').style.transform = 'translateY(0)'; });
+  _obRender();
+}
+function _obRender() {
+  const s = OB_STEPS[_obIdx];
+  document.getElementById('ob-illust').innerHTML = _obIll[s.ill] || '';
+  document.getElementById('ob-title').textContent = s.title;
+  document.getElementById('ob-body').textContent = s.body;
+  document.getElementById('ob-next').textContent = _obIdx === OB_STEPS.length - 1 ? "Let's Go!" : 'Next';
+  document.getElementById('ob-dots').innerHTML = OB_STEPS.map((_,i) => `<div style="width:${i===_obIdx?20:6}px;height:6px;border-radius:3px;background:${i===_obIdx?'#FF5C00':'rgba(255,255,255,.14)'};transition:all .25s"></div>`).join('');
+  const card = document.getElementById('ob-card'); if (card) card.scrollTop = 0;
+}
+function obNext() { _obIdx++; if (_obIdx >= OB_STEPS.length) { obClose(); return; } _obRender(); }
+function obClose() {
+  const card = document.getElementById('ob-card'); if (card) card.style.transform = 'translateY(100%)';
+  setTimeout(() => { const ov = document.getElementById('ob-ov'); if (ov) ov.style.display = 'none'; }, 350);
+  localStorage.setItem('p_onboarded_business', '1');
+}
+setTimeout(startOnboardingBiz, 1500);
+</script>
 
 </body>
 </html>
