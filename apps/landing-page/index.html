@@ -1064,15 +1064,15 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 </div>
 
 <!-- ── ONBOARDING GUIDE ── -->
-<div id="ob-ov" style="display:none;position:fixed;inset:0;z-index:4000;background:rgba(0,0,0,.72);backdrop-filter:blur(10px);align-items:flex-end;justify-content:center">
-  <div id="ob-card" style="width:100%;max-width:480px;background:var(--surf);border:1px solid var(--border2);border-top-left-radius:24px;border-top-right-radius:24px;padding:24px 22px 32px;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1)">
+<div id="ob-ov" style="display:none;position:fixed;inset:0;z-index:4000;background:rgba(0,0,0,.82);backdrop-filter:blur(14px);align-items:flex-end;justify-content:center">
+  <div id="ob-card" style="width:100%;max-width:480px;background:var(--surf);border:1px solid var(--border2);border-top-left-radius:24px;border-top-right-radius:24px;padding:18px 22px 28px;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);max-height:92vh;overflow-y:auto">
     <div style="display:flex;justify-content:flex-end;margin-bottom:2px">
       <button onclick="obClose()" style="background:none;border:none;color:var(--mu);font-size:.75rem;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.06em">Skip</button>
     </div>
-    <div id="ob-icon" style="font-size:2.8rem;text-align:center;margin-bottom:10px"></div>
-    <div id="ob-title" style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;text-align:center;margin-bottom:8px"></div>
-    <div id="ob-body" style="font-size:.84rem;color:var(--mu2);text-align:center;line-height:1.6;margin-bottom:22px"></div>
-    <div id="ob-dots" style="display:flex;justify-content:center;gap:5px;margin-bottom:20px"></div>
+    <div id="ob-illust" style="margin:0 auto 14px;width:100%;display:flex;justify-content:center;align-items:center;min-height:140px"></div>
+    <div id="ob-title" style="font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:800;text-align:center;margin-bottom:8px"></div>
+    <div id="ob-body" style="font-size:.84rem;color:var(--mu2);text-align:center;line-height:1.6;margin-bottom:18px"></div>
+    <div id="ob-dots" style="display:flex;justify-content:center;gap:5px;margin-bottom:18px"></div>
     <button id="ob-next" onclick="obNext()" style="width:100%;padding:14px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.92rem;font-weight:700;cursor:pointer;transition:opacity .15s">Next</button>
   </div>
 </div>
@@ -5322,14 +5322,23 @@ async function openMySocialSheet() {
 }
 
 /* ── ONBOARDING GUIDE ── */
+const _obIll = {
+  welcome: `<div style="display:flex;flex-direction:column;align-items:center;gap:8px"><div style="position:relative;width:90px;height:90px;border-radius:50%;background:radial-gradient(circle,#FF5C00 0%,#FF2D78 60%,rgba(176,38,255,0) 100%);display:flex;align-items:center;justify-content:center"><div style="width:36px;height:36px;border-radius:50%;background:#FF5C00;box-shadow:0 0 22px #FF5C00,0 0 44px rgba(255,45,120,.7);animation:p 2s ease-in-out infinite"></div></div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.06em;color:var(--tx)">PULSIFY</div><div style="font-size:.74rem;color:var(--mu)">Feel the Vibe 🇿🇦</div></div>`,
+  search: `<div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:8px"><div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1.5px solid var(--or);border-radius:50px;padding:9px 14px;box-shadow:0 0 18px rgba(255,92,0,.35)"><span style="color:var(--or)">🔍</span><span style="color:var(--mu);font-size:.82rem;flex:1">Search events, venues, artists…</span></div><div style="display:flex;gap:6px;flex-wrap:wrap;padding:0 4px"><span style="padding:5px 12px;border-radius:50px;background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.3);color:var(--or);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700">Amapiano</span><span style="padding:5px 12px;border-radius:50px;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--mu);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700">Gqom</span><span style="padding:5px 12px;border-radius:50px;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--mu);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700">Jazz</span><span style="padding:5px 12px;border-radius:50px;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--mu);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700">Free</span></div></div>`,
+  map: `<div style="width:220px;height:140px;border-radius:14px;background:linear-gradient(135deg,#0f3a5e 0%,#1a5c8c 50%,#0d4a2b 100%);border:1.5px solid var(--border2);position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.04) 0,rgba(255,255,255,.04) 1px,transparent 1px,transparent 22px),repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0,rgba(255,255,255,.04) 1px,transparent 1px,transparent 22px)"></div><div style="position:absolute;top:35px;left:50px;width:18px;height:18px;border-radius:50%;background:#FF5C00;border:2px solid #fff;box-shadow:0 0 14px #FF5C00"></div><div style="position:absolute;top:75px;left:130px;width:18px;height:18px;border-radius:50%;background:#B026FF;border:2px solid #fff;box-shadow:0 0 14px #B026FF"></div><div style="position:absolute;top:50px;left:160px;width:14px;height:14px;border-radius:50%;background:#00E5FF;border:2px solid #fff;box-shadow:0 0 10px #00E5FF"></div><div style="position:absolute;top:95px;left:70px;width:14px;height:14px;border-radius:50%;background:#C6FF4A;border:2px solid #fff;box-shadow:0 0 10px #C6FF4A"></div></div>`,
+  feed: `<div style="width:100%;max-width:280px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:12px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:.9rem">😎</div><div style="flex:1"><div style="font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700">Lerato M.</div><div style="font-size:.62rem;color:var(--mu)">2h ago · 🎉 At The Lookout</div></div></div><div style="width:100%;height:80px;border-radius:8px;background:linear-gradient(135deg,#FF5C00,#FF2D78,#B026FF);display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin-bottom:8px">🎶</div><div style="display:flex;gap:14px;color:var(--mu);font-size:.72rem"><span>❤️ 12</span><span>💬 3</span><span style="color:var(--or)">📸 Live photo</span></div></div>`,
+  squad: `<div style="width:100%;max-width:280px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:12px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><div style="font-size:1.4rem">👥</div><div><div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:800">Mzansi Crew</div><div style="font-size:.62rem;color:var(--mu)">4 members</div></div></div><div style="display:flex;gap:-4px;margin-bottom:10px"><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);border:2px solid var(--bg2);display:flex;align-items:center;justify-content:center;font-size:.7rem;margin-left:0">A</div><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#00E5FF);border:2px solid var(--bg2);display:flex;align-items:center;justify-content:center;font-size:.7rem;margin-left:-8px">B</div><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#C6FF4A,#FF5C00);border:2px solid var(--bg2);display:flex;align-items:center;justify-content:center;font-size:.7rem;margin-left:-8px;color:#000">C</div><div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#FF2D78,#B026FF);border:2px solid var(--bg2);display:flex;align-items:center;justify-content:center;font-size:.7rem;margin-left:-8px">D</div></div><div style="background:rgba(255,92,0,.08);border:1px solid rgba(255,92,0,.25);border-radius:10px;padding:7px 10px;display:flex;align-items:center;gap:8px"><div style="background:rgba(255,92,0,.15);border-radius:6px;padding:3px 7px;font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--or);line-height:1">📅</div><div style="flex:1"><div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700">Gents Vibing</div><div style="font-size:.6rem;color:var(--mu)">Sat · The Lookout · ✓ 3 going</div></div></div></div>`,
+  ticket: `<div style="width:100%;max-width:260px;background:linear-gradient(135deg,#0f0a1f,#1a0d2e);border:1px solid var(--border2);border-radius:14px;padding:14px;position:relative;overflow:hidden"><div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#FF5C00,#FF2D78,#B026FF)"></div><div style="font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.14em;color:var(--or);text-transform:uppercase;margin-bottom:4px">🎟 Your Ticket</div><div style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800;margin-bottom:2px">Amapiano Lounge</div><div style="font-size:.66rem;color:var(--mu2);margin-bottom:10px">Sat 24 May · 20:00 · Durban</div><div style="display:flex;align-items:center;gap:10px;padding-top:10px;border-top:1px dashed var(--border2)"><div style="width:50px;height:50px;background:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.6rem">▦</div><div style="flex:1"><div style="font-size:.6rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.08em">SCAN AT DOOR</div><div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--li);margin-top:2px">#PLS-2891</div></div></div></div>`,
+  profile: `<div style="width:100%;max-width:260px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center"><div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;border:2.5px solid var(--bg)">😎</div><div style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800;margin-bottom:2px">Your Name</div><div style="font-size:.66rem;color:var(--mu);margin-bottom:8px">@yourhandle · Durban</div><div style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap"><span style="padding:3px 9px;border-radius:50px;background:rgba(176,38,255,.12);border:1px solid rgba(176,38,255,.3);color:var(--pu);font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700">🎵 Amapiano</span><span style="padding:3px 9px;border-radius:50px;background:rgba(176,38,255,.12);border:1px solid rgba(176,38,255,.3);color:var(--pu);font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700">🎵 Gqom</span></div></div>`
+};
 const OB_STEPS = [
-  { icon:'🇿🇦', title:'Welcome to Pulsify',  body:"South Africa's live event discovery platform. Let's show you around in 30 seconds.", hl:null },
-  { icon:'🔍',  title:'Find Your Event',      body:"Search events, venues or artists — or filter by province and genre. Amapiano or Gqom, we've got you.", hl:'search-inp' },
-  { icon:'🗺',  title:"See What's Near You",  body:'The map shows events and venues around you in real time. Tap any pin to open the spot.', hl:'[data-tab="map"]' },
-  { icon:'📸',  title:'Share Your Experience',body:"Tap Feed then the pencil button to post a photo from an event you're at. Your memory shows up in the community feed for others to see and react to.", hl:'auth-btn' },
-  { icon:'👥',  title:'Squads — Go Together', body:'Create a Squad with your crew. Plan outings, invite friends, set a date and RSVP — all in one place.', hl:'[data-tab="squad"]' },
-  { icon:'🎟',  title:'Your Tickets & Saves', body:'Once you book a ticket or save a spot, it lives here. Show your QR code at the door.', hl:'[data-tab="tickets"]' },
-  { icon:'😊',  title:'Your Profile',         body:'Add a photo, pick your genre preferences and follow organisers to get personalised updates.', hl:'[data-tab="profile"]' },
+  { ill:'welcome', title:'Welcome to Pulsify',  body:"South Africa's live event discovery platform. Let's show you around in 30 seconds." },
+  { ill:'search',  title:'Find Your Event',      body:"Search events, venues or artists — or filter by province and genre. Amapiano or Gqom, we've got you." },
+  { ill:'map',     title:"See What's Near You",  body:'Tap the 🗺 Map tab in the bottom nav. Events and venues appear as glowing pins on a live map of South Africa.' },
+  { ill:'feed',    title:'Share Your Experience',body:"Tap Feed (top-right) then the ✏️ button to post a photo from an event you're at. Your memory shows in the community feed." },
+  { ill:'squad',   title:'Squads — Go Together', body:'Tap the 👥 Friends tab to create a Squad. Plan outings, invite friends, set a date and RSVP — all in one place.' },
+  { ill:'ticket',  title:'Your Tickets & Saves', body:'Tap the 🎟 Bookings tab. Your event tickets and saved places live here — show the QR code at the door.' },
+  { ill:'profile', title:'Your Profile',         body:'Tap the 😊 Profile tab to add a photo, pick your genre preferences and follow organisers for personalised updates.' },
 ];
 let _obIdx = 0;
 function startOnboarding() {
@@ -5342,18 +5351,16 @@ function startOnboarding() {
 }
 function _obRender() {
   const s = OB_STEPS[_obIdx];
-  document.getElementById('ob-icon').textContent  = s.icon;
+  const illEl = document.getElementById('ob-illust');
+  if (illEl) illEl.innerHTML = _obIll[s.ill] || '';
   document.getElementById('ob-title').textContent = s.title;
   document.getElementById('ob-body').textContent  = s.body;
   document.getElementById('ob-next').textContent  = _obIdx === OB_STEPS.length - 1 ? "Let's Go!" : 'Next';
   document.getElementById('ob-dots').innerHTML = OB_STEPS.map((_,i) =>
     `<div style="width:${i===_obIdx?20:6}px;height:6px;border-radius:3px;background:${i===_obIdx?'var(--or)':'var(--border2)'};transition:all .25s"></div>`
   ).join('');
-  document.querySelectorAll('.ob-glow').forEach(el => el.classList.remove('ob-glow'));
-  if (s.hl) {
-    const t = s.hl.startsWith('[') ? document.querySelector(s.hl) : document.getElementById(s.hl);
-    if (t) t.classList.add('ob-glow');
-  }
+  const card = document.getElementById('ob-card');
+  if (card) card.scrollTop = 0;
 }
 function obNext() {
   _obIdx++;
@@ -5361,7 +5368,6 @@ function obNext() {
   _obRender();
 }
 function obClose() {
-  document.querySelectorAll('.ob-glow').forEach(el => el.classList.remove('ob-glow'));
   const card = document.getElementById('ob-card');
   if (card) card.style.transform = 'translateY(100%)';
   setTimeout(() => { const ov = document.getElementById('ob-ov'); if (ov) ov.style.display = 'none'; }, 350);

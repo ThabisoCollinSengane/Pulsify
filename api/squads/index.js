@@ -27,14 +27,18 @@ module.exports = async (req, res) => {
       if (!auth) return res.status(401).json({ error: 'Unauthorized' });
       const { name, description, is_public = true, template_type = 'general' } = req.body || {};
       if (!name || !name.trim()) return res.status(400).json({ error: 'name is required' });
-      const userClient = sbAs(token);
-      const { data: squad, error } = await userClient
+      const { data: squad, error } = await sb()
         .from('squads')
         .insert({ name: name.trim(), description: description?.trim() || null, creator_id: auth.user.id, is_public, template_type })
         .select('id, name, description, avatar_url, is_public, member_count, total_points, template_type, template_config, created_at')
         .single();
       if (error) return res.status(400).json({ error: error.message });
-      await userClient.from('squad_members').insert({ squad_id: squad.id, user_id: auth.user.id, role: 'admin' });
+      const { error: memErr } = await sb().from('squad_members').insert({ squad_id: squad.id, user_id: auth.user.id, role: 'admin' });
+      if (memErr) {
+        // Rollback the squad if we can't add the creator — prevents orphaned squads where creator can't see plans
+        await sb().from('squads').delete().eq('id', squad.id);
+        return res.status(500).json({ error: 'Failed to add creator as member: ' + memErr.message });
+      }
       return res.status(201).json({ squad });
     }
 
