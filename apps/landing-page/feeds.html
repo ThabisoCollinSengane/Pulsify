@@ -86,6 +86,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .cmt-item.cmt-target-c{background:rgba(255,92,0,.08)}
 .puls-badge{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);box-shadow:0 0 8px rgba(255,92,0,.8),0 0 16px rgba(255,45,120,.5);position:relative;vertical-align:middle;margin-left:4px;flex-shrink:0;cursor:default;font-size:9px;font-weight:900;color:#fff;line-height:1;animation:puls-glow 1.6s ease-in-out infinite}
 .puls-badge::after{content:'\2713';font-size:9px;font-weight:900;color:#fff;line-height:1}
+.verified-pill{display:inline-flex;align-items:center;gap:3px;vertical-align:middle;margin-left:4px}
+.verified-pill .puls-badge{margin-left:0}
+.verified-pill .verified-txt{font-family:'Syne',sans-serif;font-size:.54rem;font-weight:700;letter-spacing:.08em;color:#FF5C00;text-transform:uppercase;line-height:1}
 @keyframes puls-glow{0%,100%{box-shadow:0 0 6px rgba(255,92,0,.7),0 0 12px rgba(255,45,120,.4)}50%{box-shadow:0 0 12px rgba(255,92,0,1),0 0 24px rgba(255,45,120,.8)}}
 .fab{position:fixed;bottom:calc(var(--bh) + 14px);right:16px;z-index:200;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:1.2rem;cursor:pointer;box-shadow:0 4px 18px rgba(176,38,255,.4);display:flex;align-items:center;justify-content:center}
 .co{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(10px);z-index:1200;display:none;align-items:flex-end;justify-content:center}
@@ -393,7 +396,7 @@ function buildCard(post) {
         (post.avatar_url ? '<img src="'+x(post.avatar_url)+'" loading="lazy" onerror="this.style.display=\u0027none\u0027"/>' : (post.display_name?.[0]?.toUpperCase()||'😊')) +
       '</div>' +
       '<div style="flex:1;min-width:0;cursor:pointer" onclick="openProfile(\u0027'+x(post.user_id)+'\u0027)">' +
-        '<div class="fo">' + x(post.display_name || post.username) + (post.is_verified ? '<span class="puls-badge" title="Verified by Pulsefy"></span>' : '') + (isOrg ? '<span class="org-pill">📢 Page</span>' : '') + '</div>' +
+        '<div class="fo">' + x(post.display_name || post.username) + (post.is_verified ? '<span class="verified-pill" title="Verified by Pulsefy"><span class="puls-badge"></span><span class="verified-txt">Verified</span></span>' : '') + (isOrg ? '<span class="org-pill">📢 Page</span>' : '') + '</div>' +
         (post.event_name ? '<div style="font-size:.64rem;color:var(--or);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;letter-spacing:.04em">🎟 '+x(post.event_name)+'</div>' : '') +
         '<div class="fl">@'+x(post.username)+' · '+timeAgo(post.ts || post.created_at)+'</div>' +
       '</div>' +
@@ -668,6 +671,7 @@ async function openProfile(userId) {
         '<div style="text-align:center"><div style="font-family:\u0027Bebas Neue\u0027,sans-serif;font-size:1.3rem;color:var(--or)">'+followers_count+'</div><div style="font-size:.58rem;color:var(--mu);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Followers</div></div>' +
         '<div style="text-align:center"><div style="font-family:\u0027Bebas Neue\u0027,sans-serif;font-size:1.3rem;color:var(--or)">'+following_count+'</div><div style="font-size:.58rem;color:var(--mu);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Following</div></div>' +
       '</div>' +
+      '<a href="/user-profile?id='+x(userId)+'" style="display:block;text-align:center;padding:10px 14px;margin-top:14px;background:rgba(176,38,255,.12);border:1px solid rgba(176,38,255,.3);border-radius:50px;color:var(--pu);font-family:\u0027Syne\u0027,sans-serif;font-size:.78rem;font-weight:700;text-decoration:none">View Full Profile →</a>' +
       (postsHtml ? '<div style="font-family:\u0027Syne\u0027,sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin:14px 0 8px">Places Attended</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">'+postsHtml+'</div>' : '');
   } catch(e) {
     body.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">'+x(e.message)+'</div>';

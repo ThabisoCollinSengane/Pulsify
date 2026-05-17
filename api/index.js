@@ -262,13 +262,13 @@ module.exports = async (req, res) => {
       const { caption, image_url, event_id, event_name, post_type } = req.body || {};
       if (!caption && !image_url) return res.status(400).json({ error: 'caption or image_url required' });
 
-      // Monthly post limit: free organizers/businesses get 1 post per calendar month
+      // Monthly post limit: free organizers/businesses get 5 posts/month during beta
       const { data: poster } = await sb().from('profiles').select('role,subscription_type').eq('id', user.id).single();
       if (poster?.subscription_type === 'free' && ['organizer', 'business'].includes(poster?.role)) {
         const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
         const { count } = await sb().from('posts').select('id', { count: 'exact', head: true })
           .eq('user_id', user.id).gte('created_at', monthStart.toISOString());
-        if (count >= 1) return res.status(403).json({ error: 'Free accounts can post once per month. Upgrade to premium for unlimited posts.' });
+        if (count >= 5) return res.status(403).json({ error: 'POST_LIMIT_REACHED', limit: 5, used: count, message: "You've used all 5 free posts this month. Upgrade to Premium for unlimited posts." });
       }
 
       const { data: post, error } = await sb().from('posts').insert({
@@ -1297,7 +1297,21 @@ module.exports = async (req, res) => {
         .in('verif_status', ['pending', 'approved', 'rejected'])
         .order('created_at', { ascending: false });
       if (error) return res.status(400).json({ error: error.message });
-      return res.status(200).json({ verifications: data || [] });
+      // Sign URLs from the private verification-docs bucket so the admin browser can render them
+      const signOne = async (url) => {
+        if (!url || !url.includes('/verification-docs/')) return url;
+        try {
+          const path = url.split('/verification-docs/')[1].split('?')[0];
+          const { data: s } = await sb().storage.from('verification-docs').createSignedUrl(path, 3600);
+          return s?.signedUrl || url;
+        } catch { return url; }
+      };
+      const verifications = await Promise.all((data || []).map(async (row) => ({
+        ...row,
+        face_scan_url: await signOne(row.face_scan_url),
+        id_doc_url:    await signOne(row.id_doc_url),
+      })));
+      return res.status(200).json({ verifications });
     }
 
     /* ─── GET /admin/events ─────────────────────────────────── */

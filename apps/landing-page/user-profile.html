@@ -432,10 +432,10 @@ async function renderActivity(userId) {
     ].sort((a, b) => new Date(b._at) - new Date(a._at)).slice(0, 30);
 
     if (!items.length) {
-      el.innerHTML = '<div class="empty"><div class="empty-ico">❤️</div><div class="empty-title">No activity yet</div></div>';
+      el.innerHTML = '<div class="empty"><div class="empty-ico">❤️</div><div class="empty-title">No activity yet</div><div style="font-size:.74rem;color:var(--mu);margin-top:6px">Like or comment on a post — your interactions show up here.</div></div>';
       return;
     }
-    el.innerHTML = items.map(it => {
+    el.innerHTML = '<div style="font-size:.72rem;color:var(--mu);padding:8px 12px 4px">Posts you\'ve liked or commented on</div>' + items.map(it => {
       const p = it.post || {};
       const ico = it._type === 'like' ? '❤️' : '💬';
       const label = it._type === 'like' ? 'Liked a post' : 'Commented';
