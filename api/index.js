@@ -583,10 +583,10 @@ module.exports = async (req, res) => {
       const userClient = sbAs(token);
 
       const { data: existing } = await userClient.from('reactions')
-        .select('id').eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type).maybeSingle();
+        .select('user_id').eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type).maybeSingle();
 
       if (existing) {
-        await userClient.from('reactions').delete().eq('id', existing.id);
+        await userClient.from('reactions').delete().eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type);
         // DB trigger handles count decrement — just notify caller
         return res.status(200).json({ liked: false });
       }
@@ -623,11 +623,11 @@ module.exports = async (req, res) => {
       const userClient = sbAs(token);
 
       const { data: existing } = await userClient.from('reactions')
-        .select('id,entity_type').eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type).maybeSingle();
+        .select('user_id').eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type).maybeSingle();
 
       if (!existing) return res.status(200).json({ liked: false });
 
-      await userClient.from('reactions').delete().eq('id', existing.id);
+      await userClient.from('reactions').delete().eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type);
       // DB trigger handles count decrement automatically
       return res.status(200).json({ liked: false });
     }

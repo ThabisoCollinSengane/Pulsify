@@ -164,20 +164,26 @@ module.exports = async (req, res) => {
       if (!auth) return res.status(401).json({ error: 'Unauthorized' });
       const squadId = squadPlansMatch[1];
       const userClient = sbAs(token);
-      const { data: membership } = await userClient.from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
+      const { data: membership } = await sb().from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
       if (!membership) return res.status(403).json({ error: 'Not a squad member' });
-      const { data: plans } = await userClient
+      const { data: plans, error: plansErr } = await sb()
         .from('squad_plans')
-        .select('id, title, notes, plan_date, plan_time, location_name, event_id, outing_type, budget_per_person, creator_id, created_at, profiles!squad_plans_creator_id_fkey(display_name, avatar_url)')
+        .select('id, title, notes, plan_date, plan_time, location_name, event_id, outing_type, budget_per_person, creator_id, created_at')
         .eq('squad_id', squadId)
         .order('plan_date', { ascending: true });
+      if (plansErr) return res.status(400).json({ error: plansErr.message });
       const planIds = (plans || []).map(p => p.id);
-      let rsvpMap = {};
+      let rsvpMap = {}, creatorMap = {};
       if (planIds.length > 0) {
-        const { data: rsvps } = await userClient.from('squad_plan_rsvps').select('plan_id, user_id, status').in('plan_id', planIds);
+        const { data: rsvps } = await sb().from('squad_plan_rsvps').select('plan_id, user_id, status').in('plan_id', planIds);
         (rsvps || []).forEach(r => { if (!rsvpMap[r.plan_id]) rsvpMap[r.plan_id] = []; rsvpMap[r.plan_id].push(r); });
+        const creatorIds = [...new Set((plans || []).map(p => p.creator_id).filter(Boolean))];
+        if (creatorIds.length) {
+          const { data: profs } = await sb().from('profiles').select('id, display_name, avatar_url').in('id', creatorIds);
+          (profs || []).forEach(p => { creatorMap[p.id] = { display_name: p.display_name, avatar_url: p.avatar_url }; });
+        }
       }
-      const result = (plans || []).map(p => ({ ...p, rsvps: rsvpMap[p.id] || [], my_rsvp: (rsvpMap[p.id] || []).find(r => r.user_id === auth.user.id)?.status || null }));
+      const result = (plans || []).map(p => ({ ...p, creator: creatorMap[p.creator_id] || null, rsvps: rsvpMap[p.id] || [], my_rsvp: (rsvpMap[p.id] || []).find(r => r.user_id === auth.user.id)?.status || null }));
       return res.status(200).json({ plans: result });
     }
 

@@ -214,7 +214,7 @@ async function loadUserData() {
     return;
   }
 
-  const { data: profile, error } = await sb.from('profiles').select('id,display_name,username,bio,avatar_url,genres,social_links,role').eq('id', profileId).single();
+  const { data: profile, error } = await sb.from('profiles').select('id,display_name,username,bio,avatar_url,genres,social_links,role,is_verified').eq('id', profileId).single();
   if (error || !profile) {
     showToast('User profile not found.', 'error');
     document.getElementById('pname').textContent = "User not found";
@@ -245,7 +245,8 @@ async function loadUserData() {
     if(currentUser) await checkFollowing(profile.id);
   }
 
-  document.getElementById('pname').textContent = profile.display_name || 'User';
+  document.getElementById('pname').innerHTML = escHtml(profile.display_name || 'User') +
+    (profile.is_verified ? ' <span title="Verified by Pulsefy" style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);box-shadow:0 0 8px rgba(255,92,0,.6);vertical-align:middle;margin-left:4px;font-size:.7rem">✓</span>' : '');
   document.getElementById('phandle').textContent = '@' + (profile.username || 'user');
   document.getElementById('pbio').textContent = profile.bio || '';
 
@@ -415,12 +416,19 @@ async function renderActivity(userId) {
   el.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Loading…</div></div>';
   try {
     const [{ data: likes }, { data: comments }] = await Promise.all([
-      sb.from('reactions').select('post_id, created_at, posts(id,caption,image_url,event_name)').eq('user_id', userId).eq('type', 'like').order('created_at', { ascending: false }).limit(20),
-      sb.from('comments').select('id, body, content, text, created_at, post_id, posts(id,caption,image_url,event_name)').eq('user_id', userId).order('created_at', { ascending: false }).limit(20),
+      sb.from('reactions').select('entity_id, created_at').eq('user_id', userId).eq('entity_type', 'post').eq('type', 'like').order('created_at', { ascending: false }).limit(20),
+      sb.from('comments').select('id, body, entity_id, created_at').eq('user_id', userId).eq('entity_type', 'post').order('created_at', { ascending: false }).limit(20),
     ]);
+    // Batch-fetch post data for all entity_ids
+    const postIds = [...new Set([...(likes||[]).map(r=>r.entity_id), ...(comments||[]).map(c=>c.entity_id)])].filter(Boolean);
+    let postMap = {};
+    if (postIds.length) {
+      const { data: posts } = await sb.from('posts').select('id,caption,image_url,event_name').in('id', postIds);
+      (posts||[]).forEach(p => { postMap[p.id] = p; });
+    }
     const items = [
-      ...(likes || []).map(r => ({ ...r, _type: 'like', _at: r.created_at, post: r.posts })),
-      ...(comments || []).map(c => ({ ...c, _type: 'comment', _at: c.created_at, post: c.posts })),
+      ...(likes || []).map(r => ({ ...r, _type: 'like', _at: r.created_at, post: postMap[r.entity_id] || null })),
+      ...(comments || []).map(c => ({ ...c, _type: 'comment', _at: c.created_at, post: postMap[c.entity_id] || null })),
     ].sort((a, b) => new Date(b._at) - new Date(a._at)).slice(0, 30);
 
     if (!items.length) {
