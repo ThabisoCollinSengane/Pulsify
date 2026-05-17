@@ -587,29 +587,24 @@ module.exports = async (req, res) => {
 
       if (existing) {
         await userClient.from('reactions').delete().eq('id', existing.id);
-        if (entity_type === 'post') {
-          const { data: p } = await sb().from('posts').select('likes_count').eq('id', entity_id).single();
-          await sb().from('posts').update({ likes_count: Math.max(0, (p?.likes_count || 1) - 1) }).eq('id', entity_id);
-        }
+        // DB trigger handles count decrement — just notify caller
         return res.status(200).json({ liked: false });
       }
 
       const { error: insErr } = await userClient.from('reactions').insert({ user_id: user.id, entity_type, entity_id, type });
       if (insErr) return res.status(400).json({ error: insErr.message });
 
+      // DB trigger handles count increment; fire notification for posts/events
       if (entity_type === 'post') {
-        const { data: p } = await sb().from('posts').select('user_id,likes_count').eq('id', entity_id).single();
-        if (p) {
-          await sb().from('posts').update({ likes_count: (p.likes_count || 0) + 1 }).eq('id', entity_id);
-          if (p.user_id !== user.id) {
-            const { data: prof } = await sb().from('profiles').select('display_name').eq('id', user.id).single();
-            const name = prof?.display_name || 'Someone';
-            await sb().from('notifications').insert({
-              user_id: p.user_id, type: 'like', from_user_id: user.id,
-              from_display_name: name, entity_id, entity_type: 'post',
-              message: `${name} liked your post`,
-            });
-          }
+        const { data: p } = await sb().from('posts').select('user_id').eq('id', entity_id).single();
+        if (p && p.user_id !== user.id) {
+          const { data: prof } = await sb().from('profiles').select('display_name').eq('id', user.id).single();
+          const name = prof?.display_name || 'Someone';
+          await sb().from('notifications').insert({
+            user_id: p.user_id, type: 'like', from_user_id: user.id,
+            from_display_name: name, entity_id, entity_type: 'post',
+            message: `${name} liked your post`,
+          }).catch(() => {});
         }
       }
 
@@ -633,10 +628,7 @@ module.exports = async (req, res) => {
       if (!existing) return res.status(200).json({ liked: false });
 
       await userClient.from('reactions').delete().eq('id', existing.id);
-      if (existing.entity_type === 'post') {
-        const { data: p } = await sb().from('posts').select('likes_count').eq('id', entity_id).single();
-        await sb().from('posts').update({ likes_count: Math.max(0, (p?.likes_count || 1) - 1) }).eq('id', entity_id);
-      }
+      // DB trigger handles count decrement automatically
       return res.status(200).json({ liked: false });
     }
 
