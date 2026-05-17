@@ -2758,6 +2758,23 @@ function renderProfile() {
   if (adminBtn) adminBtn.style.display = (role === 'admin') ? 'flex' : 'none';
 
   currentUser = sess;
+
+  // Profile completeness nudge — show once per session for incomplete profiles
+  const feed = document.getElementById('events-feed');
+  const existing = document.getElementById('profile-nudge');
+  if (feed && !sessionStorage.getItem('pn_dismissed')) {
+    if (!prof?.bio && !prof?.avatar_url) {
+      if (!existing) {
+        const nudge = document.createElement('div');
+        nudge.id = 'profile-nudge';
+        nudge.style.cssText = 'background:rgba(176,38,255,.12);border:1px solid rgba(176,38,255,.3);border-radius:12px;padding:11px 13px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:8px';
+        nudge.innerHTML = '<span style="font-size:.78rem">✏️ <strong>Complete your profile</strong> — add a photo &amp; bio to connect with others</span><div style="display:flex;gap:8px;align-items:center;flex-shrink:0"><a href="/profile-settings" style="font-size:.74rem;color:var(--pu);font-weight:700;text-decoration:none">→ Edit</a><button onclick="document.getElementById(\'profile-nudge\').remove();sessionStorage.setItem(\'pn_dismissed\',\'1\')" style="background:none;border:none;color:var(--mu);font-size:1rem;cursor:pointer;line-height:1;padding:0">×</button></div>';
+        feed.insertBefore(nudge, feed.firstChild);
+      }
+    } else if (existing) {
+      existing.remove();
+    }
+  }
 }
 
 /* ══════════════════════════════════════════════════
@@ -3169,7 +3186,7 @@ async function loadNotifications() {
     const dot = document.getElementById('notif-dot');
     if (dot) dot.style.display = unread ? 'block' : 'none';
     if (!notifs.length) {
-      el.innerHTML = '<div style="padding:30px;text-align:center;font-size:.78rem;color:var(--mu)">No notifications yet 🔔</div>';
+      el.innerHTML = '<div style="padding:30px;text-align:center"><div style="font-size:2rem;margin-bottom:8px">✓</div><div style="font-size:.78rem;color:var(--mu)">You\'re all caught up!</div></div>';
       return;
     }
 
@@ -5131,18 +5148,29 @@ async function loadSquadInviteList() {
       sb2.from('squad_members').select('user_id').eq('squad_id', _inviteSquadId)
     ]);
     const memberIds = new Set((membersRes.data || []).map(m => m.user_id));
-    const candidates = (followsRes.data || [])
+    let candidates = (followsRes.data || [])
       .map(f => f.profiles)
       .filter(p => p && !memberIds.has(p.id));
+    let isFallback = false;
+    if (!candidates.length) {
+      const excludeIds = [...memberIds, uid].join(',');
+      const { data: suggestions } = await sb2.from('profiles')
+        .select('id, display_name, username, avatar_url, is_verified')
+        .not('id', 'in', `(${excludeIds})`)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      candidates = suggestions || [];
+      isFallback = true;
+    }
     if (!candidates.length) {
       body.innerHTML = `<div style="padding:30px 16px;text-align:center">
         <div style="font-size:2.4rem;margin-bottom:8px">👋</div>
-        <div style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;margin-bottom:4px">No one to invite</div>
-        <div style="font-size:.74rem;color:var(--mu);line-height:1.5">Follow some friends first — they'll show up here so you can add them to your squad.</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;margin-bottom:4px">No one to invite yet</div>
+        <div style="font-size:.74rem;color:var(--mu);line-height:1.5">Be the first to invite someone — share your squad link or follow friends to find them here.</div>
       </div>`;
       return;
     }
-    body.innerHTML = candidates.map(p => {
+    body.innerHTML = (isFallback ? `<div style="font-size:.68rem;color:var(--mu);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">Suggested People</div>` : '') + candidates.map(p => {
       const ini = (p.display_name || p.username || '?')[0].toUpperCase();
       return `<div id="inv-row-${x(p.id)}" style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
         <div class="sq-member-av">${p.avatar_url ? `<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>` : ini}</div>

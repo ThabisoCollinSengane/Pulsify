@@ -484,14 +484,26 @@ module.exports = async (req, res) => {
       const { data: existing } = await sb().from('profiles').select('*').eq('id', user.id).single();
       if (existing) return res.status(200).json({ profile: existing });
 
-      const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Pulsefy User';
+      const b = req.body || {};
+      const displayName = (b.display_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Pulsefy User').slice(0, 80);
+      const rawUsername = b.username || user.user_metadata?.username || '';
+      const username = rawUsername.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20) || `user_${user.id.slice(0, 8)}`;
+      const role = ['user', 'organizer', 'business'].includes(b.role) ? b.role : 'user';
+      const genres = Array.isArray(b.genres) ? b.genres.slice(0, 10) : [];
+
       const { data: created } = await sb().from('profiles').insert({
         id:           user.id,
         email:        user.email,
-        username:     `user_${user.id.slice(0, 8)}`,
+        username,
         display_name: displayName,
-        avatar_url:   user.user_metadata?.avatar_url || null,
-        city:         'Durban',
+        role,
+        genres:       genres.length ? genres : null,
+        avatar_url:   b.avatar_url || user.user_metadata?.avatar_url || null,
+        bio:          b.bio ? String(b.bio).slice(0, 300) : null,
+        dob:          b.dob || null,
+        phone:        b.phone ? String(b.phone).slice(0, 20) : null,
+        province:     b.province || null,
+        city:         b.city || null,
       }).select().single();
 
       // Non-blocking welcome email
