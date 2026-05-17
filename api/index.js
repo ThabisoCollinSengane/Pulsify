@@ -2132,6 +2132,14 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
+    // GET /squads/:id/public — unauthenticated preview for invite landing page
+    if (squadDetailMatch && url.endsWith('/public') && req.method === 'GET') {
+      const { data } = await sb().from('squads')
+        .select('id, name, avatar_url, member_count, is_public')
+        .eq('id', squadDetailMatch[1]).single();
+      return res.status(data ? 200 : 404).json(data || { error: 'Not found' });
+    }
+
     // GET /squads/:id — squad detail with per-member points
     if (squadDetailMatch && req.method === 'GET') {
       const auth = await authUser(req);

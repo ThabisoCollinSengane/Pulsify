@@ -3977,9 +3977,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Deep-link from /map: ?eid=xxx or ?bid=xxx
   const _qp = new URLSearchParams(location.search);
-  const _eid = _qp.get('eid'), _bid = _qp.get('bid');
+  const _eid = _qp.get('eid'), _bid = _qp.get('bid'), _sqid = _qp.get('squad');
   if (_eid) setTimeout(() => openEv(_eid), 400);
   else if (_bid) setTimeout(() => openBiz(_bid), 400);
+  else if (_sqid) setTimeout(() => handleSquadInviteLink(_sqid), 700);
 
   // Check auth state + notification dot
   const sb = getSB();
@@ -4552,11 +4553,22 @@ function loadSqMembers(squadId) {
       </div>
     </div>`;
   }).join('');
-  const inviteBtn = isMember ? `<button onclick="openSquadInvite('${x(squadId)}')" style="width:100%;padding:11px;background:rgba(0,229,255,.08);border:1.5px solid rgba(0,229,255,.3);border-radius:50px;color:var(--cy);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;margin-top:14px">+ Invite Friend</button>` : '';
+  const sqName = (_sqCurrentSquad && _sqCurrentSquad.name) || 'Squad';
+  const shareSection = isMember ? `
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:.66rem;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Invite to Squad</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
+        <button onclick="sqShareInvite('${x(squadId)}','${x(sqName)}','copy')" style="padding:9px 4px;background:var(--surf);border:1px solid var(--border);border-radius:10px;color:var(--tx);font-size:.7rem;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer">📋 Copy Link</button>
+        <button onclick="sqShareInvite('${x(squadId)}','${x(sqName)}','whatsapp')" style="padding:9px 4px;background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.3);border-radius:10px;color:#25D366;font-size:.7rem;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer">💬 WhatsApp</button>
+        <button onclick="sqShareInvite('${x(squadId)}','${x(sqName)}','share')" style="padding:9px 4px;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.25);border-radius:10px;color:var(--cy);font-size:.7rem;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer">🔗 Share</button>
+      </div>
+      <div style="font-size:.66rem;color:var(--mu);margin-bottom:8px;text-align:center">— or invite a follower —</div>
+      <button onclick="openSquadInvite('${x(squadId)}')" style="width:100%;padding:11px;background:rgba(0,229,255,.08);border:1.5px solid rgba(0,229,255,.3);border-radius:50px;color:var(--cy);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer">+ Invite Friend</button>
+    </div>` : '';
   const actionBtn = isMember
     ? `<button onclick="leaveSquad('${x(squadId)}')" style="width:100%;padding:11px;background:rgba(255,45,120,.1);border:1.5px solid rgba(255,45,120,.3);border-radius:50px;color:var(--pk);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;margin-top:8px">Leave Squad</button>`
     : `<button onclick="joinSquad('${x(squadId)}')" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;margin-top:14px">Join Squad</button>`;
-  pane.innerHTML = `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Members (${members.length})</div>${membersHtml}${inviteBtn}${actionBtn}`;
+  pane.innerHTML = `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Members (${members.length})</div>${membersHtml}${shareSection}${actionBtn}`;
 }
 
 async function loadSqCalendar(squadId) {
@@ -4738,6 +4750,68 @@ async function rejectInvite(inviteId) {
   try {
     await fetch(API + '/squads/invites/' + inviteId + '/reject', { method: 'POST', headers: { 'Authorization': 'Bearer ' + session.access_token } });
     const row = document.getElementById('inv-banner-' + inviteId); if (row) row.remove();
+  } catch(e) {}
+}
+
+function sqShareInvite(squadId, squadName, method) {
+  const url = location.origin + '/?squad=' + encodeURIComponent(squadId);
+  const text = 'Join my squad "' + squadName + '" on Pulsefy! ' + url;
+  if (method === 'whatsapp') {
+    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener');
+  } else if (method === 'share' && navigator.share) {
+    navigator.share({ title: squadName + ' — Pulsefy Squad', text, url }).catch(() => {});
+  } else {
+    // copy link (also fallback for share if navigator.share unavailable)
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => showToast('🔗 Invite link copied!'));
+    } else {
+      showToast('🔗 ' + url);
+    }
+  }
+}
+
+async function handleSquadInviteLink(squadId) {
+  const sb2 = getSB(); if (!sb2) return;
+  const session = (await sb2.auth.getSession()).data?.session;
+  if (session) {
+    // Logged in — open the squad directly
+    showTab('friends');
+    setTimeout(async () => {
+      try {
+        const r = await fetch(API + '/squads/' + encodeURIComponent(squadId), {
+          headers: { 'Authorization': 'Bearer ' + session.access_token }
+        });
+        if (r.ok) {
+          const detail = await safeJson(r);
+          if (detail && detail.squad) {
+            const el = document.getElementById('squad-content');
+            if (el) { renderSquadWorkspace(detail, el); }
+          }
+        }
+      } catch(e) {}
+    }, 300);
+    return;
+  }
+  // Not logged in — show invite banner
+  try {
+    const r = await fetch(API + '/squads/' + encodeURIComponent(squadId) + '/public');
+    if (!r.ok) return;
+    const sq = await r.json();
+    if (!sq || !sq.name) return;
+    let banner = document.getElementById('sq-invite-link-banner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'sq-invite-link-banner';
+      banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#B026FF,#FF5C00);padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.6)';
+      document.body.prepend(banner);
+    }
+    banner.innerHTML = `
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:800;color:#fff">👥 You're invited to join "${x(sq.name)}"!</div>
+        <div style="font-size:.7rem;color:rgba(255,255,255,.8);margin-top:2px">${sq.member_count||0} member${sq.member_count===1?'':'s'} · Create a free account to join</div>
+      </div>
+      <a href="/create-account?squad=${encodeURIComponent(squadId)}" style="flex-shrink:0;background:#fff;color:#B026FF;font-family:'Syne',sans-serif;font-size:.74rem;font-weight:800;border-radius:50px;padding:8px 14px;text-decoration:none;white-space:nowrap">Join Free →</a>
+      <button onclick="this.parentElement.remove()" style="background:rgba(0,0,0,.25);border:none;color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:.8rem;flex-shrink:0">✕</button>`;
   } catch(e) {}
 }
 
