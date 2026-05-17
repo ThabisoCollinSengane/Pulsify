@@ -548,9 +548,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 <!-- ══ MAP ══ -->
 <div class="panel" id="tab-map" style="overflow:hidden">
   <!-- Header bar — floats over map -->
-  <div style="position:absolute;top:0;left:0;right:0;height:56px;z-index:50;background:linear-gradient(180deg,rgba(5,8,15,.85) 0%,rgba(5,8,15,0) 100%);backdrop-filter:blur(12px);display:flex;align-items:center;padding:0 14px;gap:10px">
+  <div style="position:absolute;top:0;left:0;right:0;height:56px;z-index:50;background:linear-gradient(180deg,rgba(5,8,15,.88) 0%,rgba(5,8,15,0) 100%);backdrop-filter:blur(12px);display:flex;align-items:center;padding:0 14px;gap:8px">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.06em;color:#fff;flex:1;text-shadow:0 2px 8px rgba(0,0,0,.6)">📍 PULSEFY MAP</div>
     <div style="display:flex;align-items:center;gap:5px;background:rgba(5,8,15,.6);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);border-radius:50px;padding:4px 12px;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:800;color:#fff;letter-spacing:.04em"><b id="map-cnt" style="color:var(--li)">0</b>&nbsp;spots</div>
+    <button id="map-loc-btn" onclick="goToMyLocation()" title="My Location" style="width:36px;height:36px;border-radius:50%;background:rgba(5,8,15,.7);border:1px solid rgba(0,229,255,.4);color:var(--cy);font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">📍</button>
+    <button onclick="snapMapBack()" title="Reset view" style="width:36px;height:36px;border-radius:50%;background:rgba(5,8,15,.7);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">⌂</button>
   </div>
   <!-- Filter chips — floats over map -->
   <div style="position:absolute;top:56px;left:0;right:0;z-index:49;display:flex;gap:6px;padding:8px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;background:linear-gradient(180deg,rgba(5,8,15,.6) 0%,rgba(5,8,15,0) 100%);backdrop-filter:blur(4px)">
@@ -1682,12 +1684,14 @@ async function openEv(evId) {
 
   try {
     const sb = getSB();
-    const [{ data: ev, error: evErr }, { data: evTiers }, { data: evPhotos }] = await Promise.all([
+    const [{ data: evDb, error: evErr }, { data: evTiers }, { data: evPhotos }] = await Promise.all([
       sb.from('events').select('*').eq('id', evId).single(),
       sb.from('ticket_tiers').select('*').eq('event_id', evId).order('sort_order'),
       sb.from('event_photos').select('*').eq('event_id', evId).order('created_at', { ascending: false }).limit(12),
     ]);
-    if (evErr || !ev) throw new Error('Not found');
+    // Fall back to in-memory feed cache for Quicket events not yet seeded to DB
+    const ev = evDb || (eventsForMap || []).find(e => String(e.id) === String(evId));
+    if (!ev) throw new Error('Not found');
     const tiers = evTiers || [], photos = evPhotos || [];
 
     selTier = tiers[0] || null; selQty = 1;
@@ -2229,13 +2233,8 @@ function initMap() {
   }
   mapObj.touchZoomRotate.disableRotation();
   
-  // Add controls
+  // Zoom controls only — My Location handled by our custom button
   mapObj.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
-  mapObj.addControl(new mapboxgl.GeolocateControl({
-    positionOptions: { enableHighAccuracy: true },
-    trackUserLocation: true,
-    showUserHeading: true
-  }), 'top-right');
   
   mapObj.on('load', () => {
     mapObj.resize();
@@ -2405,7 +2404,16 @@ function placeMapMarkers() {
       showMapPanel(item, type, s);
     });
 
-    mapMarkers.push(new mapboxgl.Marker({element: el, anchor: 'center'}).setLngLat([lon, lat]).addTo(mapObj));
+    // Nudge markers that sit on/past the KZN beach line so they render on land.
+    // Coastline approximation: Umhlanga(-29.72,31.09) → Port Edward(-31.05,30.22)
+    // slope: 0.87° lon / 1.33° lat → 0.654 lon per lat degree going south.
+    let plotLon = lon;
+    if (lat >= -31.1 && lat <= -29.0 && lon >= 29.5) {
+      const coastLon = 31.09 + 0.654 * (lat + 29.72);
+      if (lon > coastLon - 0.03) plotLon = coastLon - 0.03; // ~3km inland
+    }
+
+    mapMarkers.push(new mapboxgl.Marker({element: el, anchor: 'center'}).setLngLat([plotLon, lat]).addTo(mapObj));
   });
 
   const cntEl = document.getElementById('map-cnt');
@@ -2421,6 +2429,41 @@ function placeMapMarkers() {
     kznMarkers.forEach(m => bounds.extend(m.getLngLat()));
     mapObj.fitBounds(bounds, { padding: 100, maxZoom: 12, duration: 1200 });
   }
+}
+
+const _MAP_HOME = { center: [30.9753, -29.8587], zoom: 10 };
+
+function snapMapBack() {
+  if (!mapObj) return;
+  mapObj.flyTo({ center: _MAP_HOME.center, zoom: _MAP_HOME.zoom, duration: 900, essential: true });
+}
+
+function goToMyLocation() {
+  if (!mapObj) return;
+  if (!navigator.geolocation) { showToast('Location not supported on this device', 'err'); return; }
+  const btn = document.getElementById('map-loc-btn');
+  if (btn) { btn.textContent = '⏳'; btn.style.background = 'rgba(0,229,255,.15)'; }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const { latitude: lat, longitude: lon } = pos.coords;
+      const inSA = lat >= -35 && lat <= -22 && lon >= 16 && lon <= 34;
+      if (btn) { btn.textContent = '📍'; btn.style.background = inSA ? 'rgba(0,229,255,.2)' : 'rgba(5,8,15,.7)'; }
+      if (!inSA) { showToast('You appear to be outside South Africa'); return; }
+      mapObj.flyTo({ center: [lon, lat], zoom: 13, duration: 1200, essential: true });
+      // Add/refresh user location marker
+      if (window._myLocMarker) window._myLocMarker.remove();
+      const el = document.createElement('div');
+      el.style.cssText = 'width:20px;height:20px;border-radius:50%;background:rgba(0,229,255,.9);border:3px solid #fff;box-shadow:0 0 18px rgba(0,229,255,.8),0 2px 8px rgba(0,0,0,.8)';
+      window._myLocMarker = new mapboxgl.Marker({ element: el, anchor: 'center' }).setLngLat([lon, lat]).addTo(mapObj);
+      showToast('📍 Showing your location');
+    },
+    err => {
+      if (btn) { btn.textContent = '📍'; btn.style.background = 'rgba(5,8,15,.7)'; }
+      if (err.code === 1) showToast('Location permission denied — enable it in browser settings', 'err');
+      else showToast('Could not get your location', 'err');
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+  );
 }
 
 function showMapPanel(item, type, s) {
