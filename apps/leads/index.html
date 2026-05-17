@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
-<title>Lead Management — Pulsify</title>
+<title>Lead Management — Pulsefy</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
@@ -119,7 +119,7 @@ body{padding:20px;padding-top:80px}
 <body>
 
 <div class="tb">
-  <a href="/" class="logo"><span class="dot"></span>PULSIFY</a>
+  <a href="/" class="logo"><span class="dot"></span>PULSEFY</a>
   <button class="back" onclick="window.location.href='/admin'">← Back to Dashboard</button>
 </div>
 
@@ -229,7 +229,7 @@ body{padding:20px;padding-top:80px}
 <!-- Auth Gate -->
 <div class="auth-gate" id="auth-gate">
   <div class="auth-card">
-    <div class="auth-logo"><span class="dot"></span>PULSIFY</div>
+    <div class="auth-logo"><span class="dot"></span>PULSEFY</div>
     <div class="auth-sub">Admin Access</div>
     <div class="auth-title">Sign In</div>
     <div class="auth-desc">Lead Management is restricted to authorised team members.</div>
@@ -540,9 +540,9 @@ async function addNote(id) {
 
 // ── Email modal ──────────────────────────────────────────────────────────────
 const TEMPLATES = {
-  intro:   { subject: 'Join Pulsify — Free Listing for SA Events & Businesses', body: `Hi {name},\n\nI came across your page and thought Pulsify would be a great fit for you.\n\nPulsify is South Africa's fastest-growing event discovery platform. We're offering free listings to event organisers and businesses in our launch phase.\n\nInterested? I'd love to set you up in under 5 minutes.\n\nBest,\nThe Pulsify Team\nhttps://pulsify-blue.vercel.app` },
-  followup:{ subject: 'Following up — Pulsify listing for {name}', body: `Hi {name},\n\nJust following up on my previous message about Pulsify. We're growing fast across KZN, Gauteng, and the Western Cape and I'd love to get you on the platform.\n\nNo cost, no commitment — just more visibility for your events.\n\nLet me know if you have any questions.\n\nBest,\nThe Pulsify Team` },
-  convert: { subject: 'Your Pulsify account is ready, {name}!', body: `Hi {name},\n\nGreat news — your Pulsify listing is ready to go live.\n\nHead to https://pulsify-blue.vercel.app and create your account to get started. Once you're in, your profile will be visible to thousands of event-goers across South Africa.\n\nWelcome aboard!\n\nThe Pulsify Team` },
+  intro:   { subject: 'Join Pulsefy — Free Listing for SA Events & Businesses', body: `Hi {name},\n\nI came across your page and thought Pulsefy would be a great fit for you.\n\nPulsefy is South Africa's fastest-growing event discovery platform. We're offering free listings to event organisers and businesses in our launch phase.\n\nInterested? I'd love to set you up in under 5 minutes.\n\nBest,\nThe Pulsefy Team\nhttps://pulsefy-blue.vercel.app` },
+  followup:{ subject: 'Following up — Pulsefy listing for {name}', body: `Hi {name},\n\nJust following up on my previous message about Pulsefy. We're growing fast across KZN, Gauteng, and the Western Cape and I'd love to get you on the platform.\n\nNo cost, no commitment — just more visibility for your events.\n\nLet me know if you have any questions.\n\nBest,\nThe Pulsefy Team` },
+  convert: { subject: 'Your Pulsefy account is ready, {name}!', body: `Hi {name},\n\nGreat news — your Pulsefy listing is ready to go live.\n\nHead to https://pulsefy-blue.vercel.app and create your account to get started. Once you're in, your profile will be visible to thousands of event-goers across South Africa.\n\nWelcome aboard!\n\nThe Pulsefy Team` },
 };
 
 function openEmail(id) {
@@ -586,7 +586,7 @@ function exportToCSV() {
   const rows = [cols.join(','), ...leads.map(l => cols.map(c => `"${(l[c]||'').toString().replace(/"/g,'""')}"`).join(','))];
   const blob = new Blob([rows.join('\n')], { type:'text/csv' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = `pulsify-leads-${new Date().toISOString().split('T')[0]}.csv`; a.click();
+  a.download = `pulsefy-leads-${new Date().toISOString().split('T')[0]}.csv`; a.click();
 }
 </script>
 </body>

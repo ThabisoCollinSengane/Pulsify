@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
-<title>Create Account — Pulsify</title>
+<title>Create Account — Pulsefy</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
@@ -71,7 +71,7 @@ select.inp option{background:#0D1424}
 </style>
 </head>
 <body>
-<a class="logo" href="/"><span class="dot"></span>PULSIFY</a>
+<a class="logo" href="/"><span class="dot"></span>PULSEFY</a>
 <p class="tagline">Join South Africa's vibe platform 🇿🇦</p>
 
 <div class="card">
@@ -182,7 +182,7 @@ select.inp option{background:#0D1424}
     <div class="sec-div">Terms</div>
     <div class="terms-row" id="trow" onclick="togTerms()">
       <div class="chkbox" id="tchk"></div>
-      <div class="terms-txt">I agree to the Pulsify <a href="/terms" target="_blank" onclick="event.stopPropagation()">Terms of Service</a> and <a href="/terms" target="_blank" onclick="event.stopPropagation()">Privacy Policy</a>. I confirm I am at least 13 years old.</div>
+      <div class="terms-txt">I agree to the Pulsefy <a href="/terms" target="_blank" onclick="event.stopPropagation()">Terms of Service</a> and <a href="/terms" target="_blank" onclick="event.stopPropagation()">Privacy Policy</a>. I confirm I am at least 13 years old.</div>
     </div>
 
     <button class="btn-back" onclick="goStep1()">← Back</button>
@@ -392,7 +392,7 @@ async function doCreate() {
     }
     const destLabel = role === 'organizer' ? '🎪 Organizer account created! Setting up your dashboard…'
       : role === 'business' ? '🏪 Business account created! Setting up your dashboard…'
-      : '🎉 Welcome to Pulsify!';
+      : '🎉 Welcome to Pulsefy!';
     toast(destLabel, 'ok');
     const dest = role === 'organizer' ? '/organizer'
       : role === 'business' ? '/business'

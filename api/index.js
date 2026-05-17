@@ -406,7 +406,7 @@ module.exports = async (req, res) => {
       if (!qr_data) return res.status(400).json({ error: 'qr_data required' });
 
       const parts = String(qr_data).split(':');
-      if (parts.length < 4 || parts[0] !== 'PULSIFY' || parts[3] !== 'VALID')
+      if (parts.length < 4 || parts[0] !== 'PULSEFY' || parts[3] !== 'VALID')
         return res.status(400).json({ error: 'Invalid QR code' });
 
       const booking_ref = parts[1];
@@ -484,7 +484,7 @@ module.exports = async (req, res) => {
       const { data: existing } = await sb().from('profiles').select('*').eq('id', user.id).single();
       if (existing) return res.status(200).json({ profile: existing });
 
-      const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Pulsify User';
+      const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Pulsefy User';
       const { data: created } = await sb().from('profiles').insert({
         id:           user.id,
         email:        user.email,
@@ -1097,7 +1097,7 @@ module.exports = async (req, res) => {
       const free  = q.free === '1' || q.free === 'true';
       const limit = Math.min(parseInt(q.limit || '200'), 500);
 
-      // Quicket category/keyword → Pulsify genre
+      // Quicket category/keyword → Pulsefy genre
       const GENRE_MAP = {
         music:'house', concert:'house', live:'live',
         amapiano:'amapiano', gqom:'gqom',
@@ -1269,7 +1269,7 @@ module.exports = async (req, res) => {
         await sb().from('notifications').insert({
           user_id:           admin.id,
           type:              'system',
-          from_display_name: 'Pulsify System',
+          from_display_name: 'Pulsefy System',
           message:           `New verification request from ${user.email || 'a user'}.`,
           entity_type:       'verification',
           entity_id:         user.id,
@@ -1349,9 +1349,9 @@ module.exports = async (req, res) => {
       if (error) return res.status(400).json({ error: error.message });
 
       // Notify the user about verification result
-      const adminName = auth.profile.display_name || 'Pulsify Admin';
+      const adminName = auth.profile.display_name || 'Pulsefy Admin';
       const msg = action === 'approve'
-        ? '🎉 Your profile has been verified! Your Pulsify verified badge is now active.'
+        ? '🎉 Your profile has been verified! Your Pulsefy verified badge is now active.'
         : `Your verification application was not approved. ${notes ? 'Reason: ' + notes : 'Please re-apply with complete and accurate information.'}`;
       await sb().from('notifications').insert({
         user_id:           targetId,
@@ -1417,7 +1417,7 @@ module.exports = async (req, res) => {
         try {
           const r = await fetch('https://overpass-api.de/api/interpreter', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Pulsify/1.0' },
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Pulsefy/1.0' },
             body,
             signal: AbortSignal.timeout(20000),
           });
@@ -1573,7 +1573,7 @@ module.exports = async (req, res) => {
         user_id: u.id, type: 'broadcast',
         title, body: msgBody, message: msgBody,
         data: { url: targetUrl },
-        from_display_name: 'Pulsify',
+        from_display_name: 'Pulsefy',
       }));
       await sb().from('notifications').insert(notifs);
 
@@ -1584,7 +1584,7 @@ module.exports = async (req, res) => {
       if (VPUB && VPRIV) {
         try {
           const webpush = require('web-push');
-          webpush.setVapidDetails('mailto:admin@pulsify.co.za', VPUB, VPRIV);
+          webpush.setVapidDetails('mailto:admin@pulsefy.co.za', VPUB, VPRIV);
           const ids = users.map(u => u.id);
           const { data: subs } = await sb().from('push_subscriptions').select('*').in('user_id', ids);
           const payload = JSON.stringify({ title, body: msgBody, url: targetUrl });

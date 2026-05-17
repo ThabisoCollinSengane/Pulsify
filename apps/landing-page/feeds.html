@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
-<title>Feed — Pulsify</title>
+<title>Feed — Pulsefy</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
@@ -593,7 +593,7 @@ async function doFollow(targetUserId, postId) {
 }
 
 function doShare(caption) {
-  if (navigator.share) navigator.share({title:'Pulsify Post', text:caption||'Check this out on Pulsify!', url:location.href});
+  if (navigator.share) navigator.share({title:'Pulsefy Post', text:caption||'Check this out on Pulsefy!', url:location.href});
   else { navigator.clipboard?.writeText(location.href); showToast('🔗 Link copied!'); }
 }
 

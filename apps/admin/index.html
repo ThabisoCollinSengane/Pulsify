@@ -123,7 +123,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <body>
 
 <div class="topbar">
-  <div class="logo"><div class="dot"></div>PULSIFY</div>
+  <div class="logo"><div class="dot"></div>PULSEFY</div>
   <div style="display:flex;align-items:center;gap:10px">
     <span class="admin-badge">🔐 Admin Panel</span>
     <button class="btn btn-surf" onclick="signOutAdmin()" id="logout-btn" style="display:none">Sign Out</button>
@@ -142,7 +142,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </button>
     <div class="or-divider">or</div>
     <label class="field-lbl">Email</label>
-    <input class="inp" id="admin-email" type="email" placeholder="admin@pulsify.co.za" style="width:100%;margin-bottom:10px"/>
+    <input class="inp" id="admin-email" type="email" placeholder="admin@pulsefy.co.za" style="width:100%;margin-bottom:10px"/>
     <label class="field-lbl">Password</label>
     <input class="inp" id="admin-pw" type="password" placeholder="••••••••" style="width:100%;margin-bottom:14px"/>
     <button class="btn btn-or" style="width:100%" id="login-btn" onclick="adminLogin()">Sign In to Admin Panel</button>
@@ -1076,7 +1076,7 @@ async function geocodeSelected() {
   try {
     const r = await fetch(
       `https://nominatim.openstreetmap.org/search?` + new URLSearchParams({ q: query, format: 'json', limit: 1, countrycodes: 'za' }),
-      { headers: { 'User-Agent': 'Pulsify/2.0 Admin' } }
+      { headers: { 'User-Agent': 'Pulsefy/2.0 Admin' } }
     );
     const results = await safeJson(r);
     if (!results.length) { appendLog('No results found. Try a more specific address.', 'err'); return; }
@@ -1160,7 +1160,7 @@ async function runBulkGeocode() {
       await new Promise(r => setTimeout(r, 1200)); // Nominatim rate limit 1/sec
       const r = await fetch(
         `https://nominatim.openstreetmap.org/search?` + new URLSearchParams({ q: query, format: 'json', limit: 1, countrycodes: 'za' }),
-        { headers: { 'User-Agent': 'Pulsify/2.0 Admin' } }
+        { headers: { 'User-Agent': 'Pulsefy/2.0 Admin' } }
       );
       const results = await safeJson(r);
       if (!results.length) { failed++; continue; }

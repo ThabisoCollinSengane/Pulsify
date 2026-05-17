@@ -388,7 +388,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .mcb{flex-shrink:0;background:rgba(10,14,26,.82);backdrop-filter:blur(20px);border:1.5px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);padding:6px 14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s;-webkit-tap-highlight-color:transparent}
 .mcb.active{background:linear-gradient(135deg,var(--pu),var(--or));color:#fff;border-color:transparent;box-shadow:0 4px 18px rgba(176,38,255,.45)}
 
-/* ── MAP SPLASH (PULSIFY MAP EXPLORE) ── */
+/* ── MAP SPLASH (PULSEFY MAP EXPLORE) ── */
 #map-splash{position:absolute;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:radial-gradient(ellipse at center,#0c0f1f 0%,#05080F 70%);animation:msIn .35s ease-out;text-align:center;padding:24px;pointer-events:none}
 #map-splash.ms-fade{animation:msOut .45s ease-in forwards;pointer-events:none}
 .ms-pulse{position:relative;width:110px;height:110px;display:flex;align-items:center;justify-content:center}
@@ -403,7 +403,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 @keyframes msRing{0%{transform:scale(.65);opacity:1}100%{transform:scale(1.9);opacity:0}}
 @keyframes msDot{0%,100%{transform:scale(1);box-shadow:0 0 50px var(--or),0 0 90px rgba(176,38,255,.6)}50%{transform:scale(1.12);box-shadow:0 0 70px var(--or),0 0 120px rgba(176,38,255,.8)}}
 @keyframes msPulseText{0%,100%{opacity:.55}50%{opacity:1}}
-/* ── Pulsify verified badge ── */
+/* ── Pulsefy verified badge ── */
 .puls-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);box-shadow:0 0 8px rgba(255,92,0,.5);position:relative;vertical-align:middle;margin-left:5px;flex-shrink:0;cursor:default}
 .puls-badge::before{content:'';position:absolute;inset:-4px;border-radius:50%;background:linear-gradient(135deg,rgba(255,92,0,.35),rgba(255,45,120,.35));animation:puls-ring 2.2s ease-out infinite;z-index:-1}
 .puls-badge::after{content:'';width:7px;height:7px;border-radius:50%;background:#fff;opacity:.95}
@@ -415,7 +415,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 
 <!-- TOP BAR -->
 <header class="tb">
-  <div class="logo" onclick="goHome()"><span class="dot"></span>PULSIFY</div>
+  <div class="logo" onclick="goHome()"><span class="dot"></span>PULSEFY</div>
   <div class="top-r">
     <button class="back" id="back-btn" onclick="goBack()">← Back</button>
     <div class="ib" id="notif-btn" onclick="openNotifPanel()">🔔<span class="nd" id="notif-dot"></span></div>
@@ -1003,7 +1003,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 <script>
 
 /* ═══════════════════════════════════════════════════════════
-   PULSIFY — LIVE API FRONTEND
+   PULSEFY — LIVE API FRONTEND
    All data loaded from /api/* — no static arrays
    ═══════════════════════════════════════════════════════════ */
 
@@ -1217,7 +1217,7 @@ function showTab(name, _noPush) {
     }
   }
 }
-// Show "PULSIFY MAP EXPLORE" splash inside the map panel while it boots
+// Show "PULSEFY MAP EXPLORE" splash inside the map panel while it boots
 function showMapSplash() {
   const mc = document.getElementById('mc'); if (!mc) return;
   if (document.getElementById('map-splash')) return;
@@ -1225,7 +1225,7 @@ function showMapSplash() {
   splash.id = 'map-splash';
   splash.innerHTML = `
     <div class="ms-pulse"><div class="ms-dot"></div></div>
-    <div class="ms-title">PULSIFY MAP</div>
+    <div class="ms-title">PULSEFY MAP</div>
     <div class="ms-sub">EXPLORE</div>
     <div class="ms-sub2">Loading the streets…</div>`;
   mc.appendChild(splash);
@@ -1481,7 +1481,7 @@ function buildCard(ev, idx) {
   const btnLbl   = gl.includes('march') ? 'Join March' : (iF ? 'RSVP Free' : 'Get Tickets');
   return `<div class="fc rv" data-evid="${x(ev.id)}" onclick="openEv('${x(ev.id)}')">
     <div class="fh"><div class="fa" style="background:${bg}">${emo}</div>
-      <div style="flex:1;min-width:0"><div class="fo">${x(ev.organiser_name || ev.venue_name || 'Pulsify')}</div>
+      <div style="flex:1;min-width:0"><div class="fo">${x(ev.organiser_name || ev.venue_name || 'Pulsefy')}</div>
       <div class="fl">📍 ${x(ev.venue_city)} · ${fdt(ev.date_local, ev.time_local)}</div></div>${badge}</div>
     <div class="fb" style="background:transparent">
       <img src="${x(ev.image_url || '')}" loading="lazy" onerror="this.style.display='none'"/>
@@ -1959,7 +1959,7 @@ async function openBiz(bizId) {
         ${tags.length ? `<div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px"><div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Tags</div><div style="display:flex;flex-wrap:wrap;gap:4px">${tags.map(t => `<span class="tg">${x(t)}</span>`).join('')}</div></div>` : ''}
         <div style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.2);border-radius:12px;padding:12px">
           <div style="font-size:.75rem;color:var(--mu2);line-height:1.5">🏪 <strong style="color:var(--cy)">Is this your business?</strong> Claim your Pulsefy profile.</div>
-          <button onclick="showToast('Email: business@pulsify.co.za')" style="margin-top:8px;background:rgba(0,229,255,.12);border:1px solid rgba(0,229,255,.3);color:var(--cy);padding:7px 16px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer">Claim Profile →</button>
+          <button onclick="showToast('Email: business@pulsefy.co.za')" style="margin-top:8px;background:rgba(0,229,255,.12);border:1px solid rgba(0,229,255,.3);color:var(--cy);padding:7px 16px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer">Claim Profile →</button>
         </div>
       </div>
       <div class="bzp" id="bp-gallery">
@@ -3482,7 +3482,7 @@ async function showTicketConfirm(booking) {
   document.getElementById('tc-name').textContent  = booking.buyer_name  || '';
   document.getElementById('tc-qty').textContent   = booking.quantity    || 1;
   document.getElementById('tc-total').textContent = booking.is_free ? 'FREE' : 'R' + (booking.total_paid || 0).toFixed(2);
-  const qrData = encodeURIComponent(booking.qr_data || booking.booking_ref || 'PULSIFY');
+  const qrData = encodeURIComponent(booking.qr_data || booking.booking_ref || 'PULSEFY');
   document.getElementById('tc-qr').src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${qrData}&bgcolor=090D1A&color=FF5C00&margin=2`;
   document.getElementById('ticket-confirm-modal').style.display = 'flex';
   const evId = booking.event_id || '';
