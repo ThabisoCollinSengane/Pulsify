@@ -4,7 +4,20 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
-<title>Sign In — Pulsify</title>
+<meta name="description" content="Sign in to Pulsefy — South Africa's live event discovery platform. Book tickets, follow organisers, plan outings with your squad."/>
+<meta name="robots" content="noindex,follow"/>
+<title>Sign In — Pulsefy 🇿🇦</title>
+<link rel="canonical" href="https://pulsefy.co.za/signin"/>
+<link rel="icon" type="image/png" href="/favicon.png"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="Pulsefy"/>
+<meta property="og:title" content="Sign In — Pulsefy"/>
+<meta property="og:description" content="Sign in to Pulsefy — South Africa's live event discovery platform."/>
+<meta property="og:url" content="https://pulsefy.co.za/signin"/>
+<meta property="og:image" content="https://pulsefy.co.za/og-image.png"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Sign In — Pulsefy"/>
+<meta name="twitter:image" content="https://pulsefy.co.za/og-image.png"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
@@ -252,12 +265,30 @@ async function doSignIn() {
   setTimeout(() => redirectByRole(), 800);
 }
 
+let _forgotAt = 0;
 async function handleForgot() {
   const em = document.getElementById('em').value.trim();
   if (!em) return showErr('Enter your email address first, then tap Forgot password.');
-  const { error } = await sb.auth.resetPasswordForEmail(em, { redirectTo: window.location.origin + '/signin' });
-  if (error) return showErr('Could not send reset email: ' + error.message);
-  showOk('\u2705 Password reset link sent to <strong>' + em + '</strong>. Check your inbox (and spam folder).');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return showErr('That does not look like a valid email address.');
+  const now = Date.now();
+  if (now < _forgotAt) {
+    const wait = Math.ceil((_forgotAt - now) / 1000);
+    return showErr('Please wait ' + wait + 's before requesting another reset email.');
+  }
+  _forgotAt = now + 60000;
+  const { error } = await sb.auth.resetPasswordForEmail(em, { redirectTo: window.location.origin + '/reset-password' });
+  if (error) {
+    _forgotAt = 0;
+    const msg = (error.message || '').toLowerCase();
+    if (msg.includes('rate limit') || msg.includes('too many') || error.status === 429) {
+      return showErr('Too many reset requests. Supabase limits this to 4 per hour by default \u2014 wait an hour, then try again. If this keeps happening, custom SMTP needs to be enabled in your Supabase dashboard.');
+    }
+    if (msg.includes('user not found') || msg.includes('no user found')) {
+      return showOk('\u2705 If an account exists for <strong>' + em + '</strong>, a reset link is on the way. Check your inbox (and spam folder).');
+    }
+    return showErr('Could not send reset email: ' + error.message);
+  }
+  showOk('\u2705 Password reset link sent to <strong>' + em + '</strong>. Check your inbox (and spam folder). The link expires in 1 hour.');
 }
 
 async function resendVerification() {

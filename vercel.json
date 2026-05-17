@@ -44,6 +44,7 @@
     { "source": "/map",                   "destination": "/apps/map/index.html" },
     { "source": "/map/(.*)",              "destination": "/apps/map/$1" },
     { "source": "/signin",               "destination": "/apps/landing-page/signin.html" },
+    { "source": "/reset-password",       "destination": "/apps/landing-page/reset-password.html" },
     { "source": "/create-account",       "destination": "/apps/landing-page/create-account.html" },
     { "source": "/profile-settings",     "destination": "/apps/landing-page/profile-settings.html" },
     { "source": "/user-profile",         "destination": "/apps/landing-page/user-profile.html" },
