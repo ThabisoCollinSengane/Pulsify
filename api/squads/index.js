@@ -159,20 +159,22 @@ module.exports = async (req, res) => {
 
     // GET /squads/:id/plans — list all plans with RSVPs
     if (squadPlansMatch && req.method === 'GET') {
+      const token = tokenFrom(req);
       const auth = await authUser(req);
       if (!auth) return res.status(401).json({ error: 'Unauthorized' });
       const squadId = squadPlansMatch[1];
-      const { data: membership } = await sb().from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
+      const userClient = sbAs(token);
+      const { data: membership } = await userClient.from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
       if (!membership) return res.status(403).json({ error: 'Not a squad member' });
-      const { data: plans } = await sb()
+      const { data: plans } = await userClient
         .from('squad_plans')
-        .select('id, title, notes, plan_date, plan_time, location_name, event_id, creator_id, created_at, profiles!squad_plans_creator_id_fkey(display_name, avatar_url)')
+        .select('id, title, notes, plan_date, plan_time, location_name, event_id, outing_type, budget_per_person, creator_id, created_at, profiles!squad_plans_creator_id_fkey(display_name, avatar_url)')
         .eq('squad_id', squadId)
         .order('plan_date', { ascending: true });
       const planIds = (plans || []).map(p => p.id);
       let rsvpMap = {};
       if (planIds.length > 0) {
-        const { data: rsvps } = await sb().from('squad_plan_rsvps').select('plan_id, user_id, status').in('plan_id', planIds);
+        const { data: rsvps } = await userClient.from('squad_plan_rsvps').select('plan_id, user_id, status').in('plan_id', planIds);
         (rsvps || []).forEach(r => { if (!rsvpMap[r.plan_id]) rsvpMap[r.plan_id] = []; rsvpMap[r.plan_id].push(r); });
       }
       const result = (plans || []).map(p => ({ ...p, rsvps: rsvpMap[p.id] || [], my_rsvp: (rsvpMap[p.id] || []).find(r => r.user_id === auth.user.id)?.status || null }));
@@ -256,7 +258,7 @@ module.exports = async (req, res) => {
       if (!membership) return res.status(403).json({ error: 'Not a squad member' });
       const { data: alreadyMember } = await sb().from('squad_members').select('user_id').eq('squad_id', squadId).eq('user_id', inviteeId).single();
       if (alreadyMember) return res.status(400).json({ error: 'User is already a member' });
-      const { error } = await sb().from('squad_invites').insert({ squad_id: squadId, inviter_id: auth.user.id, invitee_id: inviteeId, status: 'pending' });
+      const { error } = await sbAs(token).from('squad_invites').insert({ squad_id: squadId, inviter_id: auth.user.id, invitee_id: inviteeId, status: 'pending' });
       if (error) return res.status(400).json({ error: error.message });
       const [{ data: squad }, { data: inviter }] = await Promise.all([
         sb().from('squads').select('name').eq('id', squadId).single(),
@@ -281,6 +283,19 @@ module.exports = async (req, res) => {
       if (is_public !== undefined) updates.is_public = is_public;
       if (template_config) updates.template_config = template_config;
       const { error } = await sb().from('squads').update(updates).eq('id', squadId);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ ok: true });
+    }
+
+    // PATCH /squads/:id/about — admin updates squad description
+    if (squadDetailMatch && url.endsWith('/about') && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const squadId = squadDetailMatch[1];
+      const { data: mem } = await sb().from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
+      if (!mem || mem.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const { description } = req.body || {};
+      const { error } = await sb().from('squads').update({ description: description || null }).eq('id', squadId);
       if (error) return res.status(400).json({ error: error.message });
       return res.status(200).json({ ok: true });
     }

@@ -2721,27 +2721,35 @@ async function renderSaved() {
         const { data } = await sb.from('events')
           .select('id,name,date_local,time_local,venue_name,venue_city,image_url,genre,is_free,price_min,hype_score,like_count,comment_count,organiser_name')
           .in('id', savedEv).limit(30);
-        if (data?.length) {
-          el.innerHTML = data.map(ev => {
-            const pr = ev.is_free ? '<span style="color:var(--li)">FREE</span>' : ev.price_min ? `R${ev.price_min}` : 'R—';
-            const img = ev.image_url || '';
+        // Fallback: supplement missing events from the in-memory map cache
+        let evList = data || [];
+        if (evList.length < savedEv.length && window.eventsForMap?.length) {
+          const fetched = new Set(evList.map(e => String(e.id)));
+          const extras = (window.eventsForMap).filter(e => savedEv.includes(String(e.id)) && !fetched.has(String(e.id)));
+          evList = [...evList, ...extras];
+        }
+        if (evList.length) {
+          const evCard = (ev) => {
+            const pr = ev.is_free ? '<span style="color:var(--li)">FREE</span>' : ev.price_min ? `R${ev.price_min}` : '';
+            const img = ev.image_url || ev.cover_image_url || '';
             return `<div style="display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer" onclick="openEv('${x(ev.id)}')">
               <div style="width:52px;height:52px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--surf2)">
                 ${img ? `<img src="${x(img)}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'"/>` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.2rem">${ge(ev.genre)}</div>`}
               </div>
               <div style="flex:1;min-width:0">
                 <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(ev.name)}</div>
-                <div style="font-size:.7rem;color:var(--mu);margin-top:2px">📍 ${x(ev.venue_city||'')} · ${fdate(ev.date_local)}</div>
-                <div style="font-size:.72rem;color:var(--or);margin-top:2px;font-family:'Syne',sans-serif;font-weight:700">${pr}</div>
+                <div style="font-size:.7rem;color:var(--mu);margin-top:2px">📍 ${x(ev.venue_city||ev.venue?.city||'')} · ${fdate(ev.date_local)}</div>
+                ${pr ? `<div style="font-size:.72rem;color:var(--or);margin-top:2px;font-family:'Syne',sans-serif;font-weight:700">${pr}</div>` : ''}
               </div>
               <button style="background:none;border:none;font-size:1rem;cursor:pointer;color:var(--or);padding:4px" onclick="event.stopPropagation();toggleSave('ev','${x(ev.id)}',this)"><span class="ai">🔖</span></button>
             </div>`;
-          }).join('');
+          };
+          el.innerHTML = evList.map(evCard).join('');
         } else {
-          el.innerHTML = `<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu)">${savedEv.length} saved event(s) — details currently unavailable</div>`;
+          el.innerHTML = `<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu)">Your ${savedEv.length} saved event(s) will load when you browse the app first.</div>`;
         }
       } catch(e) {
-        el.innerHTML = `<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu)">${savedEv.length} saved event(s)</div>`;
+        el.innerHTML = `<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu)">${savedEv.length} saved event(s) — refresh to retry</div>`;
       }
     }
   }
@@ -2836,21 +2844,27 @@ function renderComments() {
     return;
   }
 
-  listEl.innerHTML = activeComments.map(c => {
-    const p = c.profiles;
-    const av = p?.avatar_url ? `<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover">` : (p?.display_name || '?')[0];
-    const name = p?.display_name || 'A user';
+  let _replyTarget = null;
+  const renderOne = (c, depth = 0) => {
+    const p = c.profiles || c.profile || {};
+    const av = p.avatar_url ? `<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover">` : (p.display_name || '?')[0];
+    const name = p.display_name || c.display_name || 'A user';
     const uid  = c.user_id || '';
     const clickable = uid ? `onclick="closeComments();openProfile('${x(uid)}')" style="cursor:pointer"` : '';
-    return `<div class="cm">
+    const body = c.text || c.content || c.body || '';
+    const replies = (c.replies || []).map(r => renderOne(r, depth + 1)).join('');
+    const replyBtn = depth < 2 ? `<button onclick="(function(){var inp=document.getElementById('comment-input');if(inp){window._cmtReplyTo='${x(c.id)}';inp.placeholder='Replying to ${x(name.replace(/'/g,""))}…';inp.focus();}})()" style="background:none;border:none;color:var(--mu);font-size:.62rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;padding:2px 0;margin-top:2px;letter-spacing:.04em">↩ Reply</button>` : '';
+    return `<div style="margin-left:${depth*18}px;${depth>0?'padding-left:8px;border-left:1.5px solid var(--border);':''}">
+      <div class="cm">
         <div class="cav" ${clickable} style="background:linear-gradient(135deg,#1a0533,#4a0080);overflow:hidden;${uid?'cursor:pointer':''}">${av}</div>
         <div style="flex:1">
-            <div class="cna" ${clickable}>${x(name)}</div>
-            <div class="ctx">${x(c.text || c.content || '')}</div>
-            <div class="ctm">${timeAgoShort(c.created_at)}</div>
+          <div class="cna" ${clickable}>${x(name)}</div>
+          <div class="ctx">${x(body)}</div>
+          <div style="display:flex;align-items:center;gap:10px"><div class="ctm">${timeAgoShort(c.created_at)}</div>${replyBtn}</div>
         </div>
-    </div>`;
-  }).join('');
+      </div>${replies}</div>`;
+  };
+  listEl.innerHTML = activeComments.map(c => renderOne(c)).join('');
   listEl.scrollTop = listEl.scrollHeight;
 }
 
@@ -3095,12 +3109,12 @@ async function loadNotifications() {
       return;
     }
 
-    // Batch-fetch avatars for everyone who triggered a notification
+    // Batch-fetch avatars + display names for everyone who triggered a notification
     const fromIds = [...new Set(notifs.map(n => n.from_user_id).filter(Boolean))];
-    let avatarMap = {};
+    let avatarMap = {}, nameMap = {};
     if (fromIds.length) {
-      const { data: profs } = await sb.from('profiles').select('id,avatar_url').in('id', fromIds);
-      (profs || []).forEach(p => { avatarMap[p.id] = p.avatar_url; });
+      const { data: profs } = await sb.from('profiles').select('id,avatar_url,display_name').in('id', fromIds);
+      (profs || []).forEach(p => { avatarMap[p.id] = p.avatar_url; nameMap[p.id] = p.display_name; });
     }
 
     const ico = {follow:'👤',like:'❤️',repost:'🔁',comment:'💬',ticket:'🎟',business_post:'📢',account:'⚙️',order:'📦',payment:'💳',squad_invite:'👥',squad_plan:'📅'};
@@ -3124,7 +3138,7 @@ async function loadNotifications() {
         ? `<img src="${x(avatar)}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0">`
         : `<div style="width:48px;height:48px;border-radius:50%;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">${icoChar}</div>`;
 
-      const actorName = n.from_display_name || '';
+      const actorName = n.from_display_name || nameMap[n.from_user_id] || '';
       const rawMsg    = n.message || '';
       let msgHtml;
       if (actorName && rawMsg.startsWith(actorName)) {
@@ -4272,7 +4286,16 @@ function renderSquadWorkspace(detail, container) {
   _sqCurrentMembers = members || [];
   _sqCurrentIsMember = !!isMember;
 
+  const isAdmin = (members || []).some(m => m.user_id === currentUser?.id && m.role === 'admin');
+
   container.innerHTML = `
+    <div style="background:rgba(176,38,255,.06);border:1px solid rgba(176,38,255,.2);border-radius:12px;padding:10px 12px;margin-bottom:12px;display:flex;gap:10px;align-items:flex-start">
+      <span style="font-size:1.1rem;flex-shrink:0">👥</span>
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:800;color:var(--pu);margin-bottom:2px">SQUADS — Plan Together</div>
+        <div style="font-size:.7rem;color:var(--mu2);line-height:1.45">Create outings, chat with your crew, track RSVPs and link real events. Invite friends via WhatsApp or a share link.</div>
+      </div>
+    </div>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)">
       <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,${tmpl.color}22,${tmpl.color}55);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">${tmpl.icon}</div>
       <div style="flex:1;min-width:0">
@@ -4280,7 +4303,18 @@ function renderSquadWorkspace(detail, container) {
         <div style="font-size:.7rem;color:var(--mu)">👥 ${squad.member_count} · ${squad.is_public?'🌍 Public':'🔒 Private'}</div>
       </div>
     </div>
-    ${squad.description ? `<div style="font-size:.8rem;color:var(--mu2);margin-bottom:12px;line-height:1.5">${x(squad.description)}</div>` : ''}
+    ${squad.description
+      ? `<div style="background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px;display:flex;gap:8px;align-items:flex-start">
+           <span style="font-size:.9rem">📝</span>
+           <div style="flex:1">
+             <div style="font-size:.62rem;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:3px">About</div>
+             <div id="sq-about-text" style="font-size:.8rem;color:var(--mu2);line-height:1.5">${x(squad.description)}</div>
+           </div>
+           ${isAdmin ? `<button onclick="sqEditAbout('${x(squad.id)}','${x(squad.description.replace(/'/g,"&#39;"))}')" style="background:none;border:none;color:var(--mu);font-size:.75rem;cursor:pointer;flex-shrink:0;padding:2px 4px">✏️</button>` : ''}
+         </div>`
+      : isAdmin
+        ? `<button onclick="sqEditAbout('${x(squad.id)}','')" style="width:100%;background:var(--surf);border:1.5px dashed var(--border);border-radius:10px;padding:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;margin-bottom:12px">+ Add squad description</button>`
+        : ''}
     <div style="display:flex;gap:5px;margin-bottom:14px">
       <button id="sqt-plans" onclick="showSqTab('plans','${x(squad.id)}')" style="flex:1;padding:8px 2px;background:rgba(255,92,0,.15);border:1.5px solid rgba(255,92,0,.35);border-radius:10px;color:var(--or);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer">📅 Plans</button>
       <button id="sqt-calendar" onclick="showSqTab('calendar','${x(squad.id)}')" style="flex:1;padding:8px 2px;background:transparent;border:1.5px solid var(--border);border-radius:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer">🗓 Calendar</button>
@@ -4293,6 +4327,25 @@ function renderSquadWorkspace(detail, container) {
     <div id="sq-tab-members" style="display:none"></div>`;
 
   loadSquadPlans(squad.id);
+}
+
+async function sqEditAbout(squadId, current) {
+  const val = prompt('Squad description (shown to all members):', current || '');
+  if (val === null) return;
+  const sb2 = getSB(); if (!sb2) return;
+  const session = (await sb2.auth.getSession()).data?.session;
+  if (!session) { showToast('Sign in first'); return; }
+  const r = await fetch(API + '/squads/' + squadId + '/about', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+    body: JSON.stringify({ description: val.trim() })
+  });
+  if (r.ok) {
+    showToast('✅ Description saved');
+    const el = document.getElementById('sq-about-text');
+    if (el) el.textContent = val.trim();
+    _squadsLoaded = false;
+  } else { showToast('Could not save'); }
 }
 
 function showSqTab(tab, squadId) {
@@ -4410,8 +4463,8 @@ function showCreatePlanForm(squadId, prefill) {
     <input id="plan-title" class="sq-input" placeholder="Outing title *" maxlength="80" value="${x(pf.name||'')}"/>
     <div style="font-size:.68rem;color:var(--mu);font-weight:700;margin-bottom:4px;letter-spacing:.06em;text-transform:uppercase">Date &amp; Time</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-      <input id="plan-date" class="sq-input" type="date" value="${pf.date_local||today}" style="color-scheme:dark;margin-bottom:0"/>
-      <input id="plan-time" class="sq-input" type="time" value="${pf.time_local?pf.time_local.slice(0,5):''}" placeholder="Time" style="color-scheme:dark;margin-bottom:0"/>
+      <div><div style="font-size:.6rem;color:var(--mu);margin-bottom:2px">Date</div><input id="plan-date" class="sq-input" type="date" value="${pf.date_local||today}" style="color-scheme:dark;margin-bottom:0"/></div>
+      <div><div style="font-size:.6rem;color:var(--mu);margin-bottom:2px">Time</div><input id="plan-time" class="sq-input" type="time" value="${pf.time_local?pf.time_local.slice(0,5):''}" style="color-scheme:dark;margin-bottom:0"/></div>
     </div>
     <input id="plan-location" class="sq-input" placeholder="📍 Location / destination" maxlength="80" value="${x(pf.location||'')}"/>
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px">
@@ -4503,7 +4556,7 @@ async function loadSqChat(squadId) {
 async function fetchSqMessages(squadId, session) {
   const msgEl = document.getElementById('sq-chat-msgs'); if (!msgEl) return;
   const sb2 = getSB(); if (!sb2) return;
-  const { data: msgs } = await sb2.from('squad_messages').select('id,content,created_at,profiles(display_name,avatar_url)').eq('squad_id', squadId).order('created_at',{ascending:false}).limit(40);
+  const { data: msgs } = await sb2.from('squad_messages').select('id,body,created_at,profiles(display_name,avatar_url)').eq('squad_id', squadId).order('created_at',{ascending:false}).limit(40);
   const list = (msgs || []).reverse();
   if (!list.length) { msgEl.innerHTML = '<div style="text-align:center;color:var(--mu);font-size:.76rem;padding:30px 0">No messages yet. Say hi!</div>'; return; }
   msgEl.innerHTML = list.map(m => {
@@ -4512,7 +4565,7 @@ async function fetchSqMessages(squadId, session) {
       <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,92,0,.2);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;overflow:hidden">${p.avatar_url?`<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>`:ini}</div>
       <div style="max-width:72%;background:var(--surf);border:1px solid var(--border);border-radius:12px 12px 12px 4px;padding:8px 12px">
         <div style="font-size:.62rem;color:var(--mu);margin-bottom:2px">${x(p.display_name||'?')}</div>
-        <div style="font-size:.8rem;line-height:1.4">${x(m.content)}</div>
+        <div style="font-size:.8rem;line-height:1.4">${x(m.body||m.content||'')}</div>
       </div>
     </div>`;
   }).join('');
@@ -4526,7 +4579,7 @@ async function sendSqMsg(squadId) {
   const session = (await sb2.auth.getSession()).data?.session;
   if (!session) { showToast('Sign in first'); return; }
   input.value = '';
-  const { error } = await sb2.from('squad_messages').insert({ squad_id: squadId, user_id: session.user.id, content });
+  const { error } = await sb2.from('squad_messages').insert({ squad_id: squadId, user_id: session.user.id, body: content });
   if (error) { showToast('Could not send'); input.value = content; return; }
   fetchSqMessages(squadId, session);
 }
