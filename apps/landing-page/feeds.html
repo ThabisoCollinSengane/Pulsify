@@ -267,10 +267,13 @@ function mapPost(p) {
     display_name: prof.display_name || 'User',
     avatar_url:   prof.avatar_url   || null,
     role:         prof.role         || 'user',
+    is_verified:  prof.is_verified  || false,
     post_type:    p.post_type || 'attended_photo',
     image_url:    p.image_url || null,
     caption:      p.caption   || '',
     event_name:   p.event_name || null,
+    like_count:   p.likes_count || p.like_count || 0,
+    comment_count: p.comments_count || p.comment_count || 0,
     likes: [], reposts: [], comments: [],
     ts: p.created_at,
   };
@@ -361,6 +364,10 @@ function buildCard(post) {
   const cap = post.caption || '';
   const shortCap = cap.length > 220 ? cap.slice(0,220) : cap;
 
+  const likeCount = likes.length > 0 ? fn(likes.length) : fn(post.like_count || 0);
+  const cmtCount  = comments.length > 0 ? fn(comments.length) : fn(post.comment_count || 0);
+  const rpostCount = fn(reposts.length);
+
   const el = document.createElement('div');
   el.className = 'fc';
   el.id = 'post-' + post.id;
@@ -370,7 +377,7 @@ function buildCard(post) {
         (post.avatar_url ? '<img src="'+x(post.avatar_url)+'" loading="lazy" onerror="this.style.display=\u0027none\u0027"/>' : (post.display_name?.[0]?.toUpperCase()||'😊')) +
       '</div>' +
       '<div style="flex:1;min-width:0;cursor:pointer" onclick="openProfile(\u0027'+x(post.user_id)+'\u0027)">' +
-        '<div class="fo">' + x(post.display_name || post.username) + (isOrg ? '<span class="org-pill">📢 Page</span>' : '') + '</div>' +
+        '<div class="fo">' + x(post.display_name || post.username) + (post.is_verified ? '<span style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);color:#fff;font-size:9px;font-weight:900;vertical-align:middle;margin-left:4px;flex-shrink:0" title="Verified by Pulsefy">✓</span>' : '') + (isOrg ? '<span class="org-pill">📢 Page</span>' : '') + '</div>' +
         (post.event_name ? '<div style="font-size:.64rem;color:var(--or);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;letter-spacing:.04em">🎟 '+x(post.event_name)+'</div>' : '') +
         '<div class="fl">@'+x(post.username)+' · '+timeAgo(post.ts || post.created_at)+'</div>' +
       '</div>' +
@@ -379,8 +386,8 @@ function buildCard(post) {
     (post.image_url ? '<img class="fb" src="'+x(post.image_url)+'" loading="lazy" onerror="this.remove()"/>' : '') +
     (cap ? '<div class="fd"><div class="cap" id="cap-'+x(post.id)+'">'+x(shortCap)+(cap.length>220?' <span class="cap-more" onclick="expandCap(\u0027'+x(post.id)+'\u0027)">more</span>':'')+'</div></div>' : '') +
     '<div class="fac">' +
-      '<button class="ab '+(liked?'lk':'')+'" id="lb-'+x(post.id)+'" onclick="doLike(\u0027'+x(post.id)+'\u0027)"><span class="ai">'+(liked?'❤️':'🤍')+'</span> <span id="lc-'+x(post.id)+'">'+likes.length>0?fn(likes.length):fn(post.like_count||0)+'</span></button>' +
-      '<button class="ab" onclick="toggleCmt(\u0027'+x(post.id)+'\u0027)"><span class="ai">💬</span> <span id="cc-'+x(post.id)+'">'+comments.length>0?fn(comments.length):fn(post.comment_count||0)+'</span></button>' +
+      '<button class="ab '+(liked?'lk':'')+'" id="lb-'+x(post.id)+'" onclick="doLike(\u0027'+x(post.id)+'\u0027)"><span class="ai">'+(liked?'❤️':'🤍')+'</span> <span id="lc-'+x(post.id)+'">'+likeCount+'</span></button>' +
+      '<button class="ab" onclick="toggleCmt(\u0027'+x(post.id)+'\u0027)"><span class="ai">💬</span> <span id="cc-'+x(post.id)+'">'+cmtCount+'</span></button>' +
       '<button class="ab '+(reposted?'rp':'')+'" id="rb-'+x(post.id)+'" onclick="doRepost(\u0027'+x(post.id)+'\u0027)"><span class="ai">🔁</span> <span id="rc-'+x(post.id)+'">'+fn(reposts.length)+'</span></button>' +
       '<button class="ab" onclick="doShare(\u0027'+x(post.caption||'')+'\u0027)"><span class="ai">🔗</span></button>' +
       '<button class="ab" onclick="openReportPost(\u0027'+x(post.id)+'\u0027,\u0027'+x((post.caption||'').slice(0,80).replace(/\u0027/g,''))+'\u0027)" title="Report post"><span class="ai">🚩</span></button>' +
