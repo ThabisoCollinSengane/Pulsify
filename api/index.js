@@ -2032,12 +2032,12 @@ module.exports = async (req, res) => {
       const auth = await authUser(req);
       if (!auth) return res.status(401).json({ error: 'Unauthorized' });
       const squadId = squadPlansMatch[1];
-      const { title, notes, plan_date, plan_time, location_name, event_id } = req.body || {};
+      const { title, notes, plan_date, plan_time, location_name, event_id, outing_type, budget_per_person } = req.body || {};
       if (!title?.trim() || !plan_date) return res.status(400).json({ error: 'title and plan_date are required' });
       const { data: membership } = await sb().from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
       if (!membership) return res.status(403).json({ error: 'Not a squad member' });
       const { data: plan, error } = await sbAs(token).from('squad_plans')
-        .insert({ squad_id: squadId, creator_id: auth.user.id, title: title.trim(), notes: notes || null, plan_date, plan_time: plan_time || null, location_name: location_name || null, event_id: event_id || null })
+        .insert({ squad_id: squadId, creator_id: auth.user.id, title: title.trim(), notes: notes || null, plan_date, plan_time: plan_time || null, location_name: location_name || null, event_id: event_id || null, outing_type: outing_type || 'general', budget_per_person: budget_per_person ? parseInt(budget_per_person) : null })
         .select('id, title, plan_date').single();
       if (error) return res.status(400).json({ error: error.message });
       const { data: members } = await sb().from('squad_members').select('user_id').eq('squad_id', squadId).neq('user_id', auth.user.id);

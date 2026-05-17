@@ -4289,12 +4289,14 @@ function renderSquadWorkspace(detail, container) {
       </div>
     </div>
     ${squad.description ? `<div style="font-size:.8rem;color:var(--mu2);margin-bottom:12px;line-height:1.5">${x(squad.description)}</div>` : ''}
-    <div style="display:flex;gap:6px;margin-bottom:14px">
-      <button id="sqt-plans" onclick="showSqTab('plans','${x(squad.id)}')" style="flex:1;padding:9px 4px;background:rgba(255,92,0,.15);border:1.5px solid rgba(255,92,0,.35);border-radius:10px;color:var(--or);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer">📅 Plans</button>
-      <button id="sqt-chat" onclick="showSqTab('chat','${x(squad.id)}')" style="flex:1;padding:9px 4px;background:transparent;border:1.5px solid var(--border);border-radius:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer">💬 Chat</button>
-      <button id="sqt-members" onclick="showSqTab('members','${x(squad.id)}')" style="flex:1;padding:9px 4px;background:transparent;border:1.5px solid var(--border);border-radius:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer">👥 Members</button>
+    <div style="display:flex;gap:5px;margin-bottom:14px">
+      <button id="sqt-plans" onclick="showSqTab('plans','${x(squad.id)}')" style="flex:1;padding:8px 2px;background:rgba(255,92,0,.15);border:1.5px solid rgba(255,92,0,.35);border-radius:10px;color:var(--or);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer">📅 Plans</button>
+      <button id="sqt-calendar" onclick="showSqTab('calendar','${x(squad.id)}')" style="flex:1;padding:8px 2px;background:transparent;border:1.5px solid var(--border);border-radius:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer">🗓 Calendar</button>
+      <button id="sqt-chat" onclick="showSqTab('chat','${x(squad.id)}')" style="flex:1;padding:8px 2px;background:transparent;border:1.5px solid var(--border);border-radius:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer">💬 Chat</button>
+      <button id="sqt-members" onclick="showSqTab('members','${x(squad.id)}')" style="flex:1;padding:8px 2px;background:transparent;border:1.5px solid var(--border);border-radius:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer">👥 Members</button>
     </div>
     <div id="sq-tab-plans"></div>
+    <div id="sq-tab-calendar" style="display:none"></div>
     <div id="sq-tab-chat" style="display:none"></div>
     <div id="sq-tab-members" style="display:none"></div>`;
 
@@ -4302,7 +4304,7 @@ function renderSquadWorkspace(detail, container) {
 }
 
 function showSqTab(tab, squadId) {
-  ['plans','chat','members'].forEach(t => {
+  ['plans','calendar','chat','members'].forEach(t => {
     const btn = document.getElementById('sqt-' + t);
     const pane = document.getElementById('sq-tab-' + t);
     if (btn) {
@@ -4312,9 +4314,22 @@ function showSqTab(tab, squadId) {
     if (pane) pane.style.display = t === tab ? '' : 'none';
   });
   if (tab === 'plans') loadSquadPlans(squadId);
+  else if (tab === 'calendar') loadSqCalendar(squadId);
   else if (tab === 'chat') loadSqChat(squadId);
   else if (tab === 'members') loadSqMembers(squadId);
 }
+
+const OUTING_TYPES = [
+  { id:'general',   icon:'📅', label:'Outing'       },
+  { id:'event',     icon:'🎵', label:'Event Night'   },
+  { id:'roadtrip',  icon:'🚗', label:'Road Trip'     },
+  { id:'city',      icon:'🌆', label:'City Outing'   },
+  { id:'shisa',     icon:'🍖', label:'Shisanyama'    },
+  { id:'beach',     icon:'🌊', label:'Beach Day'     },
+  { id:'hike',      icon:'🥾', label:'Hike'          },
+  { id:'braai',     icon:'🔥', label:'Braai'         },
+];
+const OUTING_ICONS = Object.fromEntries(OUTING_TYPES.map(t => [t.id, t.icon]));
 
 async function loadSquadPlans(squadId) {
   const pane = document.getElementById('sq-tab-plans'); if (!pane) return;
@@ -4335,7 +4350,7 @@ function renderPlansList(pane, plans, squadId) {
   const today = new Date(); today.setHours(0,0,0,0);
   const upcoming = plans.filter(p => new Date(p.plan_date + 'T00:00:00') >= today);
   const past = plans.filter(p => new Date(p.plan_date + 'T00:00:00') < today);
-  const createBtn = `<button onclick="showCreatePlanForm('${x(squadId)}')" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;cursor:pointer;margin-bottom:16px">+ Plan an Outing</button>`;
+  const createBtn = `<button onclick="showCreatePlanForm('${x(squadId)}')" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;cursor:pointer;margin-bottom:14px">+ Plan an Outing</button>`;
   if (!plans.length) {
     pane.innerHTML = createBtn + `<div style="text-align:center;padding:24px 0"><div style="font-size:2.4rem;margin-bottom:8px">📅</div><div style="font-size:.82rem;color:var(--mu)">No outings planned yet.<br>Be the first to plan one!</div></div>`;
     return;
@@ -4344,22 +4359,32 @@ function renderPlansList(pane, plans, squadId) {
     const d = new Date(p.plan_date + 'T00:00:00');
     const mon = d.toLocaleDateString('en-ZA',{month:'short'}).toUpperCase();
     const day = d.getDate();
+    const dow = d.toLocaleDateString('en-ZA',{weekday:'short'});
     const goingCount = (p.rsvps||[]).filter(r=>r.status==='going').length;
     const maybeCount = (p.rsvps||[]).filter(r=>r.status==='maybe').length;
     const myRsvp = p.my_rsvp;
+    const typeIcon = OUTING_ICONS[p.outing_type||'general'] || '📅';
     const rb = (st,lbl,act) => `<button onclick="rsvpPlan('${x(squadId)}','${x(p.id)}','${st}')" style="flex:1;padding:7px 4px;background:${act?'rgba(0,229,255,.15)':'transparent'};border:1.5px solid ${act?'rgba(0,229,255,.4)':'var(--border)'};border-radius:8px;color:${act?'var(--cy)':'var(--mu)'};font-size:.68rem;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer">${lbl}</button>`;
-    return `<div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:10px">
+    return `<div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:10px">
       <div style="display:flex;gap:12px;align-items:flex-start">
-        <div style="flex-shrink:0;text-align:center;background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.25);border-radius:10px;padding:6px 10px;min-width:40px">
-          <div style="font-size:.6rem;font-family:'Syne',sans-serif;font-weight:700;color:var(--or)">${mon}</div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;line-height:1">${day}</div>
+        <div style="flex-shrink:0;text-align:center;background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.25);border-radius:12px;padding:6px 10px;min-width:44px">
+          <div style="font-size:.56rem;font-family:'Syne',sans-serif;font-weight:700;color:var(--mu);margin-bottom:1px">${dow.toUpperCase()}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.7rem;line-height:1;color:var(--or)">${day}</div>
+          <div style="font-size:.56rem;font-family:'Syne',sans-serif;font-weight:700;color:var(--or)">${mon}</div>
         </div>
         <div style="flex:1;min-width:0">
-          <div style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800;margin-bottom:2px">${x(p.title)}</div>
-          ${p.plan_time?`<div style="font-size:.7rem;color:var(--mu)">🕐 ${p.plan_time.slice(0,5)}</div>`:''}
-          ${p.location_name?`<div style="font-size:.74rem;color:var(--mu2);margin-top:2px">📍 ${x(p.location_name)}</div>`:''}
-          ${p.notes?`<div style="font-size:.72rem;color:var(--mu);margin-top:4px;line-height:1.4">${x(p.notes)}</div>`:''}
-          ${(goingCount||maybeCount)?`<div style="font-size:.68rem;color:var(--mu);margin-top:6px">${goingCount} going · ${maybeCount} maybe</div>`:''}
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+            <span style="font-size:1rem">${typeIcon}</span>
+            <div style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(p.title)}</div>
+          </div>
+          ${p.plan_time?`<div style="font-size:.72rem;color:var(--cy)">🕐 ${p.plan_time.slice(0,5)}</div>`:''}
+          ${p.location_name?`<div style="font-size:.74rem;color:var(--mu2);margin-top:3px">📍 ${x(p.location_name)}</div>`:''}
+          ${p.budget_per_person?`<div style="font-size:.7rem;color:var(--li);margin-top:3px">💰 ~R${p.budget_per_person}/person</div>`:''}
+          ${p.notes?`<div style="font-size:.72rem;color:var(--mu);margin-top:5px;line-height:1.4;background:rgba(255,255,255,.03);border-radius:8px;padding:5px 7px">${x(p.notes)}</div>`:''}
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+            ${goingCount?`<span style="font-size:.66rem;color:var(--li)">✓ ${goingCount} going</span>`:''}
+            ${maybeCount?`<span style="font-size:.66rem;color:var(--mu)">? ${maybeCount} maybe</span>`:''}
+          </div>
         </div>
       </div>
       <div style="display:flex;gap:6px;margin-top:10px">
@@ -4375,22 +4400,54 @@ function renderPlansList(pane, plans, squadId) {
   pane.innerHTML = html;
 }
 
-function showCreatePlanForm(squadId) {
+function showCreatePlanForm(squadId, prefill) {
   const pane = document.getElementById('sq-tab-plans'); if (!pane) return;
   const today = new Date().toISOString().split('T')[0];
+  const pf = prefill || {};
+  const typePills = OUTING_TYPES.map(t =>
+    `<button type="button" onclick="sqSelectOutingType('${t.id}',this)" data-otype="${t.id}" style="padding:6px 10px;border-radius:50px;border:1.5px solid var(--border);background:transparent;color:var(--mu);font-size:.68rem;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Syne',sans-serif">${t.icon} ${t.label}</button>`
+  ).join('');
   pane.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
       <button onclick="loadSquadPlans('${x(squadId)}')" style="background:transparent;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer;padding:0 4px 0 0">←</button>
       <div style="font-family:'Syne',sans-serif;font-size:.9rem;font-weight:800">Plan an Outing</div>
     </div>
-    <input id="plan-title" class="sq-input" placeholder="Outing title (required)" maxlength="80"/>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <input id="plan-date" class="sq-input" type="date" value="${today}" style="color-scheme:dark"/>
-      <input id="plan-time" class="sq-input" type="time" style="color-scheme:dark"/>
+    <div style="font-size:.68rem;color:var(--mu);font-weight:700;margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase">Outing Type</div>
+    <div id="outing-type-pills" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">${typePills}</div>
+    <input type="hidden" id="plan-outing-type" value="general"/>
+    <input id="plan-title" class="sq-input" placeholder="Outing title *" maxlength="80" value="${x(pf.name||'')}"/>
+    <div style="font-size:.68rem;color:var(--mu);font-weight:700;margin-bottom:4px;letter-spacing:.06em;text-transform:uppercase">Date &amp; Time</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <input id="plan-date" class="sq-input" type="date" value="${pf.date_local||today}" style="color-scheme:dark;margin-bottom:0"/>
+      <input id="plan-time" class="sq-input" type="time" value="${pf.time_local?pf.time_local.slice(0,5):''}" placeholder="Time" style="color-scheme:dark;margin-bottom:0"/>
     </div>
-    <input id="plan-location" class="sq-input" placeholder="📍 Location (optional)" maxlength="80"/>
-    <textarea id="plan-notes" class="sq-input" placeholder="📝 Notes (optional)" rows="3" maxlength="500" style="resize:vertical;font-family:inherit;min-height:70px"></textarea>
-    <button onclick="submitPlan('${x(squadId)}')" style="width:100%;padding:12px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer">Save Plan</button>`;
+    <input id="plan-location" class="sq-input" placeholder="📍 Location / destination" maxlength="80" value="${x(pf.location||'')}"/>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px">
+      <textarea id="plan-notes" class="sq-input" placeholder="📝 Notes — what to bring, vibe, etc." rows="3" maxlength="500" style="resize:none;font-family:inherit;margin-bottom:0">${x(pf.notes||'')}</textarea>
+      <div>
+        <div style="font-size:.62rem;color:var(--mu);font-weight:700;margin-bottom:4px;letter-spacing:.06em;text-transform:uppercase">Budget/person</div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--or)">R</span>
+          <input id="plan-budget" class="sq-input" type="number" min="0" max="99999" placeholder="0" style="margin-bottom:0;width:100%;text-align:right"/>
+        </div>
+      </div>
+    </div>
+    ${pf.event_id ? `<input type="hidden" id="plan-event-id" value="${x(pf.event_id)}"/>
+    <div style="background:rgba(176,38,255,.08);border:1px solid rgba(176,38,255,.25);border-radius:10px;padding:8px 12px;margin-top:8px;font-size:.76rem;display:flex;align-items:center;gap:8px">
+      <span>🎟</span><span style="flex:1">${x(pf.name||'Linked event')}</span>
+      <button onclick="document.getElementById('plan-event-id').remove();this.closest('div').remove()" style="background:transparent;border:none;color:var(--mu);cursor:pointer;font-size:.8rem">✕</button>
+    </div>` : ''}
+    <button onclick="submitPlan('${x(squadId)}')" style="width:100%;padding:12px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer;margin-top:12px">Save Plan</button>`;
+  // auto-select General pill
+  setTimeout(() => sqSelectOutingType('general', document.querySelector('[data-otype="general"]')), 0);
+}
+
+function sqSelectOutingType(typeId, el) {
+  document.querySelectorAll('#outing-type-pills button').forEach(b => {
+    b.style.background = 'transparent'; b.style.borderColor = 'var(--border)'; b.style.color = 'var(--mu)';
+  });
+  if (el) { el.style.background = 'rgba(255,92,0,.15)'; el.style.borderColor = 'rgba(255,92,0,.4)'; el.style.color = 'var(--or)'; }
+  const inp = document.getElementById('plan-outing-type'); if (inp) inp.value = typeId;
 }
 
 async function submitPlan(squadId) {
@@ -4399,6 +4456,10 @@ async function submitPlan(squadId) {
   const plan_time = document.getElementById('plan-time')?.value||null;
   const location_name = (document.getElementById('plan-location')?.value||'').trim()||null;
   const notes = (document.getElementById('plan-notes')?.value||'').trim()||null;
+  const outing_type = document.getElementById('plan-outing-type')?.value || 'general';
+  const budget_raw = document.getElementById('plan-budget')?.value;
+  const budget_per_person = budget_raw ? parseInt(budget_raw) : null;
+  const event_id = document.getElementById('plan-event-id')?.value || null;
   if (!title) { showToast('Title is required'); return; }
   if (!plan_date) { showToast('Date is required'); return; }
   const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
@@ -4408,7 +4469,7 @@ async function submitPlan(squadId) {
     const r = await fetch(API + '/squads/' + squadId + '/plans', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-      body: JSON.stringify({ title, plan_date, plan_time, location_name, notes })
+      body: JSON.stringify({ title, plan_date, plan_time, location_name, notes, outing_type, budget_per_person, event_id })
     });
     const d = await safeJson(r);
     if (!r.ok) { showToast(d.error || 'Could not save plan'); return; }
@@ -4497,6 +4558,133 @@ function loadSqMembers(squadId) {
     : `<button onclick="joinSquad('${x(squadId)}')" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;margin-top:14px">Join Squad</button>`;
   pane.innerHTML = `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Members (${members.length})</div>${membersHtml}${inviteBtn}${actionBtn}`;
 }
+
+async function loadSqCalendar(squadId) {
+  const pane = document.getElementById('sq-tab-calendar'); if (!pane) return;
+  pane.innerHTML = '<div style="padding:20px;font-size:.78rem;color:var(--mu)">Loading…</div>';
+  let plans = [];
+  try {
+    const sb2 = getSB(); let token = null;
+    if (sb2) { try { token = (await sb2.auth.getSession()).data?.session?.access_token; } catch(e){} }
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    const r = await fetch(API + '/squads/' + squadId + '/plans', { headers });
+    if (r.ok) { const d = await safeJson(r); plans = d.plans || []; }
+  } catch(e) {}
+  const feedEvents = (window.eventsForMap || []).filter(e => e.date_local);
+  // Build a quick-lookup registry for the "+ Plan" button
+  window._sqEvReg = {};
+  feedEvents.forEach(e => { window._sqEvReg[e.id] = e; });
+  const planDates = new Set(plans.map(p => p.plan_date));
+  const todayStr = new Date().toISOString().split('T')[0];
+  const eventDateMap = {};
+  feedEvents.forEach(e => {
+    const ds = (e.date_local||'').split('T')[0];
+    if (ds) { if (!eventDateMap[ds]) eventDateMap[ds] = []; eventDateMap[ds].push(e); }
+  });
+  window._sqCal = { year: new Date().getFullYear(), month: new Date().getMonth(), sel: null, plans, eventDateMap, squadId };
+  window._renderSqCal = function() {
+    const { year, month, sel, plans: pl, eventDateMap: edm, squadId: sid } = window._sqCal;
+    const firstDay = new Date(year, month, 1);
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    const startDow = firstDay.getDay();
+    const monthName = firstDay.toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
+    const days = ['S','M','T','W','T','F','S'];
+    let cells = '';
+    for (let i = 0; i < startDow; i++) cells += '<div></div>';
+    for (let d = 1; d <= lastDate; d++) {
+      const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const isToday = ds === todayStr;
+      const hasPlan = planDates.has(ds);
+      const hasEv = !!edm[ds];
+      const isSel = ds === sel;
+      cells += `<div onclick="sqCalDay('${ds}')" style="text-align:center;padding:5px 2px;border-radius:8px;cursor:pointer;background:${isSel?'rgba(255,92,0,.2)':isToday?'rgba(0,229,255,.08)':'transparent'};border:${isToday?'1.5px solid rgba(0,229,255,.3)':'1px solid transparent'}">
+        <div style="font-size:.8rem;font-weight:${isToday?700:400};color:${isToday?'var(--cy)':'var(--tx)'}">${d}</div>
+        <div style="display:flex;justify-content:center;gap:2px;height:6px;margin-top:1px">
+          ${hasPlan?'<div style="width:5px;height:5px;border-radius:50%;background:var(--or)"></div>':''}
+          ${hasEv?'<div style="width:5px;height:5px;border-radius:50%;background:#B026FF"></div>':''}
+        </div>
+      </div>`;
+    }
+    let detailHtml = '';
+    if (sel) {
+      const dayPlans = pl.filter(p => p.plan_date === sel);
+      const dayEvs = edm[sel] || [];
+      if (dayPlans.length || dayEvs.length) {
+        detailHtml = `<div style="margin-top:12px;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:10px 12px">
+          <div style="font-size:.66rem;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">${new Date(sel+'T00:00:00').toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long'})}</div>
+          ${dayPlans.map(p=>`<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+            <span>${OUTING_ICONS[p.outing_type||'general']||'📅'}</span>
+            <div><div style="font-size:.82rem;font-weight:700">${x(p.title)}</div>${p.plan_time?`<div style="font-size:.66rem;color:var(--cy)">🕐 ${p.plan_time.slice(0,5)}</div>`:''}</div>
+          </div>`).join('')}
+          ${dayEvs.slice(0,3).map(e=>`<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer" onclick="openEv('${x(e.id)}')">
+            <span>🎟</span><div><div style="font-size:.82rem;font-weight:700">${x(e.name)}</div><div style="font-size:.66rem;color:#B026FF">${x(e.venue_city||'')}</div></div>
+          </div>`).join('')}
+        </div>`;
+      }
+    }
+    const upcoming = feedEvents.filter(e => (e.date_local||'').split('T')[0] >= todayStr).sort((a,b)=>a.date_local>b.date_local?1:-1).slice(0,10);
+    const upHtml = upcoming.length ? `<div style="margin-top:16px">
+      <div style="font-size:.66rem;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#B026FF;display:inline-block"></span>Upcoming on Pulsefy</div>
+      ${upcoming.map(e=>{
+        const ed = new Date((e.date_local||'')+'T00:00:00');
+        const edmon = ed.toLocaleDateString('en-ZA',{month:'short'}).toUpperCase();
+        const edd = ed.getDate();
+        const typeIcon = OUTING_ICONS[e.genre] || '🎟';
+        return `<div style="display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer" onclick="openEv('${x(e.id)}')">
+          <div style="min-width:38px;text-align:center;background:rgba(176,38,255,.12);border:1px solid rgba(176,38,255,.25);border-radius:8px;padding:4px 2px;flex-shrink:0">
+            <div style="font-size:.54rem;font-weight:700;color:#B026FF">${edmon}</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;line-height:1">${edd}</div>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:.8rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(e.name)}</div>
+            <div style="font-size:.68rem;color:var(--mu)">${x(e.venue_city||'')} · ${e.is_free?'Free':'R'+(e.price_min||'?')}</div>
+          </div>
+          <button onclick="event.stopPropagation();sqPlanFromEv('${x(e.id)}','${x(sid)}')" style="flex-shrink:0;background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.3);border-radius:50px;color:var(--or);font-size:.62rem;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;padding:4px 8px;white-space:nowrap">+ Plan</button>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+    pane.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <button onclick="sqCalNav(-1)" style="background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:5px 13px;color:var(--tx);cursor:pointer;font-size:1rem">‹</button>
+        <div style="font-family:'Syne',sans-serif;font-size:.86rem;font-weight:800">${monthName}</div>
+        <button onclick="sqCalNav(1)" style="background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:5px 13px;color:var(--tx);cursor:pointer;font-size:1rem">›</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:4px">${days.map(d=>`<div style="text-align:center;font-size:.6rem;color:var(--mu);font-weight:700;padding:4px 0">${d}</div>`).join('')}</div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${cells}</div>
+      <div style="display:flex;gap:12px;margin-top:8px;font-size:.64rem;color:var(--mu)">
+        <span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--or);vertical-align:middle;margin-right:3px"></span>Squad plan</span>
+        <span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#B026FF;vertical-align:middle;margin-right:3px"></span>Pulsefy event</span>
+      </div>
+      ${detailHtml}${upHtml}`;
+  };
+  window._renderSqCal();
+}
+window.sqCalNav = function(dir) {
+  if (!window._sqCal) return;
+  window._sqCal.month += dir;
+  if (window._sqCal.month > 11) { window._sqCal.month = 0; window._sqCal.year++; }
+  if (window._sqCal.month < 0) { window._sqCal.month = 11; window._sqCal.year--; }
+  if (window._renderSqCal) window._renderSqCal();
+};
+window.sqCalDay = function(ds) {
+  if (!window._sqCal) return;
+  window._sqCal.sel = window._sqCal.sel === ds ? null : ds;
+  if (window._renderSqCal) window._renderSqCal();
+};
+window.sqPlanFromEv = function(evId, squadId) {
+  const e = window._sqEvReg && window._sqEvReg[evId];
+  if (!e) return;
+  showCreatePlanForm(squadId, {
+    name: e.name,
+    date_local: (e.date_local || '').split('T')[0],
+    time_local: (e.time_local || '').slice(0, 5),
+    location: e.venue_city || '',
+    event_id: e.id,
+    notes: e.name + (e.venue_city ? ' at ' + e.venue_city : ''),
+  });
+  showSqTab('plans', squadId);
+};
 
 async function loadInvites() {
   const sb2 = getSB(); if (!sb2) return;
