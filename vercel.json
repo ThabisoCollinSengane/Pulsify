@@ -1,12 +1,16 @@
 {
   "outputDirectory": ".",
   "functions": {
-    "api/index.js":          { "maxDuration": 30 },
-    "api/events/index.js":   { "maxDuration": 30 },
-    "api/squads/index.js":   { "maxDuration": 30 },
-    "api/admin/index.js":    { "maxDuration": 30 },
-    "api/payments/index.js": { "maxDuration": 30 }
+    "api/index.js":                    { "maxDuration": 30 },
+    "api/events/index.js":             { "maxDuration": 30 },
+    "api/squads/index.js":             { "maxDuration": 30 },
+    "api/admin/index.js":              { "maxDuration": 30 },
+    "api/payments/index.js":           { "maxDuration": 30 },
+    "api/cron/squad-reminders.js":     { "maxDuration": 30 }
   },
+  "crons": [
+    { "path": "/api/cron/squad-reminders", "schedule": "0 5 * * *" }
+  ],
   "rewrites": [
     { "source": "/api/events/search",      "destination": "/api/events" },
     { "source": "/api/events/(.*)",        "destination": "/api/events" },
@@ -26,6 +30,7 @@
     { "source": "/api/payments/(.*)",      "destination": "/api/payments" },
     { "source": "/api/payments",           "destination": "/api/payments" },
     { "source": "/api/verify-request",     "destination": "/api/payments" },
+    { "source": "/api/cron/(.*)",          "destination": "/api/cron/$1" },
     { "source": "/api/(.*)",               "destination": "/api" },
     { "source": "/sw.js",                  "destination": "/sw.js" },
     { "source": "/business",              "destination": "/apps/business/index.html" },
