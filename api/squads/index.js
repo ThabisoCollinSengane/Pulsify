@@ -184,7 +184,7 @@ module.exports = async (req, res) => {
       if (!title?.trim() || !plan_date) return res.status(400).json({ error: 'title and plan_date are required' });
       const { data: membership } = await sb().from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
       if (!membership) return res.status(403).json({ error: 'Not a squad member' });
-      const { data: plan, error } = await sbAs(token).from('squad_plans')
+      const { data: plan, error } = await sb().from('squad_plans')
         .insert({ squad_id: squadId, creator_id: auth.user.id, title: title.trim(), notes: notes || null, plan_date, plan_time: plan_time || null, location_name: location_name || null, event_id: event_id || null, outing_type: outing_type || 'general', budget_per_person: budget_per_person ? parseInt(budget_per_person) : null })
         .select('id, title, plan_date').single();
       if (error) return res.status(400).json({ error: error.message });

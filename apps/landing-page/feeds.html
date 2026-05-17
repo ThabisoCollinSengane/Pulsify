@@ -71,6 +71,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .reply-banner button{background:none;border:none;color:var(--mu);cursor:pointer;font-size:.85rem}
 .fc.cmt-target{box-shadow:0 0 0 2px var(--or)}
 .cmt-item.cmt-target-c{background:rgba(255,92,0,.08)}
+.puls-badge{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);box-shadow:0 0 8px rgba(255,92,0,.8),0 0 16px rgba(255,45,120,.5);position:relative;vertical-align:middle;margin-left:4px;flex-shrink:0;cursor:default;font-size:9px;font-weight:900;color:#fff;line-height:1;animation:puls-glow 1.6s ease-in-out infinite}
+.puls-badge::after{content:'\2713';font-size:9px;font-weight:900;color:#fff;line-height:1}
+@keyframes puls-glow{0%,100%{box-shadow:0 0 6px rgba(255,92,0,.7),0 0 12px rgba(255,45,120,.4)}50%{box-shadow:0 0 12px rgba(255,92,0,1),0 0 24px rgba(255,45,120,.8)}}
 .fab{position:fixed;bottom:calc(var(--bh) + 14px);right:16px;z-index:200;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:1.2rem;cursor:pointer;box-shadow:0 4px 18px rgba(176,38,255,.4);display:flex;align-items:center;justify-content:center}
 .co{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(10px);z-index:1200;display:none;align-items:flex-end;justify-content:center}
 .co.open{display:flex}
@@ -235,7 +238,7 @@ async function fetchPosts() {
   if (!sb) throw new Error('Supabase not loaded');
   const limit = 10, offset = (_page - 1) * limit;
   let q = sb.from('posts')
-    .select('id,user_id,post_type,image_url,caption,event_name,created_at,profiles:user_id(username,display_name,avatar_url,role)', { count: 'exact' })
+    .select('id,user_id,post_type,image_url,caption,event_name,like_count,comment_count,created_at,profiles:user_id(username,display_name,avatar_url,role,is_verified)', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
   if (_filter === 'following' && _uid) {
@@ -377,7 +380,7 @@ function buildCard(post) {
         (post.avatar_url ? '<img src="'+x(post.avatar_url)+'" loading="lazy" onerror="this.style.display=\u0027none\u0027"/>' : (post.display_name?.[0]?.toUpperCase()||'😊')) +
       '</div>' +
       '<div style="flex:1;min-width:0;cursor:pointer" onclick="openProfile(\u0027'+x(post.user_id)+'\u0027)">' +
-        '<div class="fo">' + x(post.display_name || post.username) + (post.is_verified ? '<span style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);color:#fff;font-size:9px;font-weight:900;vertical-align:middle;margin-left:4px;flex-shrink:0" title="Verified by Pulsefy">✓</span>' : '') + (isOrg ? '<span class="org-pill">📢 Page</span>' : '') + '</div>' +
+        '<div class="fo">' + x(post.display_name || post.username) + (post.is_verified ? '<span class="puls-badge" title="Verified by Pulsefy"></span>' : '') + (isOrg ? '<span class="org-pill">📢 Page</span>' : '') + '</div>' +
         (post.event_name ? '<div style="font-size:.64rem;color:var(--or);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;letter-spacing:.04em">🎟 '+x(post.event_name)+'</div>' : '') +
         '<div class="fl">@'+x(post.username)+' · '+timeAgo(post.ts || post.created_at)+'</div>' +
       '</div>' +
