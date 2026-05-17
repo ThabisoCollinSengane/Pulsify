@@ -162,29 +162,16 @@ module.exports = async (req, res) => {
       const auth = await authUser(req);
       if (!auth) return res.status(401).json({ error: 'Unauthorized' });
       const squadId = squadPlansMatch[1];
-      // Use service client for reads — membership verified explicitly below
-      const svc = sb();
-      const { data: membership } = await svc.from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
-      if (!membership) return res.status(403).json({ error: 'Not a squad member' });
-      const { data: plans, error: plansErr } = await svc
-        .from('squad_plans')
-        .select('id, title, notes, plan_date, plan_time, location_name, event_id, outing_type, budget_per_person, creator_id, created_at')
-        .eq('squad_id', squadId)
-        .order('plan_date', { ascending: true });
-      if (plansErr) return res.status(400).json({ error: plansErr.message });
-      const planIds = (plans || []).map(p => p.id);
-      let rsvpMap = {}, creatorMap = {};
-      if (planIds.length > 0) {
-        const { data: rsvps } = await svc.from('squad_plan_rsvps').select('plan_id, user_id, status').in('plan_id', planIds);
-        (rsvps || []).forEach(r => { if (!rsvpMap[r.plan_id]) rsvpMap[r.plan_id] = []; rsvpMap[r.plan_id].push(r); });
-        const creatorIds = [...new Set((plans || []).map(p => p.creator_id).filter(Boolean))];
-        if (creatorIds.length) {
-          const { data: profs } = await svc.from('profiles').select('id, display_name, avatar_url').in('id', creatorIds);
-          (profs || []).forEach(p => { creatorMap[p.id] = { display_name: p.display_name, avatar_url: p.avatar_url }; });
-        }
+      // Use SECURITY DEFINER RPC — runs as postgres, bypasses RLS & grants entirely
+      const { data: plans, error: plansErr } = await sb().rpc('get_squad_plans', {
+        p_squad_id: squadId,
+        p_user_id: auth.user.id,
+      });
+      if (plansErr) {
+        if (plansErr.message?.includes('not_a_member')) return res.status(403).json({ error: 'Not a squad member' });
+        return res.status(400).json({ error: plansErr.message });
       }
-      const result = (plans || []).map(p => ({ ...p, creator: creatorMap[p.creator_id] || null, rsvps: rsvpMap[p.id] || [], my_rsvp: (rsvpMap[p.id] || []).find(r => r.user_id === auth.user.id)?.status || null }));
-      return res.status(200).json({ plans: result });
+      return res.status(200).json({ plans: plans || [] });
     }
 
     // POST /squads/:id/plans — create a plan + notify members
@@ -252,26 +239,29 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
-    // POST /squads/:id/invite — send invite (pending, notifies invitee)
+    // POST /squads/:id/invite — send invite via SECURITY DEFINER RPC (bypasses grants/RLS)
     if (squadActionMatch && squadActionMatch[2] === 'invite' && req.method === 'POST') {
-      const token = tokenFrom(req);
       const auth = await authUser(req);
       if (!auth) return res.status(401).json({ error: 'Unauthorized' });
       const squadId = squadActionMatch[1];
       const { user_id: inviteeId } = req.body || {};
       if (!inviteeId) return res.status(400).json({ error: 'user_id required' });
-      const { data: membership } = await sb().from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
-      if (!membership) return res.status(403).json({ error: 'Not a squad member' });
-      const { data: alreadyMember } = await sb().from('squad_members').select('user_id').eq('squad_id', squadId).eq('user_id', inviteeId).single();
-      if (alreadyMember) return res.status(400).json({ error: 'User is already a member' });
-      const { error } = await sb().from('squad_invites').insert({ squad_id: squadId, inviter_id: auth.user.id, invitee_id: inviteeId, status: 'pending' });
-      if (error && !error.message?.includes('duplicate')) return res.status(400).json({ error: error.message });
+      // insert_squad_invite is SECURITY DEFINER (runs as postgres), callable by anon/authenticated.
+      // It verifies membership internally and uses ON CONFLICT DO NOTHING for duplicates.
+      const { error } = await sb().rpc('insert_squad_invite', {
+        p_squad_id: squadId,
+        p_inviter_id: auth.user.id,
+        p_invitee_id: inviteeId,
+      });
+      if (error) {
+        if (error.message?.includes('Not a squad member')) return res.status(403).json({ error: 'Not a squad member' });
+        return res.status(400).json({ error: error.message });
+      }
       const [{ data: squad }, { data: inviter }] = await Promise.all([
         sb().from('squads').select('name').eq('id', squadId).single(),
-        sb().from('profiles').select('display_name').eq('id', auth.user.id).single()
+        sb().from('profiles').select('display_name').eq('id', auth.user.id).single(),
       ]);
-      await sb().from('notifications').insert({ user_id: inviteeId, type: 'squad_invite', from_user_id: auth.user.id, from_display_name: inviter?.display_name || 'Someone', entity_id: squadId, entity_type: 'squad', message: `${inviter?.display_name || 'Someone'} invited you to join ${squad?.name || 'a squad'}`, data: { squad_id: squadId } });
-      await sbAs(token).from('squad_points').insert({ squad_id: squadId, user_id: auth.user.id, activity_type: 'invite', points: 5 }).catch(() => {});
+      sb().from('notifications').insert({ user_id: inviteeId, type: 'squad_invite', from_user_id: auth.user.id, from_display_name: inviter?.display_name || 'Someone', entity_id: squadId, entity_type: 'squad', message: `${inviter?.display_name || 'Someone'} invited you to join ${squad?.name || 'a squad'}`, data: { squad_id: squadId } }).catch(() => {});
       return res.status(200).json({ ok: true });
     }
 

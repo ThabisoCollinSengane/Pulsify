@@ -3296,7 +3296,7 @@ async function openProfile(userId) {
     const sb = getSB();
     if (!sb) throw new Error('Supabase not loaded');
     const [{ data: profile, error: pErr }, { count: postsCnt }, { count: followersCnt }, { count: followingCnt }, { data: recent }] = await Promise.all([
-      sb.from('profiles').select('id,username,display_name,avatar_url,role,bio,city,genres,social_links').eq('id', userId).maybeSingle(),
+      sb.from('profiles').select('id,username,display_name,avatar_url,role,bio,city,genres,social_links,is_verified').eq('id', userId).maybeSingle(),
       sb.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', userId),
       sb.from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', userId),
       sb.from('follows').select('following_id', { count: 'exact', head: true }).eq('follower_id', userId),
