@@ -2146,21 +2146,16 @@ module.exports = async (req, res) => {
       const squadId = squadDetailMatch[1];
       const { data: squad } = await sb().from('squads').select('id, name, description, avatar_url, is_public, member_count, total_points, template_type, template_config, creator_id, created_at').eq('id', squadId).single();
       if (!squad) return res.status(404).json({ error: 'Squad not found' });
-      const { data: members } = await sb().from('squad_members').select('role, joined_at, profiles(id, display_name, username, avatar_url)').eq('squad_id', squadId);
+      const [{ data: members }, { data: memberCheck }, { data: allPoints }] = await Promise.all([
+        sb().from('squad_members').select('user_id, role, joined_at, profiles(id, display_name, username, avatar_url)').eq('squad_id', squadId),
+        auth ? sb().from('squad_members').select('user_id').eq('squad_id', squadId).eq('user_id', auth.user.id).maybeSingle() : Promise.resolve({ data: null }),
+        sb().from('squad_points').select('user_id, points').eq('squad_id', squadId),
+      ]);
       const { data: activity } = await sb().from('squad_activity').select('id, activity_type, description, created_at, profiles(display_name, avatar_url)').eq('squad_id', squadId).order('created_at', { ascending: false }).limit(10);
-      const { data: allPoints } = await sb().from('squad_points').select('user_id, points').eq('squad_id', squadId);
       const memberPoints = {};
       (allPoints || []).forEach(p => { memberPoints[p.user_id] = (memberPoints[p.user_id] || 0) + p.points; });
-      const { data: checkins } = await sb().from('squad_points').select('id').eq('squad_id', squadId).eq('activity_type', 'squad_checkin');
-      const { data: invites } = await sb().from('squad_points').select('id').eq('squad_id', squadId).eq('activity_type', 'invite');
-      const goals = [
-        { label: 'Attend 5 events together', current: (checkins || []).length, target: 5 },
-        { label: 'Reach 100 squad points', current: squad.total_points, target: 100 },
-        { label: 'Grow to 5 members', current: squad.member_count, target: 5 },
-        { label: 'Invite 3 friends', current: (invites || []).length, target: 3 },
-      ];
-      const isMember = auth ? (members || []).some(m => m.profiles?.id === auth.user.id) : false;
-      return res.status(200).json({ squad, members: members || [], activity: activity || [], goals, isMember, memberPoints });
+      const isMember = !!memberCheck;
+      return res.status(200).json({ squad, members: members || [], activity: activity || [], isMember, memberPoints });
     }
 
     /* ─── GET /admin/activity-log ───────────────────────── */

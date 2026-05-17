@@ -1481,6 +1481,8 @@ function renderLeadsTable(leads) {
           <button class="btn btn-li" style="padding:5px 10px;font-size:.68rem" onclick="advanceLead('${l.id}','${LEAD_STATUS_NEXT[l.status] || 'contacted'}')">→ ${LEAD_STATUS_LABELS[LEAD_STATUS_NEXT[l.status] || 'contacted']}</button>
           ${l.status !== 'ignored' ? `<button class="btn btn-pk" style="padding:5px 10px;font-size:.68rem" onclick="advanceLead('${l.id}','ignored')">🚫</button>` : ''}
           <button class="btn btn-or" style="padding:5px 10px;font-size:.68rem" onclick="quickAddEvent('${l.id}','${esc(l.name||'')}')">🎟 +Event</button>
+          ${l.email ? `<a class="btn" style="padding:5px 10px;font-size:.68rem;background:rgba(0,180,255,.12);border:1px solid rgba(0,180,255,.3);color:#00B4FF;border-radius:6px;text-decoration:none" href="mailto:${esc(l.email)}?subject=Partnership%20with%20Pulsefy&body=Hi%20${encodeURIComponent(l.name||'there')}%2C%0A%0AWe%20noticed%20your%20business%20on%20our%20platform%20and%20would%20love%20to%20connect.%0A%0AKind%20regards%2C%0APulsefy%20Team">✉️ Email</a>` : ''}
+          ${l.phone ? `<a class="btn" style="padding:5px 10px;font-size:.68rem;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);color:#25D366;border-radius:6px;text-decoration:none" href="https://wa.me/${encodeURIComponent((l.phone||'').replace(/\D/g,''))}?text=${encodeURIComponent('Hi '+( l.name||'there')+', we\\'d love to feature your business on Pulsefy — SA\\'s top events & nightlife app. Interested in a free listing? 🎯')}" target="_blank">💬 WhatsApp</a>` : ''}
         </div>
       </td>
     </tr>`;

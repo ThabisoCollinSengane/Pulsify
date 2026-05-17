@@ -744,11 +744,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 </div>
 
 <!-- MY SOCIAL LINKS SHEET -->
-<div id="my-social-sheet" style="display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.classList.remove('open')">
+<div id="my-social-sheet" style="display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
   <div style="width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;max-height:85vh;overflow-y:auto;padding:20px 18px 32px;animation:su .25s ease">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
       <div style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800">🔗 Social Links</div>
-      <button onclick="document.getElementById('my-social-sheet').classList.remove('open')" style="background:rgba(255,255,255,.08);border:none;color:var(--tx);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.9rem">✕</button>
+      <button onclick="document.getElementById('my-social-sheet').style.display='none'" style="background:rgba(255,255,255,.08);border:none;color:var(--tx);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.9rem">✕</button>
     </div>
     <div style="font-size:.75rem;color:var(--mu);margin-bottom:16px;line-height:1.5">Add your social handles so others can find and follow you. These appear above your bio on your public profile.</div>
     <div id="my-social-inputs"></div>
@@ -1909,8 +1909,13 @@ async function openBiz(bizId) {
 
   try {
     const sb = getSB();
-    const { data: b, error: bizErr } = await sb.from('businesses').select('*').eq('id', bizId).single();
+    const [{ data: b, error: bizErr }, { count: bizLikeCount }, bizLikedRes] = await Promise.all([
+      sb.from('businesses').select('*').eq('id', bizId).single(),
+      sb.from('reactions').select('id', { count: 'exact', head: true }).eq('entity_id', bizId).eq('entity_type', 'businesses'),
+      currentUser ? sb.from('reactions').select('user_id').eq('entity_id', bizId).eq('entity_type', 'businesses').eq('user_id', currentUser.id).maybeSingle() : Promise.resolve({ data: null }),
+    ]);
     if (bizErr || !b) throw new Error('Not found');
+    const bizLiked = !!bizLikedRes.data;
 
     const emo  = ce(b.category);
     const stars = '★'.repeat(Math.round(b.rating || 0)) + '☆'.repeat(5 - Math.round(b.rating || 0));
@@ -1936,7 +1941,7 @@ async function openBiz(bizId) {
         <button class="cb dr" onclick="window.open('https://maps.google.com/?q=${encodeURIComponent((b.address || b.name) + ', ' + (b.city || ''))}','_blank')" title="Directions"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--mu2)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></button>
       </div>
       <div class="rx">
-        <button class="rb" onclick="this.classList.toggle('act');const i=this.querySelector('.ri');i.textContent=i.textContent==='❤️'?'🤍':'❤️'"><span class="ri">🤍</span><span class="rl">${fn(Math.round((b.review_count || 0) * .8))}</span></button>
+        <button class="rb ${bizLiked?'lk':''}" onclick="toggleLike(this,'${x(b.id)}','businesses')"><span class="ai">${bizLiked?'❤️':'🤍'}</span><span>${fn(bizLikeCount||0)}</span></button>
         <button class="rb" onclick="openComments('${x(b.id)}','${x(b.name)}')"><span class="ri">💬</span><span class="rl">${fn(Math.round((b.review_count || 0) * .15))}</span></button>
         <button class="rb" onclick="toggleSave('biz','${x(b.id)}',this)"><span class="ri">${savedBz.includes(b.id) ? '🔖' : '🏷'}</span><span class="rl">Save</span></button>
         <button class="rb" onclick="shareIt('${x(b.name)}')"><span class="ri">🔗</span><span class="rl">Share</span></button>
@@ -3226,7 +3231,7 @@ async function saveMySocialLinks() {
     showToast('Social links saved!','ok');
     // update localStorage
     try { const p=JSON.parse(localStorage.getItem('p_profile')||'{}'); p.social_links=links; localStorage.setItem('p_profile',JSON.stringify(p)); } catch(e){}
-    document.getElementById('my-social-sheet')?.classList.remove('open');
+    const _ss = document.getElementById('my-social-sheet'); if (_ss) _ss.style.display = 'none';
   } else { showToast('Save failed','err'); }
 }
 
@@ -3247,7 +3252,7 @@ async function openProfile(userId) {
       sb.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', userId),
       sb.from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', userId),
       sb.from('follows').select('following_id', { count: 'exact', head: true }).eq('follower_id', userId),
-      sb.from('posts').select('id,image_url,caption,created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(6),
+      sb.from('posts').select('id,image_url,caption,created_at,like_count,comment_count').eq('user_id', userId).order('created_at', { ascending: false }).limit(6),
     ]);
     if (pErr || !profile) throw new Error(pErr?.message || 'Profile not found');
     const posts_count = postsCnt || 0;
@@ -3268,12 +3273,16 @@ async function openProfile(userId) {
       ? 'linear-gradient(135deg,#FF5C00,#FF2D78)'
       : 'linear-gradient(135deg,#B026FF,#FF5C00)';
 
-    const postsHtml = recent_posts.filter(p => firstImg(p.image_url)).length
+    const photoPosts = recent_posts.filter(p => firstImg(p.image_url)).slice(0, 9);
+    const postsHtml = photoPosts.length
       ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px;border-radius:10px;overflow:hidden">
-          ${recent_posts.filter(p => firstImg(p.image_url)).slice(0,9).map(p => `
+          ${photoPosts.map(p => `
             <div onclick="openPost('${x(p.id)}')" style="aspect-ratio:1;background:var(--surf2);overflow:hidden;cursor:pointer;position:relative">
               <img src="${x(firstImg(p.image_url))}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.background='var(--surf2)'"/>
-              ${imgCount(p.image_url)>1?`<span style="position:absolute;bottom:4px;right:5px;font-size:.58rem">📷</span>`:''}
+              <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg,rgba(0,0,0,.7) 0%,transparent 100%);padding:4px 5px;display:flex;gap:6px;align-items:center">
+                ${(p.like_count||0)>0?`<span style="font-size:.56rem;color:#fff">❤️ ${fn(p.like_count)}</span>`:''}
+                ${(p.comment_count||0)>0?`<span style="font-size:.56rem;color:#fff">💬 ${fn(p.comment_count)}</span>`:''}
+              </div>
             </div>`).join('')}
         </div>`
       : '<div style="padding:20px;text-align:center;font-size:.78rem;color:var(--mu);border:1px dashed var(--border);border-radius:12px">No photos yet</div>';
@@ -3329,14 +3338,21 @@ async function openPost(postId) {
   listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu)">Loading…</div>';
 
   const [{ data: post }, { data: cmts }] = await Promise.all([
-    sb.from('posts').select('id,user_id,caption,image_url,like_count,comment_count,created_at,profiles(display_name,avatar_url,username)').eq('id', postId).single(),
-    sb.from('comments').select('id,body,created_at,profiles(display_name,avatar_url)').eq('entity_id', postId).eq('entity_type','post').order('created_at',{ascending:true}).limit(50),
+    sb.from('posts').select('id,user_id,caption,image_url,like_count,comment_count,created_at').eq('id', postId).single(),
+    sb.from('comments').select('id,body,created_at,user_id').eq('entity_id', postId).eq('entity_type','post').order('created_at',{ascending:true}).limit(50),
   ]);
   if (!post) { listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu)">Post not found</div>'; return; }
 
+  // Batch-fetch profiles for author + commenters in one query
+  const allUids = [...new Set([post.user_id, ...(cmts||[]).map(c => c.user_id).filter(Boolean)])];
+  const { data: profRows } = await sb.from('profiles').select('id,display_name,avatar_url,username').in('id', allUids);
+  const profMap = {};
+  (profRows||[]).forEach(p => { profMap[p.id] = p; });
+  const author = profMap[post.user_id];
+
   const img = firstImg(post.image_url);
-  const name = x(post.profiles?.display_name || post.profiles?.username || 'User');
-  const av = post.profiles?.avatar_url;
+  const name = x(author?.display_name || author?.username || 'User');
+  const av = author?.avatar_url;
 
   // Check if current user liked this post
   let liked = false;
@@ -3346,17 +3362,20 @@ async function openPost(postId) {
   }
 
   const commentsHtml = (cmts||[]).length
-    ? cmts.map(c => `
+    ? cmts.map(c => {
+      const cp = profMap[c.user_id] || {};
+      return `
       <div style="display:flex;gap:10px;padding:6px 0;align-items:flex-start">
         <div style="width:32px;height:32px;border-radius:50%;background:var(--surf2);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.9rem">
-          ${c.profiles?.avatar_url ? `<img src="${x(c.profiles.avatar_url)}" style="width:100%;height:100%;object-fit:cover">` : '👤'}
+          ${cp.avatar_url ? `<img src="${x(cp.avatar_url)}" style="width:100%;height:100%;object-fit:cover">` : '👤'}
         </div>
         <div style="flex:1;min-width:0;background:var(--surf);border-radius:12px;padding:8px 10px">
-          <div style="font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;color:var(--tx);margin-bottom:2px">${x(c.profiles?.display_name||'User')}</div>
+          <div style="font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;color:var(--tx);margin-bottom:2px">${x(cp.display_name||'User')}</div>
           <div style="font-size:.8rem;color:var(--mu2);line-height:1.4">${x(c.body||'')}</div>
           <div style="font-size:.6rem;color:var(--mu);margin-top:3px">${timeAgoShort(c.created_at)}</div>
         </div>
-      </div>`).join('')
+      </div>`;
+    }).join('')
     : '<div style="padding:16px 0;text-align:center;font-size:.78rem;color:var(--mu)">No comments yet</div>';
 
   listEl.innerHTML = `
@@ -3399,21 +3418,37 @@ async function openAllPhotos(userId) {
   if (!ov || !body) return;
   ov.style.display = 'flex';
   body.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu)">Loading photos…</div>';
-  const { data: posts } = await sb.from('posts').select('id,image_url,caption,created_at').eq('user_id', userId).order('created_at',{ascending:false}).limit(100);
+  const { data: posts } = await sb.from('posts').select('id,image_url,caption,created_at,like_count,comment_count').eq('user_id', userId).order('created_at',{ascending:false}).limit(100);
   const photoPosts = (posts||[]).filter(p => firstImg(p.image_url));
+
+  // Group by month
+  const byMonth = {};
+  photoPosts.forEach(p => {
+    const d = new Date(p.created_at);
+    const key = d.toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
+    if (!byMonth[key]) byMonth[key] = [];
+    byMonth[key].push(p);
+  });
+
+  const monthSections = Object.keys(byMonth).map(month => `
+    <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin:12px 0 6px">${month}</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px;border-radius:10px;overflow:hidden">
+      ${byMonth[month].map(p=>`
+        <div onclick="openPost('${x(p.id)}')" style="aspect-ratio:1;background:var(--surf2);overflow:hidden;cursor:pointer;position:relative">
+          <img src="${x(firstImg(p.image_url))}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.background='var(--surf2)'"/>
+          <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg,rgba(0,0,0,.75) 0%,transparent 100%);padding:4px 5px;display:flex;gap:6px;align-items:center">
+            ${(p.like_count||0)>0?`<span style="font-size:.56rem;color:#fff">❤️ ${fn(p.like_count)}</span>`:''}
+            ${(p.comment_count||0)>0?`<span style="font-size:.56rem;color:#fff">💬 ${fn(p.comment_count)}</span>`:''}
+          </div>
+        </div>`).join('')}
+    </div>`).join('');
+
   body.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
       <button onclick="closeProfOverlay()" style="background:none;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer;padding:0">←</button>
       <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu)">All Photos (${photoPosts.length})</div>
     </div>
-    ${photoPosts.length
-      ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px;border-radius:10px;overflow:hidden">
-          ${photoPosts.map(p=>`
-            <div onclick="openPost('${x(p.id)}')" style="aspect-ratio:1;background:var(--surf2);overflow:hidden;cursor:pointer;position:relative">
-              <img src="${x(firstImg(p.image_url))}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.background='var(--surf2)'"/>
-            </div>`).join('')}
-        </div>`
-      : '<div style="padding:40px;text-align:center;color:var(--mu)">No photos yet</div>'}`;
+    ${photoPosts.length ? monthSections : '<div style="padding:40px;text-align:center;color:var(--mu)">No photos yet</div>'}`;
 }
 
 function closeProfOverlay() { document.getElementById('prof-overlay').style.display = 'none'; }
@@ -4178,7 +4213,10 @@ async function showSquadTab(squadId) {
   const workspace = document.getElementById('sq-workspace');
   if (workspace) workspace.innerHTML = '<div style="padding:20px;font-size:.78rem;color:var(--mu)">Loading…</div>';
   try {
-    const r = await fetch(API + '/squads/' + squadId);
+    const _sb2 = getSB();
+    const _sqSess = _sb2 ? (await _sb2.auth.getSession().catch(()=>({data:{}}))).data?.session : null;
+    const _sqHdrs = _sqSess?.access_token ? { 'Authorization': 'Bearer ' + _sqSess.access_token } : {};
+    const r = await fetch(API + '/squads/' + squadId, { headers: _sqHdrs });
     if (!r.ok) throw new Error('Failed');
     const detail = await safeJson(r);
     renderSquadWorkspace(detail, workspace);
@@ -4778,7 +4816,7 @@ async function openMySocialSheet() {
   const sheet = document.getElementById('my-social-sheet');
   const el = document.getElementById('my-social-inputs');
   if (!sheet || !el) return;
-  sheet.classList.add('open');
+  sheet.style.display = 'flex';
   let current = {};
   try { current = JSON.parse(localStorage.getItem('p_profile')||'{}').social_links || {}; } catch(e){}
   // Also try to fetch fresh from Supabase
