@@ -86,9 +86,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .cmt-item.cmt-target-c{background:rgba(255,92,0,.08)}
 .puls-badge{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);box-shadow:0 0 8px rgba(255,92,0,.8),0 0 16px rgba(255,45,120,.5);position:relative;vertical-align:middle;margin-left:4px;flex-shrink:0;cursor:default;font-size:9px;font-weight:900;color:#fff;line-height:1;animation:puls-glow 1.6s ease-in-out infinite}
 .puls-badge::after{content:'\2713';font-size:9px;font-weight:900;color:#fff;line-height:1}
-.verified-pill{display:inline-flex;align-items:center;gap:3px;vertical-align:middle;margin-left:4px}
-.verified-pill .puls-badge{margin-left:0}
-.verified-pill .verified-txt{font-family:'Syne',sans-serif;font-size:.54rem;font-weight:700;letter-spacing:.08em;color:#FF5C00;text-transform:uppercase;line-height:1}
+.verified-pill{display:inline-flex;align-items:center;gap:2px;vertical-align:middle;margin-left:4px}
+.verified-pill .puls-badge{margin-left:0;width:11px;height:11px}
+.verified-pill .puls-badge::after{font-size:7px}
+.verified-pill .verified-txt{font-family:'Syne',sans-serif;font-size:.44rem;font-weight:700;letter-spacing:.04em;color:#FF5C00;text-transform:uppercase;line-height:1;opacity:.85}
 @keyframes puls-glow{0%,100%{box-shadow:0 0 6px rgba(255,92,0,.7),0 0 12px rgba(255,45,120,.4)}50%{box-shadow:0 0 12px rgba(255,92,0,1),0 0 24px rgba(255,45,120,.8)}}
 .fab{position:fixed;bottom:calc(var(--bh) + 14px);right:16px;z-index:200;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:1.2rem;cursor:pointer;box-shadow:0 4px 18px rgba(176,38,255,.4);display:flex;align-items:center;justify-content:center}
 .co{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(10px);z-index:1200;display:none;align-items:flex-end;justify-content:center}
