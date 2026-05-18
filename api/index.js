@@ -1784,12 +1784,13 @@ module.exports = async (req, res) => {
       const squadId = squadDetailMatch[1];
       const { data: membership } = await sb().from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
       if (!membership || membership.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
-      const { name, description, is_public, template_config } = req.body || {};
+      const { name, description, is_public, template_config, avatar_url } = req.body || {};
       const updates = {};
       if (name) updates.name = name.trim();
       if (description !== undefined) updates.description = description;
       if (is_public !== undefined) updates.is_public = is_public;
       if (template_config) updates.template_config = template_config;
+      if (avatar_url !== undefined) updates.avatar_url = avatar_url;
       const { error } = await sb().from('squads').update(updates).eq('id', squadId);
       if (error) return res.status(400).json({ error: error.message });
       return res.status(200).json({ ok: true });

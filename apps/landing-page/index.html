@@ -3709,6 +3709,7 @@ function renderSquadWorkspace(detail, container) {
   const { squad, members, activity, goals, isMember } = detail;
   const tmpl = getTemplate(squad.template_type || 'general');
   const pts = squad.total_points || 0;
+  const isAdmin = members.some(m => m.profiles?.id === (currentUser?.id || '') && m.role === 'admin');
 
   const membersHtml = `<div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin:18px 0 10px">Members (${members.length})</div>
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px">
@@ -3755,9 +3756,16 @@ function renderSquadWorkspace(detail, container) {
     ${goalsHtml}${membersHtml}${inviteBtn}${actionsHtml}`;
 
   const sid = x(squad.id);
+  const avatarInner = squad.avatar_url
+    ? `<img src="${x(squad.avatar_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:12px"/>`
+    : `<span style="font-size:1.5rem">${tmpl.icon}</span>`;
+
   container.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">
-      <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,${tmpl.color}22,${tmpl.color}55);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0">${tmpl.icon}</div>
+      <div style="position:relative;width:44px;height:44px;flex-shrink:0">
+        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,${tmpl.color}22,${tmpl.color}55);display:flex;align-items:center;justify-content:center;overflow:hidden">${avatarInner}</div>
+        ${isAdmin ? `<button onclick="uploadSquadAvatar('${sid}')" title="Change photo" style="position:absolute;bottom:-4px;right:-4px;width:18px;height:18px;border-radius:50%;background:#B026FF;border:2px solid var(--bg);color:#fff;font-size:.55rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">📷</button>` : ''}
+      </div>
       <div style="flex:1;min-width:0">
         <div style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(squad.name)}</div>
         <div style="font-size:.72rem;color:var(--mu)">👥 ${squad.member_count} · ${squad.is_public?'🌍 Public':'🔒 Private'}</div>
@@ -4005,6 +4013,37 @@ async function loadSquadCalendar(squadId) {
   } catch(e) {
     pane.innerHTML = `<div style="color:var(--pk);padding:20px;font-size:.78rem">Error: ${x(e.message)}</div>`;
   }
+}
+
+async function uploadSquadAvatar(squadId) {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*';
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) return showToast('Image must be under 5 MB', 'err');
+    showToast('Uploading…');
+    try {
+      const sb2 = getSB();
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `squad-avatars/${squadId}-${Date.now()}.${ext}`;
+      const { error: upErr } = await sb2.storage.from('post-images').upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = sb2.storage.from('post-images').getPublicUrl(path);
+      const { data: { session } } = await sb2.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Not signed in');
+      const r = await fetch(API + '/squads/' + squadId, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ avatar_url: publicUrl })
+      });
+      if (!r.ok) { const d = await r.json().catch(()=>{}); throw new Error(d?.error || 'Update failed'); }
+      showToast('Squad photo updated!');
+      showSquadTab(squadId);
+    } catch(e) { showToast(e.message || 'Upload failed', 'err'); }
+  };
+  input.click();
 }
 
 async function showSquadEmptyState(container) {
