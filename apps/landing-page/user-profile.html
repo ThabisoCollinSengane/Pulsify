@@ -347,29 +347,45 @@ function updateFollowerCount(change) {
 
 function escHtml(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
+function _firstImageUrl(raw) {
+  if (!raw) return '';
+  if (Array.isArray(raw)) return raw[0] || '';
+  if (typeof raw === 'string' && raw.trim().startsWith('[')) {
+    try { const a = JSON.parse(raw); return Array.isArray(a) ? (a[0] || '') : raw; } catch(e) { return raw; }
+  }
+  return raw;
+}
 async function renderPosts(userId) {
   const el = document.getElementById('posts-list');
   el.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Loading…</div></div>';
   try {
-    const { data: posts, error, count } = await sb.from('posts').select('id,caption,image_url,event_name,created_at', { count: 'exact' }).eq('user_id', userId).order('created_at', { ascending: false }).limit(30);
+    const { data: posts, error, count } = await sb.from('posts').select('id,caption,image_url,event_name,like_count,comment_count,created_at', { count: 'exact' }).eq('user_id', userId).order('created_at', { ascending: false }).limit(30);
     if (error) throw error;
     document.getElementById('stat-posts').textContent = count || 0;
     if (!posts?.length) {
       el.innerHTML = '<div class="empty"><div class="empty-ico">📸</div><div class="empty-title">No posts yet</div></div>';
       return;
     }
-    el.innerHTML = posts.map(p => `
+    el.innerHTML = posts.map(p => {
+      const img = _firstImageUrl(p.image_url);
+      const likes = p.like_count || 0;
+      const cmts  = p.comment_count || 0;
+      return `
       <div class="post" id="post-${escHtml(p.id)}">
-        ${p.image_url ? `<img class="post-img" src="${escHtml(p.image_url)}" loading="lazy" onerror="this.style.display='none'"/>` : '<div class="post-img-placeholder">📸</div>'}
+        ${img ? `<img class="post-img" src="${escHtml(img)}" loading="lazy" onerror="this.style.display='none'"/>` : '<div class="post-img-placeholder">📸</div>'}
         <div class="post-body">
           ${p.event_name ? `<div class="post-ev">🎟 ${escHtml(p.event_name)}</div>` : ''}
           ${p.caption ? `<div class="post-cap">${escHtml(p.caption)}</div>` : ''}
           <div class="post-foot">
             <span class="post-date">${new Date(p.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})}</span>
+            <div class="post-actions">
+              <span class="pa">❤️ ${likes}</span>
+              <span class="pa">💬 ${cmts}</span>
+            </div>
           </div>
         </div>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   } catch(e) {
     el.innerHTML = '<div class="empty"><div class="empty-ico">📸</div><div class="empty-title">Could not load posts</div></div>';
   }
