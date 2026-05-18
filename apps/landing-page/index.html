@@ -3695,7 +3695,10 @@ async function showSquadTab(squadId) {
   const workspace = document.getElementById('sq-workspace');
   if (workspace) workspace.innerHTML = '<div style="padding:20px;font-size:.78rem;color:var(--mu)">Loading…</div>';
   try {
-    const r = await fetch(API + '/squads/' + squadId);
+    const sb2 = getSB();
+    const { data: { session } } = await sb2.auth.getSession();
+    const token = session?.access_token || '';
+    const r = await fetch(API + '/squads/' + squadId, token ? { headers: { Authorization: 'Bearer ' + token } } : {});
     if (!r.ok) throw new Error('Failed');
     const detail = await safeJson(r);
     renderSquadWorkspace(detail, workspace);
@@ -3714,7 +3717,7 @@ function renderSquadWorkspace(detail, container) {
   const membersHtml = `<div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin:18px 0 10px">Members (${members.length})</div>
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px">
       ${members.map(m => { const p=m.profiles||{}; const ini=(p.display_name||'?')[0].toUpperCase();
-        return `<div style="display:flex;align-items:center;gap:8px"><div class="sq-member-av">${p.avatar_url?`<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>`:ini}</div><div><div style="font-size:.78rem;font-weight:700">${x(p.display_name||p.username||'?')}</div><div style="font-size:.68rem;color:var(--mu)">${m.role==='admin'?'👑 Admin':'Member'}</div></div></div>`;
+        return `<div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="openProfile('${x(p.id||'')}')" title="View profile"><div class="sq-member-av">${p.avatar_url?`<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>`:ini}</div><div><div style="font-size:.78rem;font-weight:700;color:var(--tx)">${x(p.display_name||p.username||'?')}</div><div style="font-size:.68rem;color:var(--mu)">${m.role==='admin'?'👑 Admin':'Member'}</div></div></div>`;
       }).join('')}
     </div>`;
 
@@ -3912,13 +3915,16 @@ async function rsvpPlan(planId, squadId, status, btn) {
   } catch(e) { showToast(e.message || 'Failed', 'err'); }
 }
 
+let _sqReply = null; // { msgId, name, body }
 async function loadSquadMessages(squadId) {
+  _sqReply = null;
   const pane = document.getElementById('sqw-pane-chat');
   if (!pane) return;
   pane.innerHTML = `
-    <div id="sq-msgs" style="height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:8px 2px;background:var(--surf);border:1px solid var(--border);border-radius:14px;margin-bottom:10px">
+    <div id="sq-msgs" style="height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:8px 4px;background:var(--surf);border:1px solid var(--border);border-radius:14px;margin-bottom:8px">
       <div style="text-align:center;color:var(--mu);font-size:.76rem;padding:20px">Loading messages…</div>
     </div>
+    <div id="sq-reply-banner" style="display:none;padding:6px 12px;border-radius:8px;background:rgba(176,38,255,.1);border:1px solid rgba(176,38,255,.3);font-size:.72rem;color:var(--pu);margin-bottom:6px;align-items:center;justify-content:space-between"></div>
     <div style="display:flex;gap:6px">
       <input id="sq-msg-input" placeholder="Message your squad…" style="flex:1;padding:10px 14px;border-radius:50px;background:var(--bg2);border:1px solid var(--border);color:var(--tx);font-size:.82rem" onkeydown="if(event.key==='Enter')sendSquadMessage('${x(squadId)}')"/>
       <button onclick="sendSquadMessage('${x(squadId)}')" style="padding:0 18px;border-radius:50px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer">Send</button>
@@ -3926,7 +3932,7 @@ async function loadSquadMessages(squadId) {
   try {
     const sb2 = getSB();
     const { data: msgs, error } = await sb2.from('squad_messages')
-      .select('id,user_id,body,created_at')
+      .select('id,user_id,body,created_at,reply_to_id,reply_to_body')
       .eq('squad_id', squadId).order('created_at', { ascending: true }).limit(200);
     if (error) throw error;
     const userIds = [...new Set((msgs || []).map(m => m.user_id))];
@@ -3946,11 +3952,14 @@ async function loadSquadMessages(squadId) {
         const mine = m.user_id === me;
         const av = p.avatar_url ? `<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>` : (p.display_name || '?')[0].toUpperCase();
         const time = new Date(m.created_at).toLocaleTimeString('en-ZA', { hour:'2-digit', minute:'2-digit' });
+        const name = x(p.display_name || p.username || 'User');
+        const replyQuote = m.reply_to_body ? `<div style="border-left:2px solid rgba(255,255,255,.3);padding:4px 8px;margin-bottom:6px;font-size:.72rem;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(m.reply_to_body)}</div>` : '';
         return `<div style="display:flex;gap:8px;align-items:flex-end;${mine?'flex-direction:row-reverse':''}">
-          <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff;overflow:hidden;flex-shrink:0">${av}</div>
+          <div onclick="openProfile('${x(m.user_id)}')" style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff;overflow:hidden;flex-shrink:0;cursor:pointer">${av}</div>
           <div style="max-width:72%">
-            <div style="font-size:.62rem;color:var(--mu);margin:0 8px 2px;${mine?'text-align:right':''}">${x(p.display_name || p.username || 'User')} · ${time}</div>
-            <div style="background:${mine?'linear-gradient(135deg,#B026FF,#FF5C00)':'var(--bg2)'};color:${mine?'#fff':'var(--tx)'};padding:8px 12px;border-radius:14px;font-size:.84rem;line-height:1.4;word-wrap:break-word">${x(m.body)}</div>
+            <div style="font-size:.62rem;color:var(--mu);margin:0 8px 2px;${mine?'text-align:right':''}">${name} · ${time}</div>
+            <div style="background:${mine?'linear-gradient(135deg,#B026FF,#FF5C00)':'var(--bg2)'};color:${mine?'#fff':'var(--tx)'};padding:8px 12px;border-radius:14px;font-size:.84rem;line-height:1.4;word-wrap:break-word">${replyQuote}${x(m.body)}</div>
+            <button onclick="sqStartReply('${x(m.id)}','${name.replace(/'/g,'&#39;')}','${x(m.body).replace(/'/g,'&#39;').slice(0,60)}')" style="background:none;border:none;color:var(--mu);font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;cursor:pointer;padding:3px ${mine?'8px 0 0':'0 0 0 8px'};${mine?'display:block;text-align:right':''}">↩ Reply</button>
           </div>
         </div>`;
       }).join('');
@@ -3961,16 +3970,36 @@ async function loadSquadMessages(squadId) {
   }
 }
 
+function sqStartReply(msgId, name, bodyPreview) {
+  _sqReply = { msgId, name, bodyPreview };
+  const banner = document.getElementById('sq-reply-banner');
+  if (banner) {
+    banner.style.display = 'flex';
+    banner.innerHTML = `<span>↩ Replying to <strong>${name}</strong>: <em>${bodyPreview}${bodyPreview.length>=60?'…':''}</em></span><button onclick="sqCancelReply()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:.9rem;padding:0 0 0 8px">✕</button>`;
+  }
+  const inp = document.getElementById('sq-msg-input');
+  if (inp) inp.focus();
+}
+function sqCancelReply() {
+  _sqReply = null;
+  const banner = document.getElementById('sq-reply-banner');
+  if (banner) banner.style.display = 'none';
+}
+
 async function sendSquadMessage(squadId) {
   const input = document.getElementById('sq-msg-input');
   const body = input.value.trim();
   if (!body) return;
   input.value = '';
+  const replyTo = _sqReply;
+  sqCancelReply();
   try {
     const sb2 = getSB();
     const { data: { user } } = await sb2.auth.getUser();
     if (!user) return showToast('Sign in first', 'err');
-    const { error } = await sb2.from('squad_messages').insert({ squad_id: squadId, user_id: user.id, body });
+    const row = { squad_id: squadId, user_id: user.id, body };
+    if (replyTo) { row.reply_to_id = replyTo.msgId; row.reply_to_body = replyTo.bodyPreview; }
+    const { error } = await sb2.from('squad_messages').insert(row);
     if (error) throw error;
     loadSquadMessages(squadId);
   } catch(e) {
