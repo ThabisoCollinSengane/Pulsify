@@ -90,7 +90,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:currentColor;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* Tabs */
-.tab-btn{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;padding:12px 20px;cursor:pointer;border-bottom:2px solid transparent;color:var(--mu);transition:all .2s;user-select:none}
+.tab-btn{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;padding:12px 20px;cursor:pointer;border-bottom:2px solid transparent;color:var(--mu);transition:all .2s;user-select:none;flex-shrink:0;white-space:nowrap}
 .tab-btn:hover{color:var(--tx)}
 .tab-btn.active{color:var(--or);border-bottom-color:var(--or)}
 .tab-content{display:none}
@@ -139,7 +139,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <div class="page">
 
   <!-- Tab Navigation -->
-  <div style="display:flex;gap:8px;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:0">
+  <div style="display:flex;gap:8px;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none">
     <div class="tab-btn active" onclick="switchTab('users')">👥 Users</div>
     <div class="tab-btn" onclick="switchTab('businesses')">🏢 Businesses</div>
     <div class="tab-btn" onclick="switchTab('events')">🎉 Events</div>
