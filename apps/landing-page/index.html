@@ -2892,11 +2892,11 @@ async function openProfile(userId) {
     const sb = getSB();
     if (!sb) throw new Error('Supabase not loaded');
     const [{ data: profile, error: pErr }, { count: postsCnt }, { count: followersCnt }, { count: followingCnt }, { data: recent }] = await Promise.all([
-      sb.from('profiles').select('id,username,display_name,avatar_url,role,bio,city,genres,instagram,tiktok,whatsapp,facebook,twitter').eq('id', userId).maybeSingle(),
+      sb.from('profiles').select('id,username,display_name,avatar_url,role,bio,city,genres,instagram,tiktok,whatsapp,facebook,twitter,is_verified').eq('id', userId).maybeSingle(),
       sb.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', userId),
       sb.from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', userId),
       sb.from('follows').select('following_id', { count: 'exact', head: true }).eq('follower_id', userId),
-      sb.from('posts').select('id,image_url,caption,created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(6),
+      sb.from('posts').select('id,image_url,caption,created_at,likes_count,comments_count').eq('user_id', userId).order('created_at', { ascending: false }).limit(6),
     ]);
     if (pErr || !profile) throw new Error(pErr?.message || 'Profile not found');
     const posts_count = postsCnt || 0;
@@ -2921,7 +2921,11 @@ async function openProfile(userId) {
       <div style="border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surf);margin-bottom:10px">
         ${firstImg(p.image_url) ? `<div style="position:relative;width:100%;aspect-ratio:1;background:#000;overflow:hidden"><img src="${x(firstImg(p.image_url))}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'"/>${imgCount(p.image_url)>1?`<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.7);color:#fff;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;padding:3px 8px;border-radius:50px">📷 ${imgCount(p.image_url)}</span>`:''}</div>` : ''}
         ${p.caption ? `<div style="padding:10px 12px;font-size:.82rem;color:var(--tx);line-height:1.45">${x(p.caption)}</div>` : ''}
-        <div style="padding:6px 12px 10px;font-size:.62rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.08em;text-transform:uppercase">${timeAgoShort(p.created_at)}</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 12px 10px">
+          <button class="ab" onclick="toggleLike(this,'${x(p.id)}','posts')" style="background:none;border:none;display:flex;align-items:center;gap:4px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;padding:4px 8px;border-radius:50px;border:1px solid var(--border)"><span class="ai">🤍</span><span>${fn(p.likes_count||0)}</span></button>
+          <button class="ab" onclick="openComments('${x(p.id)}','Post','posts')" style="background:none;border:none;display:flex;align-items:center;gap:4px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;padding:4px 8px;border-radius:50px;border:1px solid var(--border)"><span class="ai">💬</span><span>${fn(p.comments_count||0)}</span></button>
+          <span style="margin-left:auto;font-size:.62rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.08em;text-transform:uppercase">${timeAgoShort(p.created_at)}</span>
+        </div>
       </div>
     `).join('') : '<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu);border:1px dashed var(--border);border-radius:12px">No posts yet</div>';
 
@@ -2949,17 +2953,17 @@ async function openProfile(userId) {
       ${profile.bio ? `<div style="font-size:.84rem;color:var(--mu2);line-height:1.55;margin-bottom:10px">${x(profile.bio)}</div>` : ''}
       ${(() => {
         const links = [];
-        if (profile.whatsapp)  links.push(`<a href="https://wa.me/${profile.whatsapp.replace(/\D/g,'')}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.1rem" title="WhatsApp">💬</a>`);
-        if (profile.instagram) links.push(`<a href="${profile.instagram.startsWith('http')?profile.instagram:'https://instagram.com/'+profile.instagram.replace('@','')}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.1rem" title="Instagram">📸</a>`);
-        if (profile.tiktok)    links.push(`<a href="${profile.tiktok.startsWith('http')?profile.tiktok:'https://tiktok.com/@'+profile.tiktok.replace('@','')}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:#000;border:1px solid #333;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.1rem" title="TikTok">🎵</a>`);
-        if (profile.facebook)  links.push(`<a href="${profile.facebook.startsWith('http')?profile.facebook:'https://facebook.com/'+profile.facebook}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:#1877F2;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.1rem" title="Facebook">📘</a>`);
-        if (profile.twitter)   links.push(`<a href="${profile.twitter.startsWith('http')?profile.twitter:'https://x.com/'+profile.twitter.replace('@','')}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:#000;border:1px solid #333;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.1rem" title="X / Twitter">𝕏</a>`);
+        if (profile.whatsapp)  links.push(`<a href="https://wa.me/${profile.whatsapp.replace(/\D/g,'')}" target="_blank" style="width:38px;height:38px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;text-decoration:none;flex-shrink:0" title="WhatsApp"><svg viewBox="0 0 24 24" fill="#fff" width="20" height="20"><path d="M20.52 3.48A12 12 0 0 0 2.1 18.33L0 24l5.82-2.08A12 12 0 1 0 20.52 3.48zm-8.52 18a10 10 0 0 1-5.35-1.54l-.38-.23-3.45 1.24 1.26-3.37-.25-.4A10 10 0 1 1 12 21.5zm5.5-7.5c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.67.15s-.77.97-.94 1.17-.35.22-.65.07-1.26-.46-2.4-1.47c-.89-.79-1.49-1.77-1.66-2.07s-.02-.46.13-.61.3-.35.45-.52.2-.3.3-.5.05-.37-.02-.52-.67-1.62-.92-2.22-.49-.5-.67-.51L7.8 9c-.2 0-.52.07-.79.37s-1.04 1.02-1.04 2.48 1.07 2.87 1.22 3.07 2.1 3.2 5.08 4.49c.71.3 1.26.49 1.69.62.71.23 1.36.2 1.87.12.57-.09 1.77-.72 2.02-1.42s.25-1.3.17-1.42-.27-.2-.57-.35z"/></svg></a>`);
+        if (profile.instagram) links.push(`<a href="${profile.instagram.startsWith('http')?profile.instagram:'https://instagram.com/'+profile.instagram.replace('@','')}" target="_blank" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%);display:flex;align-items:center;justify-content:center;text-decoration:none;flex-shrink:0" title="Instagram"><svg viewBox="0 0 24 24" fill="#fff" width="20" height="20"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zm0 10.162a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg></a>`);
+        if (profile.tiktok)    links.push(`<a href="${profile.tiktok.startsWith('http')?profile.tiktok:'https://tiktok.com/@'+profile.tiktok.replace('@','')}" target="_blank" style="width:38px;height:38px;border-radius:50%;background:#010101;display:flex;align-items:center;justify-content:center;text-decoration:none;flex-shrink:0" title="TikTok"><svg viewBox="0 0 24 24" fill="#fff" width="20" height="20"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 0 0-6.34 6.29 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.22 8.22 0 0 0 4.8 1.54V6.78a4.85 4.85 0 0 1-1.82-.09z"/></svg></a>`);
+        if (profile.facebook)  links.push(`<a href="${profile.facebook.startsWith('http')?profile.facebook:'https://facebook.com/'+profile.facebook}" target="_blank" style="width:38px;height:38px;border-radius:50%;background:#1877F2;display:flex;align-items:center;justify-content:center;text-decoration:none;flex-shrink:0" title="Facebook"><svg viewBox="0 0 24 24" fill="#fff" width="20" height="20"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>`);
+        if (profile.twitter)   links.push(`<a href="${profile.twitter.startsWith('http')?profile.twitter:'https://x.com/'+profile.twitter.replace('@','')}" target="_blank" style="width:38px;height:38px;border-radius:50%;background:#000;display:flex;align-items:center;justify-content:center;text-decoration:none;flex-shrink:0" title="X / Twitter"><svg viewBox="0 0 24 24" fill="#fff" width="18" height="18"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>`);
         return links.length ? `<div style="display:flex;gap:8px;margin-bottom:12px">${links.join('')}</div>` : '';
       })()}
       <div style="display:flex;gap:8px;margin-bottom:16px">
         <div style="flex:1;text-align:center;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:10px 4px"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--or);line-height:1">${posts_count}</div><div style="font-size:.58rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-top:3px">Posts</div></div>
-        <div style="flex:1;text-align:center;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:10px 4px"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--or);line-height:1">${followers_count}</div><div style="font-size:.58rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-top:3px">Followers</div></div>
-        <div style="flex:1;text-align:center;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:10px 4px"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--or);line-height:1">${following_count}</div><div style="font-size:.58rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-top:3px">Following</div></div>
+        <div onclick="showFollowList('${x(userId)}','followers')" style="flex:1;text-align:center;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:10px 4px;cursor:pointer"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--or);line-height:1">${followers_count}</div><div style="font-size:.58rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-top:3px">Followers</div></div>
+        <div onclick="showFollowList('${x(userId)}','following')" style="flex:1;text-align:center;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:10px 4px;cursor:pointer"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--or);line-height:1">${following_count}</div><div style="font-size:.58rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-top:3px">Following</div></div>
       </div>
       ${prefsHtml}
       <div style="font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Recent Posts</div>
@@ -2989,6 +2993,43 @@ async function toggleFollowOverlay(targetId) {
     }
   } catch(e) { showToast('Error: ' + e.message); }
   if (btn) btn.disabled = false;
+}
+
+async function showFollowList(userId, type) {
+  const sb = getSB();
+  const body = document.getElementById('prof-overlay-body');
+  if (!body) return;
+  body.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div>';
+  try {
+    let rows;
+    if (type === 'followers') {
+      const { data } = await sb.from('follows').select('profiles:follower_id(id,display_name,username,avatar_url)').eq('following_id', userId);
+      rows = (data||[]).map(r => r.profiles).filter(Boolean);
+    } else {
+      const { data } = await sb.from('follows').select('profiles:following_id(id,display_name,username,avatar_url)').eq('follower_id', userId);
+      rows = (data||[]).map(r => r.profiles).filter(Boolean);
+    }
+    const label = type === 'followers' ? 'Followers' : 'Following';
+    const listHtml = rows.length ? rows.map(p => {
+      const avGrad = 'linear-gradient(135deg,#B026FF,#FF5C00)';
+      const ini = (p.display_name||p.username||'?')[0].toUpperCase();
+      const av = p.avatar_url
+        ? `<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>`
+        : `<span style="font-family:'Bebas Neue',sans-serif;font-size:1rem">${ini}</span>`;
+      return `<div onclick="openProfile('${x(p.id)}')" style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer">
+        <div style="width:42px;height:42px;border-radius:50%;background:${avGrad};display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">${av}</div>
+        <div><div style="font-size:.88rem;font-weight:700;color:var(--tx)">${x(p.display_name||p.username||'?')}</div><div style="font-size:.7rem;color:var(--mu)">@${x(p.username||'user')}</div></div>
+      </div>`;
+    }).join('') : `<div style="padding:30px;text-align:center;font-size:.78rem;color:var(--mu)">No ${label.toLowerCase()} yet</div>`;
+    body.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <button onclick="history.back()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:1.1rem;padding:0">←</button>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem">${label}</div>
+      </div>
+      ${listHtml}`;
+  } catch(e) {
+    body.innerHTML = `<div style="padding:40px;text-align:center;color:var(--mu)">${x(e.message)}</div>`;
+  }
 }
 
 /* ══════════════════════════════════════════════════
