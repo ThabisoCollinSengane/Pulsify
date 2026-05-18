@@ -149,6 +149,15 @@ textarea.inp{resize:none;height:78px;line-height:1.5}
   </div>
 
   <div class="sec">
+    <div class="sec-head">Social Links</div>
+    <div class="field"><div class="lbl">📸 Instagram</div><input class="inp" id="soc-instagram" type="text" placeholder="@yourhandle or full URL"/></div>
+    <div class="field"><div class="lbl">🎵 TikTok</div><input class="inp" id="soc-tiktok" type="text" placeholder="@yourhandle or full URL"/></div>
+    <div class="field"><div class="lbl">💬 WhatsApp</div><input class="inp" id="soc-whatsapp" type="tel" placeholder="e.g. 0821234567"/></div>
+    <div class="field"><div class="lbl">📘 Facebook</div><input class="inp" id="soc-facebook" type="text" placeholder="Name or full URL"/></div>
+    <div class="field"><div class="lbl">🐦 X / Twitter</div><input class="inp" id="soc-twitter" type="text" placeholder="@yourhandle or full URL"/></div>
+  </div>
+
+  <div class="sec">
     <div class="sec-head">Notification Preferences</div>
     <div style="padding:4px 15px">
       <div class="trow"><div class="trow-info"><div class="trow-title">Email — Event reminders</div><div class="trow-sub">24h before events you've booked</div></div><label class="tgl"><input type="checkbox" id="n-email-ev"/><span class="tgl-s"></span></label></div>
@@ -204,6 +213,11 @@ async function loadData() {
   document.getElementById('dob').value = currentProfile.dob || '';
   const phone = (currentProfile.phone || '').replace('+27', '');
   document.getElementById('phone').value = phone;
+  document.getElementById('soc-instagram').value = currentProfile.instagram || '';
+  document.getElementById('soc-tiktok').value    = currentProfile.tiktok    || '';
+  document.getElementById('soc-whatsapp').value  = currentProfile.whatsapp  || '';
+  document.getElementById('soc-facebook').value  = currentProfile.facebook  || '';
+  document.getElementById('soc-twitter').value   = currentProfile.twitter   || '';
   document.getElementById('created-at').textContent = currentUser.created_at ? new Date(currentUser.created_at).toLocaleDateString() : '—';
 
   if (currentUser.email_confirmed_at) {
@@ -286,7 +300,12 @@ async function saveAll() {
   let phone = document.getElementById('phone').value.trim();
   phone = phone ? '+27' + phone.replace(/^0/, '').replace(/\s/g, '') : null;
 
-  const updateData = { display_name: displayName, username, bio, province, city, dob, phone, genres: Array.from(selectedGenres), updated_at: new Date().toISOString() };
+  const instagram = document.getElementById('soc-instagram').value.trim() || null;
+  const tiktok    = document.getElementById('soc-tiktok').value.trim()    || null;
+  const whatsapp  = document.getElementById('soc-whatsapp').value.trim()  || null;
+  const facebook  = document.getElementById('soc-facebook').value.trim()  || null;
+  const twitter   = document.getElementById('soc-twitter').value.trim()   || null;
+  const updateData = { display_name: displayName, username, bio, province, city, dob, phone, genres: Array.from(selectedGenres), instagram, tiktok, whatsapp, facebook, twitter, updated_at: new Date().toISOString() };
   const { error } = await sb.from('profiles').update(updateData).eq('id', currentUser.id);
   if (error) { showToast('Error saving: ' + error.message, 'err'); return; }
 

@@ -101,6 +101,7 @@ body{padding-bottom:32px}
     <div class="pname" id="pname">User</div>
     <div class="phandle" id="phandle">@user</div>
     <div class="pbio" id="pbio"></div>
+    <div id="social-links-row" style="display:none;gap:8px;margin:8px 0 4px"></div>
     <div class="follow-row">
       <div class="follow-stat" id="followers-stat">
         <div class="follow-num" id="followers-count">0</div>
@@ -217,6 +218,16 @@ async function loadUserData() {
   document.getElementById('pname').textContent = profile.display_name || 'User';
   document.getElementById('phandle').textContent = '@' + (profile.username || 'user');
   document.getElementById('pbio').textContent = profile.bio || '';
+
+  const socialRow = document.getElementById('social-links-row');
+  const socialLinks = [
+    profile.whatsapp  && `<a href="https://wa.me/${(profile.whatsapp||'').replace(/\D/g,'')}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.1rem">💬</a>`,
+    profile.instagram && `<a href="${(profile.instagram||'').startsWith('http')?profile.instagram:'https://instagram.com/'+profile.instagram.replace('@','')}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.1rem">📸</a>`,
+    profile.tiktok    && `<a href="${(profile.tiktok||'').startsWith('http')?profile.tiktok:'https://tiktok.com/@'+profile.tiktok.replace('@','')}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:#000;border:1px solid #333;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.1rem">🎵</a>`,
+    profile.facebook  && `<a href="${(profile.facebook||'').startsWith('http')?profile.facebook:'https://facebook.com/'+profile.facebook}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:#1877F2;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.1rem">📘</a>`,
+    profile.twitter   && `<a href="${(profile.twitter||'').startsWith('http')?profile.twitter:'https://x.com/'+profile.twitter.replace('@','')}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:#000;border:1px solid #333;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.1rem">𝕏</a>`,
+  ].filter(Boolean);
+  if (socialLinks.length) { socialRow.innerHTML = socialLinks.join(''); socialRow.style.display = 'flex'; }
 
   if (profile.avatar_url) {
     const avatarEl = document.getElementById('avatar-el');

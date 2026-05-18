@@ -2892,7 +2892,7 @@ async function openProfile(userId) {
     const sb = getSB();
     if (!sb) throw new Error('Supabase not loaded');
     const [{ data: profile, error: pErr }, { count: postsCnt }, { count: followersCnt }, { count: followingCnt }, { data: recent }] = await Promise.all([
-      sb.from('profiles').select('id,username,display_name,avatar_url,role,bio,city,genres').eq('id', userId).maybeSingle(),
+      sb.from('profiles').select('id,username,display_name,avatar_url,role,bio,city,genres,instagram,tiktok,whatsapp,facebook,twitter').eq('id', userId).maybeSingle(),
       sb.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', userId),
       sb.from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', userId),
       sb.from('follows').select('following_id', { count: 'exact', head: true }).eq('follower_id', userId),
@@ -2946,7 +2946,16 @@ async function openProfile(userId) {
         ${isOrg ? `<span style="padding:2px 8px;border-radius:50px;background:rgba(255,92,0,.15);color:var(--or);font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase">${x(profile.role)}</span>` : ''}
       </div>
       <div style="font-size:.74rem;color:var(--mu);margin-bottom:${profile.bio?'10px':'14px'}">@${x(profile.username||'user')}${profile.city?' · '+x(profile.city):''}</div>
-      ${profile.bio ? `<div style="font-size:.84rem;color:var(--mu2);line-height:1.55;margin-bottom:14px">${x(profile.bio)}</div>` : ''}
+      ${profile.bio ? `<div style="font-size:.84rem;color:var(--mu2);line-height:1.55;margin-bottom:10px">${x(profile.bio)}</div>` : ''}
+      ${(() => {
+        const links = [];
+        if (profile.whatsapp)  links.push(`<a href="https://wa.me/${profile.whatsapp.replace(/\D/g,'')}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.1rem" title="WhatsApp">💬</a>`);
+        if (profile.instagram) links.push(`<a href="${profile.instagram.startsWith('http')?profile.instagram:'https://instagram.com/'+profile.instagram.replace('@','')}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.1rem" title="Instagram">📸</a>`);
+        if (profile.tiktok)    links.push(`<a href="${profile.tiktok.startsWith('http')?profile.tiktok:'https://tiktok.com/@'+profile.tiktok.replace('@','')}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:#000;border:1px solid #333;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.1rem" title="TikTok">🎵</a>`);
+        if (profile.facebook)  links.push(`<a href="${profile.facebook.startsWith('http')?profile.facebook:'https://facebook.com/'+profile.facebook}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:#1877F2;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.1rem" title="Facebook">📘</a>`);
+        if (profile.twitter)   links.push(`<a href="${profile.twitter.startsWith('http')?profile.twitter:'https://x.com/'+profile.twitter.replace('@','')}" target="_blank" style="width:36px;height:36px;border-radius:50%;background:#000;border:1px solid #333;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.1rem" title="X / Twitter">𝕏</a>`);
+        return links.length ? `<div style="display:flex;gap:8px;margin-bottom:12px">${links.join('')}</div>` : '';
+      })()}
       <div style="display:flex;gap:8px;margin-bottom:16px">
         <div style="flex:1;text-align:center;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:10px 4px"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--or);line-height:1">${posts_count}</div><div style="font-size:.58rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-top:3px">Posts</div></div>
         <div style="flex:1;text-align:center;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:10px 4px"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--or);line-height:1">${followers_count}</div><div style="font-size:.58rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-top:3px">Followers</div></div>
