@@ -7,7 +7,7 @@ on:
 
 jobs:
   google:
-    name: Google Places Scraper
+    name: Google Places (General SA)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,10 +23,10 @@ jobs:
           SUPABASE_SERVICE_KEY:  ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: node scripts/scrape-google-places.js
 
-  social:
-    name: Social Media Scraper (Apify)
+  google-venues:
+    name: Google Places (Durban & JHB Venues)
     runs-on: ubuntu-latest
-    needs: google          # run after Google to avoid parallel Supabase writes
+    needs: google
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -34,9 +34,45 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
-      - name: Scrape TikTok / Instagram / Facebook via Apify
+      - name: Scrape Durban & JHB venues
+        env:
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+          SUPABASE_URL:          ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY:  ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/scrape-durban-jhb-venues.js
+
+  social:
+    name: Social (General SA — Apify)
+    runs-on: ubuntu-latest
+    needs: google-venues
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Scrape TikTok / Instagram / Facebook (SA)
         env:
           APIFY_TOKEN:          ${{ secrets.APIFY_TOKEN }}
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: node scripts/scrape-social.js
+
+  social-venues:
+    name: Social (Durban & JHB Venues — Apify)
+    runs-on: ubuntu-latest
+    needs: social
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Scrape TikTok / Instagram / Facebook (Durban & JHB venues)
+        env:
+          APIFY_TOKEN:          ${{ secrets.APIFY_TOKEN }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/scrape-social-venues.js

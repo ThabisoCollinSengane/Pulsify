@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>You're invited to Pulsefy</title>
+</head>
+<body style="margin:0;padding:0;background:#0d0d0d;font-family:Arial,Helvetica,sans-serif;color:#ffffff">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0d0d0d;padding:40px 16px">
+  <tr><td align="center">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px">
+
+      <!-- LOGO -->
+      <tr><td style="padding-bottom:28px">
+        <span style="font-size:26px;font-weight:900;letter-spacing:-1px;color:#B026FF">◉</span>
+        <span style="font-size:26px;font-weight:900;letter-spacing:-1px;color:#ffffff"> PULSEFY</span>
+      </td></tr>
+
+      <!-- CARD -->
+      <tr><td style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:16px;padding:32px">
+        <p style="font-size:36px;margin:0 0 16px">🎉</p>
+        <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:#ffffff;line-height:1.3">You're invited to join Pulsefy</h1>
+        <p style="margin:0 0 20px;font-size:15px;color:#a0a0a0;line-height:1.7">
+          You've been invited to join Pulsefy — South Africa's live event discovery platform. Find concerts, shisanyamas, festivals and nightlife near you, book tickets in seconds, and plan outings with your squad.
+        </p>
+        <p style="margin:0 0 20px;font-size:15px;color:#a0a0a0;line-height:1.7">
+          Tap the button below to accept the invite and set up your account.
+        </p>
+        <table cellpadding="0" cellspacing="0" border="0" style="margin-top:20px">
+          <tr><td style="background:linear-gradient(135deg,#B026FF,#FF5C00);border-radius:50px;padding:0">
+            <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:50px;font-family:Arial,Helvetica,sans-serif">Accept Invite →</a>
+          </td></tr>
+        </table>
+        <hr style="border:none;border-top:1px solid #2a2a2a;margin:24px 0"/>
+        <p style="margin:0;font-size:12px;color:#555;line-height:1.7">
+          Or copy and paste this link into your browser:<br/>
+          <a href="{{ .ConfirmationURL }}" style="color:#B026FF;word-break:break-all">{{ .ConfirmationURL }}</a>
+        </p>
+        <p style="margin:12px 0 0;font-size:12px;color:#444;line-height:1.6">
+          This invite expires in 7 days. If you weren't expecting this, you can safely ignore the email.
+        </p>
+      </td></tr>
+
+      <!-- FOOTER -->
+      <tr><td style="padding-top:28px;text-align:center;font-size:12px;color:#4a4a4a;line-height:1.8">
+        <p style="margin:0">© Pulsefy · South Africa</p>
+        <p style="margin:4px 0 0">Feel the Vibe 🇿🇦</p>
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>

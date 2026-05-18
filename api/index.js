@@ -1,5 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
+const { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail } = require('./email');
 
 const SUPA_URL  = process.env.SUPABASE_URL  || 'https://cjzewfvtdayjgjdpdmln.supabase.co';
 const SUPA_ANON = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
@@ -52,10 +53,21 @@ async function authUser(req) {
     const { data: { user }, error } = await userSb.auth.getUser(token);
     if (error || !user) return null;
     const { data: profile } = await sb().from('profiles').select('*').eq('id', user.id).single();
+    if (profile?.suspended) return null;
     return { user, profile: profile || { id: user.id, role: 'user' } };
   } catch(e) {
     return null;
   }
+}
+
+async function logAdminAction(adminId, adminName, actionType, targetId, targetName, details) {
+  try {
+    await sb().from('admin_activity_log').insert({
+      admin_id: adminId, admin_name: adminName || 'Admin',
+      action_type: actionType, target_id: String(targetId || ''),
+      target_name: targetName || null, details: details || null,
+    });
+  } catch(e) { /* non-fatal */ }
 }
 
 module.exports = async (req, res) => {
@@ -250,13 +262,13 @@ module.exports = async (req, res) => {
       const { caption, image_url, event_id, event_name, post_type } = req.body || {};
       if (!caption && !image_url) return res.status(400).json({ error: 'caption or image_url required' });
 
-      // Monthly post limit: free organizers/businesses get 1 post per calendar month
+      // Monthly post limit: free organizers/businesses get 5 posts/month during beta
       const { data: poster } = await sb().from('profiles').select('role,subscription_type').eq('id', user.id).single();
       if (poster?.subscription_type === 'free' && ['organizer', 'business'].includes(poster?.role)) {
         const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
         const { count } = await sb().from('posts').select('id', { count: 'exact', head: true })
           .eq('user_id', user.id).gte('created_at', monthStart.toISOString());
-        if (count >= 1) return res.status(403).json({ error: 'Free accounts can post once per month. Upgrade to premium for unlimited posts.' });
+        if (count >= 5) return res.status(403).json({ error: 'POST_LIMIT_REACHED', limit: 5, used: count, message: "You've used all 5 free posts this month. Upgrade to Premium for unlimited posts." });
       }
 
       const { data: post, error } = await sb().from('posts').insert({
@@ -297,9 +309,9 @@ module.exports = async (req, res) => {
       ] = await Promise.all([
         sb().from('profiles').select('id,username,display_name,bio,avatar_url,city,province,role,is_verified,genres').eq('id', profId).single(),
         sb().from('posts').select('id', { count: 'exact', head: true }).eq('user_id', profId).eq('visibility', 'public'),
-        sb().from('follows').select('id', { count: 'exact', head: true }).eq('following_id', profId),
-        sb().from('follows').select('id', { count: 'exact', head: true }).eq('follower_id', profId),
-        sb().from('posts').select('id,caption,image_url,post_type,likes_count,comments_count,created_at').eq('user_id', profId).eq('visibility', 'public').order('created_at', { ascending: false }).limit(6),
+        sb().from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', profId),
+        sb().from('follows').select('following_id', { count: 'exact', head: true }).eq('follower_id', profId),
+        sb().from('posts').select('id,caption,image_url,post_type,like_count,comment_count,created_at').eq('user_id', profId).eq('visibility', 'public').order('created_at', { ascending: false }).limit(6),
       ]);
 
       if (!profile) return res.status(404).json({ error: 'Profile not found' });
@@ -311,6 +323,46 @@ module.exports = async (req, res) => {
         following_count: followingCount || 0,
         recent_posts:    recentPosts   || [],
       });
+    }
+
+    /* ─── GET /profiles/:id/followers ──────────────────────── */
+    const followersMatch = url.match(/^\/profiles\/([^/]+)\/followers$/);
+    if (followersMatch && req.method === 'GET') {
+      const targetId = followersMatch[1];
+      const { data, error } = await sb()
+        .from('follows')
+        .select('follower_id, created_at, profiles:follower_id(id, display_name, username, avatar_url, is_verified, role, city)')
+        .eq('following_id', targetId)
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (error) return res.status(400).json({ error: error.message });
+      const users = (data || []).map(r => r.profiles).filter(Boolean);
+      return res.status(200).json({ users });
+    }
+
+    /* ─── GET /profiles/:id/following ──────────────────────── */
+    const followingMatch = url.match(/^\/profiles\/([^/]+)\/following$/);
+    if (followingMatch && req.method === 'GET') {
+      const sourceId = followingMatch[1];
+      const { data, error } = await sb()
+        .from('follows')
+        .select('following_id, created_at, profiles:following_id(id, display_name, username, avatar_url, is_verified, role, city)')
+        .eq('follower_id', sourceId)
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (error) return res.status(400).json({ error: error.message });
+      const users = (data || []).map(r => r.profiles).filter(Boolean);
+      return res.status(200).json({ users });
+    }
+
+    /* ─── GET /suggestions ─────────────────────────────────── */
+    if (url === '/suggestions' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const limit = Math.min(50, parseInt(q.limit || '20'));
+      const { data, error } = await sb().rpc('get_friend_suggestions', { p_user_id: auth.user.id, p_limit: limit });
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ suggestions: data || [] });
     }
 
     /* ─── POST /ticket/purchase ───────────────────────────── */
@@ -348,6 +400,18 @@ module.exports = async (req, res) => {
 
       if (bErr) return res.status(400).json({ error: bErr.message });
 
+      // Notify the buyer if they're a registered user
+      const { user_id } = body;
+      if (user_id) {
+        await sb().from('notifications').insert({
+          user_id, type: 'ticket',
+          from_display_name: 'Pulsefy',
+          entity_id: event_id, entity_type: 'events',
+          message: `Your ticket for ${ev.name} is confirmed! Ref: ${booking_ref}${unit_price > 0 ? ` · R${total_paid.toFixed(2)}` : ' · FREE'}`,
+          data: { booking_ref, tier_name: tier?.name || null },
+        }).catch(() => {});
+      }
+
       return res.status(200).json({
         success:     true,
         booking_ref,
@@ -382,7 +446,7 @@ module.exports = async (req, res) => {
       if (!qr_data) return res.status(400).json({ error: 'qr_data required' });
 
       const parts = String(qr_data).split(':');
-      if (parts.length < 4 || parts[0] !== 'PULSIFY' || parts[3] !== 'VALID')
+      if (parts.length < 4 || parts[0] !== 'PULSEFY' || parts[3] !== 'VALID')
         return res.status(400).json({ error: 'Invalid QR code' });
 
       const booking_ref = parts[1];
@@ -429,16 +493,20 @@ module.exports = async (req, res) => {
       if (sig !== hash) return res.status(401).json({ error: 'Invalid signature' });
 
       if (req.body?.event === 'charge.success') {
-        const ref  = req.body.data?.reference;
-        const meta = req.body.data?.metadata || {};
+        const ref    = req.body.data?.reference;
+        const meta   = req.body.data?.metadata || {};
+        const userId = meta.user_id || null;
         if (meta.booking_id) {
-          await Promise.all([
-            sb().from('bookings').update({ status: 'confirmed', paystack_ref: ref }).eq('id', meta.booking_id),
-            sb().from('payments').upsert({
-              paystack_ref: ref, booking_id: meta.booking_id, type: 'ticket',
-              amount_kobo: req.body.data?.amount, status: 'success', metadata: meta,
-            }, { onConflict: 'paystack_ref' }),
-          ]);
+          await sb().from('bookings').update({ status: 'confirmed' }).eq('id', meta.booking_id);
+        }
+        if (userId && ref) {
+          await sb().from('payments').upsert({
+            user_id: userId, reference: ref, type: meta.type || 'ticket',
+            entity_id: meta.booking_id || meta.entity_id || null,
+            amount: req.body.data?.amount || 0, status: 'success',
+            completed_at: new Date().toISOString(),
+            metadata: { paystack: req.body.data },
+          }, { onConflict: 'reference' });
         }
       }
       return res.status(200).json({ received: true });
@@ -456,13 +524,30 @@ module.exports = async (req, res) => {
       const { data: existing } = await sb().from('profiles').select('*').eq('id', user.id).single();
       if (existing) return res.status(200).json({ profile: existing });
 
+      const b = req.body || {};
+      const displayName = (b.display_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Pulsefy User').slice(0, 80);
+      const rawUsername = b.username || user.user_metadata?.username || '';
+      const username = rawUsername.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20) || `user_${user.id.slice(0, 8)}`;
+      const role = ['user', 'organizer', 'business'].includes(b.role) ? b.role : 'user';
+      const genres = Array.isArray(b.genres) ? b.genres.slice(0, 10) : [];
+
       const { data: created } = await sb().from('profiles').insert({
         id:           user.id,
-        username:     `user_${user.id.slice(0, 8)}`,
-        display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Pulsify User',
-        avatar_url:   user.user_metadata?.avatar_url || null,
-        city:         'Durban',
+        email:        user.email,
+        username,
+        display_name: displayName,
+        role,
+        genres:       genres.length ? genres : null,
+        avatar_url:   b.avatar_url || user.user_metadata?.avatar_url || null,
+        bio:          b.bio ? String(b.bio).slice(0, 300) : null,
+        dob:          b.dob || null,
+        phone:        b.phone ? String(b.phone).slice(0, 20) : null,
+        province:     b.province || null,
+        city:         b.city || null,
       }).select().single();
+
+      // Non-blocking welcome email
+      sendWelcomeEmail(user.email, displayName).catch(e => console.error('[email/welcome]', e.message));
 
       return res.status(200).json({ profile: created, created: true });
     }
@@ -550,33 +635,28 @@ module.exports = async (req, res) => {
       const userClient = sbAs(token);
 
       const { data: existing } = await userClient.from('reactions')
-        .select('id').eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type).maybeSingle();
+        .select('user_id').eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type).maybeSingle();
 
       if (existing) {
-        await userClient.from('reactions').delete().eq('id', existing.id);
-        if (entity_type === 'post') {
-          const { data: p } = await sb().from('posts').select('likes_count').eq('id', entity_id).single();
-          await sb().from('posts').update({ likes_count: Math.max(0, (p?.likes_count || 1) - 1) }).eq('id', entity_id);
-        }
+        await userClient.from('reactions').delete().eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type);
+        // DB trigger handles count decrement — just notify caller
         return res.status(200).json({ liked: false });
       }
 
       const { error: insErr } = await userClient.from('reactions').insert({ user_id: user.id, entity_type, entity_id, type });
       if (insErr) return res.status(400).json({ error: insErr.message });
 
+      // DB trigger handles count increment; fire notification for posts/events
       if (entity_type === 'post') {
-        const { data: p } = await sb().from('posts').select('user_id,likes_count').eq('id', entity_id).single();
-        if (p) {
-          await sb().from('posts').update({ likes_count: (p.likes_count || 0) + 1 }).eq('id', entity_id);
-          if (p.user_id !== user.id) {
-            const { data: prof } = await sb().from('profiles').select('display_name').eq('id', user.id).single();
-            const name = prof?.display_name || 'Someone';
-            await sb().from('notifications').insert({
-              user_id: p.user_id, type: 'like', from_user_id: user.id,
-              from_display_name: name, entity_id, entity_type: 'post',
-              message: `${name} liked your post`,
-            });
-          }
+        const { data: p } = await sb().from('posts').select('user_id').eq('id', entity_id).single();
+        if (p && p.user_id !== user.id) {
+          const { data: prof } = await sb().from('profiles').select('display_name').eq('id', user.id).single();
+          const name = prof?.display_name || 'Someone';
+          await sb().from('notifications').insert({
+            user_id: p.user_id, type: 'like', from_user_id: user.id,
+            from_display_name: name, entity_id, entity_type: 'post',
+            message: `${name} liked your post`,
+          }).catch(() => {});
         }
       }
 
@@ -595,15 +675,12 @@ module.exports = async (req, res) => {
       const userClient = sbAs(token);
 
       const { data: existing } = await userClient.from('reactions')
-        .select('id,entity_type').eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type).maybeSingle();
+        .select('user_id').eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type).maybeSingle();
 
       if (!existing) return res.status(200).json({ liked: false });
 
-      await userClient.from('reactions').delete().eq('id', existing.id);
-      if (existing.entity_type === 'post') {
-        const { data: p } = await sb().from('posts').select('likes_count').eq('id', entity_id).single();
-        await sb().from('posts').update({ likes_count: Math.max(0, (p?.likes_count || 1) - 1) }).eq('id', entity_id);
-      }
+      await userClient.from('reactions').delete().eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type);
+      // DB trigger handles count decrement automatically
       return res.status(200).json({ liked: false });
     }
 
@@ -711,8 +788,8 @@ module.exports = async (req, res) => {
       if (error) return res.status(400).json({ error: error.message });
 
       if (entity_type === 'post') {
-        const { data: p } = await sb().from('posts').select('comments_count').eq('id', entity_id).single();
-        if (p) await sb().from('posts').update({ comments_count: (p.comments_count || 0) + 1 }).eq('id', entity_id);
+        const { data: p } = await sb().from('posts').select('comment_count').eq('id', entity_id).single();
+        if (p) await sb().from('posts').update({ comment_count: (p.comment_count || 0) + 1 }).eq('id', entity_id);
       }
 
       return res.status(200).json({ comment: { ...comment, content: comment.body }, success: true });
@@ -757,9 +834,9 @@ module.exports = async (req, res) => {
 
     /* ─── GET /leads ─────────────────────────────────────── */
     if (url === '/leads' && req.method === 'GET') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
-      const user  = await verifyToken(token);
-      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const token = tokenFrom(req);
 
       const page     = Math.max(1, parseInt(q.page   || '1'));
       const limit    = Math.min(100, parseInt(q.limit || '20'));
@@ -770,7 +847,7 @@ module.exports = async (req, res) => {
       const province = q.province || '';
       const search   = q.search   || '';
 
-      let query = sb().from('scraped_leads')
+      let query = sbAs(token).from('scraped_leads')
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
@@ -790,10 +867,10 @@ module.exports = async (req, res) => {
         { count: convertedCount },
         { count: ignoredCount },
       ] = await Promise.all([
-        sb().from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'new'),
-        sb().from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'contacted'),
-        sb().from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'converted'),
-        sb().from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'ignored'),
+        sbAs(token).from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'new'),
+        sbAs(token).from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'contacted'),
+        sbAs(token).from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'converted'),
+        sbAs(token).from('scraped_leads').select('id', { count: 'exact', head: true }).eq('status', 'ignored'),
       ]);
 
       return res.status(200).json({
@@ -814,24 +891,121 @@ module.exports = async (req, res) => {
     /* ─── PATCH /leads/:id ───────────────────────────────── */
     const leadId = url.match(/^\/leads\/([^/]+)$/)?.[1];
     if (leadId && req.method === 'PATCH') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
-      const user  = await verifyToken(token);
-      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+      const auth2 = await authUser(req);
+      if (!auth2 || auth2.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const leadToken = tokenFrom(req);
 
       const { status, notes } = req.body || {};
       const updates = { updated_at: new Date().toISOString() };
       if (status !== undefined) updates.status = status;
       if (notes  !== undefined) updates.notes  = notes;
 
-      const { data, error } = await sb().from('scraped_leads')
+      const { data, error } = await sbAs(leadToken).from('scraped_leads')
         .update(updates).eq('id', leadId).select().single();
 
       if (error) return res.status(400).json({ error: error.message });
       return res.status(200).json({ lead: data, success: true });
     }
 
+    /* ─── GET /leads/:id/events ─── list events for one lead ─ */
+    const leadEventsListMatch = url.match(/^\/leads\/([^/]+)\/events$/);
+    if (leadEventsListMatch && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const token = tokenFrom(req);
+      const { data, error } = await sbAs(token).from('lead_events')
+        .select('*').eq('lead_id', leadEventsListMatch[1]).order('created_at', { ascending: false });
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ events: data || [] });
+    }
 
-    // PATCH /admin/users/:id - Update user (suspend/activate, change role)
+    /* ─── POST /leads/:id/events ─── add event to lead ──────── */
+    if (leadEventsListMatch && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const token = tokenFrom(req);
+      const { title, description, genre, event_date, event_time, venue_name, venue_city, venue_address, image_url, source_url, organiser_name, is_free, price_min } = req.body || {};
+      if (!title) return res.status(400).json({ error: 'title required' });
+      const { data, error } = await sbAs(token).from('lead_events').insert({
+        lead_id: leadEventsListMatch[1], title, description: description || null,
+        genre: genre || 'nightlife', event_date: event_date || null, event_time: event_time || null,
+        venue_name: venue_name || null, venue_city: venue_city || null, venue_address: venue_address || null,
+        image_url: image_url || null, source_url: source_url || null,
+        organiser_name: organiser_name || null, is_free: !!is_free,
+        price_min: price_min || null, status: 'pending',
+      }).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(201).json({ event: data });
+    }
+
+    /* ─── GET /admin/lead-events ─── all pending lead events ── */
+    if (url === '/admin/lead-events' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const token = tokenFrom(req);
+      const status = q.status || 'pending';
+      let query = sbAs(token).from('lead_events')
+        .select('*, scraped_leads(id, name, category, city, email, phone, instagram, facebook, website)')
+        .order('created_at', { ascending: false });
+      if (status !== 'all') query = query.eq('status', status);
+      const { data, error } = await query;
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ events: data || [] });
+    }
+
+    /* ─── PATCH /admin/lead-events/:id ─── approve/reject ───── */
+    const leadEventMatch = url.match(/^\/admin\/lead-events\/([^/]+)$/);
+    if (leadEventMatch && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const token = tokenFrom(req);
+      const leId = leadEventMatch[1];
+      const { action, admin_notes } = req.body || {};
+
+      if (action === 'reject') {
+        const { error } = await sbAs(token).from('lead_events')
+          .update({ status: 'rejected', admin_notes: admin_notes || null, updated_at: new Date().toISOString() })
+          .eq('id', leId);
+        if (error) return res.status(400).json({ error: error.message });
+        await logAdminAction(auth.user.id, auth.profile.display_name || 'Admin', 'lead_event_reject', leId, null, { admin_notes });
+        return res.status(200).json({ success: true });
+      }
+
+      if (action === 'approve') {
+        // Fetch the lead event + lead info
+        const { data: le } = await sbAs(token).from('lead_events')
+          .select('*, scraped_leads(name, city)').eq('id', leId).single();
+        if (!le) return res.status(404).json({ error: 'Lead event not found' });
+
+        // Publish to events table
+        const eventId = 'lead_' + leId.replace(/-/g, '').slice(0, 16);
+        const { error: evErr } = await sbAs(token).from('events').upsert({
+          id: eventId, source: 'lead', name: le.title,
+          description: le.description || null, organiser_name: le.organiser_name || le.scraped_leads?.name || null,
+          genre: le.genre || 'nightlife', status: 'onsale',
+          date_local: le.event_date || null, time_local: le.event_time || null,
+          venue_name: le.venue_name || null, venue_city: le.venue_city || le.scraped_leads?.city || null,
+          venue_address: le.venue_address || null,
+          image_url: le.image_url || null, is_free: le.is_free || false,
+          price_min: le.price_min || null, external_url: le.source_url || null,
+          hype_score: 65, is_active: true, is_frontline: false,
+          like_count: 0, comment_count: 0, approved: true,
+        }, { onConflict: 'id' });
+        if (evErr) return res.status(400).json({ error: evErr.message });
+
+        // Mark lead event as approved
+        await sbAs(token).from('lead_events')
+          .update({ status: 'approved', published_event_id: eventId, admin_notes: admin_notes || null, updated_at: new Date().toISOString() })
+          .eq('id', leId);
+
+        await logAdminAction(auth.user.id, auth.profile.display_name || 'Admin', 'lead_event_approve', leId, le.title, { published_event_id: eventId });
+        return res.status(200).json({ success: true, published_event_id: eventId });
+      }
+
+      return res.status(400).json({ error: 'action must be approve or reject' });
+    }
+
+
     const adminUserMatch = url.match(/^\/admin\/users\/([^/]+)$/);
     if (adminUserMatch && req.method === 'PATCH') {
       const auth = await authUser(req);
@@ -862,7 +1036,15 @@ module.exports = async (req, res) => {
         .single();
       
       if (error) throw error;
-      
+
+      // Log the admin action
+      const adminName = auth.profile.display_name || auth.user.email || 'Admin';
+      const targetName = data.display_name || data.email || userId;
+      if (updates.suspended === true)  await logAdminAction(auth.user.id, adminName, 'suspend',               userId, targetName, updates);
+      if (updates.suspended === false) await logAdminAction(auth.user.id, adminName, 'unsuspend',             userId, targetName, updates);
+      if (updates.role)                await logAdminAction(auth.user.id, adminName, 'role_change',           userId, targetName, updates);
+      if (updates.subscription_type)   await logAdminAction(auth.user.id, adminName, 'subscription_change',  userId, targetName, updates);
+
       return res.status(200).json({ success: true, profile: data });
     }
 
@@ -925,19 +1107,23 @@ module.exports = async (req, res) => {
       if (profileError && profileError.code !== 'PGRST116') throw profileError;
 
       if (!profile) {
+        const bizName = user.user_metadata?.full_name || user.email.split('@')[0];
         const { data: newProfile, error: createError } = await supabase.from('profiles').insert({
           id: user.id, email: user.email,
-          display_name: user.user_metadata?.full_name || user.email.split('@')[0],
+          display_name: bizName,
           avatar_url: user.user_metadata?.avatar_url,
           role: 'business'
         }).select().single();
         if (createError) throw createError;
         profile = newProfile;
-        
+
         const { data: bizCheck } = await supabase.from('businesses').select('id').eq('id', profile.id).maybeSingle();
         if (!bizCheck) {
-          await supabase.from('businesses').insert({ id: profile.id, owner_id: profile.id, name: profile.display_name, category: 'other', is_active: true });
+          await supabase.from('businesses').insert({ id: profile.id, owner_id: profile.id, name: bizName, category: 'other', is_active: true });
         }
+
+        // Non-blocking welcome email for new business accounts
+        sendWelcomeEmail(user.email, bizName).catch(e => console.error('[email/welcome-biz]', e.message));
       } else if (!['business', 'admin', 'organizer'].includes(profile.role)) {
         const { data: updatedProfile, error: updateError } = await supabase.from('profiles').update({ role: 'business' }).eq('id', user.id).select().single();
         if (updateError) throw updateError;
@@ -955,7 +1141,7 @@ module.exports = async (req, res) => {
       const free  = q.free === '1' || q.free === 'true';
       const limit = Math.min(parseInt(q.limit || '200'), 500);
 
-      // Quicket category/keyword → Pulsify genre
+      // Quicket category/keyword → Pulsefy genre
       const GENRE_MAP = {
         music:'house', concert:'house', live:'live',
         amapiano:'amapiano', gqom:'gqom',
@@ -1107,21 +1293,35 @@ module.exports = async (req, res) => {
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
       const body = req.body || {};
-      const { error } = await sb()
-        .from('profiles')
-        .update({
-          verif_status:  'pending',
-          verif_request: JSON.stringify({
-            ...body,
-            user_id: user.id,
-            submitted_at: new Date().toISOString(),
-          }),
-        })
-        .eq('id', user.id);
+      const { face_scan_url, id_doc_url, ...rest } = body;
+      const updatePayload = {
+        verif_status:  'pending',
+        verif_request: JSON.stringify({
+          ...rest,
+          user_id: user.id,
+          submitted_at: new Date().toISOString(),
+        }),
+      };
+      if (face_scan_url) updatePayload.face_scan_url = face_scan_url;
+      if (id_doc_url)    updatePayload.id_doc_url    = id_doc_url;
 
-      if (error) {
-        console.warn('[verify-request] profiles update failed:', error.message, '— saving to fallback');
+      const { error } = await sb().from('profiles').update(updatePayload).eq('id', user.id);
+
+      // Notify admin about new verification request
+      const { data: admins } = await sb().from('profiles').select('id').eq('role', 'admin');
+      for (const admin of admins || []) {
+        await sb().from('notifications').insert({
+          user_id:           admin.id,
+          type:              'system',
+          from_display_name: 'Pulsefy System',
+          message:           `New verification request from ${user.email || 'a user'}.`,
+          entity_type:       'verification',
+          entity_id:         user.id,
+          read:              false,
+        });
       }
+
+      if (error) console.warn('[verify-request] profiles update failed:', error.message);
       return res.status(200).json({ success: true, status: 'pending' });
     }
 
@@ -1133,11 +1333,25 @@ module.exports = async (req, res) => {
       }
       const { data, error } = await sb()
         .from('profiles')
-        .select('id,email,display_name,role,verif_status,verif_request,is_verified,created_at')
+        .select('id,email,display_name,role,verif_status,verif_request,is_verified,face_scan_url,id_doc_url,created_at')
         .in('verif_status', ['pending', 'approved', 'rejected'])
         .order('created_at', { ascending: false });
       if (error) return res.status(400).json({ error: error.message });
-      return res.status(200).json({ verifications: data || [] });
+      // Sign URLs from the private verification-docs bucket so the admin browser can render them
+      const signOne = async (url) => {
+        if (!url || !url.includes('/verification-docs/')) return url;
+        try {
+          const path = url.split('/verification-docs/')[1].split('?')[0];
+          const { data: s } = await sb().storage.from('verification-docs').createSignedUrl(path, 3600);
+          return s?.signedUrl || url;
+        } catch { return url; }
+      };
+      const verifications = await Promise.all((data || []).map(async (row) => ({
+        ...row,
+        face_scan_url: await signOne(row.face_scan_url),
+        id_doc_url:    await signOne(row.id_doc_url),
+      })));
+      return res.status(200).json({ verifications });
     }
 
     /* ─── GET /admin/events ─────────────────────────────────── */
@@ -1159,13 +1373,17 @@ module.exports = async (req, res) => {
       if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
       const eventId = adminEventMatch[1];
       const { approved } = req.body || {};
+      const { data: evtRow } = await sb().from('events').select('name,organiser_name').eq('id', eventId).single();
+      const adminName = auth.profile.display_name || auth.user.email || 'Admin';
       if (approved === false) {
         const { error } = await sb().from('events').delete().eq('id', eventId);
         if (error) return res.status(400).json({ error: error.message });
+        await logAdminAction(auth.user.id, adminName, 'event_reject', eventId, evtRow?.name || eventId, {});
         return res.status(200).json({ success: true, deleted: true });
       }
       const { data, error } = await sb().from('events').update({ approved: true }).eq('id', eventId).select().single();
       if (error) return res.status(400).json({ error: error.message });
+      await logAdminAction(auth.user.id, adminName, 'event_approve', eventId, evtRow?.name || eventId, {});
       return res.status(200).json({ success: true, event: data });
     }
 
@@ -1187,14 +1405,136 @@ module.exports = async (req, res) => {
       };
       const { data, error } = await sb().from('profiles').update(updates).eq('id', targetId).select().single();
       if (error) return res.status(400).json({ error: error.message });
+
+      // Notify the user about verification result
+      const adminName = auth.profile.display_name || 'Pulsefy Admin';
+      const msg = action === 'approve'
+        ? '🎉 Your profile has been verified! Your Pulsefy verified badge is now active.'
+        : `Your verification application was not approved. ${notes ? 'Reason: ' + notes : 'Please re-apply with complete and accurate information.'}`;
+      await sb().from('notifications').insert({
+        user_id:           targetId,
+        type:              'verification',
+        from_user_id:      auth.user.id,
+        from_display_name: adminName,
+        message:           msg,
+        entity_type:       'profile',
+        entity_id:         targetId,
+        data:              { action, notes: notes || null },
+        read:              false,
+      });
+      await logAdminAction(auth.user.id, adminName, action === 'approve' ? 'verif_approve' : 'verif_reject', targetId, data?.display_name || targetId, { notes });
+
+      // Non-blocking verification result email
+      const targetEmail = data?.email;
+      const targetName  = data?.display_name;
+      if (targetEmail) {
+        if (action === 'approve') {
+          sendVerifApprovedEmail(targetEmail, targetName).catch(e => console.error('[email/verif]', e.message));
+        } else {
+          sendVerifRejectedEmail(targetEmail, targetName, notes).catch(e => console.error('[email/verif]', e.message));
+        }
+      }
+
       return res.status(200).json({ success: true, profile: data });
+    }
+
+
+    /* ─── POST /admin/scrape ── OSM venue scraper (no API key needed) ─ */
+    if (url === '/admin/scrape' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+
+      const cities = q.cities ? q.cities.split(',') : ['Durban','Johannesburg'];
+      const results = { inserted: 0, skipped: 0, errors: 0, cities_done: [] };
+
+      // Venue type queries for OSM Overpass
+      const VENUE_TYPES = [
+        { filter: '["amenity"="nightclub"]',  category: 'club',        label: 'Club/Nightclub' },
+        { filter: '["amenity"="bar"]',         category: 'bar',         label: 'Bar/Tavern' },
+        { filter: '["amenity"="restaurant"]["cuisine"~"braai|shisa|grill|south_african|african",i]', category: 'shisanyama', label: 'Shisanyama/Braai' },
+        { filter: '["tourism"="guest_house"]', category: 'bnb',         label: 'Guest House/BnB' },
+        { filter: '["tourism"="hostel"]',      category: 'bnb',         label: 'Hostel' },
+        { filter: '["tourism"="hotel"]',       category: 'hotel',       label: 'Hotel' },
+        { filter: '["amenity"="events_venue"]',category: 'venue',       label: 'Events Venue' },
+        { filter: '["leisure"="dance"]',        category: 'dance_venue', label: 'Dance Venue' },
+      ];
+
+      // Bounding boxes: [south, west, north, east]
+      const CITY_BOXES = {
+        'Durban':         '-30.1,30.7,-29.6,31.2',
+        'Johannesburg':   '-26.4,27.8,-25.9,28.3',
+        'Cape Town':      '-34.2,18.3,-33.7,18.7',
+        'Pretoria':       '-25.9,28.0,-25.6,28.4',
+        'Sandton':        '-26.2,28.0,-26.0,28.2',
+        'KwaMashu':       '-29.8,30.9,-29.7,31.0',
+        'Umlazi':         '-29.97,30.87,-29.87,30.97',
+      };
+
+      const overpassFetch = async (query) => {
+        const body = 'data=' + encodeURIComponent(query);
+        try {
+          const r = await fetch('https://overpass-api.de/api/interpreter', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Pulsefy/1.0' },
+            body,
+            signal: AbortSignal.timeout(20000),
+          });
+          if (!r.ok) return [];
+          const j = await r.json();
+          return j.elements || [];
+        } catch { return []; }
+      };
+
+      for (const city of cities) {
+        const bbox = CITY_BOXES[city];
+        if (!bbox) continue;
+        const province = { 'Durban':'KZN','KwaMashu':'KZN','Umlazi':'KZN','Johannesburg':'GP','Sandton':'GP','Cape Town':'WC','Pretoria':'GP' }[city] || null;
+
+        for (const vt of VENUE_TYPES) {
+          const overpassQuery = `[out:json][timeout:20];(node${vt.filter}(${bbox});way${vt.filter}(${bbox}););out body;`;
+          const elements = await overpassFetch(overpassQuery);
+
+          for (const el of elements) {
+            const tags = el.tags || {};
+            const name = tags.name || tags['name:en'];
+            if (!name) continue;
+
+            // skip if already in DB
+            const { count } = await sb().from('scraped_leads')
+              .select('id', { count: 'exact', head: true }).eq('name', name).eq('city', city);
+            if (count > 0) { results.skipped++; continue; }
+
+            const { error } = await sb().from('scraped_leads').insert({
+              name,
+              category:  vt.category,
+              city,
+              province,
+              phone:     tags.phone || tags['contact:phone'] || null,
+              website:   tags.website || tags['contact:website'] || null,
+              instagram: tags['contact:instagram'] || null,
+              facebook:  tags['contact:facebook'] || null,
+              description: tags.description || `${vt.label} in ${city}`,
+              source:    'osm',
+              status:    'new',
+            });
+
+            if (error) results.errors++;
+            else results.inserted++;
+          }
+        }
+        results.cities_done.push(city);
+      }
+
+      await logAdminAction(auth.user.id, auth.profile.display_name || 'Admin', 'scrape_osm', null, null, results);
+      return res.status(200).json({ success: true, ...results });
     }
 
     /* ─── GET /admin/banners ─────────────────────────────── */
     if (url === '/admin/banners' && req.method === 'GET') {
       const auth = await authUser(req);
       if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
-      const { data, error } = await sb().from('banners').select('*').order('created_at', { ascending: false });
+      const token = tokenFrom(req);
+      const { data, error } = await sbAs(token).from('banners').select('*').order('created_at', { ascending: false });
       if (error) return res.status(400).json({ error: error.message });
       return res.status(200).json({ banners: data });
     }
@@ -1205,7 +1545,8 @@ module.exports = async (req, res) => {
       if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
       const { title, subtitle, target_url, target_type, image_url, bg_color, expires_at } = req.body || {};
       if (!title) return res.status(400).json({ error: 'title is required' });
-      const { data, error } = await sb().from('banners').insert({
+      const token = tokenFrom(req);
+      const { data, error } = await sbAs(token).from('banners').insert({
         title, subtitle: subtitle || null, target_url: target_url || null,
         target_type: target_type || 'external', image_url: image_url || null,
         bg_color: bg_color || '#FF5C00', is_active: true,
@@ -1290,7 +1631,7 @@ module.exports = async (req, res) => {
         user_id: u.id, type: 'broadcast',
         title, body: msgBody, message: msgBody,
         data: { url: targetUrl },
-        from_display_name: 'Pulsify',
+        from_display_name: 'Pulsefy',
       }));
       await sb().from('notifications').insert(notifs);
 
@@ -1301,7 +1642,7 @@ module.exports = async (req, res) => {
       if (VPUB && VPRIV) {
         try {
           const webpush = require('web-push');
-          webpush.setVapidDetails('mailto:admin@pulsify.co.za', VPUB, VPRIV);
+          webpush.setVapidDetails('mailto:admin@pulsefy.co.za', VPUB, VPRIV);
           const ids = users.map(u => u.id);
           const { data: subs } = await sb().from('push_subscriptions').select('*').in('user_id', ids);
           const payload = JSON.stringify({ title, body: msgBody, url: targetUrl });
@@ -1314,6 +1655,8 @@ module.exports = async (req, res) => {
         } catch(e) { /* web-push not installed or keys invalid */ }
       }
 
+      const adminName2 = auth.profile.display_name || auth.user.email || 'Admin';
+      await logAdminAction(auth.user.id, adminName2, 'notification_broadcast', null, title, { target, recipients: notifs.length });
       return res.status(200).json({ notif_sent: notifs.length, push_sent });
     }
 
@@ -1444,8 +1787,9 @@ module.exports = async (req, res) => {
     if (url === '/admin/promotions' && req.method === 'GET') {
       const auth = await authUser(req);
       if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const token = tokenFrom(req);
       const statusFilter = q.status || 'pending';
-      let query = sb().from('promotions').select('*').order('created_at', { ascending: false });
+      let query = sbAs(token).from('promotions').select('*').order('created_at', { ascending: false });
       if (statusFilter === 'pending')  query = query.eq('is_active', false);
       else if (statusFilter === 'active') query = query.eq('is_active', true);
       const { data, error } = await query;
@@ -1542,9 +1886,10 @@ module.exports = async (req, res) => {
       const type   = req.query?.type   || 'event';
       const types  = type === 'all' ? ['event','business','post'] : [type];
       if (types.some(t => !REPORT_TABLES[t])) return res.status(400).json({ error: 'invalid type' });
+      const token = tokenFrom(req);
       const results = await Promise.all(types.map(async (t) => {
         const cfg = REPORT_TABLES[t];
-        let q = sb().from(cfg.table).select('*').order('created_at', { ascending: false });
+        let q = sbAs(token).from(cfg.table).select('*').order('created_at', { ascending: false });
         if (status !== 'all') q = q.eq('status', status);
         const { data, error } = await q;
         if (error) throw error;
@@ -1638,6 +1983,140 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, total_points: updated?.total_points });
     }
 
+    // GET /squads/invites — pending invites for current user
+    if (url === '/squads/invites' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { data: invites } = await sb()
+        .from('squad_invites')
+        .select('id, squad_id, inviter_id, status, created_at, squads(id, name, avatar_url), profiles!squad_invites_inviter_id_fkey(display_name, username, avatar_url)')
+        .eq('invitee_id', auth.user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+      return res.status(200).json({ invites: invites || [] });
+    }
+
+    const squadInviteActionMatch = url.match(/^\/squads\/invites\/([^/]+)\/(accept|reject)$/);
+
+    // POST /squads/invites/:id/accept
+    if (squadInviteActionMatch && squadInviteActionMatch[2] === 'accept' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const inviteId = squadInviteActionMatch[1];
+      const { data: invite } = await sb().from('squad_invites').select('id, squad_id, status').eq('id', inviteId).eq('invitee_id', auth.user.id).single();
+      if (!invite) return res.status(404).json({ error: 'Invite not found' });
+      if (invite.status !== 'pending') return res.status(400).json({ error: 'Invite already processed' });
+      await sb().from('squad_invites').delete().eq('id', inviteId);
+      const { error } = await sb().from('squad_members').insert({ squad_id: invite.squad_id, user_id: auth.user.id, role: 'member' });
+      if (error && !error.message.includes('duplicate')) return res.status(400).json({ error: error.message });
+      const { data: squad } = await sb().from('squads').select('member_count').eq('id', invite.squad_id).single();
+      await sb().from('squads').update({ member_count: (squad?.member_count || 1) + 1 }).eq('id', invite.squad_id);
+      return res.status(200).json({ ok: true });
+    }
+
+    // POST /squads/invites/:id/reject
+    if (squadInviteActionMatch && squadInviteActionMatch[2] === 'reject' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const inviteId = squadInviteActionMatch[1];
+      await sb().from('squad_invites').delete().eq('id', inviteId).eq('invitee_id', auth.user.id);
+      return res.status(200).json({ ok: true });
+    }
+
+    const squadPlanRsvpMatch = url.match(/^\/squads\/([^/]+)\/plans\/([^/]+)\/rsvp$/);
+    const squadPlanDetailMatch = url.match(/^\/squads\/([^/]+)\/plans\/([^/]+)$/);
+    const squadPlansMatch = url.match(/^\/squads\/([^/]+)\/plans$/);
+
+    // POST /squads/:id/plans/:planId/rsvp
+    if (squadPlanRsvpMatch && req.method === 'POST') {
+      const token = tokenFrom(req);
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const [, , planId] = squadPlanRsvpMatch;
+      const { status: rsvpStatus } = req.body || {};
+      if (!['going','maybe','not_going'].includes(rsvpStatus)) return res.status(400).json({ error: 'status must be going|maybe|not_going' });
+      const { error } = await sbAs(token).from('squad_plan_rsvps').upsert({ plan_id: planId, user_id: auth.user.id, status: rsvpStatus }, { onConflict: 'plan_id,user_id' });
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ ok: true });
+    }
+
+    // PATCH /squads/:id/plans/:planId — update plan (creator only)
+    if (squadPlanDetailMatch && req.method === 'PATCH') {
+      const token = tokenFrom(req);
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const [, , planId] = squadPlanDetailMatch;
+      const { title, notes, plan_date, plan_time, location_name, event_id } = req.body || {};
+      const updates = {};
+      if (title) updates.title = title.trim();
+      if (notes !== undefined) updates.notes = notes;
+      if (plan_date) updates.plan_date = plan_date;
+      if (plan_time !== undefined) updates.plan_time = plan_time || null;
+      if (location_name !== undefined) updates.location_name = location_name;
+      if (event_id !== undefined) updates.event_id = event_id || null;
+      const { error } = await sbAs(token).from('squad_plans').update(updates).eq('id', planId).eq('creator_id', auth.user.id);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ ok: true });
+    }
+
+    // DELETE /squads/:id/plans/:planId — delete plan (creator only)
+    if (squadPlanDetailMatch && req.method === 'DELETE') {
+      const token = tokenFrom(req);
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const [, , planId] = squadPlanDetailMatch;
+      const { error } = await sbAs(token).from('squad_plans').delete().eq('id', planId).eq('creator_id', auth.user.id);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ ok: true });
+    }
+
+    // GET /squads/:id/plans — list all plans with RSVPs
+    if (squadPlansMatch && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const squadId = squadPlansMatch[1];
+      const { data: membership } = await sb().from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
+      if (!membership) return res.status(403).json({ error: 'Not a squad member' });
+      const { data: plans } = await sb()
+        .from('squad_plans')
+        .select('id, title, notes, plan_date, plan_time, location_name, event_id, creator_id, created_at, profiles!squad_plans_creator_id_fkey(display_name, avatar_url)')
+        .eq('squad_id', squadId)
+        .order('plan_date', { ascending: true });
+      const planIds = (plans || []).map(p => p.id);
+      let rsvpMap = {};
+      if (planIds.length > 0) {
+        const { data: rsvps } = await sb().from('squad_plan_rsvps').select('plan_id, user_id, status').in('plan_id', planIds);
+        (rsvps || []).forEach(r => { if (!rsvpMap[r.plan_id]) rsvpMap[r.plan_id] = []; rsvpMap[r.plan_id].push(r); });
+      }
+      const result = (plans || []).map(p => ({ ...p, rsvps: rsvpMap[p.id] || [], my_rsvp: (rsvpMap[p.id] || []).find(r => r.user_id === auth.user.id)?.status || null }));
+      return res.status(200).json({ plans: result });
+    }
+
+    // POST /squads/:id/plans — create a plan + notify members
+    if (squadPlansMatch && req.method === 'POST') {
+      const token = tokenFrom(req);
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const squadId = squadPlansMatch[1];
+      const { title, notes, plan_date, plan_time, location_name, event_id, outing_type, budget_per_person } = req.body || {};
+      if (!title?.trim() || !plan_date) return res.status(400).json({ error: 'title and plan_date are required' });
+      const { data: membership } = await sb().from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
+      if (!membership) return res.status(403).json({ error: 'Not a squad member' });
+      const { data: plan, error } = await sbAs(token).from('squad_plans')
+        .insert({ squad_id: squadId, creator_id: auth.user.id, title: title.trim(), notes: notes || null, plan_date, plan_time: plan_time || null, location_name: location_name || null, event_id: event_id || null, outing_type: outing_type || 'general', budget_per_person: budget_per_person ? parseInt(budget_per_person) : null })
+        .select('id, title, plan_date').single();
+      if (error) return res.status(400).json({ error: error.message });
+      const { data: members } = await sb().from('squad_members').select('user_id').eq('squad_id', squadId).neq('user_id', auth.user.id);
+      const { data: planner } = await sb().from('profiles').select('display_name').eq('id', auth.user.id).single();
+      const plannerName = planner?.display_name || 'Someone';
+      const dateStr = new Date(plan_date + 'T00:00:00').toLocaleDateString('en-ZA', { month: 'short', day: 'numeric' });
+      if (members && members.length > 0) {
+        const notifs = members.map(m => ({ user_id: m.user_id, type: 'squad_plan', from_user_id: auth.user.id, from_display_name: plannerName, entity_id: plan.id, entity_type: 'squad_plan', message: `${plannerName} planned "${title.trim()}" for ${dateStr}`, data: { squad_id: squadId, plan_id: plan.id } }));
+        await sb().from('notifications').insert(notifs);
+      }
+      return res.status(201).json({ plan });
+    }
+
     const squadDetailMatch = url.match(/^\/squads\/([^/]+)$/);
     const squadActionMatch = url.match(/^\/squads\/([^/]+)\/(join|leave|invite)$/);
 
@@ -1678,7 +2157,7 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
-    // POST /squads/:id/invite — add a follower to squad
+    // POST /squads/:id/invite — send invite (pending, notifies invitee)
     if (squadActionMatch && squadActionMatch[2] === 'invite' && req.method === 'POST') {
       const token = tokenFrom(req);
       const auth = await authUser(req);
@@ -1688,14 +2167,16 @@ module.exports = async (req, res) => {
       if (!inviteeId) return res.status(400).json({ error: 'user_id required' });
       const { data: membership } = await sb().from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
       if (!membership) return res.status(403).json({ error: 'Not a squad member' });
-      // Inviting another user requires service role (RLS only lets users insert their own row).
-      // Falls back to anon if SVC key not set, in which case admin must enable invites manually.
-      const { error } = await sb().from('squad_members').insert({ squad_id: squadId, user_id: inviteeId, role: 'member' });
+      const { data: alreadyMember } = await sb().from('squad_members').select('user_id').eq('squad_id', squadId).eq('user_id', inviteeId).single();
+      if (alreadyMember) return res.status(400).json({ error: 'User is already a member' });
+      const { error } = await sb().from('squad_invites').insert({ squad_id: squadId, inviter_id: auth.user.id, invitee_id: inviteeId, status: 'pending' });
       if (error) return res.status(400).json({ error: error.message });
-      const { data: squad } = await sb().from('squads').select('member_count').eq('id', squadId).single();
-      await sb().from('squads').update({ member_count: (squad?.member_count || 1) + 1 }).eq('id', squadId);
-      await sbAs(token).from('squad_points').insert({ squad_id: squadId, user_id: auth.user.id, activity_type: 'invite', points: 5 });
-      await sbAs(token).from('squad_activity').insert({ squad_id: squadId, user_id: auth.user.id, activity_type: 'invite', description: 'Invited a friend', data: { invitee_id: inviteeId } });
+      const [{ data: squad }, { data: inviter }] = await Promise.all([
+        sb().from('squads').select('name').eq('id', squadId).single(),
+        sb().from('profiles').select('display_name').eq('id', auth.user.id).single()
+      ]);
+      await sb().from('notifications').insert({ user_id: inviteeId, type: 'squad_invite', from_user_id: auth.user.id, from_display_name: inviter?.display_name || 'Someone', entity_id: squadId, entity_type: 'squad', message: `${inviter?.display_name || 'Someone'} invited you to join ${squad?.name || 'a squad'}`, data: { squad_id: squadId } });
+      await sbAs(token).from('squad_points').insert({ squad_id: squadId, user_id: auth.user.id, activity_type: 'invite', points: 5 }).catch(() => {});
       return res.status(200).json({ ok: true });
     }
 
@@ -1717,32 +2198,241 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
+    // GET /squads/:id/public — unauthenticated preview for invite landing page
+    if (squadDetailMatch && url.endsWith('/public') && req.method === 'GET') {
+      const { data } = await sb().from('squads')
+        .select('id, name, avatar_url, member_count, is_public')
+        .eq('id', squadDetailMatch[1]).single();
+      return res.status(data ? 200 : 404).json(data || { error: 'Not found' });
+    }
+
     // GET /squads/:id — squad detail with per-member points
     if (squadDetailMatch && req.method === 'GET') {
       const auth = await authUser(req);
       const squadId = squadDetailMatch[1];
       const { data: squad } = await sb().from('squads').select('id, name, description, avatar_url, is_public, member_count, total_points, template_type, template_config, creator_id, created_at').eq('id', squadId).single();
       if (!squad) return res.status(404).json({ error: 'Squad not found' });
-      const { data: members } = await sb().from('squad_members').select('role, joined_at, profiles(id, display_name, username, avatar_url)').eq('squad_id', squadId);
+      const [{ data: members }, { data: memberCheck }, { data: allPoints }] = await Promise.all([
+        sb().from('squad_members').select('user_id, role, joined_at, profiles(id, display_name, username, avatar_url)').eq('squad_id', squadId),
+        auth ? sb().from('squad_members').select('user_id').eq('squad_id', squadId).eq('user_id', auth.user.id).maybeSingle() : Promise.resolve({ data: null }),
+        sb().from('squad_points').select('user_id, points').eq('squad_id', squadId),
+      ]);
       const { data: activity } = await sb().from('squad_activity').select('id, activity_type, description, created_at, profiles(display_name, avatar_url)').eq('squad_id', squadId).order('created_at', { ascending: false }).limit(10);
-      const { data: allPoints } = await sb().from('squad_points').select('user_id, points').eq('squad_id', squadId);
       const memberPoints = {};
       (allPoints || []).forEach(p => { memberPoints[p.user_id] = (memberPoints[p.user_id] || 0) + p.points; });
-      const { data: checkins } = await sb().from('squad_points').select('id').eq('squad_id', squadId).eq('activity_type', 'squad_checkin');
-      const { data: invites } = await sb().from('squad_points').select('id').eq('squad_id', squadId).eq('activity_type', 'invite');
-      const goals = [
-        { label: 'Attend 5 events together', current: (checkins || []).length, target: 5 },
-        { label: 'Reach 100 squad points', current: squad.total_points, target: 100 },
-        { label: 'Grow to 5 members', current: squad.member_count, target: 5 },
-        { label: 'Invite 3 friends', current: (invites || []).length, target: 3 },
-      ];
-      const isMember = auth ? (members || []).some(m => m.profiles?.id === auth.user.id) : false;
-      return res.status(200).json({ squad, members: members || [], activity: activity || [], goals, isMember, memberPoints });
+      const isMember = !!memberCheck;
+      return res.status(200).json({ squad, members: members || [], activity: activity || [], isMember, memberPoints });
+    }
+
+    /* ─── GET /admin/activity-log ───────────────────────── */
+    if (url === '/admin/activity-log' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const limit = Math.min(parseInt(q.limit) || 100, 500);
+      const { data, error } = await sb().from('admin_activity_log')
+        .select('*').order('created_at', { ascending: false }).limit(limit);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ log: data || [] });
+    }
+
+    /* ─── GET /admin/user-notifications/:userId ─────────── */
+    const adminUserNotifsMatch = url.match(/^\/admin\/user-notifications\/([^/]+)$/);
+    if (adminUserNotifsMatch && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const targetUserId = adminUserNotifsMatch[1];
+      const { data, error } = await sb().from('notifications')
+        .select('id,type,title,message,body,read,created_at,from_display_name,entity_type,entity_id')
+        .eq('user_id', targetUserId)
+        .order('created_at', { ascending: false }).limit(50);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ notifications: data || [] });
     }
 
     /* ─── GET /health ────────────────────────────────────── */
     if (url === '/health' && req.method === 'GET') {
       return res.status(200).json({ ok: true, ts: Date.now(), url: SUPA_URL });
+    }
+
+    /* ─── PATCH /profile/socials ──────────────────────────── */
+    if (url === '/profile/socials' && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { social_links } = req.body || {};
+      if (!social_links || typeof social_links !== 'object') return res.status(400).json({ error: 'social_links object required' });
+      const allowed = ['whatsapp','instagram','tiktok','facebook','x'];
+      const clean = {};
+      for (const k of allowed) clean[k] = (social_links[k] || '').trim().slice(0, 500);
+      const { data, error } = await sb().from('profiles').update({ social_links: clean }).eq('id', auth.user.id).select('social_links').single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ social_links: data.social_links });
+    }
+
+    /* ─── GET /admin/app-settings ─────────────────────────── */
+    if (url === '/admin/app-settings' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const { data } = await sb().from('app_settings').select('*');
+      const settings = Object.fromEntries((data || []).map(r => [r.key, r.value]));
+      return res.status(200).json({ settings });
+    }
+
+    /* ─── PATCH /admin/app-settings ───────────────────────── */
+    if (url === '/admin/app-settings' && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const { key, value } = req.body || {};
+      if (!key || value === undefined) return res.status(400).json({ error: 'key and value required' });
+      const { data, error } = await sb().from('app_settings')
+        .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+        .select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ setting: data });
+    }
+
+    /* ─── GET /config ─────────────────────────────────────── */
+    if (url === '/config' && req.method === 'GET') {
+      return res.status(200).json({
+        paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY || '',
+        appName: 'Pulsefy',
+      });
+    }
+
+    /* ─── POST /payments/initiate ─────────────────────────── */
+    if (url === '/payments/initiate' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { user, profile } = auth;
+      const { type, entity_id, amount, email } = req.body || {};
+      if (!type || !amount || !email) return res.status(400).json({ error: 'type, amount, and email required' });
+      if (!['ticket','subscription_organizer','subscription_business','promotion'].includes(type))
+        return res.status(400).json({ error: 'Invalid payment type' });
+      if (!Number.isInteger(amount) || amount < 1) return res.status(400).json({ error: 'amount must be a positive integer in cents' });
+
+      const psRes = await fetch('https://api.paystack.co/transaction/initialize', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, amount, currency: 'ZAR', metadata: { user_id: user.id, type, entity_id: entity_id || null, display_name: profile.display_name } }),
+      });
+      if (!psRes.ok) { const b = await psRes.json().catch(() => ({})); return res.status(502).json({ error: b.message || 'Paystack error' }); }
+      const psData = await psRes.json();
+      if (!psData.status) return res.status(502).json({ error: psData.message || 'Paystack error' });
+
+      const { reference, authorization_url } = psData.data;
+      const { error: dbErr } = await sb().from('payments').insert({
+        user_id: user.id, reference, amount, currency: 'ZAR', type,
+        entity_id: entity_id || null, status: 'pending', metadata: { email },
+      });
+      if (dbErr) return res.status(400).json({ error: dbErr.message });
+      return res.status(200).json({ reference, authorization_url });
+    }
+
+    /* ─── GET /payments/verify ────────────────────────────── */
+    if (url === '/payments/verify' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { user, profile } = auth;
+      const ref = q.ref || '';
+      if (!ref) return res.status(400).json({ error: 'ref query parameter required' });
+
+      const { data: payment } = await sb().from('payments').select('*').eq('reference', ref).eq('user_id', user.id).single();
+      if (!payment) return res.status(404).json({ error: 'Payment not found' });
+      if (payment.status === 'success') return res.status(200).json({ success: true, payment });
+
+      const psRes = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(ref)}`, {
+        headers: { 'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
+      });
+      if (!psRes.ok) { const b = await psRes.json().catch(() => ({})); return res.status(502).json({ error: b.message || 'Paystack verify error' }); }
+      const psData = await psRes.json();
+      const newStatus = psData.data?.status === 'success' ? 'success' : 'failed';
+      const now = new Date().toISOString();
+
+      const { data: updated } = await sb().from('payments')
+        .update({ status: newStatus, completed_at: now, metadata: { ...payment.metadata, paystack: psData.data } })
+        .eq('id', payment.id).select().single();
+
+      if (newStatus === 'success') {
+        if (['subscription_organizer','subscription_business'].includes(payment.type)) {
+          await sb().from('profiles').update({ subscription_type: 'premium' }).eq('id', user.id);
+        }
+        await sb().from('notifications').insert({
+          user_id: user.id, type: 'payment', from_user_id: user.id, from_display_name: 'Pulsefy',
+          entity_id: payment.id, entity_type: 'payment',
+          message: `Payment of R${(payment.amount / 100).toFixed(2)} confirmed ✅`,
+        });
+        await logAdminAction(user.id, profile.display_name || user.email, 'payment_success', payment.id,
+          `${payment.type} — R${(payment.amount / 100).toFixed(2)}`, { reference: ref });
+        const userEmail = profile.email || user.email;
+        if (userEmail) sendPaymentConfirmEmail(userEmail, profile.display_name, payment.amount, payment.type).catch(() => {});
+      }
+      return res.status(200).json({ success: newStatus === 'success', payment: updated });
+    }
+
+    /* ─── POST /payments/webhook ──────────────────────────── */
+    if (url === '/payments/webhook' && req.method === 'POST') {
+      const sig  = req.headers['x-paystack-signature'] || '';
+      const hash = crypto.createHmac('sha512', process.env.PAYSTACK_SECRET_KEY || '')
+        .update(JSON.stringify(req.body)).digest('hex');
+      if (sig !== hash) return res.status(401).json({ error: 'Invalid signature' });
+      res.status(200).json({ received: true });
+
+      if (req.body?.event === 'charge.success') {
+        const ref  = req.body.data?.reference;
+        const meta = req.body.data?.metadata || {};
+        if (!ref) return;
+        const { data: payment } = await sb().from('payments').select('*').eq('reference', ref).maybeSingle();
+        if (!payment || payment.status === 'success') return;
+        const now = new Date().toISOString();
+        await sb().from('payments').update({
+          status: 'success', completed_at: now, metadata: { ...payment.metadata, paystack: req.body.data },
+        }).eq('id', payment.id);
+
+        if (['subscription_organizer','subscription_business'].includes(payment.type)) {
+          await sb().from('profiles').update({ subscription_type: 'premium' }).eq('id', payment.user_id);
+        }
+        await sb().from('notifications').insert({
+          user_id: payment.user_id, type: 'payment', from_user_id: payment.user_id, from_display_name: 'Pulsefy',
+          entity_id: payment.id, entity_type: 'payment',
+          message: `Payment of R${(payment.amount / 100).toFixed(2)} confirmed ✅`,
+        });
+        await logAdminAction(payment.user_id, meta.display_name || 'User', 'payment_success', payment.id,
+          `${payment.type} — R${(payment.amount / 100).toFixed(2)}`, { reference: ref });
+        const { data: prof } = await sb().from('profiles').select('email,display_name').eq('id', payment.user_id).single();
+        if (prof?.email) sendPaymentConfirmEmail(prof.email, prof.display_name, payment.amount, payment.type).catch(() => {});
+      }
+      return;
+    }
+
+    /* ─── GET /businesses/:id/menu ──────────────────────── */
+    const menuBizId = url.match(/^\/businesses\/([^/]+)\/menu$/)?.[1];
+    if (menuBizId && req.method === 'GET') {
+      const { data, error } = await sb().from('menu_items').select('*').eq('business_id', menuBizId).eq('is_available', true).order('category').order('sort_order');
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ items: data || [] });
+    }
+
+    /* ─── POST /pickup-orders ────────────────────────────── */
+    if (url === '/pickup-orders' && req.method === 'POST') {
+      const { business_id, customer_name, customer_phone, items, notes, pickup_time, total } = req.body || {};
+      if (!business_id || !customer_name || !customer_phone || !items?.length)
+        return res.status(400).json({ error: 'business_id, customer_name, customer_phone, items required' });
+      const order_ref = `ORD-${Date.now()}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
+      const { data: order, error: oErr } = await sb().from('pickup_orders').insert({
+        order_ref, business_id, customer_name, customer_phone,
+        items, notes: notes || null, pickup_time: pickup_time || null,
+        total: +total || 0, status: 'pending',
+      }).select().single();
+      if (oErr) return res.status(400).json({ error: oErr.message });
+      const { data: biz } = await sb().from('businesses').select('owner_id,name').eq('id', business_id).maybeSingle();
+      if (biz?.owner_id) {
+        await sb().from('notifications').insert({
+          user_id: biz.owner_id, type: 'order',
+          from_display_name: customer_name,
+          entity_id: order.id, entity_type: 'pickup_order',
+          message: `${customer_name} placed a pickup order — R${(+total || 0).toFixed(2)} · Ref: ${order_ref}`,
+        }).catch(() => {});
+      }
+      return res.status(200).json({ success: true, order_ref, order_id: order.id });
     }
 
     return res.status(404).json({ error: `Route not found: ${req.method} ${url}` });

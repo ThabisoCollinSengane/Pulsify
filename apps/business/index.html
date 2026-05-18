@@ -7,11 +7,12 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
-<title>Pulsify Business Dashboard</title>
+<title>Pulsefy Business Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--te:#00D4AA;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0;--th:58px;--bh:68px}
@@ -107,6 +108,11 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 .setting-card{background:var(--surf2);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:10px}
 .setting-card-row{display:flex;align-items:center;justify-content:space-between}
 .setting-card-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+/* ── Pulsify verified badge ── */
+.puls-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);box-shadow:0 0 8px rgba(255,92,0,.5);position:relative;vertical-align:middle;margin-left:5px;flex-shrink:0;cursor:default}
+.puls-badge::before{content:'';position:absolute;inset:-4px;border-radius:50%;background:linear-gradient(135deg,rgba(255,92,0,.35),rgba(255,45,120,.35));animation:puls-ring 2.2s ease-out infinite;z-index:-1}
+.puls-badge::after{content:'';width:7px;height:7px;border-radius:50%;background:#fff;opacity:.95}
+@keyframes puls-ring{0%{transform:scale(1);opacity:.5}70%{transform:scale(1.9);opacity:0}100%{transform:scale(1.9);opacity:0}}
 /* ── FAQ ── */
 .faq-item{border:1px solid var(--border);border-radius:12px;margin-bottom:8px;overflow:hidden}
 .faq-q{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
@@ -248,7 +254,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <!-- ══ POSTS ══ -->
 <div class="panel" id="tab-posts">
   <div class="sec-head">
-    <div><div class="sec-title">Posts</div><div class="sec-sub">Content shared to the Pulsify feed</div></div>
+    <div><div class="sec-title">Posts</div><div class="sec-sub">Content shared to the Pulsefy feed</div></div>
     <button class="btn-primary" onclick="openSheet('post-sheet')">+ Post</button>
   </div>
   <div id="posts-list"></div>
@@ -257,13 +263,13 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <!-- ══ EVENTS ══ -->
 <div class="panel" id="tab-events">
   <div class="sec-head">
-    <div><div class="sec-title">Your Events</div><div class="sec-sub">Visible on the Pulsify home feed</div></div>
+    <div><div class="sec-title">Your Events</div><div class="sec-sub">Visible on the Pulsefy home feed</div></div>
     <button class="btn-primary" onclick="openSheet('event-sheet')">+ Event</button>
   </div>
   <div id="events-list"></div>
 
   <div class="sec-head" style="margin-top:24px">
-    <div><div class="sec-title">🌍 Discover</div><div class="sec-sub">Upcoming events on Pulsify</div></div>
+    <div><div class="sec-title">🌍 Discover</div><div class="sec-sub">Upcoming events on Pulsefy</div></div>
   </div>
   <div id="discover-list" style="padding:0 14px"><div style="padding:30px 0;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div></div>
 </div>
@@ -310,7 +316,31 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <div><div class="sec-title">Promote Your Business</div><div class="sec-sub">Get featured in the event feed</div></div>
   </div>
   <div style="padding:0 14px 80px">
-    <div style="font-size:.78rem;color:var(--mu);margin-bottom:16px;line-height:1.6">Your promotion appears in the "Featured This Weekend" section or injected into the homepage feed. All promotions are reviewed by our team before going live.</div>
+    <div style="font-size:.78rem;color:var(--mu);margin-bottom:14px;line-height:1.6">Boost your business across the Pulsefy feed and discovery sections. Pick a template to get started fast, then fill in the details below. All promotions are reviewed before going live.</div>
+
+    <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Quick-Start Templates</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+      <div onclick="applyBizPromoTemplate('bnb')" style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer">
+        <div style="font-size:1.5rem;margin-bottom:6px">🏠</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">BnB / Stay</div>
+        <div style="font-size:.66rem;color:var(--mu);margin-top:2px">Weekend getaway · Special rate</div>
+      </div>
+      <div onclick="applyBizPromoTemplate('club')" style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer">
+        <div style="font-size:1.5rem;margin-bottom:6px">🪩</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">Club Night</div>
+        <div style="font-size:.66rem;color:var(--mu);margin-top:2px">Friday/Saturday · DJ lineup</div>
+      </div>
+      <div onclick="applyBizPromoTemplate('shisanyama')" style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer">
+        <div style="font-size:1.5rem;margin-bottom:6px">🔥</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">Shisanyama</div>
+        <div style="font-size:.66rem;color:var(--mu);margin-top:2px">Sunday session · Food + music</div>
+      </div>
+      <div onclick="applyBizPromoTemplate('custom')" style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer">
+        <div style="font-size:1.5rem;margin-bottom:6px">✨</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">Custom Promo</div>
+        <div style="font-size:.66rem;color:var(--mu);margin-top:2px">Build from scratch</div>
+      </div>
+    </div>
 
     <div id="promo-msg-biz" style="display:none;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:14px"></div>
 
@@ -342,7 +372,10 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <label class="ff-label">Target cities <span style="color:var(--mu);font-size:.68rem">(comma-separated, blank = everywhere)</span></label>
     <input class="ff" id="biz-promo-cities" placeholder="e.g. Durban, Pietermaritzburg"/>
 
-    <button class="btn-primary" id="biz-promo-btn" onclick="submitBizPromo()" style="width:100%;margin-top:6px">Submit for Review 🚀</button>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button onclick="previewBizPromo()" style="flex:1;padding:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);color:var(--tx);border-radius:50px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer">👁 Preview</button>
+      <button class="btn-primary" id="biz-promo-btn" onclick="submitBizPromo()" style="flex:1.6">Submit for Review 🚀</button>
+    </div>
 
     <div style="margin-top:24px">
       <div class="section-label">Your Promotions</div>
@@ -412,7 +445,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
             <div style="font-size:.68rem;color:var(--mu)">R499/month — currently on free plan</div>
           </div>
         </div>
-        <a href="https://wa.me/27000000000?text=Hi%20Pulsify%2C%20I%27d%20like%20to%20upgrade%20my%20business%20to%20Premium." target="_blank" class="btn-sec" style="padding:6px 12px;font-size:.72rem;text-decoration:none">Upgrade →</a>
+        <button id="biz-sub-btn" class="btn-sec" style="padding:6px 12px;font-size:.72rem" onclick="upgradeBizToPremium()">Upgrade →</button>
       </div>
       <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">⭐ Featured on map · Unlimited menu items · Analytics dashboard · Priority support</div>
     </div>
@@ -431,6 +464,14 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
       </div>
       <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Add your bank account to receive payouts from orders and bookings.</div>
     </div>
+
+    <!-- Social Links -->
+    <div class="section-label" style="margin-top:14px">Social Links</div>
+    <div class="setting-card" id="biz-social-card">
+      <div id="biz-social-inputs"></div>
+      <button onclick="saveBizSocialLinks()" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;margin-top:6px">Save Social Links</button>
+      <div id="biz-social-status" style="font-size:.7rem;color:var(--mu);text-align:center;margin-top:6px"></div>
+    </div>
   </div>
 
   <!-- FAQ -->
@@ -438,7 +479,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <div class="section-label">FAQ & Support</div>
     <div id="faq-biz"></div>
     <div style="margin-top:14px;text-align:center">
-      <a href="mailto:support@pulsify.co.za" style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;color:var(--or);text-decoration:none">✉️ Contact Support</a>
+      <a href="mailto:hello@pulsefy.co.za" style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;color:var(--or);text-decoration:none">✉️ Contact Support</a>
     </div>
   </div>
 </div>
@@ -451,7 +492,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <div class="sheet-handle"></div>
     <div class="sheet-head"><div class="sheet-title">New Post</div><button class="sheet-close" onclick="closeSheet('post-sheet')">✕</button></div>
     <div class="sheet-body">
-      <div class="info-box">Posts appear on the Pulsify feed for all your followers.</div>
+      <div class="info-box">Posts appear on the Pulsefy feed for all your followers.</div>
       <label class="ff-label">Photos (up to 5)</label>
       <div id="biz-img-drop" onclick="document.getElementById('biz-img-file').click()" style="height:80px;background:rgba(255,255,255,.03);border:1.5px dashed rgba(0,229,255,.3);border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-bottom:8px;flex-direction:column;gap:4px">
         <span style="font-size:1.4rem">📷</span>
@@ -476,7 +517,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <div class="sheet-head"><div class="sheet-title" id="ev-sheet-title">New Event</div><button class="sheet-close" onclick="closeSheet('event-sheet')">✕</button></div>
     <div class="sheet-body">
       <input type="hidden" id="ev-edit-id"/>
-      <div class="info-box">Events appear on the shared Pulsify discover feed for all users.</div>
+      <div class="info-box">Events appear on the shared Pulsefy discover feed for all users.</div>
       <label class="ff-label">Event Name *</label>
       <input class="ff" type="text" id="ev-name" placeholder="e.g. Gqom Friday Night"/>
       <div class="ff-row">
@@ -497,8 +538,14 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
       <textarea class="ff" id="ev-desc" placeholder="Describe the event…" rows="3"></textarea>
       <label class="ff-label">Lineup (comma separated)</label>
       <input class="ff" type="text" id="ev-lineup" placeholder="DJ Lag, Bello No Gallo"/>
-      <label class="ff-label">Banner Image URL (optional)</label>
-      <input class="ff" type="url" id="ev-img" placeholder="https://…/banner.jpg"/>
+      <label class="ff-label">Banner Image (optional)</label>
+      <div id="ev-img-preview" style="display:none;border-radius:10px;overflow:hidden;height:90px;background:#111;margin-bottom:8px"><img id="ev-img-thumb" style="width:100%;height:100%;object-fit:cover"/></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button type="button" class="btn-primary" style="padding:8px 14px;font-size:.78rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--tx)" onclick="document.getElementById('ev-img-file').click()">📷 Choose Image</button>
+        <span id="ev-img-name" style="font-size:.72rem;color:var(--mu2)">No file chosen</span>
+      </div>
+      <input type="file" id="ev-img-file" accept="image/*" style="display:none" onchange="previewEvImg(this)"/>
+      <input type="hidden" id="ev-img"/>
       <button class="btn-primary" style="width:100%" onclick="submitEvent()">Save Event 🎟</button>
     </div>
   </div>
@@ -544,7 +591,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <div class="sheet-handle"></div>
     <div class="sheet-head"><div class="sheet-title">Verify Profile</div><button class="sheet-close" onclick="closeSheet('verify-sheet')">✕</button></div>
     <div class="sheet-body">
-      <div class="info-box">⏱ Verification takes <strong>1–3 business days</strong>. You'll be notified once reviewed. Verified accounts get a ✅ badge visible to all Pulsify users.</div>
+      <div class="info-box">⏱ Verification takes <strong>1–3 business days</strong>. You'll be notified once reviewed. Verified accounts get a ✅ badge visible to all Pulsefy users.</div>
       <div id="verif-msg" class="msg"></div>
       <label class="ff-label">Is your business registered? *</label>
       <div style="display:flex;gap:8px;margin-bottom:14px">
@@ -579,6 +626,28 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
       <input class="ff" id="vf-address" placeholder="Street, suburb, city"/>
       <label class="ff-label">Business Description *</label>
       <textarea class="ff" id="vf-desc" rows="3" placeholder="What does your business do?"></textarea>
+      <label class="ff-label">Face Scan (Selfie) *</label>
+      <div style="margin-bottom:12px">
+        <div style="position:relative;border-radius:14px;overflow:hidden;background:#000;margin-bottom:8px;min-height:150px;display:flex;align-items:center;justify-content:center">
+          <video id="vf-video" autoplay playsinline muted style="width:100%;border-radius:14px;display:none"></video>
+          <canvas id="vf-canvas" style="display:none"></canvas>
+          <img id="vf-preview" style="width:100%;border-radius:14px;display:none"/>
+          <div id="vf-cam-placeholder" style="color:var(--mu);font-size:.78rem;padding:20px;text-align:center">📸 Take a selfie to confirm your identity</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button type="button" class="btn-sec" style="flex:1;padding:9px;font-size:.74rem" onclick="startVfCam()">📷 Camera</button>
+          <button type="button" id="vf-capture-btn" class="btn-primary" style="flex:1;padding:9px;font-size:.74rem;display:none" onclick="captureVfFace()">✔ Capture</button>
+          <button type="button" id="vf-retake-btn" class="btn-sec" style="flex:1;padding:9px;font-size:.74rem;display:none" onclick="retakeVfFace()">🔄 Retake</button>
+        </div>
+      </div>
+      <label class="ff-label">SA ID Document (photo or scan) *</label>
+      <div style="margin-bottom:14px">
+        <label style="display:block;border:2px dashed var(--border);border-radius:12px;padding:14px;text-align:center;cursor:pointer;font-size:.76rem;color:var(--mu)">
+          <span id="vf-id-doc-label">📄 Tap to upload ID document (JPG, PNG or PDF)</span>
+          <input type="file" id="vf-id-doc" accept="image/*,application/pdf" style="display:none" onchange="previewVfIdDoc(event)"/>
+        </label>
+        <img id="vf-id-doc-preview" style="display:none;width:100%;border-radius:10px;margin-top:8px;max-height:140px;object-fit:contain"/>
+      </div>
       <button class="btn-primary" style="width:100%;margin-top:6px" onclick="submitVerification()">Submit for Verification 🏆</button>
     </div>
   </div>
@@ -669,7 +738,7 @@ const BIZ_FAQ = [
   { q: 'How long does profile verification take?', a: 'Verified applications are reviewed within 1–3 business days. You\'ll receive a notification once reviewed.' },
   { q: 'How do customers find my menu?', a: 'Share your public menu link found in the Profile tab. Customers can browse and place pickup orders directly from it.' },
   { q: 'When do I receive payouts?', a: 'Payouts are processed weekly to your registered bank account once you have added a payment method.' },
-  { q: 'Can I post upcoming events?', a: 'Yes! Tap "New Event" to publish events to the shared Pulsify discovery feed visible to all users.' },
+  { q: 'Can I post upcoming events?', a: 'Yes! Tap "New Event" to publish events to the shared Pulsefy discovery feed visible to all users.' },
   { q: 'How do I update my business hours?', a: 'Include your trading hours in your Tagline / Description in the Profile tab.' },
   { q: 'Can I delete a post?', a: 'Yes, go to the Posts tab, find the post and tap the Delete button.' },
 ];
@@ -700,21 +769,77 @@ function setRegistered(val) {
 
 // ── Verification ─────────────────────────────────────────────
 async function loadVerifStatus() {
-  const saved = load('verif', {});
-  if (saved.status) {
-    const labels = { pending: '⏳ Pending review', approved: '✅ Verified', rejected: '❌ Not approved' };
-    const el = document.getElementById('biz-verif-status');
-    if (el) el.textContent = labels[saved.status] || 'Not verified';
-    const btn = document.getElementById('biz-verif-btn');
-    if (btn && saved.status === 'approved') { btn.textContent = '✅ Verified'; btn.disabled = true; }
-    if (btn && saved.status === 'pending')  { btn.textContent = '⏳ Pending'; btn.disabled = true; }
-  }
+  try {
+    const sb = getSB(); if (!sb) return;
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      const { data: prof } = await sb.from('profiles').select('verif_status,is_verified').eq('id', session.user.id).single();
+      if (prof) {
+        const labels = { pending: '⏳ Pending review', approved: '✅ Verified', rejected: '❌ Not approved — reapply' };
+        const el = document.getElementById('biz-verif-status');
+        if (el) el.textContent = labels[prof.verif_status] || 'Not verified';
+        const btn = document.getElementById('biz-verif-btn');
+        if (btn) {
+          if (prof.is_verified)                    { btn.textContent = '✅ Verified'; btn.disabled = true; }
+          else if (prof.verif_status === 'pending')  { btn.textContent = '⏳ Pending'; btn.disabled = true; }
+          else if (prof.verif_status === 'rejected') { btn.textContent = 'Reapply →'; btn.disabled = false; }
+        }
+        save('verif', { status: prof.verif_status });
+      }
+    }
+  } catch(e) { console.warn('[verif status]', e); }
   const pm = load('payment', {});
   if (pm.bank) {
     const el = document.getElementById('biz-payment-status');
     if (el) el.textContent = `${pm.bank} ••••${(pm.account||'').slice(-4)}`;
     const btn = document.getElementById('biz-payment-btn');
     if (btn) btn.textContent = 'Edit →';
+  }
+}
+
+// ── Business face scan + ID doc ──────────────────────────────
+let _vfFaceScanBlob = null;
+let _vfIdDocFile    = null;
+let _vfStream       = null;
+
+async function startVfCam() {
+  try {
+    _vfStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+    const vid = document.getElementById('vf-video');
+    vid.srcObject = _vfStream; vid.style.display = 'block';
+    document.getElementById('vf-cam-placeholder').style.display = 'none';
+    document.getElementById('vf-preview').style.display = 'none';
+    document.getElementById('vf-capture-btn').style.display = 'block';
+    document.getElementById('vf-retake-btn').style.display = 'none';
+  } catch(e) { showMsg('verif-msg', 'Camera not available: ' + e.message, 'err'); }
+}
+function captureVfFace() {
+  const vid = document.getElementById('vf-video');
+  const canvas = document.getElementById('vf-canvas');
+  canvas.width = vid.videoWidth || 640; canvas.height = vid.videoHeight || 480;
+  canvas.getContext('2d').drawImage(vid, 0, 0);
+  canvas.toBlob(blob => {
+    _vfFaceScanBlob = blob;
+    const prev = document.getElementById('vf-preview');
+    prev.src = URL.createObjectURL(blob); prev.style.display = 'block';
+    document.getElementById('vf-video').style.display = 'none';
+    document.getElementById('vf-capture-btn').style.display = 'none';
+    document.getElementById('vf-retake-btn').style.display = 'block';
+    if (_vfStream) _vfStream.getTracks().forEach(t => t.stop());
+  }, 'image/jpeg', 0.8);
+}
+function retakeVfFace() {
+  _vfFaceScanBlob = null;
+  document.getElementById('vf-preview').style.display = 'none';
+  document.getElementById('vf-retake-btn').style.display = 'none';
+  startVfCam();
+}
+function previewVfIdDoc(e) {
+  _vfIdDocFile = e.target.files[0]; if (!_vfIdDocFile) return;
+  document.getElementById('vf-id-doc-label').textContent = '✅ ' + _vfIdDocFile.name;
+  if (_vfIdDocFile.type.startsWith('image/')) {
+    const prev = document.getElementById('vf-id-doc-preview');
+    prev.src = URL.createObjectURL(_vfIdDocFile); prev.style.display = 'block';
   }
 }
 
@@ -727,32 +852,43 @@ async function submitVerification() {
   if (!contact || !idNum || !phone || !address || !desc) {
     showMsg('verif-msg', 'Please fill in all required fields.', 'err'); return;
   }
-  const payload = {
-    is_registered: _isRegistered,
-    company: _isRegistered ? document.getElementById('vf-company').value.trim() : '',
-    reg_num: _isRegistered ? document.getElementById('vf-reg-num').value.trim() : '',
-    entity:  _isRegistered ? document.getElementById('vf-entity').value : '',
-    contact, id_number: idNum, phone, address, description: desc,
-    business_name: BIZ?.name || '',
-    submitted_at: new Date().toISOString(),
-  };
-  const sb = getSB();
-  if (sb) {
-    try {
-      const { data: { session } } = await sb.auth.getSession();
-      if (session) {
-        await fetch('/api/verify-request', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-          body: JSON.stringify(payload),
-        });
-      }
-    } catch(e) { console.warn('[verif]', e); }
-  }
-  save('verif', { status: 'pending', ...payload });
-  showMsg('verif-msg', '✅ Submitted! We\'ll review within 1–3 business days.', 'ok');
-  loadVerifStatus();
-  setTimeout(() => closeSheet('verify-sheet'), 2200);
+  if (!_vfFaceScanBlob) { showMsg('verif-msg', 'Please take a selfie photo first.', 'err'); return; }
+  if (!_vfIdDocFile)    { showMsg('verif-msg', 'Please upload your ID document.', 'err'); return; }
+  showMsg('verif-msg', '⏳ Uploading documents…', 'ok');
+  try {
+    const sb = getSB(); if (!sb) throw new Error('Not initialised');
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { showMsg('verif-msg', 'Please sign in first.', 'err'); return; }
+    const uid = session.user.id;
+    const facePath = `${uid}/face_${Date.now()}.jpg`;
+    await sb.storage.from('verification-docs').upload(facePath, _vfFaceScanBlob, { contentType: 'image/jpeg', upsert: true });
+    const { data: { publicUrl: faceScanUrl } } = sb.storage.from('verification-docs').getPublicUrl(facePath);
+    const ext = (_vfIdDocFile.name.split('.').pop() || 'jpg').toLowerCase();
+    const idPath = `${uid}/id_doc_${Date.now()}.${ext}`;
+    await sb.storage.from('verification-docs').upload(idPath, _vfIdDocFile, { upsert: true });
+    const { data: { publicUrl: idDocUrl } } = sb.storage.from('verification-docs').getPublicUrl(idPath);
+    const payload = {
+      is_registered: _isRegistered,
+      company: _isRegistered ? document.getElementById('vf-company').value.trim() : '',
+      reg_num: _isRegistered ? document.getElementById('vf-reg-num').value.trim() : '',
+      entity:  _isRegistered ? document.getElementById('vf-entity').value : '',
+      contact, id_number: idNum, phone, address, description: desc,
+      business_name: BIZ?.name || '',
+      face_scan_url: faceScanUrl,
+      id_doc_url:    idDocUrl,
+      submitted_at: new Date().toISOString(),
+    };
+    const r = await fetch('/api/verify-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error((await r.json()).error || 'Submission failed');
+    save('verif', { status: 'pending', ...payload });
+    showMsg('verif-msg', '✅ Submitted! We\'ll review within 1–3 business days.', 'ok');
+    await loadVerifStatus();
+    setTimeout(() => closeSheet('verify-sheet'), 2400);
+  } catch(e) { showMsg('verif-msg', 'Upload failed: ' + e.message, 'err'); }
 }
 
 // ── Payment Method ───────────────────────────────────────────
@@ -887,6 +1023,8 @@ function showTab(name, _noPush) {
   if (name === 'analytics') renderAnalytics();
   if (name === 'promote')   loadBizPromotions();
   if (name === 'events')    loadDiscoverEvents();
+  if (name === 'profile')   renderBizFAQ();
+  if (name === 'profile')   loadBizSocialLinks();
 }
 
 // ═══════════ DISCOVER (public events catalog) ═══════════
@@ -997,6 +1135,36 @@ function setGreeting() {
   document.getElementById('home-date').textContent = new Date().toLocaleDateString('en-ZA', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 }
 
+let _paystackPK = '';
+fetch('/api/config').then(r => r.json()).then(d => { _paystackPK = d.paystackPublicKey || ''; }).catch(() => {});
+
+async function upgradeBizToPremium() {
+  const sb = getSB(); if (!sb) return;
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { toast('Please sign in first', 'err'); return; }
+  const handler = PaystackPop.setup({
+    key:      _paystackPK,
+    email:    session.user.email,
+    amount:   49900, // R499 in cents
+    currency: 'ZAR',
+    ref:      'BIZ_SUB_' + Date.now(),
+    metadata: { user_id: session.user.id, type: 'subscription_business' },
+    label:    'Business Premium Plan',
+    callback: async function(res) {
+      const btn = document.getElementById('biz-sub-btn');
+      if (btn) { btn.textContent = 'Verifying…'; btn.disabled = true; }
+      try {
+        const r = await fetch(`/api/payments/verify?ref=${res.reference}`, { headers: { Authorization: 'Bearer ' + session.access_token } });
+        const d = await r.json();
+        if (d.success) { toast('🎉 Premium activated!'); checkSubscriptionBanner(); }
+        else { toast('Verification failed — contact support', 'err'); if (btn) { btn.textContent = 'Upgrade →'; btn.disabled = false; } }
+      } catch(e) { toast('Verification error', 'err'); if (btn) { btn.textContent = 'Upgrade →'; btn.disabled = false; } }
+    },
+    onClose: function() {},
+  });
+  handler.openIframe();
+}
+
 // ════════════════════════════════════════════════════════════
 //  STATS
 // ════════════════════════════════════════════════════════════
@@ -1016,13 +1184,13 @@ async function checkSubscriptionBanner() {
     banner.style.background = 'rgba(255,184,0,.1)';
     banner.style.border = '1px solid rgba(255,184,0,.3)';
     banner.style.color = '#FFB800';
-    banner.innerHTML = `⏰ <strong>Your trial expires in ${daysLeft} day${daysLeft===1?'':'s'}</strong> — contact us to keep your premium features. <a href="mailto:support@pulsify.co.za" style="color:#FFB800;font-weight:700">Upgrade →</a>`;
+    banner.innerHTML = `⏰ <strong>Your trial expires in ${daysLeft} day${daysLeft===1?'':'s'}</strong> — contact us to keep your premium features. <a href="mailto:hello@pulsefy.co.za" style="color:#FFB800;font-weight:700">Upgrade →</a>`;
   } else if (subType === 'trial' && daysLeft !== null && daysLeft <= 0) {
     banner.style.display = 'block';
     banner.style.background = 'rgba(255,45,120,.08)';
     banner.style.border = '1px solid rgba(255,45,120,.25)';
     banner.style.color = '#FF2D78';
-    banner.innerHTML = `🚫 <strong>Your trial has expired.</strong> You're now on the free plan. <a href="mailto:support@pulsify.co.za" style="color:#FF2D78;font-weight:700">Upgrade to Premium →</a>`;
+    banner.innerHTML = `🚫 <strong>Your trial has expired.</strong> You're now on the free plan. <a href="mailto:hello@pulsefy.co.za" style="color:#FF2D78;font-weight:700">Upgrade to Premium →</a>`;
   } else if (subType === 'premium') {
     banner.style.display = 'block';
     banner.style.background = 'rgba(176,38,255,.08)';
@@ -1069,7 +1237,7 @@ async function renderAnalytics() {
       <div style="font-size:3rem;margin-bottom:12px">💎</div>
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:6px">Premium Feature</div>
       <div style="font-size:.8rem;color:var(--mu2);line-height:1.6;margin-bottom:20px">Analytics is available on the Premium plan.<br/>Get revenue charts, order trends, and customer insights.</div>
-      <a href="mailto:support@pulsify.co.za?subject=Premium%20Upgrade" style="background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;padding:12px 28px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;text-decoration:none">Upgrade — R499/month</a>
+      <a href="mailto:hello@pulsefy.co.za?subject=Premium%20Upgrade" style="background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;padding:12px 28px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;text-decoration:none">Upgrade — R499/month</a>
     </div>`;
     return;
   }
@@ -1274,7 +1442,7 @@ async function renderPosts() {
   // Fallback to localStorage
   if (!posts.length) posts = load('posts', []).slice().reverse().map(p => ({ ...p, _supa: false }));
 
-  if (!posts.length) { el.innerHTML = emptyState('📸', 'No posts yet', 'Create your first post to share updates with your followers on the Pulsify feed.'); return; }
+  if (!posts.length) { el.innerHTML = emptyState('📸', 'No posts yet', 'Create your first post to share updates with your followers on the Pulsefy feed.'); return; }
   el.innerHTML = posts.map(p => `
     <div class="post-card">
       ${p.img ? `<img class="post-img" src="${xe(p.img)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : '<div class="post-img-placeholder">📷</div>'}
@@ -1368,7 +1536,7 @@ async function deletePost(id, isSupa) {
 function renderEvents() {
   const evs = load('events', []);
   const el  = document.getElementById('events-list');
-  if (!evs.length) { el.innerHTML = emptyState('🎉', 'No events yet', 'Create your first event. It will appear on the Pulsify home feed for all users to discover.'); return; }
+  if (!evs.length) { el.innerHTML = emptyState('🎉', 'No events yet', 'Create your first event. It will appear on the Pulsefy home feed for all users to discover.'); return; }
   el.innerHTML = evs.slice().reverse().map(ev => {
     const emo = GENRE_EMOJI[(ev.genre || '').toLowerCase()] || '🎉';
     return `<div class="ev-row">
@@ -1389,6 +1557,25 @@ function renderEvents() {
   }).join('');
 }
 
+function previewEvImg(input) {
+  const file = input.files[0]; if (!file) return;
+  document.getElementById('ev-img-name').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('ev-img-thumb').src = e.target.result;
+    document.getElementById('ev-img-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadToUploads(file, folder) {
+  const ext  = file.name.split('.').pop().toLowerCase();
+  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { data, error } = await sb.storage.from('uploads').upload(path, file, { upsert: false });
+  if (error) throw new Error(error.message);
+  return sb.storage.from('uploads').getPublicUrl(data.path).data.publicUrl;
+}
+
 async function submitEvent() {
   const id   = document.getElementById('ev-edit-id').value;
   const name = document.getElementById('ev-name').value.trim();
@@ -1401,7 +1588,12 @@ async function submitEvent() {
   const city  = document.getElementById('ev-city').value.trim();
   const genre = document.getElementById('ev-genre').value.trim();
   const desc  = document.getElementById('ev-desc').value.trim();
-  const imgUrl = document.getElementById('ev-img').value.trim();
+  let imgUrl = document.getElementById('ev-img').value.trim();
+  const evImgFile = document.getElementById('ev-img-file')?.files[0];
+  if (evImgFile) {
+    try { imgUrl = await uploadToUploads(evImgFile, 'events'); }
+    catch(e) { toast('Image upload failed: ' + e.message, 'err'); return; }
+  }
 
   const ev = {
     id: id || 'ev_' + Date.now(), name,
@@ -1440,6 +1632,12 @@ async function submitEvent() {
             is_active: true,
             source: 'business',
           });
+          if (price > 0) {
+            await sb.from('ticket_tiers').insert({
+              event_id: ev.id, name: 'General Admission',
+              price, is_free: false, sort_order: 0
+            }).catch(() => {});
+          }
           await fetch('/api/posts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
@@ -1708,7 +1906,7 @@ function renderOrders() {
         <select class="status-sel" onchange="updateOrderStatus('${o.id}',this.value)">
           ${['pending','ready','completed','cancelled'].map(s=>`<option value="${s}"${o.status===s?' selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
         </select>
-        ${phone ? `<br/><a href="https://wa.me/27${phone.replace(/\D/g,'').slice(-9)}?text=${encodeURIComponent('Hi '+o.customer_name+'! Your Pulsify order '+ref+' at '+BIZ.name+' is READY for pickup! 🎉')}" target="_blank" style="font-size:.62rem;color:var(--te);text-decoration:none">💬 Notify</a>` : ''}
+        ${phone ? `<br/><a href="https://wa.me/27${phone.replace(/\D/g,'').slice(-9)}?text=${encodeURIComponent('Hi '+o.customer_name+'! Your Pulsefy order '+ref+' at '+BIZ.name+' is READY for pickup! 🎉')}" target="_blank" style="font-size:.62rem;color:var(--te);text-decoration:none">💬 Notify</a>` : ''}
       </td>
     </tr>`;
   }).join('');
@@ -1800,7 +1998,7 @@ function startOrderPoller() {
 }
 
 function requestNotifPermission() { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); }
-function sendBrowserNotif(msg) { if ('Notification' in window && Notification.permission === 'granted') new Notification('Pulsify Business', { body:msg }); }
+function sendBrowserNotif(msg) { if ('Notification' in window && Notification.permission === 'granted') new Notification('Pulsefy Business', { body:msg }); }
 
 // ════════════════════════════════════════════════════════════
 //  UTILS
@@ -1982,6 +2180,53 @@ function _bizPromoMsg(text, ok) {
   el.textContent = text;
 }
 
+function applyBizPromoTemplate(type) {
+  const templates = {
+    bnb:        { headline: 'Weekend Getaway — Special Rate', placement: 'both',              duration: '14' },
+    club:       { headline: 'Club Night — DJ Lineup This Weekend', placement: 'featured_weekend', duration: '7' },
+    shisanyama: { headline: 'Sunday Shisanyama — Food & Music',    placement: 'both',              duration: '7' },
+    custom:     { headline: '',                                    placement: 'feed_inject',       duration: '7' },
+  };
+  const t = templates[type] || templates.custom;
+  const titleEl = document.getElementById('biz-promo-title');
+  if (titleEl && !titleEl.value) titleEl.value = t.headline;
+  const placementEl = document.getElementById('biz-promo-placement');
+  if (placementEl) placementEl.value = t.placement;
+  const durationEl = document.getElementById('biz-promo-duration');
+  if (durationEl) durationEl.value = t.duration;
+  document.getElementById('biz-promo-title')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const msgEl = document.getElementById('promo-msg-biz');
+  if (msgEl) { msgEl.style.display = 'block'; msgEl.style.background = 'rgba(198,255,74,.1)'; msgEl.style.color = '#c6ff4a'; msgEl.textContent = '✅ Template applied — fill in any remaining details and submit.'; setTimeout(() => { msgEl.style.display = 'none'; }, 3000); }
+}
+
+function previewBizPromo() {
+  const bizSel = document.getElementById('biz-promo-bizsel');
+  const bizName = bizSel && bizSel.selectedIndex >= 0 ? bizSel.options[bizSel.selectedIndex].textContent : 'Your Business';
+  const placement = document.getElementById('biz-promo-placement')?.value || 'feed';
+  const cities = (document.getElementById('biz-promo-cities')?.value || 'All cities').trim();
+  const headline = (document.getElementById('biz-promo-headline')?.value || '').trim();
+  let card = document.getElementById('promo-preview-overlay');
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'promo-preview-overlay';
+    card.style.cssText = 'position:fixed;inset:0;z-index:5500;background:rgba(0,0,0,.82);backdrop-filter:blur(12px);display:flex;align-items:flex-end;justify-content:center';
+    card.onclick = (e) => { if (e.target === card) card.remove(); };
+    document.body.appendChild(card);
+  }
+  card.innerHTML = `<div style="width:100%;max-width:440px;background:#0D1424;border:1px solid rgba(255,255,255,.14);border-top-left-radius:20px;border-top-right-radius:20px;padding:18px 18px 24px;max-height:88vh;overflow-y:auto;color:#F0EEF8">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-family:'Syne',sans-serif;font-size:.9rem;font-weight:800">👁 Promotion Preview</div><button onclick="document.getElementById('promo-preview-overlay').remove()" style="background:none;border:none;color:#9997B0;font-size:1.2rem;cursor:pointer">✕</button></div>
+    <div style="font-size:.7rem;color:#9997B0;margin-bottom:12px">How your promo will appear in the ${placement === 'banner' ? 'banner carousel' : 'home feed'} for users in <strong style="color:#FF5C00">${cities}</strong></div>
+    <div style="background:linear-gradient(135deg,#1a0d2e,#0f0a1f);border:1px solid rgba(176,38,255,.3);border-radius:14px;padding:14px;position:relative;margin-bottom:14px">
+      <div style="position:absolute;top:8px;right:10px;background:#FF5C00;color:#fff;border-radius:50px;padding:2px 8px;font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;letter-spacing:.06em">⭐ FEATURED</div>
+      <div style="font-family:'Syne',sans-serif;font-size:.6rem;color:#FF5C00;letter-spacing:.1em;margin-bottom:6px;text-transform:uppercase">Featured Business</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#fff;line-height:1.1;margin-bottom:6px">${bizName}</div>
+      ${headline ? `<div style="font-size:.78rem;color:#9997B0;margin-bottom:8px">${headline}</div>` : ''}
+      <button style="background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;padding:7px 16px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700">View Spot →</button>
+    </div>
+    <button onclick="document.getElementById('promo-preview-overlay').remove()" style="width:100%;padding:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:#F0EEF8;border-radius:50px;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer">Close Preview</button>
+  </div>`;
+}
+
 async function submitBizPromo() {
   const title     = document.getElementById('biz-promo-title').value.trim();
   const city      = document.getElementById('biz-promo-city').value.trim();
@@ -2072,6 +2317,51 @@ async function deleteBizPromo(btn) {
   const r = await fetch('/api/promotions/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
   if (r.ok) loadBizPromoMine(token); else { btn.disabled = false; btn.textContent = 'Delete'; }
 }
+
+// ── Business Social Links ─────────────────────────────────────
+const _BIZ_SOCIALS = [
+  { key:'whatsapp',  label:'WhatsApp',  color:'#25D366', bg:'rgba(37,211,102,.12)',  border:'rgba(37,211,102,.3)',   ph:'+27123456789',      svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884z"/></svg>' },
+  { key:'instagram', label:'Instagram', color:'#E4405F', bg:'rgba(228,64,95,.1)',    border:'rgba(228,64,95,.3)',    ph:'@yourhandle',       svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>' },
+  { key:'tiktok',    label:'TikTok',    color:'#ffffff', bg:'rgba(255,255,255,.06)', border:'rgba(255,255,255,.15)', ph:'@yourhandle',       svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.27 8.27 0 004.84 1.55V6.79a4.85 4.85 0 01-1.07-.1z"/></svg>' },
+  { key:'facebook',  label:'Facebook',  color:'#1877F2', bg:'rgba(24,119,242,.1)',   border:'rgba(24,119,242,.3)',   ph:'Page name or URL',  svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>' },
+  { key:'x',         label:'X',         color:'#ffffff', bg:'rgba(255,255,255,.06)', border:'rgba(255,255,255,.15)', ph:'@yourhandle',       svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>' },
+];
+
+async function loadBizSocialLinks() {
+  const el = document.getElementById('biz-social-inputs');
+  if (!el) return;
+  const sb = getSB(); if (!sb) return;
+  let current = {};
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      const { data: prof } = await sb.from('profiles').select('social_links').eq('id', session.user.id).single();
+      current = prof?.social_links || {};
+    }
+  } catch(e) {}
+  el.innerHTML = _BIZ_SOCIALS.map(s => `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
+      <div style="width:34px;height:34px;border-radius:50%;background:${s.bg};border:1.5px solid ${s.border};display:flex;align-items:center;justify-content:center;color:${s.color};flex-shrink:0">${s.svg}</div>
+      <input id="bsl-${s.key}" class="inp" style="flex:1;margin:0" placeholder="${s.label}: ${s.ph}" value="${current[s.key]||''}"/>
+    </div>`).join('');
+}
+
+async function saveBizSocialLinks() {
+  const sb = getSB(); if (!sb) return;
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+  const links = {};
+  _BIZ_SOCIALS.forEach(s => { links[s.key] = (document.getElementById('bsl-'+s.key)?.value||'').trim(); });
+  const st = document.getElementById('biz-social-status');
+  try {
+    const r = await fetch('/api/profile/socials', {
+      method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+      body: JSON.stringify({ social_links: links })
+    });
+    if (r.ok) { toast('Social links saved!'); if (st) st.textContent=''; }
+    else { const d=await r.json(); if (st) st.textContent='❌ '+(d.error||'Save failed'); }
+  } catch(e) { if (st) st.textContent='❌ Error'; }
+}
 </script>
 
 <!-- QR SCANNER -->
@@ -2101,6 +2391,59 @@ async function deleteBizPromo(btn) {
     <div class="sheet-body" id="sn-list"></div>
   </div>
 </div>
+
+<!-- ── BUSINESS ONBOARDING ── -->
+<div id="ob-ov" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.82);backdrop-filter:blur(14px);align-items:flex-end;justify-content:center">
+  <div id="ob-card" style="width:100%;max-width:480px;background:#0D1424;border:1px solid rgba(255,255,255,.14);border-top-left-radius:24px;border-top-right-radius:24px;padding:18px 22px 28px;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);max-height:92vh;overflow-y:auto;color:#F0EEF8">
+    <div style="display:flex;justify-content:flex-end"><button onclick="obClose()" style="background:none;border:none;color:#9997B0;font-size:.75rem;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.06em">Skip</button></div>
+    <div id="ob-illust" style="margin:0 auto 14px;min-height:130px;display:flex;align-items:center;justify-content:center"></div>
+    <div id="ob-title" style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;text-align:center;margin-bottom:8px"></div>
+    <div id="ob-body" style="font-size:.84rem;color:#9997B0;text-align:center;line-height:1.6;margin-bottom:18px"></div>
+    <div id="ob-dots" style="display:flex;justify-content:center;gap:5px;margin-bottom:18px"></div>
+    <button id="ob-next" onclick="obNext()" style="width:100%;padding:14px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.92rem;font-weight:700;cursor:pointer">Next</button>
+  </div>
+</div>
+<script>
+const _obIll = {
+  welcome: `<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,#FF5C00,#FF2D78 60%,transparent);display:flex;align-items:center;justify-content:center;font-size:2.4rem">🏪</div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.06em">PULSIFY · BUSINESS</div></div>`,
+  profile: `<div style="width:240px;background:#090D1A;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px;text-align:center"><div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:1.7rem">🍽</div><div style="font-family:'Syne',sans-serif;font-size:.86rem;font-weight:800;margin-bottom:2px">Your Business</div><div style="font-size:.62rem;color:#9997B0;margin-bottom:6px">📍 Durban · Shisanyama</div><div style="display:flex;gap:5px;justify-content:center"><span style="padding:3px 8px;border-radius:50px;background:rgba(0,229,255,.12);color:#00E5FF;font-size:.58rem;font-family:'Syne',sans-serif;font-weight:700">⏰ Open now</span></div></div>`,
+  menu: `<div style="width:240px;background:#090D1A;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px"><div style="font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:#FF5C00;letter-spacing:.08em;margin-bottom:8px">MENU</div><div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)"><div style="font-size:1.4rem">🍖</div><div style="flex:1"><div style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700">Pap & Wors</div><div style="font-size:.6rem;color:#9997B0">Combo with chakalaka</div></div><div style="color:#C6FF4A;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:800">R65</div></div><div style="display:flex;gap:10px;align-items:center;padding:8px 0"><div style="font-size:1.4rem">🍺</div><div style="flex:1"><div style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700">Castle Lite (Q)</div></div><div style="color:#C6FF4A;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:800">R35</div></div></div>`,
+  order: `<div style="width:240px;background:#090D1A;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:#FF5C00;letter-spacing:.08em">ORDER #1247</div><span style="background:rgba(198,255,74,.12);border:1px solid rgba(198,255,74,.3);color:#C6FF4A;font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;padding:2px 7px;border-radius:50px;letter-spacing:.06em">📦 PICKUP</span></div><div style="font-size:.74rem;color:#F0EEF8;margin-bottom:4px">2× Pap & Wors, 1× Castle Lite</div><div style="font-size:.66rem;color:#9997B0;margin-bottom:10px">Lerato M. · 5min away</div><button style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;border-radius:50px;padding:8px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700">✓ Mark Ready</button></div>`,
+  promote: `<div style="width:240px;background:linear-gradient(135deg,#1a0d2e,#0f0a1f);border:1px solid rgba(176,38,255,.3);border-radius:14px;padding:14px;position:relative"><div style="position:absolute;top:8px;right:10px;background:#FF5C00;color:#fff;border-radius:50px;padding:2px 8px;font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;letter-spacing:.06em">⭐ FEATURED</div><div style="font-size:1.8rem;margin-bottom:6px">🚀</div><div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:800;margin-bottom:4px">Top of the Map</div><div style="font-size:.7rem;color:#9997B0;line-height:1.45">Premium businesses appear at the top of the map and home feed — way more visibility</div></div>`,
+};
+const OB_STEPS = [
+  { ill:'welcome', title:'Welcome, Business', body:'Your dashboard manages menu, orders, posts and promotions. Quick 60-second tour.' },
+  { ill:'profile', title:'Setup Your Profile', body:'Add photos, opening hours and contact details. This is what customers see on the map.' },
+  { ill:'menu',    title:'Add Menu Items',    body:'Build your menu with prices and photos. Customers can order via QR for pickup or table service.' },
+  { ill:'order',   title:'Manage Orders',     body:'Incoming orders appear in real-time. Mark ready when the food is prepped — customers get notified.' },
+  { ill:'promote', title:'Boost Visibility',  body:'Premium businesses (R499/mo) appear at the top of the map and home feed, with unlimited posts.' },
+];
+let _obIdx = 0;
+function startOnboardingBiz() {
+  if (localStorage.getItem('p_onboarded_business')) return;
+  _obIdx = 0;
+  const ov = document.getElementById('ob-ov'); if (!ov) return;
+  ov.style.display = 'flex';
+  requestAnimationFrame(() => { document.getElementById('ob-card').style.transform = 'translateY(0)'; });
+  _obRender();
+}
+function _obRender() {
+  const s = OB_STEPS[_obIdx];
+  document.getElementById('ob-illust').innerHTML = _obIll[s.ill] || '';
+  document.getElementById('ob-title').textContent = s.title;
+  document.getElementById('ob-body').textContent = s.body;
+  document.getElementById('ob-next').textContent = _obIdx === OB_STEPS.length - 1 ? "Let's Go!" : 'Next';
+  document.getElementById('ob-dots').innerHTML = OB_STEPS.map((_,i) => `<div style="width:${i===_obIdx?20:6}px;height:6px;border-radius:3px;background:${i===_obIdx?'#FF5C00':'rgba(255,255,255,.14)'};transition:all .25s"></div>`).join('');
+  const card = document.getElementById('ob-card'); if (card) card.scrollTop = 0;
+}
+function obNext() { _obIdx++; if (_obIdx >= OB_STEPS.length) { obClose(); return; } _obRender(); }
+function obClose() {
+  const card = document.getElementById('ob-card'); if (card) card.style.transform = 'translateY(100%)';
+  setTimeout(() => { const ov = document.getElementById('ob-ov'); if (ov) ov.style.display = 'none'; }, 350);
+  localStorage.setItem('p_onboarded_business', '1');
+}
+setTimeout(startOnboardingBiz, 1500);
+</script>
 
 </body>
 </html>
