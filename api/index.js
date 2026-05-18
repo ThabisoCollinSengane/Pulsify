@@ -618,11 +618,15 @@ module.exports = async (req, res) => {
 
       const userClient = sbAs(token);
 
+      // reactions PK is composite (user_id, entity_type, entity_id, type) — no `id` column
       const { data: existing } = await userClient.from('reactions')
-        .select('id').eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type).maybeSingle();
+        .select('created_at')
+        .eq('user_id', user.id).eq('entity_type', entity_type).eq('entity_id', String(entity_id)).eq('type', type)
+        .maybeSingle();
 
       if (existing) {
-        await userClient.from('reactions').delete().eq('id', existing.id);
+        await userClient.from('reactions').delete()
+          .eq('user_id', user.id).eq('entity_type', entity_type).eq('entity_id', String(entity_id)).eq('type', type);
         if (entity_type === 'post') {
           const { data: p } = await sb().from('posts').select('likes_count').eq('id', entity_id).single();
           await sb().from('posts').update({ likes_count: Math.max(0, (p?.likes_count || 1) - 1) }).eq('id', entity_id);
@@ -630,7 +634,7 @@ module.exports = async (req, res) => {
         return res.status(200).json({ liked: false });
       }
 
-      const { error: insErr } = await userClient.from('reactions').insert({ user_id: user.id, entity_type, entity_id, type });
+      const { error: insErr } = await userClient.from('reactions').insert({ user_id: user.id, entity_type, entity_id: String(entity_id), type });
       if (insErr) return res.status(400).json({ error: insErr.message });
 
       if (entity_type === 'post') {
@@ -662,13 +666,17 @@ module.exports = async (req, res) => {
       if (!entity_id) return res.status(400).json({ error: 'entity_id required' });
 
       const userClient = sbAs(token);
+      const { entity_type } = req.body || {};
 
       const { data: existing } = await userClient.from('reactions')
-        .select('id,entity_type').eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type).maybeSingle();
+        .select('entity_type')
+        .eq('user_id', user.id).eq('entity_id', String(entity_id)).eq('type', type)
+        .maybeSingle();
 
       if (!existing) return res.status(200).json({ liked: false });
 
-      await userClient.from('reactions').delete().eq('id', existing.id);
+      await userClient.from('reactions').delete()
+        .eq('user_id', user.id).eq('entity_type', existing.entity_type).eq('entity_id', String(entity_id)).eq('type', type);
       if (existing.entity_type === 'post') {
         const { data: p } = await sb().from('posts').select('likes_count').eq('id', entity_id).single();
         await sb().from('posts').update({ likes_count: Math.max(0, (p?.likes_count || 1) - 1) }).eq('id', entity_id);
@@ -1757,9 +1765,10 @@ module.exports = async (req, res) => {
       if (!inviteeId) return res.status(400).json({ error: 'user_id required' });
       const { data: membership } = await sb().from('squad_members').select('role').eq('squad_id', squadId).eq('user_id', auth.user.id).single();
       if (!membership) return res.status(403).json({ error: 'Not a squad member' });
-      // Inviting another user requires service role (RLS only lets users insert their own row).
-      // Falls back to anon if SVC key not set, in which case admin must enable invites manually.
-      const { error } = await sb().from('squad_members').insert({ squad_id: squadId, user_id: inviteeId, role: 'member' });
+      // Use user-scoped client so the smembers_admin_invite RLS policy can verify
+      // the caller is an admin via auth.uid(). sb() falls back to anon when the
+      // service env var is missing, which would make auth.uid() null and fail RLS.
+      const { error } = await sbAs(token).from('squad_members').insert({ squad_id: squadId, user_id: inviteeId, role: 'member' });
       if (error) return res.status(400).json({ error: error.message });
       const { data: squad } = await sb().from('squads').select('member_count').eq('id', squadId).single();
       await sb().from('squads').update({ member_count: (squad?.member_count || 1) + 1 }).eq('id', squadId);
