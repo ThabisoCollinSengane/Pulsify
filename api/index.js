@@ -149,6 +149,75 @@ module.exports = async (req, res) => {
       return res.status(200).json({ event: ev, tiers: tiers || [], photos: photos || [] });
     }
 
+    /* ─── POST /events ────────────────────────────────────── */
+    if (url === '/events' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const user = auth.user;
+
+      const { data: prof } = await sb().from('profiles').select('role,display_name,province,subscription_type').eq('id', user.id).single();
+      const role = prof?.role;
+      if (!['organizer', 'business', 'admin'].includes(role)) {
+        return res.status(403).json({ error: 'Only organizers, businesses or admins can create events' });
+      }
+
+      const {
+        name, date_local, time_local, venue_name, venue_city,
+        genre, description, price_min, price_max, image_url,
+        venue_address, venue_lat, venue_lon
+      } = req.body || {};
+
+      if (!name || !String(name).trim())           return res.status(400).json({ error: 'Event name required' });
+      if (!date_local)                              return res.status(400).json({ error: 'Date required' });
+      if (!venue_name || !String(venue_name).trim()) return res.status(400).json({ error: 'Venue required' });
+      if (!venue_city || !String(venue_city).trim()) return res.status(400).json({ error: 'City required' });
+
+      const price = parseFloat(price_min) || 0;
+      const eventId = (role === 'business' ? 'biz_' : 'org_') + user.id.slice(0, 8) + '_' + Date.now();
+      const isPremium = ['premium', 'trial'].includes(prof?.subscription_type);
+
+      const row = {
+        id: eventId,
+        name: String(name).trim(),
+        date_local,
+        time_local: time_local || null,
+        venue_name: String(venue_name).trim(),
+        venue_city: String(venue_city).trim(),
+        venue_address: venue_address || null,
+        venue_lat: venue_lat || null,
+        venue_lon: venue_lon || null,
+        venue_province: prof?.province || null,
+        genre: genre || 'other',
+        description: description || null,
+        price_min: price,
+        price_max: parseFloat(price_max) || price,
+        is_free: price === 0,
+        image_url: image_url || null,
+        organiser_name: prof?.display_name || user.email?.split('@')[0] || 'Organizer',
+        organiser_id: user.id,
+        is_active: true,
+        source: 'manual',
+        status: 'onsale',
+        approved: isPremium || role === 'admin',
+      };
+
+      const { data: event, error } = await sb().from('events').insert(row).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+
+      // Also create a feed post announcing the event
+      const caption = '🎟 ' + row.name + ' — ' + row.venue_name + ', ' + row.venue_city +
+        ' · ' + row.date_local + (row.is_free ? ' · FREE' : ' · R' + price) +
+        (row.description ? '\n' + row.description : '');
+      const postType = role === 'business' ? 'business_update' : 'organizer';
+      await sb().from('posts').insert({
+        user_id: user.id, caption, image_url: image_url || null,
+        event_id: eventId, event_name: row.name,
+        post_type: postType, visibility: 'public',
+      }).then(() => {}, () => {});
+
+      return res.status(201).json({ event, approved: row.approved });
+    }
+
     /* ─── GET /businesses ─────────────────────────────────── */
     if (url === '/businesses' && req.method === 'GET') {
       const show_all  = q.show_all === 'true';

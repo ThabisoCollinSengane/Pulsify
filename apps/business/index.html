@@ -1436,37 +1436,41 @@ async function submitEvent() {
   if (id) { const i = evs.findIndex(e => e.id === id); if (i >= 0) evs[i] = { ...evs[i], ...ev }; } else { evs.push(ev); }
   save('events', evs);
 
-  // Sync new events to Supabase so they appear on the landing page feed
+  // Sync new events to Supabase via API (uses service role to bypass RLS)
   if (!id) {
     const sb = getSB();
     if (sb) {
       try {
         const { data: { session } } = await sb.auth.getSession();
         if (session) {
-          await sb.from('events').insert({
-            id: ev.id, name,
-            date_local: date || null,
-            time_local: time || null,
-            venue_name: venue,
-            venue_city: city,
-            genre: genre || 'other',
-            description: desc || null,
-            price_min: price, price_max: price,
-            currency: 'ZAR',
-            image_url: imgUrl || null,
-            organiser_name: BIZ.name,
-            organiser_id: session.user.id,
-            is_active: true,
-            source: 'business',
-          });
-          await fetch('/api/posts', {
+          const r = await fetch('/api/events', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
             body: JSON.stringify({
-              caption: '🎉 ' + name + ' — ' + venue + (city ? ', ' + city : '') + (date ? ' · ' + date : '') + (price > 0 ? ' · R' + price : ' · FREE') + (desc ? '\n' + desc : ''),
-              event_id: ev.id, event_name: name, post_type: 'business_event',
+              name,
+              date_local: date || null,
+              time_local: time || null,
+              venue_name: venue,
+              venue_city: city,
+              genre: genre || 'other',
+              description: desc || null,
+              price_min: price, price_max: price,
+              image_url: imgUrl || null,
             }),
-          }).catch(() => {});
+          });
+          if (!r.ok) {
+            const errJson = await r.json().catch(() => ({}));
+            console.warn('[event sync]', errJson.error || r.statusText);
+            toast('Saved locally, sync failed: ' + (errJson.error || 'unknown'), 'err');
+          } else {
+            const { event } = await r.json().catch(() => ({}));
+            if (event?.id) {
+              const evs = load('events', []);
+              const i = evs.findIndex(e => e.id === ev.id);
+              if (i >= 0) evs[i].id = event.id;
+              save('events', evs);
+            }
+          }
         }
       } catch(e) { console.warn('[event sync]', e); }
     }
