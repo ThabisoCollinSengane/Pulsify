@@ -1,0 +1,25 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /signin
+Disallow: /create-account
+Disallow: /profile-settings
+Disallow: /user-profile
+Disallow: /reset-password
+Disallow: /admin
+Disallow: /business
+Disallow: /organizer
+Disallow: /leads
+Disallow: /diagnose
+
+# Google
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+
+# Bingbot
+User-agent: Bingbot
+Allow: /
+Disallow: /api/
+
+Sitemap: https://pulsefy.co.za/sitemap.xml

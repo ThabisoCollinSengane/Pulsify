@@ -8,10 +8,11 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
-<title>Organizer Dashboard — Pulsify</title>
+<title>Organizer Dashboard — Pulsefy</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0;--bh:70px}
@@ -95,16 +96,20 @@ select.inp option{background:#0D1424}
 .sn-title{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.03em}
 .sn-close{width:30px;height:30px;border-radius:50%;background:var(--surf);border:none;color:var(--tx);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .sn-body{overflow-y:auto;padding:0 18px 32px;flex:1}
+/* ── Pulsefy verified badge ── */
+.puls-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);box-shadow:0 0 8px rgba(255,92,0,.5);position:relative;vertical-align:middle;margin-left:5px;flex-shrink:0;cursor:default}
+.puls-badge::before{content:'';position:absolute;inset:-4px;border-radius:50%;background:linear-gradient(135deg,rgba(255,92,0,.35),rgba(255,45,120,.35));animation:puls-ring 2.2s ease-out infinite;z-index:-1}
+.puls-badge::after{content:'';width:7px;height:7px;border-radius:50%;background:#fff;opacity:.95}
+@keyframes puls-ring{0%{transform:scale(1);opacity:.5}70%{transform:scale(1.9);opacity:0}100%{transform:scale(1.9);opacity:0}}
 </style>
 </head>
 <body>
 
 <div class="tb">
-  <div class="logo"><span class="dot"></span>PULSIFY</div>
+  <div class="logo"><span class="dot"></span>PULSEFY</div>
   <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
     <div class="notif-badge" onclick="openSNPanel()" title="Notifications">🔔<span class="nd" id="sn-dot"></span></div>
     <span class="pill">🎪 Organizer</span>
-    <button onclick="doLogout()" title="Sign Out" style="background:rgba(255,45,120,.12);border:1.5px solid rgba(255,45,120,.3);border-radius:50px;padding:6px 14px;color:#FF2D78;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer;white-space:nowrap">🚪 Sign Out</button>
   </div>
 </div>
 
@@ -126,6 +131,7 @@ select.inp option{background:#0D1424}
     <div class="tab" onclick="switchTab(this,'pane-event')">🎟 Event</div>
     <div class="tab" onclick="switchTab(this,'pane-myposts')">📋 Posts</div>
     <div class="tab" onclick="switchTab(this,'pane-discover')">🌍 Discover</div>
+    <div class="tab" onclick="window.location.href='/feeds'" title="See what users are saying">📰 Feed</div>
     <div class="tab" onclick="switchTab(this,'pane-scan')">📷 Scan</div>
     <div class="tab" onclick="switchTab(this,'pane-promote')">🚀 Promote</div>
     <div class="tab" onclick="switchTab(this,'pane-settings')">⚙️ Settings</div>
@@ -153,12 +159,6 @@ select.inp option{background:#0D1424}
   <div class="pane" id="pane-event">
     <div class="card">
       <div class="card-body">
-        <div class="img-drop" id="ev-img-drop" onclick="document.getElementById('ev-img-file').click()">
-          <span style="font-size:1.8rem">🎟</span>
-          <span id="ev-img-hint" style="font-size:.78rem;color:var(--mu)">Tap to add event poster (recommended)</span>
-        </div>
-        <input type="file" id="ev-img-file" accept="image/*" style="display:none" onchange="previewEventImg(this)"/>
-
         <input class="inp" id="ev-name" placeholder="Event name *"/>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
           <div>
@@ -190,25 +190,7 @@ select.inp option{background:#0D1424}
           <option value="other">Other</option>
         </select>
         <textarea class="inp" id="ev-desc" placeholder="Event description (optional)" maxlength="500"></textarea>
-        <div style="display:flex;gap:8px;padding-bottom:8px">
-          <button class="btn-sec" style="flex:1" onclick="previewEvent()">👁 Preview</button>
-          <button class="btn-primary" id="ev-btn" style="flex:2" onclick="submitEvent()">Create Event 🎉</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- EVENT PREVIEW SHEET -->
-  <div class="sn-overlay" id="ev-preview-sheet" onclick="if(event.target===this)closeOrgSheet('ev-preview-sheet')">
-    <div class="sn-sheet" style="max-height:88vh">
-      <div class="sn-handle"></div>
-      <div class="sn-head"><div class="sn-title">Preview Event</div><button class="sn-close" onclick="closeOrgSheet('ev-preview-sheet')">✕</button></div>
-      <div class="sn-body" style="padding-bottom:24px">
-        <div id="ev-preview-body"></div>
-        <div style="display:flex;gap:8px;margin-top:14px">
-          <button class="btn-sec" style="flex:1" onclick="closeOrgSheet('ev-preview-sheet')">Edit</button>
-          <button class="btn-primary" style="flex:2" onclick="closeOrgSheet('ev-preview-sheet');submitEvent()">Create Event 🎉</button>
-        </div>
+        <button class="btn-primary" id="ev-btn" onclick="submitEvent()">Create Event 🎉</button>
       </div>
     </div>
   </div>
@@ -224,8 +206,33 @@ select.inp option{background:#0D1424}
     <div class="card">
       <div class="card-body">
         <div class="section-label">🚀 Promote Your Event</div>
-        <div style="font-size:.76rem;color:var(--mu);margin-bottom:14px;line-height:1.5">Your promotion will appear in the "Featured This Weekend" section or injected into the event feed. All promotions are reviewed before going live.</div>
+        <div style="font-size:.76rem;color:var(--mu);margin-bottom:14px;line-height:1.5">Boost your event across the Pulsefy feed and discovery sections. Pick a template to get started instantly, or fill in the form manually below. All promotions are reviewed before going live.</div>
 
+        <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Quick-Start Templates</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+          <div onclick="applyOrgPromoTemplate('event_boost')" style="background:var(--surf2);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer;active:opacity:.8">
+            <div style="font-size:1.5rem;margin-bottom:6px">🎤</div>
+            <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">Event Boost</div>
+            <div style="font-size:.66rem;color:var(--mu);margin-top:2px">Promote an existing event</div>
+          </div>
+          <div onclick="applyOrgPromoTemplate('weekend_special')" style="background:var(--surf2);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer">
+            <div style="font-size:1.5rem;margin-bottom:6px">🪩</div>
+            <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">Weekend Special</div>
+            <div style="font-size:.66rem;color:var(--mu);margin-top:2px">Friday/Saturday night event</div>
+          </div>
+          <div onclick="applyOrgPromoTemplate('new_event')" style="background:var(--surf2);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer">
+            <div style="font-size:1.5rem;margin-bottom:6px">🎉</div>
+            <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">New Event Launch</div>
+            <div style="font-size:.66rem;color:var(--mu);margin-top:2px">First-time announcement</div>
+          </div>
+          <div onclick="applyOrgPromoTemplate('custom')" style="background:var(--surf2);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer">
+            <div style="font-size:1.5rem;margin-bottom:6px">✨</div>
+            <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">Custom Promo</div>
+            <div style="font-size:.66rem;color:var(--mu);margin-top:2px">Build from scratch</div>
+          </div>
+        </div>
+
+        <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Your Details</div>
         <div id="promo-msg-org" style="display:none;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px"></div>
 
         <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Pick an event to promote</div>
@@ -252,7 +259,10 @@ select.inp option{background:#0D1424}
         <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Target cities <span style="color:var(--mu)">(leave blank = all cities)</span></div>
         <input class="inp" id="promo-cities" placeholder="e.g. Durban, Johannesburg" style="margin-bottom:10px"/>
 
-        <button class="btn-primary" id="promo-btn-org" onclick="submitOrgPromo()" style="width:100%">Submit for Review 🚀</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn-secondary" onclick="previewOrgPromo()" style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);color:var(--tx);padding:11px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer">👁 Preview</button>
+          <button class="btn-primary" id="promo-btn-org" onclick="submitOrgPromo()" style="flex:1.6">Submit for Review 🚀</button>
+        </div>
 
         <div style="margin-top:20px">
           <div class="section-label">Your Promotions</div>
@@ -266,7 +276,7 @@ select.inp option{background:#0D1424}
   <div class="pane" id="pane-discover">
     <div class="card">
       <div class="card-body">
-        <div class="section-label" style="margin-top:0">🌍 Upcoming events on Pulsify</div>
+        <div class="section-label" style="margin-top:0">🌍 Upcoming events on Pulsefy</div>
         <div style="font-size:.74rem;color:var(--mu);margin-bottom:12px;line-height:1.5">See what other organizers are running. Tap any event to view details and tickets on the public site.</div>
         <div id="discover-list"><div style="padding:30px 0;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div></div>
       </div>
@@ -293,6 +303,21 @@ select.inp option{background:#0D1424}
           <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Get a ✅ verified badge. Takes <strong>1–3 business days</strong> after submission.</div>
         </div>
 
+        <!-- Subscription -->
+        <div class="setting-card" id="org-sub-card">
+          <div class="setting-card-row">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="setting-card-icon" style="background:linear-gradient(135deg,rgba(176,38,255,.2),rgba(255,92,0,.15));border:1px solid rgba(176,38,255,.3)">💎</div>
+              <div>
+                <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Premium Plan</div>
+                <div id="org-sub-status" style="font-size:.68rem;color:var(--mu)">Loading…</div>
+              </div>
+            </div>
+            <button id="org-sub-btn" class="btn-sec" style="padding:6px 12px;font-size:.72rem" onclick="upgradeOrgToPremium()">Upgrade →</button>
+          </div>
+          <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">⭐ Auto-approve events · Priority visibility · Support — <strong>R299/month</strong></div>
+        </div>
+
         <!-- Payment Method -->
         <div class="setting-card">
           <div class="setting-card-row">
@@ -308,11 +333,19 @@ select.inp option{background:#0D1424}
           <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Add bank account to receive payouts from ticket sales.</div>
         </div>
 
+        <!-- Social Links -->
+        <div class="section-label" style="margin-top:4px">Social Links</div>
+        <div class="setting-card" id="org-social-card">
+          <div id="org-social-inputs"></div>
+          <button onclick="saveOrgSocialLinks()" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;margin-top:6px">Save Social Links</button>
+          <div id="org-social-status" style="font-size:.7rem;color:var(--mu);text-align:center;margin-top:6px"></div>
+        </div>
+
         <!-- FAQ -->
         <div class="section-label" style="margin-top:4px">FAQ & Support</div>
         <div id="faq-org"></div>
         <div style="margin-top:14px;text-align:center">
-          <a href="mailto:support@pulsify.co.za" style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;color:var(--or);text-decoration:none">✉️ Contact Support</a>
+          <a href="mailto:hello@pulsefy.co.za" style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;color:var(--or);text-decoration:none">✉️ Contact Support</a>
         </div>
         <div style="margin-top:16px;padding-bottom:24px;text-align:center">
           <button onclick="doLogout()" style="background:rgba(255,45,120,.1);border:1.5px solid rgba(255,45,120,.3);border-radius:50px;padding:10px 32px;color:#FF2D78;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;width:100%;max-width:260px">🚪 Sign Out</button>
@@ -340,11 +373,7 @@ select.inp option{background:#0D1424}
 </div>
 
 <nav class="bn">
-  <button class="bb" id="bn-feed" onclick="showOrgFeedView()">
-    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-    <span class="bl">Feed</span>
-  </button>
-  <button class="bb active" id="bn-dashboard" onclick="showOrgDashView()">
+  <button class="bb active">
     <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M16 7v-.5a3.5 3.5 0 00-7 0V7"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
     <span class="bl">Dashboard</span>
   </button>
@@ -353,17 +382,6 @@ select.inp option{background:#0D1424}
     <span class="bl">Profile</span>
   </button>
 </nav>
-
-<!-- INLINE FEED VIEW (shown when Feed nav button is tapped) -->
-<div id="org-feed-view" style="display:none;position:fixed;inset:0;top:58px;bottom:var(--bh);z-index:700;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);padding:12px 16px;scrollbar-width:none">
-  <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0 12px;-webkit-overflow-scrolling:touch">
-    <button id="pf-all" onclick="setOrgFeedFilter('all')" style="flex-shrink:0;padding:6px 14px;border-radius:50px;border:1px solid var(--or);background:rgba(255,92,0,.08);color:var(--or);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">✦ All</button>
-    <button id="pf-following" onclick="setOrgFeedFilter('following')" style="flex-shrink:0;padding:6px 14px;border-radius:50px;border:1px solid var(--border2);background:var(--surf);color:var(--tx);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">👥 Following</button>
-    <button id="pf-organizers" onclick="setOrgFeedFilter('organizers')" style="flex-shrink:0;padding:6px 14px;border-radius:50px;border:1px solid var(--border2);background:var(--surf);color:var(--tx);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">📢 Organizers</button>
-  </div>
-  <div id="org-feed-list"><div class="empty">Loading feed…</div></div>
-  <div id="org-feed-pagination" style="display:flex;gap:10px;justify-content:center;padding:16px 0 24px"></div>
-</div>
 
 <!-- ORG VERIFY SHEET -->
 <div class="sn-overlay" id="org-verify-sheet" onclick="if(event.target===this)closeOrgSheet('org-verify-sheet')">
@@ -408,6 +426,28 @@ select.inp option{background:#0D1424}
       </div>
       <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Address *</div>
       <input class="inp" id="ovf-address" style="width:100%;margin-bottom:10px" placeholder="Physical business address"/>
+      <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Face Scan (Selfie) *</div>
+      <div style="margin-bottom:14px">
+        <div id="ovf-cam-area" style="position:relative;border-radius:14px;overflow:hidden;background:#000;margin-bottom:8px;min-height:160px;display:flex;align-items:center;justify-content:center">
+          <video id="ovf-video" autoplay playsinline muted style="width:100%;display:block;border-radius:14px;display:none"></video>
+          <canvas id="ovf-canvas" style="display:none"></canvas>
+          <img id="ovf-preview" style="width:100%;border-radius:14px;display:none"/>
+          <div id="ovf-cam-placeholder" style="color:var(--mu);font-size:.78rem;padding:20px;text-align:center">📸 Take a selfie to confirm your identity</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button type="button" class="btn-sec" style="flex:1;padding:9px;font-size:.74rem" onclick="startOvfCam()">📷 Open Camera</button>
+          <button type="button" id="ovf-capture-btn" class="btn-primary" style="flex:1;padding:9px;font-size:.74rem;display:none" onclick="captureOvfFace()">✔ Capture</button>
+          <button type="button" id="ovf-retake-btn" class="btn-sec" style="flex:1;padding:9px;font-size:.74rem;display:none" onclick="retakeOvfFace()">🔄 Retake</button>
+        </div>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">SA ID Document (photo or scan) *</div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;border:2px dashed var(--border);border-radius:12px;padding:16px;text-align:center;cursor:pointer;font-size:.76rem;color:var(--mu)">
+          <span id="ovf-id-doc-label">📄 Tap to upload ID document (JPG, PNG or PDF)</span>
+          <input type="file" id="ovf-id-doc" accept="image/*,application/pdf" style="display:none" onchange="previewOvfIdDoc(event)"/>
+        </label>
+        <img id="ovf-id-doc-preview" style="display:none;width:100%;border-radius:10px;margin-top:8px;max-height:160px;object-fit:contain"/>
+      </div>
       <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">About Your Events *</div>
       <textarea class="inp" id="ovf-desc" style="width:100%;min-height:80px;margin-bottom:14px;resize:vertical" placeholder="What kind of events do you organise?"></textarea>
       <button class="btn-primary" style="width:100%" onclick="submitOrgVerification()">Submit for Verification 🏆</button>
@@ -549,16 +589,65 @@ function setOrgRegistered(val) {
 // ── Org Verification ─────────────────────────────────────────
 function showOrgMsg(id, text, type) { const el = document.getElementById(id); if (!el) return; el.textContent = text; el.className = 'msg show msg-' + type; }
 
-function loadOrgSettingsStatus() {
+let _paystackPK = '';
+fetch('/api/config').then(r => r.json()).then(d => { _paystackPK = d.paystackPublicKey || ''; }).catch(() => {});
+
+async function upgradeOrgToPremium() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { toast('Please sign in first', 'err'); return; }
+  const handler = PaystackPop.setup({
+    key:      _paystackPK,
+    email:    session.user.email,
+    amount:   29900, // R299 in cents
+    currency: 'ZAR',
+    ref:      'ORG_SUB_' + Date.now(),
+    metadata: { user_id: session.user.id, type: 'subscription_organizer', display_name: currentProfile?.display_name || '' },
+    label:    'Organizer Premium Plan',
+    callback: async function(res) {
+      const btn = document.getElementById('org-sub-btn');
+      if (btn) { btn.textContent = 'Verifying…'; btn.disabled = true; }
+      try {
+        const r = await fetch(`/api/payments/verify?ref=${res.reference}`, { headers: { Authorization: 'Bearer ' + session.access_token } });
+        const d = await r.json();
+        if (d.success) { toast('🎉 Premium activated!', 'ok'); loadOrgSettingsStatus(); }
+        else { toast('Payment verification failed — contact support', 'err'); }
+      } catch(e) { toast('Verification error — contact support', 'err'); }
+    },
+    onClose: function() { toast('Payment cancelled'); },
+  });
+  handler.openIframe();
+}
+
+async function loadOrgSettingsStatus() {
   try {
-    const verif = JSON.parse(localStorage.getItem('org_verif') || '{}');
-    if (verif.status) {
-      const labels = { pending: '⏳ Pending review', approved: '✅ Verified', rejected: '❌ Not approved' };
-      const el = document.getElementById('org-verif-status');
-      if (el) el.textContent = labels[verif.status] || 'Not verified';
-      const btn = document.getElementById('org-verif-btn');
-      if (btn && verif.status !== 'rejected') { btn.textContent = verif.status === 'approved' ? '✅ Verified' : '⏳ Pending'; btn.disabled = true; }
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      const { data: prof } = await sb.from('profiles').select('verif_status,is_verified,subscription_type').eq('id', session.user.id).single();
+      if (prof) {
+        const labels = { pending: '⏳ Pending review', approved: '✅ Verified', rejected: '❌ Not approved — reapply' };
+        const el = document.getElementById('org-verif-status');
+        if (el) el.textContent = labels[prof.verif_status] || 'Not verified';
+        const btn = document.getElementById('org-verif-btn');
+        if (btn) {
+          if (prof.is_verified)                  { btn.textContent = '✅ Verified'; btn.disabled = true; }
+          else if (prof.verif_status === 'pending') { btn.textContent = '⏳ Pending'; btn.disabled = true; }
+          else if (prof.verif_status === 'rejected') { btn.textContent = 'Reapply →'; btn.disabled = false; }
+        }
+        // Update subscription card
+        const subType = prof.subscription_type || 'free';
+        const subEl  = document.getElementById('org-sub-status');
+        const subBtn = document.getElementById('org-sub-btn');
+        if (subEl) subEl.textContent = subType === 'premium' ? '💎 Premium — active' : subType === 'trial' ? '⏳ Trial plan' : 'Free plan';
+        if (subBtn) { if (subType === 'premium') { subBtn.textContent = '✅ Active'; subBtn.disabled = true; } else { subBtn.textContent = 'Upgrade →'; subBtn.disabled = false; } }
+
+        // Also update localStorage so offline reads are consistent
+        const local = JSON.parse(localStorage.getItem('org_verif') || '{}');
+        localStorage.setItem('org_verif', JSON.stringify({ ...local, status: prof.verif_status }));
+      }
     }
+  } catch(e) { console.warn('[verif status]', e); }
+  // Payment status (still from localStorage)
+  try {
     const pm = JSON.parse(localStorage.getItem('org_payment') || '{}');
     if (pm.bank) {
       const el = document.getElementById('org-payment-status');
@@ -567,6 +656,69 @@ function loadOrgSettingsStatus() {
       if (btn) btn.textContent = 'Edit →';
     }
   } catch(e) {}
+}
+
+// ── Org Verification — face scan + ID doc ────────────────────
+let _ovfFaceScanBlob = null;
+let _ovfIdDocFile    = null;
+let _ovfStream       = null;
+
+async function startOvfCam() {
+  try {
+    _ovfStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+    const vid = document.getElementById('ovf-video');
+    vid.srcObject = _ovfStream;
+    vid.style.display = 'block';
+    document.getElementById('ovf-cam-placeholder').style.display = 'none';
+    document.getElementById('ovf-preview').style.display = 'none';
+    document.getElementById('ovf-capture-btn').style.display = 'block';
+    document.getElementById('ovf-retake-btn').style.display = 'none';
+  } catch(e) { toast('Camera not available: ' + e.message, 'err'); }
+}
+
+function captureOvfFace() {
+  const vid = document.getElementById('ovf-video');
+  const canvas = document.getElementById('ovf-canvas');
+  canvas.width = vid.videoWidth || 640;
+  canvas.height = vid.videoHeight || 480;
+  canvas.getContext('2d').drawImage(vid, 0, 0);
+  canvas.toBlob(blob => {
+    _ovfFaceScanBlob = blob;
+    const prev = document.getElementById('ovf-preview');
+    prev.src = URL.createObjectURL(blob);
+    prev.style.display = 'block';
+    vid.style.display = 'none';
+    document.getElementById('ovf-capture-btn').style.display = 'none';
+    document.getElementById('ovf-retake-btn').style.display = 'block';
+    if (_ovfStream) _ovfStream.getTracks().forEach(t => t.stop());
+  }, 'image/jpeg', 0.8);
+}
+
+function retakeOvfFace() {
+  _ovfFaceScanBlob = null;
+  document.getElementById('ovf-preview').style.display = 'none';
+  document.getElementById('ovf-retake-btn').style.display = 'none';
+  startOvfCam();
+}
+
+function previewOvfIdDoc(e) {
+  _ovfIdDocFile = e.target.files[0];
+  if (!_ovfIdDocFile) return;
+  document.getElementById('ovf-id-doc-label').textContent = '✅ ' + _ovfIdDocFile.name;
+  if (_ovfIdDocFile.type.startsWith('image/')) {
+    const prev = document.getElementById('ovf-id-doc-preview');
+    prev.src = URL.createObjectURL(_ovfIdDocFile);
+    prev.style.display = 'block';
+  }
+}
+
+async function uploadVerifDoc(file, folder, uid) {
+  const ext  = file.name.split('.').pop() || 'jpg';
+  const path = `${uid}/${folder}_${Date.now()}.${ext}`;
+  const { data, error } = await sb.storage.from('verification-docs').upload(path, file, { upsert: true });
+  if (error) throw error;
+  const { data: { publicUrl } } = sb.storage.from('verification-docs').getPublicUrl(path);
+  return publicUrl;
 }
 
 async function submitOrgVerification() {
@@ -578,29 +730,51 @@ async function submitOrgVerification() {
   if (!contact || !idNum || !phone || !address || !desc) {
     showOrgMsg('org-verif-msg', 'Please fill in all required fields.', 'err'); return;
   }
-  const payload = {
-    is_registered: _orgIsRegistered,
-    company: _orgIsRegistered ? document.getElementById('ovf-company').value.trim() : '',
-    reg_num: _orgIsRegistered ? document.getElementById('ovf-reg').value.trim() : '',
-    entity:  _orgIsRegistered ? document.getElementById('ovf-entity').value : '',
-    contact, id_number: idNum, phone, address, description: desc,
-    business_name: currentProfile?.display_name || '',
-    submitted_at: new Date().toISOString(),
-  };
+  if (!_ovfFaceScanBlob) {
+    showOrgMsg('org-verif-msg', 'Please take a selfie photo first.', 'err'); return;
+  }
+  if (!_ovfIdDocFile) {
+    showOrgMsg('org-verif-msg', 'Please upload your ID document.', 'err'); return;
+  }
+  showOrgMsg('org-verif-msg', '⏳ Uploading documents…', 'ok');
   try {
     const { data: { session } } = await sb.auth.getSession();
-    if (session) {
-      await fetch('/api/verify-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-        body: JSON.stringify(payload),
-      });
-    }
-  } catch(e) { console.warn('[verif]', e); }
-  localStorage.setItem('org_verif', JSON.stringify({ status: 'pending', ...payload }));
-  showOrgMsg('org-verif-msg', '✅ Submitted! We\'ll review within 1–3 business days.', 'ok');
-  loadOrgSettingsStatus();
-  setTimeout(() => closeOrgSheet('org-verify-sheet'), 2200);
+    if (!session) { showOrgMsg('org-verif-msg', 'Please sign in first.', 'err'); return; }
+    const uid = session.user.id;
+    // Upload face scan
+    const facePath = `${uid}/face_${Date.now()}.jpg`;
+    await sb.storage.from('verification-docs').upload(facePath, _ovfFaceScanBlob, { contentType: 'image/jpeg', upsert: true });
+    const { data: { publicUrl: faceScanUrl } } = sb.storage.from('verification-docs').getPublicUrl(facePath);
+    // Upload ID doc
+    const ext = (_ovfIdDocFile.name.split('.').pop() || 'jpg').toLowerCase();
+    const idPath = `${uid}/id_doc_${Date.now()}.${ext}`;
+    await sb.storage.from('verification-docs').upload(idPath, _ovfIdDocFile, { upsert: true });
+    const { data: { publicUrl: idDocUrl } } = sb.storage.from('verification-docs').getPublicUrl(idPath);
+
+    const payload = {
+      is_registered: _orgIsRegistered,
+      company: _orgIsRegistered ? document.getElementById('ovf-company').value.trim() : '',
+      reg_num: _orgIsRegistered ? document.getElementById('ovf-reg').value.trim() : '',
+      entity:  _orgIsRegistered ? document.getElementById('ovf-entity').value : '',
+      contact, id_number: idNum, phone, address, description: desc,
+      business_name: currentProfile?.display_name || '',
+      face_scan_url: faceScanUrl,
+      id_doc_url:    idDocUrl,
+      submitted_at: new Date().toISOString(),
+    };
+
+    await fetch('/api/verify-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify(payload),
+    });
+    localStorage.setItem('org_verif', JSON.stringify({ status: 'pending', ...payload }));
+    showOrgMsg('org-verif-msg', '✅ Submitted! We\'ll review within 1–3 business days.', 'ok');
+    loadOrgSettingsStatus();
+    setTimeout(() => closeOrgSheet('org-verify-sheet'), 2400);
+  } catch(e) {
+    showOrgMsg('org-verif-msg', 'Upload failed: ' + e.message, 'err');
+  }
 }
 
 function submitOrgPayment() {
@@ -658,10 +832,10 @@ function showOrgSubBanner(profile) {
 
   if (subType === 'trial' && daysLeft !== null && daysLeft > 0 && daysLeft <= 7) {
     banner.style.cssText = 'display:block;margin:0 0 14px;padding:12px 16px;border-radius:14px;font-size:.78rem;line-height:1.5;background:rgba(255,184,0,.1);border:1px solid rgba(255,184,0,.3);color:#FFB800';
-    banner.innerHTML = `⏰ <strong>Trial expires in ${daysLeft} day${daysLeft===1?'':'s'}</strong> — events will require admin approval after expiry. <a href="mailto:support@pulsify.co.za" style="color:#FFB800;font-weight:700">Upgrade →</a>`;
+    banner.innerHTML = `⏰ <strong>Trial expires in ${daysLeft} day${daysLeft===1?'':'s'}</strong> — events will require admin approval after expiry. <a href="mailto:hello@pulsefy.co.za" style="color:#FFB800;font-weight:700">Upgrade →</a>`;
   } else if (subType === 'trial' && daysLeft !== null && daysLeft <= 0) {
     banner.style.cssText = 'display:block;margin:0 0 14px;padding:12px 16px;border-radius:14px;font-size:.78rem;line-height:1.5;background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);color:#FF2D78';
-    banner.innerHTML = `🚫 <strong>Your trial has expired.</strong> New events require admin approval. <a href="mailto:support@pulsify.co.za" style="color:#FF2D78;font-weight:700">Upgrade to Premium →</a>`;
+    banner.innerHTML = `🚫 <strong>Your trial has expired.</strong> New events require admin approval. <a href="mailto:hello@pulsefy.co.za" style="color:#FF2D78;font-weight:700">Upgrade to Premium →</a>`;
   } else if (subType === 'premium') {
     banner.style.cssText = 'display:block;margin:0 0 14px;padding:12px 16px;border-radius:14px;font-size:.78rem;line-height:1.5;background:rgba(176,38,255,.08);border:1px solid rgba(176,38,255,.2);color:#B026FF';
     banner.innerHTML = `💎 <strong>Premium organizer.</strong> Your events go live instantly without admin approval.`;
@@ -848,65 +1022,6 @@ async function submitPost() {
   btn.disabled = false; btn.textContent = 'Publish 🚀';
 }
 
-let _evImgFile = null;
-
-function previewEventImg(input) {
-  const f = (input.files || [])[0];
-  if (!f) return;
-  _evImgFile = f;
-  const drop = document.getElementById('ev-img-drop');
-  const reader = new FileReader();
-  reader.onload = e => { drop.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:10px"/>`; };
-  reader.readAsDataURL(f);
-  const hint = document.getElementById('ev-img-hint');
-  if (hint) hint.textContent = 'Poster ready';
-}
-
-function previewEvent() {
-  const name  = document.getElementById('ev-name').value.trim();
-  const date  = document.getElementById('ev-date').value;
-  const time  = document.getElementById('ev-time').value;
-  const venue = document.getElementById('ev-venue').value.trim();
-  const city  = document.getElementById('ev-city').value.trim();
-  const price = parseFloat(document.getElementById('ev-price').value) || 0;
-  const genre = document.getElementById('ev-genre').value;
-  const desc  = document.getElementById('ev-desc').value.trim();
-
-  if (!name)  return toast('Enter an event name first', 'err');
-  if (!date)  return toast('Select a date first', 'err');
-  if (!venue) return toast('Enter a venue first', 'err');
-  if (!city)  return toast('Enter a city first', 'err');
-
-  const xe = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  const d = date ? new Date(date) : null;
-  const dateStr = d ? d.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'}) : '';
-  const priceStr = price > 0 ? 'R' + price : 'FREE';
-  const orgName = currentProfile?.display_name || currentUser?.email?.split('@')[0] || 'Organizer';
-  const imgHtml = _evImgFile
-    ? `<img id="ev-prev-img" style="width:100%;height:200px;object-fit:cover;display:block"/>`
-    : `<div style="width:100%;height:200px;background:linear-gradient(135deg,rgba(176,38,255,.18),rgba(255,92,0,.14));display:flex;align-items:center;justify-content:center;font-size:3rem">🎟</div>`;
-
-  document.getElementById('ev-preview-body').innerHTML = `
-    <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;overflow:hidden">
-      ${imgHtml}
-      <div style="padding:14px">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;line-height:1.1;margin-bottom:4px">${xe(name)}</div>
-        <div style="font-size:.72rem;color:var(--mu);margin-bottom:8px">by ${xe(orgName)}</div>
-        <div style="font-size:.78rem;color:var(--mu2);margin-bottom:4px">📅 ${xe(dateStr)}${time ? ' · ' + xe(time) : ''}</div>
-        <div style="font-size:.78rem;color:var(--mu2);margin-bottom:4px">📍 ${xe(venue)}, ${xe(city)}</div>
-        ${genre ? `<div style="font-size:.72rem;color:var(--mu);margin-bottom:8px">${xe(genre)}</div>` : ''}
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:${price>0?'var(--or)':'var(--li)'};margin:8px 0">${xe(priceStr)}</div>
-        ${desc ? `<div style="font-size:.82rem;color:var(--mu2);line-height:1.5;margin-top:8px;padding-top:10px;border-top:1px solid var(--border)">${xe(desc)}</div>` : ''}
-      </div>
-    </div>`;
-  document.getElementById('ev-preview-sheet').classList.add('open');
-  if (_evImgFile) {
-    const reader = new FileReader();
-    reader.onload = e => { const el = document.getElementById('ev-prev-img'); if (el) el.src = e.target.result; };
-    reader.readAsDataURL(_evImgFile);
-  }
-}
-
 async function submitEvent() {
   const name  = document.getElementById('ev-name').value.trim();
   const date  = document.getElementById('ev-date').value;
@@ -926,33 +1041,49 @@ async function submitEvent() {
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Creating…';
 
   try {
-    let imageUrl = null;
-    if (_evImgFile) {
-      const ext  = _evImgFile.name.split('.').pop() || 'jpg';
-      const path = currentUser.id + '/events/' + Date.now() + '_' + Math.random().toString(36).slice(2,7) + '.' + ext;
-      const { error: upErr } = await sb.storage.from('post-images').upload(path, _evImgFile, { upsert: false });
-      if (!upErr) {
-        const { data: { publicUrl } } = sb.storage.from('post-images').getPublicUrl(path);
-        imageUrl = publicUrl;
-      }
+    const eventId = 'org_' + currentUser.id.slice(0,8) + '_' + Date.now();
+
+    const { error } = await sb.from('events').insert({
+      id: eventId,
+      name,
+      date_local: date,
+      time_local: time || null,
+      venue_name: venue,
+      venue_city: city,
+      venue_province: currentProfile.province || null,
+      genre: genre || 'other',
+      description: desc || null,
+      price_min: price,
+      price_max: price,
+      is_free: price === 0,
+      organiser_name: currentProfile.display_name || currentUser.email?.split('@')[0],
+      organiser_id: currentUser.id,
+      is_active: true,
+      source: 'organizer',
+      approved: currentProfile?.subscription_type === 'premium' || currentProfile?.subscription_type === 'trial',
+    });
+    if (error) throw new Error(error.message);
+
+    if (price > 0) {
+      await sb.from('ticket_tiers').insert({
+        event_id: eventId, name: 'General Admission',
+        price, is_free: false, sort_order: 0
+      }).catch(() => {});
     }
 
-    const res = await fetch('/api/events', {
+    await fetch('/api/posts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token },
       body: JSON.stringify({
-        name, date_local: date, time_local: time || null,
-        venue_name: venue, venue_city: city,
-        genre: genre || 'other', description: desc || null,
-        price_min: price, price_max: price,
-        image_url: imageUrl,
-      }),
-    });
-    const _txt = await res.text();
-    let data = {}; try { data = JSON.parse(_txt); } catch(e) {}
-    if (!res.ok) throw new Error(data.error || 'Event creation failed');
+        caption: '🎟 ' + name + ' — ' + venue + ', ' + city + ' · ' + date + (price > 0 ? ' · R' + price : ' · FREE') + (desc ? '\n'+desc : ''),
+        event_id: eventId,
+        event_name: name,
+        post_type: 'organizer'
+      })
+    }).catch(() => {});
 
-    toast(data.approved ? '🎉 Event published to feed!' : '🎉 Event submitted — pending admin approval', 'ok');
+    const isPremium = currentProfile?.subscription_type === 'premium' || currentProfile?.subscription_type === 'trial';
+    toast(isPremium ? '🎉 Event created and posted to feed!' : '🎉 Event submitted — pending admin approval before it goes live.', 'ok');
     document.getElementById('ev-name').value = '';
     document.getElementById('ev-date').value = '';
     document.getElementById('ev-time').value = '';
@@ -961,14 +1092,7 @@ async function submitEvent() {
     document.getElementById('ev-price').value = '';
     document.getElementById('ev-genre').value = '';
     document.getElementById('ev-desc').value = '';
-    _evImgFile = null;
-    const drop = document.getElementById('ev-img-drop');
-    if (drop) drop.innerHTML = '<span style="font-size:1.8rem">🎟</span><span id="ev-img-hint" style="font-size:.78rem;color:var(--mu)">Tap to add event poster (recommended)</span>';
     document.getElementById('stat-events').textContent = parseInt(document.getElementById('stat-events').textContent||0)+1;
-
-    // Switch to "Posts" tab so the user sees their new event listing
-    const postsTab = document.querySelector('.tab[onclick*="pane-myposts"]');
-    if (postsTab) switchTab(postsTab, 'pane-myposts');
   } catch(e) {
     toast('Error: ' + e.message, 'err');
   }
@@ -1199,6 +1323,24 @@ function closeOrgQrScanner() {
 /* ══════════════════════════════════════════════════
    PROMOTIONS — ORGANIZER
 ══════════════════════════════════════════════════ */
+function applyOrgPromoTemplate(type) {
+  const placementEl = document.getElementById('promo-placement');
+  const durationEl  = document.getElementById('promo-duration');
+  if (type === 'event_boost' || type === 'new_event') {
+    if (placementEl) placementEl.value = 'both';
+    if (durationEl)  durationEl.value  = '7';
+  } else if (type === 'weekend_special') {
+    if (placementEl) placementEl.value = 'featured_weekend';
+    if (durationEl)  durationEl.value  = '7';
+  } else {
+    if (placementEl) placementEl.value = 'feed_inject';
+    if (durationEl)  durationEl.value  = '14';
+  }
+  document.getElementById('promo-event-sel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const msg = document.getElementById('promo-msg-org');
+  if (msg) { msg.style.display = 'block'; msg.style.background = 'rgba(198,255,74,.1)'; msg.style.color = '#c6ff4a'; msg.textContent = '✅ Template applied — select your event and submit.'; setTimeout(() => { msg.style.display = 'none'; }, 3000); }
+}
+
 async function loadOrgPromoEvents() {
   const sel = document.getElementById('promo-event-sel');
   if (!sel || sel.options.length > 1) return;
@@ -1232,6 +1374,35 @@ function _promoMsg(el, text, ok) {
   el.style.cssText = 'display:block;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px;background:' +
     (ok ? 'rgba(198,255,74,.1);color:#C6FF4A' : 'rgba(255,45,120,.12);color:#FF2D78');
   el.textContent = text;
+}
+
+function previewOrgPromo() {
+  const sel = document.getElementById('promo-event-sel');
+  const evId = sel ? sel.value : '';
+  const evOpt = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+  const evName = evOpt ? evOpt.textContent : 'Your Event';
+  const placement = document.getElementById('promo-placement')?.value || 'feed';
+  const cities = (document.getElementById('promo-cities')?.value || 'All cities').trim();
+  if (!evId) { toast('Pick an event to preview', 'err'); return; }
+  let card = document.getElementById('promo-preview-overlay');
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'promo-preview-overlay';
+    card.style.cssText = 'position:fixed;inset:0;z-index:5500;background:rgba(0,0,0,.82);backdrop-filter:blur(12px);display:flex;align-items:flex-end;justify-content:center';
+    card.onclick = (e) => { if (e.target === card) card.remove(); };
+    document.body.appendChild(card);
+  }
+  card.innerHTML = `<div style="width:100%;max-width:440px;background:#0D1424;border:1px solid rgba(255,255,255,.14);border-top-left-radius:20px;border-top-right-radius:20px;padding:18px 18px 24px;max-height:88vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-family:'Syne',sans-serif;font-size:.9rem;font-weight:800">👁 Promotion Preview</div><button onclick="document.getElementById('promo-preview-overlay').remove()" style="background:none;border:none;color:#9997B0;font-size:1.2rem;cursor:pointer">✕</button></div>
+    <div style="font-size:.7rem;color:#9997B0;margin-bottom:12px">This is how your promo will appear in the ${placement === 'feed' ? 'home feed' : placement === 'banner' ? 'banner carousel' : 'feed and banner'} for users in <strong style="color:#FF5C00">${cities}</strong></div>
+    <div style="background:linear-gradient(135deg,#1a0d2e,#0f0a1f);border:1px solid rgba(176,38,255,.3);border-radius:14px;padding:14px;position:relative;margin-bottom:14px">
+      <div style="position:absolute;top:8px;right:10px;background:#FF5C00;color:#fff;border-radius:50px;padding:2px 8px;font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;letter-spacing:.06em">🚀 BOOSTED</div>
+      <div style="font-family:'Syne',sans-serif;font-size:.6rem;color:#FF5C00;letter-spacing:.1em;margin-bottom:6px;text-transform:uppercase">Featured Event</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#fff;line-height:1.1;margin-bottom:8px">${evName.split(' — ')[0] || evName}</div>
+      <button style="background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;padding:7px 16px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700">Get Tickets →</button>
+    </div>
+    <button onclick="document.getElementById('promo-preview-overlay').remove()" style="width:100%;padding:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:#F0EEF8;border-radius:50px;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer">Close Preview</button>
+  </div>`;
 }
 
 async function submitOrgPromo() {
@@ -1301,119 +1472,54 @@ async function deleteOrgPromo(id, btn) {
   if (r.ok) loadMyOrgPromos(); else { btn.disabled = false; btn.textContent = 'Delete'; }
 }
 
+// ── Organizer Social Links ─────────────────────────────────────
+const _ORG_SOCIALS = [
+  { key:'whatsapp',  label:'WhatsApp',  color:'#25D366', bg:'rgba(37,211,102,.12)',  border:'rgba(37,211,102,.3)',   ph:'+27123456789',      svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884z"/></svg>' },
+  { key:'instagram', label:'Instagram', color:'#E4405F', bg:'rgba(228,64,95,.1)',    border:'rgba(228,64,95,.3)',    ph:'@yourhandle',       svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>' },
+  { key:'tiktok',    label:'TikTok',    color:'#ffffff', bg:'rgba(255,255,255,.06)', border:'rgba(255,255,255,.15)', ph:'@yourhandle',       svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.27 8.27 0 004.84 1.55V6.79a4.85 4.85 0 01-1.07-.1z"/></svg>' },
+  { key:'facebook',  label:'Facebook',  color:'#1877F2', bg:'rgba(24,119,242,.1)',   border:'rgba(24,119,242,.3)',   ph:'Page name or URL',  svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>' },
+  { key:'x',         label:'X',         color:'#ffffff', bg:'rgba(255,255,255,.06)', border:'rgba(255,255,255,.15)', ph:'@yourhandle',       svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>' },
+];
+
+async function loadOrgSocialLinks() {
+  const el = document.getElementById('org-social-inputs');
+  if (!el) return;
+  let current = {};
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      const { data: prof } = await sb.from('profiles').select('social_links').eq('id', session.user.id).single();
+      current = prof?.social_links || {};
+    }
+  } catch(e) {}
+  el.innerHTML = _ORG_SOCIALS.map(s => `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
+      <div style="width:34px;height:34px;border-radius:50%;background:${s.bg};border:1.5px solid ${s.border};display:flex;align-items:center;justify-content:center;color:${s.color};flex-shrink:0">${s.svg}</div>
+      <input id="osl-${s.key}" class="inp" style="flex:1;margin:0" placeholder="${s.label}: ${s.ph}" value="${current[s.key]||''}"/>
+    </div>`).join('');
+}
+
+async function saveOrgSocialLinks() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+  const links = {};
+  _ORG_SOCIALS.forEach(s => { links[s.key] = (document.getElementById('osl-'+s.key)?.value||'').trim(); });
+  const st = document.getElementById('org-social-status');
+  try {
+    const r = await fetch('/api/profile/socials', {
+      method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+      body: JSON.stringify({ social_links: links })
+    });
+    if (r.ok) { toast('Social links saved!', 'ok'); if (st) st.textContent=''; }
+    else { const d=await r.json(); if (st) st.textContent='❌ '+(d.error||'Save failed'); }
+  } catch(e) { if (st) st.textContent='❌ Error'; }
+}
+
 renderOrgFAQ();
 loadOrgSettingsStatus();
+loadOrgSocialLinks();
 history.replaceState({ pane: 'pane-post' }, '');
 init().then(() => initNotifBell());
-
-// ═══════════ INLINE FEED VIEW ═══════════
-let _orgFeedFilter = 'all', _orgFeedPage = 1, _orgFeedLoading = false, _orgFeedInitialized = false;
-
-function showOrgFeedView() {
-  document.getElementById('org-feed-view').style.display = 'block';
-  document.querySelectorAll('.bb').forEach(b => b.classList.remove('active'));
-  document.getElementById('bn-feed').classList.add('active');
-  if (!_orgFeedInitialized) { _orgFeedInitialized = true; loadOrgFeed(); }
-}
-
-function showOrgDashView() {
-  document.getElementById('org-feed-view').style.display = 'none';
-  document.querySelectorAll('.bb').forEach(b => b.classList.remove('active'));
-  document.getElementById('bn-dashboard').classList.add('active');
-}
-
-function setOrgFeedFilter(f) {
-  _orgFeedFilter = f; _orgFeedPage = 1;
-  ['all','following','organizers'].forEach(id => {
-    const btn = document.getElementById('pf-' + id);
-    if (!btn) return;
-    const active = id === f;
-    btn.style.borderColor = active ? 'var(--or)' : 'var(--border2)';
-    btn.style.color = active ? 'var(--or)' : 'var(--tx)';
-    btn.style.background = active ? 'rgba(255,92,0,.08)' : 'var(--surf)';
-  });
-  loadOrgFeed();
-}
-
-async function loadOrgFeed() {
-  if (_orgFeedLoading) return;
-  _orgFeedLoading = true;
-  const el = document.getElementById('org-feed-list');
-  if (!el) { _orgFeedLoading = false; return; }
-  el.innerHTML = '<div class="empty">Loading…</div>';
-  try {
-    const limit = 10, offset = (_orgFeedPage - 1) * limit;
-    let q = sb.from('posts')
-      .select('id,user_id,post_type,image_url,caption,event_name,created_at,likes_count,comments_count', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (_orgFeedFilter === 'following') {
-      const { data: fw } = await sb.from('follows').select('following_id').eq('follower_id', currentUser.id);
-      const ids = (fw || []).map(r => r.following_id);
-      if (!ids.length) { el.innerHTML = '<div class="empty">You\'re not following anyone yet</div>'; renderOrgFeedPagination(0, limit); _orgFeedLoading = false; return; }
-      q = q.in('user_id', ids);
-    } else if (_orgFeedFilter === 'organizers') {
-      const { data: orgs } = await sb.from('profiles').select('id').eq('role', 'organizer');
-      const orgIds = (orgs || []).map(r => r.id);
-      if (!orgIds.length) { el.innerHTML = '<div class="empty">No organizer posts yet</div>'; renderOrgFeedPagination(0, limit); _orgFeedLoading = false; return; }
-      q = q.in('user_id', orgIds);
-    }
-
-    const { data: posts, count } = await q;
-    const uids = [...new Set((posts || []).map(p => p.user_id).filter(Boolean))];
-    let pm = {};
-    if (uids.length) {
-      const { data: profs } = await sb.from('profiles').select('id,username,display_name,avatar_url,role').in('id', uids);
-      (profs || []).forEach(p => pm[p.id] = p);
-    }
-
-    if (!(posts || []).length) { el.innerHTML = '<div class="empty">No posts yet</div>'; renderOrgFeedPagination(0, limit); _orgFeedLoading = false; return; }
-    el.innerHTML = (posts || []).map(p => renderOrgFeedCard(p, pm[p.user_id])).join('');
-    renderOrgFeedPagination(count || 0, limit);
-  } catch(e) {
-    el.innerHTML = '<div class="empty" style="color:var(--pk)">Could not load feed. <button class="btn-sec" style="margin-left:8px;padding:5px 12px;font-size:.7rem" onclick="_orgFeedInitialized=false;loadOrgFeed()">Retry</button></div>';
-  }
-  _orgFeedLoading = false;
-}
-
-function renderOrgFeedCard(p, prof) {
-  const xe = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  const name = prof ? (prof.display_name || prof.username || 'User') : 'User';
-  const handle = prof ? '@' + (prof.username || '') : '';
-  const isPage = prof?.role === 'organizer' || prof?.role === 'business';
-  const av = prof?.avatar_url
-    ? `<img src="${xe(prof.avatar_url)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>`
-    : name.charAt(0).toUpperCase();
-  const img = p.image_url ? `<img src="${xe(p.image_url)}" loading="lazy" style="width:100%;max-height:360px;object-fit:cover;display:block" onerror="this.style.display='none'"/>` : '';
-  const when = p.created_at ? new Date(p.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short'}) : '';
-  const badge = isPage ? '<span style="font-size:.52rem;background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.28);color:var(--or);padding:2px 6px;border-radius:50px;font-family:\'Syne\',sans-serif;font-weight:700">Page</span>' : '';
-  return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;margin-bottom:10px;overflow:hidden">
-    <div style="display:flex;align-items:center;gap:10px;padding:12px 14px 8px">
-      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:.88rem;overflow:hidden;flex-shrink:0${isPage?';border:1.5px solid rgba(255,92,0,.5)':''}">${av}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${xe(name)} ${badge}</div>
-        <div style="font-size:.64rem;color:var(--mu)">${xe(handle)} · ${xe(when)}</div>
-      </div>
-    </div>
-    ${img}
-    ${p.caption ? `<div style="padding:8px 14px;font-size:.84rem;color:var(--mu2);line-height:1.5">${xe(p.caption)}</div>` : ''}
-    <div style="display:flex;gap:14px;padding:6px 14px 12px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu)">
-      <span>❤️ ${p.likes_count || 0}</span><span>💬 ${p.comments_count || 0}</span>
-    </div>
-  </div>`;
-}
-
-function renderOrgFeedPagination(total, limit) {
-  const el = document.getElementById('org-feed-pagination');
-  if (!el) return;
-  const pages = Math.ceil(total / limit) || 1;
-  if (pages <= 1) { el.innerHTML = ''; return; }
-  el.innerHTML = `
-    <button class="btn-sec" style="padding:8px 20px;font-size:.76rem" ${_orgFeedPage===1?'disabled':''} onclick="_orgFeedPage=Math.max(1,_orgFeedPage-1);loadOrgFeed()">← Prev</button>
-    <span style="font-family:'Syne',sans-serif;font-size:.72rem;color:var(--mu);align-self:center">Page ${_orgFeedPage} / ${pages}</span>
-    <button class="btn-sec" style="padding:8px 20px;font-size:.76rem" ${_orgFeedPage>=pages?'disabled':''} onclick="_orgFeedPage=Math.min(${pages},_orgFeedPage+1);loadOrgFeed()">Next →</button>`;
-}
 </script>
 
 <!-- NOTIFICATION PANEL -->
@@ -1424,6 +1530,60 @@ function renderOrgFeedPagination(total, limit) {
     <div class="sn-body" id="sn-list"></div>
   </div>
 </div>
+
+<!-- ── ORGANIZER ONBOARDING ── -->
+<div id="ob-ov" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.82);backdrop-filter:blur(14px);align-items:flex-end;justify-content:center">
+  <div id="ob-card" style="width:100%;max-width:480px;background:#0D1424;border:1px solid rgba(255,255,255,.14);border-top-left-radius:24px;border-top-right-radius:24px;padding:18px 22px 28px;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);max-height:92vh;overflow-y:auto;color:#F0EEF8">
+    <div style="display:flex;justify-content:flex-end"><button onclick="obClose()" style="background:none;border:none;color:#9997B0;font-size:.75rem;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.06em">Skip</button></div>
+    <div id="ob-illust" style="margin:0 auto 14px;min-height:130px;display:flex;align-items:center;justify-content:center"></div>
+    <div id="ob-title" style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;text-align:center;margin-bottom:8px"></div>
+    <div id="ob-body" style="font-size:.84rem;color:#9997B0;text-align:center;line-height:1.6;margin-bottom:18px"></div>
+    <div id="ob-dots" style="display:flex;justify-content:center;gap:5px;margin-bottom:18px"></div>
+    <button id="ob-next" onclick="obNext()" style="width:100%;padding:14px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.92rem;font-weight:700;cursor:pointer">Next</button>
+  </div>
+</div>
+<script>
+const _obIll = {
+  welcome: `<div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,#FF5C00,#FF2D78 60%,transparent);display:flex;align-items:center;justify-content:center;font-size:2.4rem">🎪</div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.06em">PULSIFY · ORGANIZER</div></div>`,
+  event: `<div style="width:240px;background:#090D1A;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px"><div style="display:flex;gap:10px;align-items:center;margin-bottom:8px"><div style="background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.3);border-radius:10px;padding:6px 10px;text-align:center"><div style="font-size:.56rem;color:#FF5C00;font-family:'Syne',sans-serif;font-weight:700">SAT</div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#FF5C00;line-height:1">24</div></div><div style="flex:1"><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:800">Amapiano Lounge</div><div style="font-size:.66rem;color:#9997B0">Suncoast Casino · 20:00</div></div></div><button style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;border-radius:50px;padding:8px;font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700">+ New Event</button></div>`,
+  post: `<div style="width:240px;background:#090D1A;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);display:flex;align-items:center;justify-content:center;font-size:.9rem">🎪</div><div style="flex:1"><div style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:800">Your Page<span style="margin-left:5px;color:#FF5C00;font-size:.55rem">VERIFIED</span></div><div style="font-size:.6rem;color:#9997B0">posting · 5 left this month</div></div></div><div style="height:80px;border-radius:8px;background:linear-gradient(135deg,#B026FF,#FF5C00,#FF2D78);margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:1.8rem">📸</div><div style="font-size:.7rem;color:#9997B0">"Tickets are selling fast! Don't miss out 🔥"</div></div>`,
+  promote: `<div style="width:240px;background:linear-gradient(135deg,#1a0d2e,#0f0a1f);border:1px solid rgba(176,38,255,.3);border-radius:14px;padding:14px;position:relative"><div style="position:absolute;top:8px;right:10px;background:#FF5C00;color:#fff;border-radius:50px;padding:2px 8px;font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;letter-spacing:.06em">🚀 BOOSTED</div><div style="font-size:1.8rem;margin-bottom:6px">🚀</div><div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:800;margin-bottom:4px">Top of the Feed</div><div style="font-size:.7rem;color:#9997B0;line-height:1.45">Pay-to-promote puts your event in front of everyone in the home feed, map and homepage carousel</div></div>`,
+  verify: `<div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="position:relative;width:80px;height:80px"><div style="position:absolute;inset:0;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);display:flex;align-items:center;justify-content:center;font-size:2.2rem;font-weight:900;color:#fff;box-shadow:0 0 30px rgba(255,92,0,.5)">✓</div></div><div style="font-family:'Syne',sans-serif;font-size:.92rem;font-weight:800">Get Verified</div><div style="font-size:.66rem;color:#FF5C00;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.1em">VERIFIED ORGANIZER</div></div>`,
+};
+const OB_STEPS = [
+  { ill:'welcome', title:'Welcome, Organizer', body:"Your dashboard manages events, posts, ticket sales and promotions. Quick 60-second tour." },
+  { ill:'event',   title:'Create Events',      body:"Tap '+ New Event' to publish. Free accounts go to admin review first; premium organizers go live instantly." },
+  { ill:'post',    title:'Post Updates',       body:"Share announcements with your followers. Free accounts get 5 posts/month, premium is unlimited." },
+  { ill:'promote', title:'Boost Reach',        body:"Pay-to-promote puts your event at the top of the home feed, map and homepage carousel." },
+  { ill:'verify',  title:'Get Verified',       body:"Submit ID + business docs in Settings → Verification to earn the orange VERIFIED badge that builds trust." },
+];
+let _obIdx = 0;
+function startOnboardingOrg() {
+  if (localStorage.getItem('p_onboarded_organizer')) return;
+  _obIdx = 0;
+  const ov = document.getElementById('ob-ov'); if (!ov) return;
+  ov.style.display = 'flex';
+  requestAnimationFrame(() => { document.getElementById('ob-card').style.transform = 'translateY(0)'; });
+  _obRender();
+}
+function _obRender() {
+  const s = OB_STEPS[_obIdx];
+  document.getElementById('ob-illust').innerHTML = _obIll[s.ill] || '';
+  document.getElementById('ob-title').textContent = s.title;
+  document.getElementById('ob-body').textContent = s.body;
+  document.getElementById('ob-next').textContent = _obIdx === OB_STEPS.length - 1 ? "Let's Go!" : 'Next';
+  document.getElementById('ob-dots').innerHTML = OB_STEPS.map((_,i) => `<div style="width:${i===_obIdx?20:6}px;height:6px;border-radius:3px;background:${i===_obIdx?'#FF5C00':'rgba(255,255,255,.14)'};transition:all .25s"></div>`).join('');
+  const card = document.getElementById('ob-card'); if (card) card.scrollTop = 0;
+}
+function obNext() { _obIdx++; if (_obIdx >= OB_STEPS.length) { obClose(); return; } _obRender(); }
+function obClose() {
+  const card = document.getElementById('ob-card'); if (card) card.style.transform = 'translateY(100%)';
+  setTimeout(() => { const ov = document.getElementById('ob-ov'); if (ov) ov.style.display = 'none'; }, 350);
+  localStorage.setItem('p_onboarded_organizer', '1');
+}
+// Trigger after init runs
+setTimeout(startOnboardingOrg, 1500);
+</script>
 
 </body>
 </html>

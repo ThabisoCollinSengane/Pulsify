@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-<title>Pulsify Admin — Business Coordinates</title>
+<title>Pulsefy Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
@@ -90,7 +90,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:currentColor;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* Tabs */
-.tab-btn{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;padding:12px 20px;cursor:pointer;border-bottom:2px solid transparent;color:var(--mu);transition:all .2s;user-select:none;flex-shrink:0;white-space:nowrap}
+.tab-btn{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;padding:12px 20px;cursor:pointer;border-bottom:2px solid transparent;color:var(--mu);transition:all .2s;user-select:none}
 .tab-btn:hover{color:var(--tx)}
 .tab-btn.active{color:var(--or);border-bottom-color:var(--or)}
 .tab-content{display:none}
@@ -103,12 +103,27 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .role-user{background:rgba(90,88,112,.1);border:1px solid rgba(90,88,112,.2);color:var(--mu2)}
 .trial-badge{background:rgba(198,255,74,.1);border:1px solid rgba(198,255,74,.2);color:var(--li)}
 .suspended-badge{background:rgba(255,45,120,.15);border:1px solid rgba(255,45,120,.3);color:var(--pk)}
+/* Mobile responsive */
+@media(max-width:640px){
+  .stats-bar{grid-template-columns:repeat(2,1fr)}
+  .tab-btn{padding:10px 12px;font-size:.68rem;white-space:nowrap;flex-shrink:0}
+  .search-row{flex-wrap:wrap}
+  .tbl-wrap{overflow-x:auto}
+  th,td{padding:8px 10px}
+  .name-cell{max-width:100px}
+  /* Hide lower-priority columns on mobile */
+  .hide-mobile{display:none!important}
+}
+.puls-badge{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);box-shadow:0 0 6px rgba(255,92,0,.4);position:relative;vertical-align:middle;margin-left:4px;flex-shrink:0}
+.puls-badge::before{content:'';position:absolute;inset:-3px;border-radius:50%;background:linear-gradient(135deg,rgba(255,92,0,.3),rgba(255,45,120,.3));animation:puls-ring 2.2s ease-out infinite;z-index:-1}
+.puls-badge::after{content:'';width:6px;height:6px;border-radius:50%;background:#fff;opacity:.95}
+@keyframes puls-ring{0%{transform:scale(1);opacity:.5}70%{transform:scale(1.9);opacity:0}100%{transform:scale(1.9);opacity:0}}
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <div class="logo"><div class="dot"></div>PULSIFY</div>
+  <div class="logo"><div class="dot"></div>PULSEFY</div>
   <div style="display:flex;align-items:center;gap:10px">
     <span class="admin-badge">🔐 Admin Panel</span>
     <button class="btn btn-surf" onclick="signOutAdmin()" id="logout-btn" style="display:none">Sign Out</button>
@@ -127,7 +142,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </button>
     <div class="or-divider">or</div>
     <label class="field-lbl">Email</label>
-    <input class="inp" id="admin-email" type="email" placeholder="admin@pulsify.co.za" style="width:100%;margin-bottom:10px"/>
+    <input class="inp" id="admin-email" type="email" placeholder="admin@pulsefy.co.za" style="width:100%;margin-bottom:10px"/>
     <label class="field-lbl">Password</label>
     <input class="inp" id="admin-pw" type="password" placeholder="••••••••" style="width:100%;margin-bottom:14px"/>
     <button class="btn btn-or" style="width:100%" id="login-btn" onclick="adminLogin()">Sign In to Admin Panel</button>
@@ -139,17 +154,17 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <div class="page">
 
   <!-- Tab Navigation -->
-  <div style="display:flex;gap:8px;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none">
-    <div class="tab-btn active" onclick="switchTab('users')">👥 Users</div>
-    <div class="tab-btn" onclick="switchTab('businesses')">🏢 Businesses</div>
-    <div class="tab-btn" onclick="switchTab('events')">🎉 Events</div>
-    <div class="tab-btn" onclick="switchTab('leads')">📊 Leads</div>
-    <div class="tab-btn" onclick="switchTab('verifications')">🏆 Verifications</div>
-    <div class="tab-btn" onclick="switchTab('banners')">🖼 Banners</div>
-    <div class="tab-btn" onclick="switchTab('notifications')">🔔 Notify</div>
-    <div class="tab-btn" onclick="switchTab('reports')">🚩 Reports</div>
-    <div class="tab-btn" onclick="switchTab('promotions')">🚀 Promotions</div>
-    <div class="tab-btn" onclick="switchTab('system')">⚙️ System</div>
+  <div style="display:flex;gap:0;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none">
+    <div class="tab-btn active" onclick="switchTab('users',this)">👥 Users</div>
+    <div class="tab-btn" onclick="switchTab('businesses',this)">🏢 Biz</div>
+    <div class="tab-btn" onclick="switchTab('events',this)">🎉 Events</div>
+    <div class="tab-btn" onclick="switchTab('leads',this)">📊 Leads</div>
+    <div class="tab-btn" onclick="switchTab('verifications',this)">🏆 Verify</div>
+    <div class="tab-btn" onclick="switchTab('banners',this)" style="display:none" title="Banner CRUD — coming in v2">🖼 Banners</div>
+    <div class="tab-btn" onclick="switchTab('notifications',this)">🔔 Notify</div>
+    <div class="tab-btn" onclick="switchTab('reports',this)">🚩 Reports</div>
+    <div class="tab-btn" onclick="switchTab('promotions',this)">🚀 Promos</div>
+    <div class="tab-btn" onclick="switchTab('system',this)">⚙️ System</div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
@@ -189,11 +204,11 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <thead>
           <tr>
             <th>User</th>
-            <th>Email</th>
+            <th class="hide-mobile">Email</th>
             <th>Role</th>
-            <th>Subscription</th>
+            <th class="hide-mobile">Subscription</th>
             <th>Status</th>
-            <th>Joined</th>
+            <th class="hide-mobile">Joined</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -304,13 +319,13 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
   <div id="tab-events" class="tab-content">
     <div style="margin-bottom:20px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Event Approval</div>
-      <div style="font-size:.82rem;color:var(--mu2)">Review and approve events submitted by organizers</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Events</div>
+      <div style="font-size:.82rem;color:var(--mu2)">View and approve all events on the platform</div>
     </div>
     <div class="search-row">
       <select class="inp" id="evt-filter" onchange="loadPendingEvents()" style="max-width:180px">
-        <option value="pending">⏳ Pending</option>
         <option value="all">All Events</option>
+        <option value="pending">⏳ Pending Approval</option>
       </select>
       <button class="btn btn-surf" onclick="loadPendingEvents()">↺ Refresh</button>
     </div>
@@ -322,57 +337,145 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <!-- TAB: LEADS -->
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
   <div id="tab-leads" class="tab-content">
-    <div style="margin-bottom:20px">
+    <div style="margin-bottom:16px">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Lead Management</div>
       <div style="font-size:.82rem;color:var(--mu2)">Business and organizer leads from scraping</div>
     </div>
 
-    <div class="stats-bar" id="leads-stats-bar">
-      <div class="stat"><div class="stat-n warn-n" id="ls-new">—</div><div class="stat-l">New</div></div>
-      <div class="stat"><div class="stat-n" id="ls-contacted">—</div><div class="stat-l">Contacted</div></div>
-      <div class="stat"><div class="stat-n ok-n" id="ls-converted">—</div><div class="stat-l">Converted</div></div>
-      <div class="stat"><div class="stat-n bad-n" id="ls-ignored">—</div><div class="stat-l">Ignored</div></div>
+    <!-- Sub-tabs -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px">
+      <button id="leads-sub-leads" onclick="switchLeadsSub('leads')" class="btn btn-or" style="font-size:.78rem;padding:7px 16px">📋 Leads</button>
+      <button id="leads-sub-events" onclick="switchLeadsSub('events')" class="btn btn-surf" style="font-size:.78rem;padding:7px 16px">🎟 Lead Events <span id="le-pending-badge" style="display:none;background:var(--pk);color:#fff;border-radius:50px;padding:1px 7px;font-size:.65rem;margin-left:4px"></span></button>
     </div>
 
-    <div class="search-row" style="flex-wrap:wrap;gap:8px">
-      <input class="inp" id="leads-search" placeholder="Search name, city, email…" oninput="loadLeads(1)" style="flex:1;min-width:180px"/>
-      <select class="inp" id="leads-status" onchange="loadLeads(1)" style="max-width:140px">
-        <option value="all">All Status</option>
-        <option value="new">New</option>
-        <option value="contacted">Contacted</option>
-        <option value="converted">Converted</option>
-        <option value="ignored">Ignored</option>
+    <!-- Sub: Leads list -->
+    <div id="leads-sub-leads-pane">
+      <div class="stats-bar" id="leads-stats-bar">
+        <div class="stat"><div class="stat-n warn-n" id="ls-new">—</div><div class="stat-l">New</div></div>
+        <div class="stat"><div class="stat-n" id="ls-contacted">—</div><div class="stat-l">Contacted</div></div>
+        <div class="stat"><div class="stat-n ok-n" id="ls-converted">—</div><div class="stat-l">Converted</div></div>
+        <div class="stat"><div class="stat-n bad-n" id="ls-ignored">—</div><div class="stat-l">Ignored</div></div>
+      </div>
+      <div class="search-row" style="flex-wrap:wrap;gap:8px">
+        <input class="inp" id="leads-search" placeholder="Search name, city, email…" oninput="loadLeads(1)" style="flex:1;min-width:180px"/>
+        <select class="inp" id="leads-status" onchange="loadLeads(1)" style="max-width:140px">
+          <option value="all">All Status</option>
+          <option value="new">New</option>
+          <option value="contacted">Contacted</option>
+          <option value="converted">Converted</option>
+          <option value="ignored">Ignored</option>
+        </select>
+        <select class="inp" id="leads-source" onchange="loadLeads(1)" style="max-width:150px">
+          <option value="all">All Sources</option>
+          <option value="google_maps">Google Maps</option>
+          <option value="instagram">Instagram</option>
+          <option value="manual">Manual</option>
+        </select>
+        <button class="btn btn-surf" onclick="loadLeads(1)">↺ Refresh</button>
+      </div>
+      <div id="msg-leads" class="msg"></div>
+      <div class="tbl-wrap">
+        <table id="leads-table">
+          <thead><tr>
+            <th>Name</th><th class="hide-mobile">Category</th><th class="hide-mobile">City</th>
+            <th>Contact</th><th class="hide-mobile">Source</th><th>Status</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="leads-tbody">
+            <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="leads-pagination" style="display:flex;justify-content:center;gap:10px;margin-top:16px"></div>
+    </div>
+
+    <!-- Sub: Lead Events -->
+    <div id="leads-sub-events-pane" style="display:none">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <select class="inp" id="le-status-filter" onchange="loadLeadEvents()" style="max-width:160px">
+          <option value="pending">⏳ Pending</option>
+          <option value="approved">✅ Approved</option>
+          <option value="rejected">❌ Rejected</option>
+          <option value="all">All</option>
+        </select>
+        <button class="btn btn-surf" onclick="loadLeadEvents()">↺ Refresh</button>
+        <button class="btn btn-or" onclick="openAddLeadEvent()" style="margin-left:auto">+ Add Lead Event</button>
+      </div>
+      <div id="le-list"><div style="padding:40px;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- Lead Event Preview Modal -->
+  <div id="le-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;overflow-y:auto;padding:20px 12px">
+    <div style="max-width:500px;margin:0 auto;background:var(--bg);border:1px solid var(--border);border-radius:20px;overflow:hidden">
+      <div id="le-modal-img" style="width:100%;height:200px;background:var(--surf);position:relative">
+        <img id="le-modal-img-tag" src="" style="width:100%;height:100%;object-fit:cover;display:none"/>
+        <div id="le-modal-img-placeholder" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:3rem">🎟</div>
+      </div>
+      <div style="padding:20px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px">
+          <div id="le-modal-title" style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.03em;line-height:1.1"></div>
+          <div id="le-modal-genre" style="font-size:.68rem;padding:3px 10px;border-radius:50px;background:rgba(255,92,0,.15);color:var(--or);border:1px solid rgba(255,92,0,.3);white-space:nowrap;margin-top:6px"></div>
+        </div>
+        <div id="le-modal-meta" style="font-size:.78rem;color:var(--mu);margin-bottom:10px;line-height:1.8"></div>
+        <div id="le-modal-desc" style="font-size:.82rem;color:var(--mu2);line-height:1.6;margin-bottom:14px"></div>
+        <div id="le-modal-lead" style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:14px;font-size:.78rem">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.72rem;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Lead / Organiser</div>
+          <div id="le-modal-lead-body"></div>
+        </div>
+        <div id="le-modal-source" style="margin-bottom:16px"></div>
+        <!-- Admin note input -->
+        <textarea id="le-modal-note" class="inp" placeholder="Admin note (optional)…" rows="2" style="margin-bottom:12px;font-family:inherit;resize:vertical"></textarea>
+        <div id="le-modal-actions" style="display:flex;gap:10px">
+          <button onclick="approveLeadEvent()" style="flex:1;padding:13px;background:linear-gradient(135deg,#00e5ff,#00b8cc);border:none;border-radius:50px;color:#000;font-family:'Syne',sans-serif;font-weight:800;font-size:.85rem;cursor:pointer">✅ Post to Pulsefy</button>
+          <button onclick="rejectLeadEvent()" style="flex:1;padding:13px;background:rgba(255,45,120,.12);border:1.5px solid rgba(255,45,120,.4);border-radius:50px;color:var(--pk);font-family:'Syne',sans-serif;font-weight:800;font-size:.85rem;cursor:pointer">✕ Reject</button>
+        </div>
+        <button onclick="closeLeModal()" style="width:100%;margin-top:10px;padding:11px;background:transparent;border:1px solid var(--border);border-radius:50px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.8rem;cursor:pointer">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Lead Event Modal -->
+  <div id="le-add-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;overflow-y:auto;padding:20px 12px">
+    <div style="max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:24px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;margin-bottom:16px">Add Lead Event</div>
+      <select class="inp" id="le-add-lead" style="margin-bottom:10px"><option value="">Select Lead…</option></select>
+      <input class="inp" id="le-add-title" placeholder="Event title *" maxlength="120"/>
+      <textarea class="inp" id="le-add-desc" placeholder="Description" rows="3" style="font-family:inherit;resize:vertical"></textarea>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <input class="inp" id="le-add-date" type="date" style="color-scheme:dark"/>
+        <input class="inp" id="le-add-time" type="time" style="color-scheme:dark"/>
+      </div>
+      <input class="inp" id="le-add-venue" placeholder="Venue name"/>
+      <input class="inp" id="le-add-city" placeholder="City"/>
+      <select class="inp" id="le-add-genre">
+        <option value="nightlife">Nightlife</option><option value="amapiano">Amapiano</option>
+        <option value="gqom">Gqom</option><option value="house">House</option>
+        <option value="afrobeats">Afrobeats</option><option value="gospel">Gospel</option>
+        <option value="comedy">Comedy</option><option value="jazz">Jazz</option>
+        <option value="kwaito">Kwaito</option><option value="festival">Festival</option>
+        <option value="hiphop">Hip Hop</option><option value="rnb">R&amp;B</option>
+        <option value="outdoor">Outdoor</option><option value="wellness">Wellness</option>
+        <option value="theatre">Theatre</option><option value="food">Food</option>
       </select>
-      <select class="inp" id="leads-source" onchange="loadLeads(1)" style="max-width:150px">
-        <option value="all">All Sources</option>
-        <option value="google_maps">Google Maps</option>
-        <option value="instagram">Instagram</option>
-        <option value="manual">Manual</option>
-      </select>
-      <button class="btn btn-surf" onclick="loadLeads(1)">↺ Refresh</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--mu2);padding:10px 0"><input type="checkbox" id="le-add-free" onchange="document.getElementById('le-add-price').style.display=this.checked?'none':'block'"/> Free Event</label>
+        <input class="inp" id="le-add-price" type="number" placeholder="Min price (R)" min="0"/>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <div style="flex:1;position:relative">
+          <button type="button" onclick="document.getElementById('le-add-img-file').click()" class="btn btn-surf" style="width:100%">📷 Choose Image</button>
+          <input type="file" id="le-add-img-file" accept="image/*" style="display:none" onchange="previewLeImg(this)"/>
+          <input type="hidden" id="le-add-img"/>
+          <div id="le-add-img-preview" style="display:none;margin-top:6px;border-radius:8px;overflow:hidden;max-height:80px"><img id="le-add-img-thumb" style="width:100%;object-fit:cover"/></div>
+        </div>
+      </div>
+      <input class="inp" id="le-add-src-url" placeholder="Source URL (Instagram, website…)" style="margin-top:8px"/>
+      <input class="inp" id="le-add-organiser" placeholder="Organiser name"/>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button onclick="submitLeadEvent()" class="btn btn-or" style="flex:1;padding:13px">Save Event</button>
+        <button onclick="closeLeAddModal()" class="btn btn-surf" style="padding:13px 20px">Cancel</button>
+      </div>
     </div>
-
-    <div id="msg-leads" class="msg"></div>
-
-    <div class="tbl-wrap">
-      <table id="leads-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Category</th>
-            <th>City</th>
-            <th>Contact</th>
-            <th>Source</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="leads-tbody">
-          <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div id="leads-pagination" style="display:flex;justify-content:center;gap:10px;margin-top:16px"></div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
@@ -443,8 +546,14 @@ tr:hover td{background:rgba(255,255,255,.02)}
         </div>
       </div>
       <div style="margin-bottom:10px">
-        <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Image URL (optional)</div>
-        <input class="inp" id="bn-image" placeholder="https://... (banner background image)" style="width:100%"/>
+        <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Banner Image (optional)</div>
+        <div id="bn-img-preview" style="display:none;margin-bottom:8px;border-radius:10px;overflow:hidden;height:80px;background:#111"><img id="bn-img-thumb" style="width:100%;height:100%;object-fit:cover"/></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button type="button" class="btn btn-surf" style="padding:9px 14px;font-size:.78rem" onclick="document.getElementById('bn-img-file').click()">📷 Choose Image</button>
+          <span id="bn-img-name" style="font-size:.72rem;color:var(--mu)">No file chosen</span>
+        </div>
+        <input type="file" id="bn-img-file" accept="image/*" style="display:none" onchange="previewBannerImg(this)"/>
+        <input type="hidden" id="bn-image"/>
       </div>
       <div id="msg-banners" class="msg" style="margin-bottom:10px"></div>
       <button class="btn-sm" onclick="createBanner()" style="background:var(--or);color:#fff;border:none;padding:10px 22px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer">+ Create Banner</button>
@@ -500,9 +609,30 @@ tr:hover td{background:rgba(255,255,255,.02)}
       </div>
     </div>
 
-    <!-- History -->
+    <!-- Broadcast History -->
     <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Recent Broadcasts</div>
-    <div id="notif-history"><div style="padding:40px;text-align:center;color:var(--mu);font-size:.82rem">Click ↺ History to load</div></div>
+    <div id="notif-history" style="margin-bottom:28px"><div style="padding:30px;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div></div>
+
+    <!-- Activity Log -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)">⚡ System Activity Log</div>
+      <button class="btn btn-surf" style="padding:5px 12px;font-size:.7rem" onclick="loadActivityLog()">↺</button>
+    </div>
+    <div id="activity-log-list"><div style="padding:30px;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div></div>
+  </div>
+
+  <!-- User Notifications Modal -->
+  <div id="user-notif-modal" style="display:none;position:fixed;inset:0;background:rgba(5,8,15,.92);z-index:999;overflow-y:auto;padding:20px">
+    <div style="max-width:560px;margin:0 auto;background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:22px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem" id="user-notif-modal-title">Notifications</div>
+          <div style="font-size:.76rem;color:var(--mu)" id="user-notif-modal-sub">User inbox</div>
+        </div>
+        <button class="btn btn-surf" onclick="closeUserNotifModal()" style="padding:7px 14px;font-size:.78rem">✕ Close</button>
+      </div>
+      <div id="user-notif-modal-body"><div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div></div>
+    </div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
@@ -566,7 +696,52 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">System Settings</div>
       <div style="font-size:.82rem;color:var(--mu2)">Configure system-wide settings</div>
     </div>
-    <div style="padding:40px;text-align:center;color:var(--mu)">System settings coming soon…</div>
+    <div style="max-width:480px">
+      <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:12px">Event Database</div>
+      <div id="event-counts" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+        <div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
+          <div id="ev-count-quicket" style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#c6ff4a">—</div>
+          <div style="font-size:.72rem;color:var(--mu);text-transform:uppercase;letter-spacing:.06em">Quicket Events</div>
+        </div>
+        <div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
+          <div id="ev-count-manual" style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--or)">—</div>
+          <div style="font-size:.72rem;color:var(--mu);text-transform:uppercase;letter-spacing:.06em">Manual Events</div>
+        </div>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:12px">Quicket Events</div>
+      <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px">
+        <div style="font-size:.88rem;font-weight:700;margin-bottom:4px">Seed Events from Quicket API</div>
+        <div style="font-size:.76rem;color:var(--mu);margin-bottom:14px;line-height:1.5">Fetches upcoming SA events (amapiano, gqom, house, etc.) across major cities and upserts them to the events table. Safe to run multiple times.</div>
+        <div id="seed-result" style="display:none;font-size:.76rem;padding:8px 12px;border-radius:8px;margin-bottom:12px"></div>
+        <button onclick="runQuicketSeed()" id="seed-btn" class="btn btn-or" style="width:100%">🎟 Seed Quicket Events Now</button>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:12px">Lead Scrapers</div>
+      <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px">
+        <div style="font-size:.88rem;font-weight:700;margin-bottom:4px">Scrape Venues via OpenStreetMap</div>
+        <div style="font-size:.76rem;color:var(--mu);margin-bottom:10px;line-height:1.5">Scrapes clubs, shisanyamas, BnBs, hotels and event venues from OpenStreetMap — no API key needed. Results appear in the Leads tab.</div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:.72rem;color:var(--mu);display:block;margin-bottom:4px">Cities to scrape (comma-separated)</label>
+          <input id="osm-cities" value="Durban,Johannesburg,Cape Town,Pretoria" style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--txt);font-size:.8rem">
+        </div>
+        <div id="osm-result" style="display:none;font-size:.76rem;padding:8px 12px;border-radius:8px;margin-bottom:12px"></div>
+        <button onclick="runOsmScrape()" id="osm-btn" class="btn btn-or" style="width:100%">📍 Run OSM Venue Scraper</button>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:12px">Mock Data</div>
+      <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:16px">
+        <div style="font-size:.88rem;font-weight:700;margin-bottom:4px">Delete Manual / Mock Events</div>
+        <div style="font-size:.76rem;color:var(--mu);margin-bottom:14px;line-height:1.5">Removes all events with source='manual'. Only do this once Quicket events are confirmed live.</div>
+        <div id="delete-result" style="display:none;font-size:.76rem;padding:8px 12px;border-radius:8px;margin-bottom:12px"></div>
+        <button onclick="deleteMockEvents()" id="delete-mock-btn" class="btn btn-pk" style="width:100%">🗑 Delete Mock Events</button>
+      </div>
+
+      <!-- Pulsefy Social Links -->
+      <div style="background:var(--surf,#1a1a1a);border:1px solid var(--border,#2a2a2a);border-radius:16px;padding:20px;margin-bottom:16px" id="admin-social-card">
+        <div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#808080;margin-bottom:16px">🔗 Pulsefy Social Links</div>
+        <div id="admin-social-inputs"></div>
+        <button onclick="saveAdminSocialLinks()" style="width:100%;padding:12px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;margin-top:8px">Save Social Links</button>
+        <div id="admin-social-status" style="font-size:.72rem;color:#808080;text-align:center;margin-top:8px"></div>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -660,14 +835,16 @@ function showAdminUI() {
   document.getElementById('logout-btn').style.display  = 'block';
   loadUsers();
   loadBusinesses();
+  // Pre-load activity log so it's ready when admin opens Notifications tab
+  setTimeout(() => { loadNotifHistory(); loadActivityLog(); }, 1500);
 }
 
 /* ── Tab switching ── */
-function switchTab(tab) {
+function switchTab(tab, btn) {
   currentTab = tab;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  event.target.classList.add('active');
+  if (btn) btn.classList.add('active');
   document.getElementById(`tab-${tab}`).classList.add('active');
   
   if (tab === 'users' && !ALL_USERS.length) loadUsers();
@@ -676,9 +853,10 @@ function switchTab(tab) {
   else if (tab === 'leads') loadLeads(1);
   else if (tab === 'verifications') loadVerifications();
   else if (tab === 'banners') loadBanners();
-  else if (tab === 'notifications') loadNotifHistory();
+  else if (tab === 'notifications') { loadNotifHistory(); loadActivityLog(); }
   else if (tab === 'reports') loadReports();
   else if (tab === 'promotions') loadAdminPromos();
+  else if (tab === 'system') { loadSystemStats(); loadAdminSocialLinks(); }
 }
 
 async function signOutAdmin() { await sb.auth.signOut(); location.reload(); }
@@ -734,6 +912,11 @@ function renderVerifList() {
         <div><strong>Address:</strong> ${esc(req.address || '—')}</div>
       </div>
       ${req.description ? `<div style="font-size:.75rem;color:var(--mu2);margin-bottom:12px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:8px">${esc(req.description)}</div>` : ''}
+      ${(req.face_scan_url || req.id_doc_url || v.face_scan_url || v.id_doc_url) ? `
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        ${(req.face_scan_url || v.face_scan_url) ? `<div><div style="font-size:.62rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Face Scan</div><a href="${req.face_scan_url || v.face_scan_url}" target="_blank"><img src="${req.face_scan_url || v.face_scan_url}" style="height:100px;border-radius:10px;object-fit:cover;border:1px solid var(--border)" onerror="this.style.opacity='.3'"/></a></div>` : ''}
+        ${(req.id_doc_url || v.id_doc_url) ? `<div><div style="font-size:.62rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">ID Document</div><a href="${req.id_doc_url || v.id_doc_url}" target="_blank"><img src="${req.id_doc_url || v.id_doc_url}" style="height:100px;border-radius:10px;object-fit:cover;border:1px solid var(--border)" onerror="this.parentElement.innerHTML='<span style=\\'font-size:.74rem;color:var(--or)\\'>📄 View Doc</span>'"/></a></div>` : ''}
+      </div>` : ''}
       ${v.verif_status === 'pending' ? `<div style="display:flex;gap:8px">
         <button class="btn btn-li" onclick="reviewVerif('${v.id}','approve')" style="flex:1">✅ Approve &amp; Verify</button>
         <button class="btn btn-pk" onclick="reviewVerif('${v.id}','reject')" style="flex:1">❌ Reject</button>
@@ -893,7 +1076,7 @@ async function geocodeSelected() {
   try {
     const r = await fetch(
       `https://nominatim.openstreetmap.org/search?` + new URLSearchParams({ q: query, format: 'json', limit: 1, countrycodes: 'za' }),
-      { headers: { 'User-Agent': 'Pulsify/2.0 Admin' } }
+      { headers: { 'User-Agent': 'Pulsefy/2.0 Admin' } }
     );
     const results = await safeJson(r);
     if (!results.length) { appendLog('No results found. Try a more specific address.', 'err'); return; }
@@ -977,7 +1160,7 @@ async function runBulkGeocode() {
       await new Promise(r => setTimeout(r, 1200)); // Nominatim rate limit 1/sec
       const r = await fetch(
         `https://nominatim.openstreetmap.org/search?` + new URLSearchParams({ q: query, format: 'json', limit: 1, countrycodes: 'za' }),
-        { headers: { 'User-Agent': 'Pulsify/2.0 Admin' } }
+        { headers: { 'User-Agent': 'Pulsefy/2.0 Admin' } }
       );
       const results = await safeJson(r);
       if (!results.length) { failed++; continue; }
@@ -1083,11 +1266,11 @@ function renderUsersTable() {
 
     return `<tr>
       <td class="name-cell" title="${esc(u.display_name || 'No name')}">${esc(u.display_name || 'No name')}</td>
-      <td style="font-family:'JetBrains Mono',monospace;font-size:.72rem">${esc(u.email)}</td>
+      <td class="hide-mobile" style="font-family:'JetBrains Mono',monospace;font-size:.72rem">${esc(u.email)}</td>
       <td>${roleBadge}</td>
-      <td>${subBadge}</td>
+      <td class="hide-mobile">${subBadge}</td>
       <td>${statusBadge}</td>
-      <td style="font-size:.72rem;color:var(--mu)">${joined}</td>
+      <td class="hide-mobile" style="font-size:.72rem;color:var(--mu)">${joined}</td>
       <td>
         <div class="user-actions">
           ${u.suspended
@@ -1100,6 +1283,7 @@ function renderUsersTable() {
           }
           <button class="btn btn-cy" style="padding:5px 10px;font-size:.68rem" onclick="showTrialModal('${u.id}')">⏰ Trial</button>
           <button class="btn btn-surf" style="padding:5px 10px;font-size:.68rem" onclick="showRoleModal('${u.id}')">👤 Role</button>
+          <button class="btn btn-surf" style="padding:5px 10px;font-size:.68rem" onclick="viewUserNotifications('${u.id}','${esc(u.display_name||u.email||'User')}')">📬 Notifs</button>
         </div>
       </td>
     </tr>`;
@@ -1296,6 +1480,9 @@ function renderLeadsTable(leads) {
         <div class="user-actions">
           <button class="btn btn-li" style="padding:5px 10px;font-size:.68rem" onclick="advanceLead('${l.id}','${LEAD_STATUS_NEXT[l.status] || 'contacted'}')">→ ${LEAD_STATUS_LABELS[LEAD_STATUS_NEXT[l.status] || 'contacted']}</button>
           ${l.status !== 'ignored' ? `<button class="btn btn-pk" style="padding:5px 10px;font-size:.68rem" onclick="advanceLead('${l.id}','ignored')">🚫</button>` : ''}
+          <button class="btn btn-or" style="padding:5px 10px;font-size:.68rem" onclick="quickAddEvent('${l.id}','${esc(l.name||'')}')">🎟 +Event</button>
+          ${l.email ? `<a class="btn" style="padding:5px 10px;font-size:.68rem;background:rgba(0,180,255,.12);border:1px solid rgba(0,180,255,.3);color:#00B4FF;border-radius:6px;text-decoration:none" href="mailto:${esc(l.email)}?subject=Partnership%20with%20Pulsefy&body=Hi%20${encodeURIComponent(l.name||'there')}%2C%0A%0AWe%20noticed%20your%20business%20on%20our%20platform%20and%20would%20love%20to%20connect.%0A%0AKind%20regards%2C%0APulsefy%20Team">✉️ Email</a>` : ''}
+          ${l.phone ? `<a class="btn" style="padding:5px 10px;font-size:.68rem;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);color:#25D366;border-radius:6px;text-decoration:none" href="https://wa.me/${encodeURIComponent((l.phone||'').replace(/\D/g,''))}?text=${encodeURIComponent("Hi "+( l.name||"there")+", we'd love to feature your business on Pulsefy — SA's top events & nightlife app. Interested in a free listing? 🎯")}" target="_blank">💬 WhatsApp</a>` : ''}
         </div>
       </td>
     </tr>`;
@@ -1325,6 +1512,220 @@ async function advanceLead(id, newStatus) {
 }
 
 function showLeadsMsg(m, t) { const el=document.getElementById('msg-leads'); if(!el) return; el.textContent=m; el.className='msg show msg-'+(t==='err'?'err':'ok'); }
+
+async function quickAddEvent(leadId, leadName) {
+  await openAddLeadEvent();
+  // Pre-select the lead
+  const sel = document.getElementById('le-add-lead');
+  for (let o of sel.options) { if (o.value === leadId) { o.selected = true; break; } }
+  if (leadName) document.getElementById('le-add-organiser').value = leadName;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+/* LEAD EVENTS                                                                       */
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+let _currentLeId = null;
+let _leadsList = [];
+
+function switchLeadsSub(tab) {
+  document.getElementById('leads-sub-leads-pane').style.display  = tab === 'leads'  ? '' : 'none';
+  document.getElementById('leads-sub-events-pane').style.display = tab === 'events' ? '' : 'none';
+  const leBtn = document.getElementById('leads-sub-leads');
+  const evBtn = document.getElementById('leads-sub-events');
+  if (tab === 'leads') { leBtn.className='btn btn-or'; evBtn.className='btn btn-surf'; }
+  else { evBtn.className='btn btn-or'; leBtn.className='btn btn-surf'; loadLeadEvents(); }
+}
+
+async function loadLeadEvents() {
+  const status = document.getElementById('le-status-filter')?.value || 'pending';
+  document.getElementById('le-list').innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div>';
+  try {
+    const r = await fetch(`/api/admin/lead-events?status=${status}`, { headers: { Authorization: 'Bearer ' + adminToken } });
+    const j = await safeJson(r);
+    if (!r.ok) { document.getElementById('le-list').innerHTML = `<div style="padding:20px;color:var(--pk);font-size:.82rem">Error: ${esc(j.error||'Failed to load')}</div>`; return; }
+    renderLeadEvents(j.events || []);
+    // update pending badge
+    const badge = document.getElementById('le-pending-badge');
+    if (status === 'pending' && j.events?.length) { badge.textContent = j.events.length; badge.style.display = 'inline'; }
+    else { badge.style.display = 'none'; }
+  } catch(e) { document.getElementById('le-list').innerHTML = `<div style="padding:20px;color:var(--pk);font-size:.82rem">Network error: ${esc(e.message)}</div>`; }
+}
+
+function renderLeadEvents(events) {
+  const el = document.getElementById('le-list');
+  if (!events.length) { el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu);font-size:.82rem">No lead events found.</div>'; return; }
+  const statusIcon = { pending:'⏳', approved:'✅', rejected:'❌' };
+  el.innerHTML = events.map(ev => {
+    const lead = ev.scraped_leads || {};
+    const dateStr = ev.event_date ? new Date(ev.event_date + 'T00:00:00').toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'}) : 'TBC';
+    return `<div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start">
+      ${ev.image_url ? `<img src="${esc(ev.image_url)}" style="width:64px;height:64px;border-radius:10px;object-fit:cover;flex-shrink:0"/>` : `<div style="width:64px;height:64px;border-radius:10px;background:rgba(255,92,0,.15);display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0">🎟</div>`}
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(ev.title)}</div>
+        <div style="font-size:.72rem;color:var(--mu);margin-top:2px">📅 ${dateStr} &nbsp;·&nbsp; 📍 ${esc(ev.venue_city||'TBC')} &nbsp;·&nbsp; 🎵 ${esc(ev.genre||'—')}</div>
+        <div style="font-size:.7rem;color:var(--mu2);margin-top:2px">Lead: <strong>${esc(lead.name||'—')}</strong>${lead.city ? ' · '+esc(lead.city) : ''}</div>
+        <div style="margin-top:6px;font-size:.7rem;color:${ev.status==='approved'?'#c6ff4a':ev.status==='rejected'?'var(--pk)':'var(--cy)'}">${statusIcon[ev.status]||''} ${ev.status}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+        <button onclick="openLeModal(${JSON.stringify(ev).replace(/'/g,"\\'")})" style="padding:7px 14px;background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.3);border-radius:50px;color:var(--cy);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer;white-space:nowrap">👁 Preview</button>
+        ${ev.status === 'approved' && ev.published_event_id ? `<div style="font-size:.65rem;color:var(--mu);text-align:center">Live ✓</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openLeModal(ev) {
+  _currentLeId = ev.id;
+  const modal = document.getElementById('le-modal');
+  // Image
+  const imgTag = document.getElementById('le-modal-img-tag');
+  const imgPh  = document.getElementById('le-modal-img-placeholder');
+  if (ev.image_url) { imgTag.src = ev.image_url; imgTag.style.display='block'; imgPh.style.display='none'; }
+  else { imgTag.style.display='none'; imgPh.style.display='flex'; }
+  // Core fields
+  document.getElementById('le-modal-title').textContent = ev.title || 'Untitled';
+  document.getElementById('le-modal-genre').textContent = ev.genre || '—';
+  const dateStr = ev.event_date ? new Date(ev.event_date+'T00:00:00').toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'long',year:'numeric'}) : 'Date TBC';
+  const timeStr = ev.event_time ? ev.event_time.slice(0,5) : '';
+  const priceStr = ev.is_free ? 'Free entry' : ev.price_min ? `From R${ev.price_min}` : 'Price TBC';
+  document.getElementById('le-modal-meta').innerHTML = `
+    📅 ${dateStr}${timeStr?' · 🕐 '+timeStr:''}<br>
+    📍 ${ev.venue_name||''} ${ev.venue_city ? '· '+ev.venue_city : ''}<br>
+    🎟 ${priceStr}`;
+  document.getElementById('le-modal-desc').textContent = ev.description || 'No description provided.';
+  // Lead info
+  const lead = ev.scraped_leads || {};
+  const socials = [
+    lead.instagram ? `<a href="https://instagram.com/${lead.instagram.replace('@','')}" target="_blank" style="color:var(--pk)">📸 Instagram</a>` : '',
+    lead.facebook  ? `<a href="${esc(lead.facebook)}" target="_blank" style="color:var(--cy)">👤 Facebook</a>` : '',
+    lead.website   ? `<a href="${esc(lead.website)}" target="_blank" style="color:var(--or)">🌐 Website</a>` : '',
+  ].filter(Boolean).join(' &nbsp; ');
+  document.getElementById('le-modal-lead-body').innerHTML = `
+    <strong>${esc(lead.name||ev.organiser_name||'—')}</strong>${lead.category ? ' · '+esc(lead.category) : ''}${lead.city?' · '+esc(lead.city):''}<br>
+    ${lead.phone ? '📞 '+esc(lead.phone)+' &nbsp; ' : ''}${lead.email ? '✉️ <a href="mailto:'+esc(lead.email)+'" style="color:var(--or)">'+esc(lead.email)+'</a>' : ''}
+    ${socials ? '<br>'+socials : ''}`;
+  // Source URL
+  document.getElementById('le-modal-source').innerHTML = ev.source_url
+    ? `<a href="${esc(ev.source_url)}" target="_blank" style="font-size:.76rem;color:var(--cy)">🔗 View original source →</a>` : '';
+  // Actions visibility
+  const actions = document.getElementById('le-modal-actions');
+  actions.style.display = ev.status === 'pending' ? 'flex' : 'none';
+  document.getElementById('le-modal-note').value = ev.admin_notes || '';
+  modal.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLeModal() {
+  document.getElementById('le-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  _currentLeId = null;
+}
+
+async function approveLeadEvent() {
+  if (!_currentLeId) return;
+  const note = document.getElementById('le-modal-note')?.value.trim() || null;
+  try {
+    const r = await fetch(`/api/admin/lead-events/${_currentLeId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ action: 'approve', admin_notes: note }),
+    });
+    const j = await safeJson(r);
+    if (!r.ok) { alert(j.error || 'Failed to approve'); return; }
+    closeLeModal();
+    showToastAdmin('✅ Event posted to Pulsefy!');
+    loadLeadEvents();
+  } catch(e) { alert('Network error: ' + e.message); }
+}
+
+async function rejectLeadEvent() {
+  if (!_currentLeId) return;
+  const note = document.getElementById('le-modal-note')?.value.trim() || null;
+  try {
+    const r = await fetch(`/api/admin/lead-events/${_currentLeId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ action: 'reject', admin_notes: note }),
+    });
+    if (!r.ok) { const j = await safeJson(r); alert(j.error || 'Failed'); return; }
+    closeLeModal();
+    showToastAdmin('Event rejected.');
+    loadLeadEvents();
+  } catch(e) { alert('Network error: ' + e.message); }
+}
+
+function showToastAdmin(msg) {
+  let t = document.getElementById('admin-toast');
+  if (!t) { t = document.createElement('div'); t.id='admin-toast'; t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 20px;border-radius:50px;font-size:.82rem;z-index:99999;opacity:0;transition:opacity .3s'; document.body.appendChild(t); }
+  t.textContent = msg; t.style.opacity = '1';
+  setTimeout(() => { t.style.opacity = '0'; }, 3000);
+}
+
+async function openAddLeadEvent() {
+  // Load leads into the select
+  const sel = document.getElementById('le-add-lead');
+  if (sel.options.length <= 1) {
+    try {
+      const r = await fetch('/api/leads?limit=100', { headers: { Authorization: 'Bearer ' + adminToken } });
+      const j = await safeJson(r);
+      (j.leads || []).forEach(l => { const o = document.createElement('option'); o.value = l.id; o.textContent = l.name + (l.city ? ' ('+l.city+')' : ''); sel.appendChild(o); });
+    } catch(e) {}
+  }
+  document.getElementById('le-add-modal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLeAddModal() {
+  document.getElementById('le-add-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function previewLeImg(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('le-add-img-thumb').src = e.target.result;
+    document.getElementById('le-add-img-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+  // Upload to storage
+  try {
+    const url = await uploadToStorage(file, 'lead-events');
+    document.getElementById('le-add-img').value = url;
+  } catch(e) { console.error('upload', e); }
+}
+
+async function submitLeadEvent() {
+  const leadId = document.getElementById('le-add-lead').value;
+  const title  = document.getElementById('le-add-title').value.trim();
+  if (!leadId) { alert('Select a lead'); return; }
+  if (!title)  { alert('Title is required'); return; }
+  const body = {
+    title, description: document.getElementById('le-add-desc').value.trim()||null,
+    genre: document.getElementById('le-add-genre').value,
+    event_date: document.getElementById('le-add-date').value||null,
+    event_time: document.getElementById('le-add-time').value||null,
+    venue_name: document.getElementById('le-add-venue').value.trim()||null,
+    venue_city: document.getElementById('le-add-city').value.trim()||null,
+    image_url: document.getElementById('le-add-img').value||null,
+    source_url: document.getElementById('le-add-src-url').value.trim()||null,
+    organiser_name: document.getElementById('le-add-organiser').value.trim()||null,
+    is_free: document.getElementById('le-add-free').checked,
+    price_min: document.getElementById('le-add-price').value||null,
+  };
+  try {
+    const r = await fetch(`/api/leads/${leadId}/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify(body),
+    });
+    const j = await safeJson(r);
+    if (!r.ok) { alert(j.error || 'Failed'); return; }
+    closeLeAddModal();
+    showToastAdmin('Event added — review it in Lead Events');
+    switchLeadsSub('events');
+  } catch(e) { alert('Network error: ' + e.message); }
+}
 
 /* ══════════════════════════════════════════════════════════════════════════════════ */
 /* EVENT APPROVAL */
@@ -1421,13 +1822,39 @@ async function loadBanners() {
   } catch(e) { el.innerHTML = `<div style="color:var(--err)">Error: ${esc(e.message)}</div>`; }
 }
 
+function previewBannerImg(input) {
+  const file = input.files[0]; if (!file) return;
+  document.getElementById('bn-img-name').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('bn-img-thumb').src = e.target.result;
+    document.getElementById('bn-img-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadToStorage(file, folder) {
+  const ext  = file.name.split('.').pop().toLowerCase();
+  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { data, error } = await sb.storage.from('uploads').upload(path, file, { upsert: false });
+  if (error) throw new Error(error.message);
+  return sb.storage.from('uploads').getPublicUrl(data.path).data.publicUrl;
+}
+
 async function createBanner() {
   const title     = document.getElementById('bn-title').value.trim();
   const subtitle  = document.getElementById('bn-subtitle').value.trim();
   const target_url = document.getElementById('bn-url').value.trim();
   const target_type = document.getElementById('bn-type').value;
   const bg_color  = document.getElementById('bn-color').value;
-  const image_url = document.getElementById('bn-image').value.trim();
+  let image_url   = document.getElementById('bn-image').value.trim();
+
+  // Upload file if selected
+  const fileInput = document.getElementById('bn-img-file');
+  if (fileInput.files[0]) {
+    try { image_url = await uploadToStorage(fileInput.files[0], 'banners'); }
+    catch(e) { showBanMsg('Image upload failed: ' + e.message, 'err'); return; }
+  }
   const expiresRaw = document.getElementById('bn-expires').value;
   const expires_at = expiresRaw ? new Date(expiresRaw).toISOString() : null;
 
@@ -1550,6 +1977,98 @@ async function loadNotifHistory() {
 
 function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function showNotifMsg(m, t) { const el=document.getElementById('msg-notif'); if(!el) return; el.textContent=m; el.className='msg show msg-'+(t==='err'?'err':'ok'); setTimeout(()=>el.classList.remove('show'),6000); }
+
+/* ── Activity Log ── */
+const ACTION_LABELS = {
+  suspend:                '🚫 Suspended user',
+  unsuspend:              '✅ Unsuspended user',
+  role_change:            '👤 Changed role',
+  subscription_change:    '💎 Changed subscription',
+  event_approve:          '✅ Approved event',
+  event_reject:           '❌ Rejected event',
+  notification_broadcast: '🔔 Sent broadcast',
+  banner_create:          '🖼 Created banner',
+  banner_delete:          '🗑 Deleted banner',
+};
+
+async function loadActivityLog() {
+  const el = document.getElementById('activity-log-list');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu)">Loading…</div>';
+  try {
+    const r = await fetch('/api/admin/activity-log?limit=80', { headers: { Authorization: 'Bearer ' + adminToken } });
+    const json = await safeJson(r);
+    if (!r.ok || !json.log?.length) {
+      el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu);font-size:.82rem">No admin actions recorded yet.</div>';
+      return;
+    }
+    el.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px">` +
+      json.log.map(item => {
+        const label = ACTION_LABELS[item.action_type] || item.action_type;
+        const when  = new Date(item.created_at).toLocaleString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+        const det   = item.details ? Object.entries(item.details).filter(([k,v])=>v!=null&&k!=='recipients').map(([k,v])=>`${k}: ${JSON.stringify(v)}`).join(', ') : '';
+        return `<div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:flex-start;gap:12px">
+          <div style="flex:1">
+            <div style="font-size:.82rem;font-weight:700;color:var(--tx)">${escHtml(label)}</div>
+            <div style="font-size:.74rem;color:var(--mu2);margin-top:2px">${escHtml(item.target_name || item.target_id || '—')}${det ? ' · <span style="font-family:monospace">'+escHtml(det)+'</span>' : ''}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:.7rem;color:var(--mu)">${escHtml(when)}</div>
+            <div style="font-size:.68rem;color:var(--mu);margin-top:2px">${escHtml(item.admin_name)}</div>
+          </div>
+        </div>`;
+      }).join('') + `</div>`;
+  } catch(e) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--pk)">Failed to load activity log.</div>';
+  }
+}
+
+/* ── User Notifications Modal ── */
+async function viewUserNotifications(userId, displayName) {
+  document.getElementById('user-notif-modal-title').textContent = displayName + ' — Inbox';
+  document.getElementById('user-notif-modal-sub').textContent = 'Loading notifications…';
+  document.getElementById('user-notif-modal-body').innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div>';
+  document.getElementById('user-notif-modal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  try {
+    const r = await fetch(`/api/admin/user-notifications/${userId}`, { headers: { Authorization: 'Bearer ' + adminToken } });
+    const json = await safeJson(r);
+    const notifs = json.notifications || [];
+    document.getElementById('user-notif-modal-sub').textContent = `${notifs.length} notification${notifs.length !== 1 ? 's' : ''}`;
+    if (!notifs.length) {
+      document.getElementById('user-notif-modal-body').innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">No notifications yet.</div>';
+      return;
+    }
+    const TYPE_ICONS = { broadcast:'🔔', squad_invite:'👥', squad_plan:'📅', follow:'👤', like:'❤️', comment:'💬', event_approve:'✅' };
+    document.getElementById('user-notif-modal-body').innerHTML = `<div style="display:flex;flex-direction:column;gap:8px">` +
+      notifs.map(n => {
+        const icon = TYPE_ICONS[n.type] || '🔔';
+        const when = new Date(n.created_at).toLocaleString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+        const readStyle = n.read ? 'opacity:.6' : '';
+        return `<div style="background:${n.read?'var(--surf)':'rgba(255,92,0,.06)'};border:1px solid ${n.read?'var(--border)':'rgba(255,92,0,.2)'};border-radius:12px;padding:12px 14px;${readStyle}">
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <div style="font-size:1.1rem;margin-top:2px">${icon}</div>
+            <div style="flex:1">
+              <div style="font-size:.82rem;font-weight:700;color:var(--tx)">${escHtml(n.title||n.type)}</div>
+              <div style="font-size:.76rem;color:var(--mu2);margin-top:2px">${escHtml(n.message||n.body||'')}</div>
+              ${n.from_display_name ? `<div style="font-size:.7rem;color:var(--mu);margin-top:4px">From: ${escHtml(n.from_display_name)}</div>` : ''}
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-size:.68rem;color:var(--mu)">${when}</div>
+              ${n.read ? '<div style="font-size:.65rem;color:var(--mu);margin-top:2px">Read</div>' : '<div style="font-size:.65rem;color:var(--or);margin-top:2px;font-weight:700">Unread</div>'}
+            </div>
+          </div>
+        </div>`;
+      }).join('') + `</div>`;
+  } catch(e) {
+    document.getElementById('user-notif-modal-body').innerHTML = '<div style="padding:20px;color:var(--pk)">Error loading notifications.</div>';
+  }
+}
+
+function closeUserNotifModal() {
+  document.getElementById('user-notif-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
 
 /* ══════════════════════════════════════════════════════════════════════════════════ */
 /* EVENT REPORTS */
@@ -1730,6 +2249,90 @@ async function _patchAdminPromo(id, body) {
     if (msg) { msg.textContent = e.message; msg.className = 'msg show msg-err'; setTimeout(() => msg.classList.remove('show'), 4000); }
   }
 }
+async function loadSystemStats() {
+  try {
+    const { data } = await sb.from('events').select('source');
+    if (data) {
+      document.getElementById('ev-count-quicket').textContent = data.filter(e => e.source === 'quicket').length;
+      document.getElementById('ev-count-manual').textContent  = data.filter(e => e.source === 'manual').length;
+    }
+  } catch(e) { console.error('loadSystemStats', e); }
+}
+
+async function runQuicketSeed() {
+  const btn = document.getElementById('seed-btn');
+  const res = document.getElementById('seed-result');
+  btn.disabled = true; btn.textContent = '⏳ Seeding…';
+  res.style.display = 'none';
+  try {
+    const r = await fetch('https://cjzewfvtdayjgjdpdmln.supabase.co/functions/v1/seed-quicket-events?secret=pulsify_seed_2026');
+    const d = await r.json();
+    if (r.ok) {
+      res.style.display = 'block';
+      if (d.api_unavailable) {
+        res.style.background = 'rgba(255,165,0,.1)'; res.style.border = '1px solid rgba(255,165,0,.3)'; res.style.color = '#ffaa00';
+        res.textContent = `⚠️ ${d.message}`;
+      } else {
+        res.style.background = 'rgba(198,255,74,.1)'; res.style.border = '1px solid rgba(198,255,74,.3)'; res.style.color = '#c6ff4a';
+        res.textContent = `✅ ${d.message}`;
+      }
+    } else {
+      res.style.display = 'block'; res.style.background = 'rgba(255,45,120,.1)'; res.style.border = '1px solid rgba(255,45,120,.3)'; res.style.color = 'var(--pk)';
+      res.textContent = `Error: ${d.error || JSON.stringify(d)}`;
+    }
+  } catch(e) {
+    res.style.display = 'block'; res.style.background = 'rgba(255,45,120,.1)'; res.style.border = '1px solid rgba(255,45,120,.3)'; res.style.color = 'var(--pk)';
+    res.textContent = 'Network error: ' + e.message;
+  }
+  btn.disabled = false; btn.textContent = '🎟 Seed Quicket Events Now';
+  loadSystemStats();
+}
+
+async function deleteMockEvents() {
+  const btn = document.getElementById('delete-mock-btn');
+  const res = document.getElementById('delete-result');
+  if (!confirm('This will permanently delete all events with source="manual". Continue?')) return;
+  btn.disabled = true; btn.textContent = '⏳ Deleting…';
+  res.style.display = 'none';
+  try {
+    const { error, count } = await sb.from('events').delete({ count: 'exact' }).eq('source', 'manual');
+    if (error) throw new Error(error.message);
+    res.style.display = 'block'; res.style.background = 'rgba(198,255,74,.1)'; res.style.border = '1px solid rgba(198,255,74,.3)'; res.style.color = '#c6ff4a';
+    res.textContent = `✅ Deleted ${count || 0} mock events.`;
+  } catch(e) {
+    res.style.display = 'block'; res.style.background = 'rgba(255,45,120,.1)'; res.style.border = '1px solid rgba(255,45,120,.3)'; res.style.color = 'var(--pk)';
+    res.textContent = 'Error: ' + e.message;
+  }
+  btn.disabled = false; btn.textContent = '🗑 Delete Mock Events';
+}
+
+async function runOsmScrape() {
+  const btn = document.getElementById('osm-btn');
+  const res = document.getElementById('osm-result');
+  const cities = document.getElementById('osm-cities').value.trim() || 'Durban,Johannesburg';
+  btn.disabled = true; btn.textContent = '⏳ Scraping venues…';
+  res.style.display = 'none';
+  try {
+    const r = await fetch(`/api/admin/scrape?cities=${encodeURIComponent(cities)}`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    const d = await safeJson(r);
+    res.style.display = 'block';
+    if (r.ok && d.success) {
+      res.style.background = 'rgba(198,255,74,.1)'; res.style.border = '1px solid rgba(198,255,74,.3)'; res.style.color = '#c6ff4a';
+      res.textContent = `✅ Inserted: ${d.inserted}  Skipped (dup): ${d.skipped}  Errors: ${d.errors}  Cities: ${d.cities_done?.join(', ')}`;
+    } else {
+      res.style.background = 'rgba(255,45,120,.1)'; res.style.border = '1px solid rgba(255,45,120,.3)'; res.style.color = 'var(--pk)';
+      res.textContent = `Error: ${d.error || JSON.stringify(d)}`;
+    }
+  } catch(e) {
+    res.style.display = 'block'; res.style.background = 'rgba(255,45,120,.1)'; res.style.border = '1px solid rgba(255,45,120,.3)'; res.style.color = 'var(--pk)';
+    res.textContent = 'Network error: ' + e.message;
+  }
+  btn.disabled = false; btn.textContent = '📍 Run OSM Venue Scraper';
+}
+
 async function deleteAdminPromo(id) {
   if (!confirm('Delete this promotion permanently?')) return;
   try {
@@ -1740,6 +2343,54 @@ async function deleteAdminPromo(id) {
     const msg = document.getElementById('msg-promotions');
     if (msg) { msg.textContent = e.message; msg.className = 'msg show msg-err'; setTimeout(() => msg.classList.remove('show'), 4000); }
   }
+}
+
+// ── Admin Social Links ─────────────────────────────────────────
+const _SOCIALS = [
+  { key:'whatsapp',  label:'WhatsApp',  color:'#25D366', bg:'rgba(37,211,102,.12)',  border:'rgba(37,211,102,.3)',   ph:'Phone: +27123456789' },
+  { key:'instagram', label:'Instagram', color:'#E4405F', bg:'rgba(228,64,95,.1)',    border:'rgba(228,64,95,.3)',    ph:'@yourhandle or URL' },
+  { key:'tiktok',    label:'TikTok',    color:'#ffffff', bg:'rgba(255,255,255,.06)', border:'rgba(255,255,255,.15)', ph:'@yourhandle or URL' },
+  { key:'facebook',  label:'Facebook',  color:'#1877F2', bg:'rgba(24,119,242,.1)',   border:'rgba(24,119,242,.3)',   ph:'Page name or URL' },
+  { key:'x',         label:'X (Twitter)',color:'#ffffff',bg:'rgba(255,255,255,.06)', border:'rgba(255,255,255,.15)', ph:'@yourhandle or URL' },
+];
+const _SOCIAL_SVGS = {
+  whatsapp:  '<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884z"/></svg>',
+  instagram: '<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>',
+  tiktok:    '<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.27 8.27 0 004.84 1.55V6.79a4.85 4.85 0 01-1.07-.1z"/></svg>',
+  facebook:  '<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
+  x:         '<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>',
+};
+
+async function loadAdminSocialLinks() {
+  const el = document.getElementById('admin-social-inputs');
+  if (!el) return;
+  let current = {};
+  try {
+    const token = localStorage.getItem('admin_token') || '';
+    const r = await fetch('/api/admin/app-settings', { headers: { Authorization: 'Bearer ' + token } });
+    const d = await r.json();
+    current = d.settings?.social_links || {};
+  } catch(e) {}
+  el.innerHTML = _SOCIALS.map(s => `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="width:34px;height:34px;border-radius:50%;background:${s.bg};border:1.5px solid ${s.border};display:flex;align-items:center;justify-content:center;color:${s.color};flex-shrink:0">${_SOCIAL_SVGS[s.key]}</div>
+      <input id="asl-${s.key}" style="flex:1;background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:9px 12px;color:#fff;font-size:.8rem;outline:none" placeholder="${s.ph}" value="${current[s.key]||''}"/>
+    </div>`).join('');
+}
+
+async function saveAdminSocialLinks() {
+  const token = localStorage.getItem('admin_token') || '';
+  const links = {};
+  _SOCIALS.forEach(s => { links[s.key] = (document.getElementById('asl-'+s.key)?.value||'').trim(); });
+  const st = document.getElementById('admin-social-status');
+  try {
+    const r = await fetch('/api/admin/app-settings', {
+      method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({ key:'social_links', value:links })
+    });
+    if (r.ok) { if (st) st.textContent = '✅ Saved!'; setTimeout(() => { if(st) st.textContent=''; }, 3000); }
+    else { if (st) st.textContent = '❌ Save failed'; }
+  } catch(e) { if (st) st.textContent = '❌ Error: '+e.message; }
 }
 </script>
 </body>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>Pulsify — Order Pickup</title>
+<title>Pulsefy — Order Pickup</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <style>
@@ -131,7 +131,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:'DM S
 
 <!-- TOP BAR -->
 <header class="tb">
-  <a href="/" class="logo"><span class="dot"></span>PULSIFY</a>
+  <a href="/" class="logo"><span class="dot"></span>PULSEFY</a>
   <button class="cart-btn" id="cart-top-btn" onclick="openSheet('checkout-sheet')" style="display:none">
     🛒 Cart <span class="cart-count" id="cart-count-top">0</span>
   </button>
@@ -193,7 +193,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Load business data from biz_accounts
   const accounts = JSON.parse(localStorage.getItem('biz_accounts') || '[]');
   const acc = accounts.find(a => a.id === BIZ_ID);
-  if (!acc) { renderNotFound('Business "' + BIZ_ID + '" not found. Make sure the business is registered on Pulsify.'); return; }
+  if (!acc) { renderNotFound('Business "' + BIZ_ID + '" not found. Make sure the business is registered on Pulsefy.'); return; }
 
   // Load profile overrides (edited in dashboard)
   const profileKey = BIZ_ID + '_profile';
@@ -216,7 +216,7 @@ function renderPage() {
   const open  = isOpenNow();
   const cats  = [...new Set(MENU.filter(i => i.available !== '0' && i.available !== false).map(i => i.cat || 'General'))];
 
-  document.title = `Order from ${BIZ_DATA.name} — Pulsify`;
+  document.title = `Order from ${BIZ_DATA.name} — Pulsefy`;
 
   let html = `
     <!-- HERO -->
@@ -244,7 +244,7 @@ function renderPage() {
     </div>`;
 
   if (!MENU.length) {
-    html += `<div class="big-empty"><div class="be-ico">${emo}</div><div class="be-title">Menu Coming Soon</div><div class="be-sub">This business hasn't uploaded their menu yet. Check back soon!</div><a href="/" class="btn-home">Back to Pulsify</a></div>`;
+    html += `<div class="big-empty"><div class="be-ico">${emo}</div><div class="be-title">Menu Coming Soon</div><div class="be-sub">This business hasn't uploaded their menu yet. Check back soon!</div><a href="/" class="btn-home">Back to Pulsefy</a></div>`;
     document.getElementById('main').innerHTML = html;
     return;
   }
@@ -444,7 +444,7 @@ function scrollToAll(btn) {
 //  UTILS
 // ════════════════════════════════════════════════════════════
 function renderNotFound(msg) {
-  document.getElementById('main').innerHTML = `<div class="big-empty"><div class="be-ico">🔍</div><div class="be-title">Business Not Found</div><div class="be-sub">${msg}</div><a class="btn-home" href="/">Back to Pulsify</a></div>`;
+  document.getElementById('main').innerHTML = `<div class="big-empty"><div class="be-ico">🔍</div><div class="be-title">Business Not Found</div><div class="be-sub">${msg}</div><a class="btn-home" href="/">Back to Pulsefy</a></div>`;
 }
 function xe(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function toast(msg, type='') { const t=document.getElementById('toast'); t.textContent=msg; t.className='toast '+type+' show'; setTimeout(()=>t.className='toast',2600); }

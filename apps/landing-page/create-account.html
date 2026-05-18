@@ -4,7 +4,20 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
-<title>Create Account — Pulsify</title>
+<meta name="description" content="Create your free Pulsefy account — South Africa's live event discovery platform. Discover concerts, festivals, shisanyamas and nightlife near you."/>
+<meta name="robots" content="noindex,follow"/>
+<title>Create Account — Pulsefy 🇿🇦</title>
+<link rel="canonical" href="https://pulsefy.co.za/create-account"/>
+<link rel="icon" type="image/png" href="/favicon.png"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="Pulsefy"/>
+<meta property="og:title" content="Create Account — Pulsefy"/>
+<meta property="og:description" content="Join Pulsefy — South Africa's live event discovery platform. It's free."/>
+<meta property="og:url" content="https://pulsefy.co.za/create-account"/>
+<meta property="og:image" content="https://pulsefy.co.za/og-image.png"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Create Account — Pulsefy"/>
+<meta name="twitter:image" content="https://pulsefy.co.za/og-image.png"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
@@ -71,7 +84,7 @@ select.inp option{background:#0D1424}
 </style>
 </head>
 <body>
-<a class="logo" href="/"><span class="dot"></span>PULSIFY</a>
+<a class="logo" href="/"><span class="dot"></span>PULSEFY</a>
 <p class="tagline">Join South Africa's vibe platform 🇿🇦</p>
 
 <div class="card">
@@ -182,7 +195,7 @@ select.inp option{background:#0D1424}
     <div class="sec-div">Terms</div>
     <div class="terms-row" id="trow" onclick="togTerms()">
       <div class="chkbox" id="tchk"></div>
-      <div class="terms-txt">I agree to the Pulsify <a href="/terms" target="_blank" onclick="event.stopPropagation()">Terms of Service</a> and <a href="/terms" target="_blank" onclick="event.stopPropagation()">Privacy Policy</a>. I confirm I am at least 13 years old.</div>
+      <div class="terms-txt">I agree to the Pulsefy <a href="/terms" target="_blank" onclick="event.stopPropagation()">Terms of Service</a> and <a href="/terms" target="_blank" onclick="event.stopPropagation()">Privacy Policy</a>. I confirm I am at least 13 years old.</div>
     </div>
 
     <button class="btn-back" onclick="goStep1()">← Back</button>
@@ -237,7 +250,14 @@ function setAccType(t) {
   });
   document.getElementById('isorg').value = t;
 }
-document.addEventListener('DOMContentLoaded', () => setAccType('user'));
+document.addEventListener('DOMContentLoaded', () => {
+  setAccType('user');
+  // Persist ?ref= so auto-follow still works after email confirmation round-trip
+  try {
+    var refId = new URL(window.location.href).searchParams.get('ref');
+    if (refId && /^[0-9a-f-]{36}$/i.test(refId)) localStorage.setItem('p_ref', refId);
+  } catch(e) {}
+});
 
 function togPw(id,btn){ var i=document.getElementById(id); var s=i.type==='password'; i.type=s?'text':'password'; btn.textContent=s?'Hide':'Show'; }
 
@@ -312,6 +332,20 @@ function goStep1() {
 async function saveSessionAndProfile(session, profileData) {
   var user = session.user;
   localStorage.setItem('p_token', session.access_token);
+
+  // WhatsApp referral — if user signed up via ?ref=<userid>, auto-follow the referrer
+  try {
+    var refId = new URL(window.location.href).searchParams.get('ref') || localStorage.getItem('p_ref');
+    if (refId && /^[0-9a-f-]{36}$/i.test(refId) && refId !== user.id) {
+      fetch('/api/follows', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+        body: JSON.stringify({ following_id: refId })
+      }).catch(() => {});
+      localStorage.removeItem('p_ref');
+    }
+  } catch(e) {}
+
   try {
     var r = await fetch('/api/auth/profile', {
       method:'POST',
@@ -392,7 +426,7 @@ async function doCreate() {
     }
     const destLabel = role === 'organizer' ? '🎪 Organizer account created! Setting up your dashboard…'
       : role === 'business' ? '🏪 Business account created! Setting up your dashboard…'
-      : '🎉 Welcome to Pulsify!';
+      : '🎉 Welcome to Pulsefy!';
     toast(destLabel, 'ok');
     const dest = role === 'organizer' ? '/organizer'
       : role === 'business' ? '/business'

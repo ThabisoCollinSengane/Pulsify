@@ -149,24 +149,17 @@ textarea.inp{resize:none;height:78px;line-height:1.5}
   </div>
 
   <div class="sec">
-    <div class="sec-head">Social Links</div>
-    <div class="field"><div class="lbl">📸 Instagram</div><input class="inp" id="soc-instagram" type="text" placeholder="@yourhandle or full URL"/></div>
-    <div class="field"><div class="lbl">🎵 TikTok</div><input class="inp" id="soc-tiktok" type="text" placeholder="@yourhandle or full URL"/></div>
-    <div class="field"><div class="lbl">💬 WhatsApp</div><input class="inp" id="soc-whatsapp" type="tel" placeholder="e.g. 0821234567"/></div>
-    <div class="field"><div class="lbl">📘 Facebook</div><input class="inp" id="soc-facebook" type="text" placeholder="Name or full URL"/></div>
-    <div class="field"><div class="lbl">🐦 X / Twitter</div><input class="inp" id="soc-twitter" type="text" placeholder="@yourhandle or full URL"/></div>
-  </div>
-
-  <div class="sec">
-    <div class="sec-head">Notification Preferences</div>
+    <div class="sec-head">In-App Notifications</div>
     <div style="padding:4px 15px">
-      <div class="trow"><div class="trow-info"><div class="trow-title">Email — Event reminders</div><div class="trow-sub">24h before events you've booked</div></div><label class="tgl"><input type="checkbox" id="n-email-ev"/><span class="tgl-s"></span></label></div>
-      <div class="trow"><div class="trow-info"><div class="trow-title">Email — Booking confirmations</div><div class="trow-sub">Receipt after ticket purchase</div></div><label class="tgl"><input type="checkbox" id="n-email-bk"/><span class="tgl-s"></span></label></div>
-      <div class="trow"><div class="trow-info"><div class="trow-title">Email — New followers</div><div class="trow-sub">When someone follows you</div></div><label class="tgl"><input type="checkbox" id="n-email-fl"/><span class="tgl-s"></span></label></div>
-      <div class="trow"><div class="trow-info"><div class="trow-title">SMS — Event reminders</div><div class="trow-sub">Requires phone number</div></div><label class="tgl"><input type="checkbox" id="n-sms-ev"/><span class="tgl-s"></span></label></div>
-      <div class="trow"><div class="trow-info"><div class="trow-title">SMS — Booking confirmations</div><div class="trow-sub">Ticket details via SMS</div></div><label class="tgl"><input type="checkbox" id="n-sms-bk"/><span class="tgl-s"></span></label></div>
-      <div class="trow"><div class="trow-info"><div class="trow-title">Push — Squad messages</div><div class="trow-sub">New messages in your squads</div></div><label class="tgl"><input type="checkbox" id="n-push-sq"/><span class="tgl-s"></span></label></div>
-      <div class="trow"><div class="trow-info"><div class="trow-title">Push — New followers</div><div class="trow-sub">When someone starts vibing with you</div></div><label class="tgl"><input type="checkbox" id="n-push-fl"/><span class="tgl-s"></span></label></div>
+      <div class="trow"><div class="trow-info"><div class="trow-title">New followers</div><div class="trow-sub">When someone starts following you</div></div><label class="tgl"><input type="checkbox" id="n-follow" checked/><span class="tgl-s"></span></label></div>
+      <div class="trow"><div class="trow-info"><div class="trow-title">Likes on your posts</div><div class="trow-sub">Hearts from the community</div></div><label class="tgl"><input type="checkbox" id="n-like" checked/><span class="tgl-s"></span></label></div>
+      <div class="trow"><div class="trow-info"><div class="trow-title">Comments on your posts</div><div class="trow-sub">Replies and discussion</div></div><label class="tgl"><input type="checkbox" id="n-comment" checked/><span class="tgl-s"></span></label></div>
+      <div class="trow"><div class="trow-info"><div class="trow-title">Squad invites</div><div class="trow-sub">When a friend invites you to their squad</div></div><label class="tgl"><input type="checkbox" id="n-squad_invite" checked/><span class="tgl-s"></span></label></div>
+      <div class="trow"><div class="trow-info"><div class="trow-title">Squad plans</div><div class="trow-sub">New outings planned in your squads</div></div><label class="tgl"><input type="checkbox" id="n-squad_plan" checked/><span class="tgl-s"></span></label></div>
+      <div class="trow"><div class="trow-info"><div class="trow-title">Organizer updates</div><div class="trow-sub">Posts from organisers and venues you follow</div></div><label class="tgl"><input type="checkbox" id="n-business_post" checked/><span class="tgl-s"></span></label></div>
+    </div>
+    <div style="margin:8px 15px 4px;padding:9px 11px;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.18);border-radius:10px;font-size:.72rem;color:var(--mu2);line-height:1.5">
+      📬 Email, SMS &amp; push notifications are coming in v2. For now everything appears in your in-app bell 🔔.
     </div>
   </div>
 
@@ -213,11 +206,6 @@ async function loadData() {
   document.getElementById('dob').value = currentProfile.dob || '';
   const phone = (currentProfile.phone || '').replace('+27', '');
   document.getElementById('phone').value = phone;
-  document.getElementById('soc-instagram').value = currentProfile.instagram || '';
-  document.getElementById('soc-tiktok').value    = currentProfile.tiktok    || '';
-  document.getElementById('soc-whatsapp').value  = currentProfile.whatsapp  || '';
-  document.getElementById('soc-facebook').value  = currentProfile.facebook  || '';
-  document.getElementById('soc-twitter').value   = currentProfile.twitter   || '';
   document.getElementById('created-at').textContent = currentUser.created_at ? new Date(currentUser.created_at).toLocaleDateString() : '—';
 
   if (currentUser.email_confirmed_at) {
@@ -243,14 +231,14 @@ async function loadData() {
     el.onclick = () => toggleGenre(el, genre);
   });
 
-  const notif = JSON.parse(localStorage.getItem('p_notif') || '{}');
-  document.getElementById('n-email-ev').checked = notif.email_event_reminder !== false;
-  document.getElementById('n-email-bk').checked = notif.email_booking_conf !== false;
-  document.getElementById('n-email-fl').checked = notif.email_new_follower === true;
-  document.getElementById('n-sms-ev').checked = notif.sms_event_reminder === true;
-  document.getElementById('n-sms-bk').checked = notif.sms_booking_conf === true;
-  document.getElementById('n-push-sq').checked = notif.push_squad_message !== false;
-  document.getElementById('n-push-fl').checked = notif.push_new_follower === true;
+  // Prefer DB-stored prefs (profiles.notification_prefs); fall back to localStorage
+  const dbPrefs = (profile && profile.notification_prefs) || {};
+  const localPrefs = JSON.parse(localStorage.getItem('p_notif') || '{}');
+  const prefs = { ...localPrefs, ...dbPrefs };
+  ['follow','like','comment','squad_invite','squad_plan','business_post'].forEach(k => {
+    const el = document.getElementById('n-' + k);
+    if (el) el.checked = prefs[k] !== false; // default ON
+  });
 
   const priv = JSON.parse(localStorage.getItem('p_privacy') || '{}');
   document.getElementById('priv-profile').value = priv.profile_public !== false ? 'true' : 'false';
@@ -300,25 +288,16 @@ async function saveAll() {
   let phone = document.getElementById('phone').value.trim();
   phone = phone ? '+27' + phone.replace(/^0/, '').replace(/\s/g, '') : null;
 
-  const instagram = document.getElementById('soc-instagram').value.trim() || null;
-  const tiktok    = document.getElementById('soc-tiktok').value.trim()    || null;
-  const whatsapp  = document.getElementById('soc-whatsapp').value.trim()  || null;
-  const facebook  = document.getElementById('soc-facebook').value.trim()  || null;
-  const twitter   = document.getElementById('soc-twitter').value.trim()   || null;
-  const updateData = { display_name: displayName, username, bio, province, city, dob, phone, genres: Array.from(selectedGenres), instagram, tiktok, whatsapp, facebook, twitter, updated_at: new Date().toISOString() };
+  const notifPrefs = {};
+  ['follow','like','comment','squad_invite','squad_plan','business_post'].forEach(k => {
+    const el = document.getElementById('n-' + k);
+    if (el) notifPrefs[k] = el.checked;
+  });
+  localStorage.setItem('p_notif', JSON.stringify(notifPrefs));
+
+  const updateData = { display_name: displayName, username, bio, province, city, dob, phone, genres: Array.from(selectedGenres), notification_prefs: notifPrefs, updated_at: new Date().toISOString() };
   const { error } = await sb.from('profiles').update(updateData).eq('id', currentUser.id);
   if (error) { showToast('Error saving: ' + error.message, 'err'); return; }
-
-  const notifPrefs = {
-    email_event_reminder: document.getElementById('n-email-ev').checked,
-    email_booking_conf: document.getElementById('n-email-bk').checked,
-    email_new_follower: document.getElementById('n-email-fl').checked,
-    sms_event_reminder: document.getElementById('n-sms-ev').checked,
-    sms_booking_conf: document.getElementById('n-sms-bk').checked,
-    push_squad_message: document.getElementById('n-push-sq').checked,
-    push_new_follower: document.getElementById('n-push-fl').checked
-  };
-  localStorage.setItem('p_notif', JSON.stringify(notifPrefs));
 
   const privacyPrefs = {
     profile_public: document.getElementById('priv-profile').value === 'true',
