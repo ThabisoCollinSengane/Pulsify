@@ -396,8 +396,9 @@ function buildCard(post) {
   const cap = post.caption || '';
   const shortCap = cap.length > 220 ? cap.slice(0,220) : cap;
 
-  const likeCount = likes.length > 0 ? fn(likes.length) : fn(post.like_count || 0);
-  const cmtCount  = comments.length > 0 ? fn(comments.length) : fn(post.comment_count || 0);
+  // Always use server's counts as the source of truth; local cache is only for "did I like this" boolean state
+  const likeCount = fn(post.like_count || 0);
+  const cmtCount  = fn(post.comment_count || 0);
   const rpostCount = fn(reposts.length);
 
   const el = document.createElement('div');
@@ -415,7 +416,23 @@ function buildCard(post) {
       '</div>' +
       (!isOwn ? '<button class="follow-btn '+(isFollowing?'on':'')+'" id="fbtn-'+x(post.id)+'" onclick="doFollow(\u0027'+x(post.user_id)+'\u0027,\u0027'+x(post.id)+'\u0027)">'+(isFollowing?'✓ Following':'+ Follow')+'</button>' : '') +
     '</div>' +
-    (post.image_url ? '<img class="fb" src="'+x(post.image_url)+'" loading="lazy" onerror="this.remove()"/>' : '') +
+    (() => {
+      let urls = [];
+      if (post.image_url) {
+        // image_url may be a single URL OR a JSON-encoded array of URLs (multi-photo posts)
+        if (typeof post.image_url === 'string' && post.image_url.trim().startsWith('[')) {
+          try { urls = JSON.parse(post.image_url).filter(u => typeof u === 'string' && u.trim()); } catch(e) { urls = [post.image_url]; }
+        } else if (Array.isArray(post.image_url)) {
+          urls = post.image_url.filter(u => typeof u === 'string' && u.trim());
+        } else if (typeof post.image_url === 'string') {
+          urls = [post.image_url];
+        }
+      }
+      if (!urls.length) return '';
+      if (urls.length === 1) return '<img class="fb" src="' + x(urls[0]) + '" loading="lazy" onerror="this.remove()"/>';
+      // Multiple photos — horizontal scroll gallery
+      return '<div style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:#000">' + urls.map(u => '<img src="' + x(u) + '" loading="lazy" onerror="this.remove()" style="width:100%;height:auto;max-height:420px;object-fit:cover;flex:0 0 100%;scroll-snap-align:start;display:block"/>').join('') + '</div>';
+    })() +
     (cap ? '<div class="fd"><div class="cap" id="cap-'+x(post.id)+'">'+x(shortCap)+(cap.length>220?' <span class="cap-more" onclick="expandCap(\u0027'+x(post.id)+'\u0027)">more</span>':'')+'</div></div>' : '') +
     '<div class="fac">' +
       '<button class="ab '+(liked?'lk':'')+'" id="lb-'+x(post.id)+'" onclick="doLike(\u0027'+x(post.id)+'\u0027)"><span class="ai">'+(liked?'❤️':'🤍')+'</span> <span id="lc-'+x(post.id)+'">'+likeCount+'</span></button>' +
@@ -470,14 +487,17 @@ function expandCap(postId) {
 
 async function doLike(postId) {
   if (!_uid) return showToast('Sign in to like posts');
+  // Find the post in our in-memory list so we can update the server count optimistically
+  const post = _posts.find(p => p.id === postId);
   const likes   = _getLikes(postId) || [];
   const liked   = likes.includes(_uid);
   const newLikes = liked ? likes.filter(l=>l!==_uid) : [...likes, _uid];
   _setLikes(postId, newLikes);
+  if (post) post.like_count = Math.max(0, (post.like_count || 0) + (liked ? -1 : 1));
   const btn = document.getElementById('lb-'+postId);
   const cnt = document.getElementById('lc-'+postId);
   if (btn) { btn.classList.toggle('lk', !liked); btn.querySelector('.ai').textContent = liked?'🤍':'❤️'; }
-  if (cnt) cnt.textContent = fn(newLikes.length);
+  if (cnt && post) cnt.textContent = fn(post.like_count);
   fetch('/api/reactions', {
     method: liked ? 'DELETE' : 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },

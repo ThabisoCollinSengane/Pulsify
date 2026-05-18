@@ -250,9 +250,9 @@ module.exports = async (req, res) => {
       const squadId = squadActionMatch[1];
       const { user_id: inviteeId } = req.body || {};
       if (!inviteeId) return res.status(400).json({ error: 'user_id required' });
-      // insert_squad_invite is SECURITY DEFINER (runs as postgres), callable by anon/authenticated.
-      // It verifies membership internally and uses ON CONFLICT DO NOTHING for duplicates.
-      const { error } = await sb().rpc('insert_squad_invite', {
+      // insert_squad_invite is SECURITY DEFINER (runs as postgres) and idempotent —
+      // returns {status:'created'|'already_invited'|'already_member'}.
+      const { data: rpcResult, error } = await sb().rpc('insert_squad_invite', {
         p_squad_id: squadId,
         p_inviter_id: auth.user.id,
         p_invitee_id: inviteeId,
@@ -261,6 +261,9 @@ module.exports = async (req, res) => {
         if (error.message?.includes('Not a squad member')) return res.status(403).json({ error: 'Not a squad member' });
         return res.status(400).json({ error: error.message });
       }
+      const status = rpcResult?.status || 'created';
+      if (status === 'already_member') return res.status(200).json({ ok: true, status: 'already_member', message: 'Already in squad' });
+      if (status === 'already_invited') return res.status(200).json({ ok: true, status: 'already_invited', message: 'Already invited' });
       const [{ data: squad }, { data: inviter }] = await Promise.all([
         sb().from('squads').select('name').eq('id', squadId).single(),
         sb().from('profiles').select('display_name').eq('id', auth.user.id).single(),

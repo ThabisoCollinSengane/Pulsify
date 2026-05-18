@@ -309,9 +309,9 @@ module.exports = async (req, res) => {
       ] = await Promise.all([
         sb().from('profiles').select('id,username,display_name,bio,avatar_url,city,province,role,is_verified,genres').eq('id', profId).single(),
         sb().from('posts').select('id', { count: 'exact', head: true }).eq('user_id', profId).eq('visibility', 'public'),
-        sb().from('follows').select('id', { count: 'exact', head: true }).eq('following_id', profId),
-        sb().from('follows').select('id', { count: 'exact', head: true }).eq('follower_id', profId),
-        sb().from('posts').select('id,caption,image_url,post_type,likes_count,comments_count,created_at').eq('user_id', profId).eq('visibility', 'public').order('created_at', { ascending: false }).limit(6),
+        sb().from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', profId),
+        sb().from('follows').select('following_id', { count: 'exact', head: true }).eq('follower_id', profId),
+        sb().from('posts').select('id,caption,image_url,post_type,like_count,comment_count,created_at').eq('user_id', profId).eq('visibility', 'public').order('created_at', { ascending: false }).limit(6),
       ]);
 
       if (!profile) return res.status(404).json({ error: 'Profile not found' });
@@ -788,8 +788,8 @@ module.exports = async (req, res) => {
       if (error) return res.status(400).json({ error: error.message });
 
       if (entity_type === 'post') {
-        const { data: p } = await sb().from('posts').select('comments_count').eq('id', entity_id).single();
-        if (p) await sb().from('posts').update({ comments_count: (p.comments_count || 0) + 1 }).eq('id', entity_id);
+        const { data: p } = await sb().from('posts').select('comment_count').eq('id', entity_id).single();
+        if (p) await sb().from('posts').update({ comment_count: (p.comment_count || 0) + 1 }).eq('id', entity_id);
       }
 
       return res.status(200).json({ comment: { ...comment, content: comment.body }, success: true });

@@ -5341,7 +5341,14 @@ async function inviteToSquad(userId, btn) {
     });
     const d = await safeJson(r);
     if (!r.ok) { showToast(d.error || 'Could not invite'); btn.disabled = false; btn.textContent = '＋ Invite'; return; }
-    btn.textContent = '✓ Invited';
+    if (d.status === 'already_member') {
+      btn.textContent = '✓ Already in squad';
+    } else if (d.status === 'already_invited') {
+      btn.textContent = '✓ Invite pending';
+    } else {
+      btn.textContent = '✓ Invited';
+      showToast('Invite sent!', 'ok');
+    }
     btn.style.background = 'rgba(198,255,74,.15)';
     btn.style.color = 'var(--li)';
     const row = document.getElementById('inv-row-' + userId);
