@@ -226,6 +226,18 @@ textarea.ff-c{resize:none;height:80px;line-height:1.55}
   </div>
 </div>
 
+<!-- Followers/Following list overlay -->
+<div id="fl-overlay" style="display:none;position:fixed;inset:0;z-index:2700;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)document.getElementById('fl-overlay').style.display='none'">
+  <div style="width:100%;max-width:520px;max-height:80vh;background:var(--bg2);border:1px solid var(--border2);border-bottom:none;border-radius:22px 22px 0 0;display:flex;flex-direction:column;animation:su .25s ease">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--border2);margin:10px auto 0;flex-shrink:0"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 8px;flex-shrink:0">
+      <div id="fl-title" style="font-family:'Syne',sans-serif;font-size:.92rem;font-weight:800">Followers</div>
+      <button onclick="document.getElementById('fl-overlay').style.display='none'" style="background:var(--surf);border:none;color:var(--mu2);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:.9rem">✕</button>
+    </div>
+    <div id="fl-body" style="flex:1;overflow-y:auto;padding:4px 14px 22px"></div>
+  </div>
+</div>
+
 <script>
 const SUPABASE_URL  = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
@@ -626,6 +638,36 @@ function doShare(caption) {
 
 function closeProfOverlay() { document.getElementById('prof-overlay').style.display = 'none'; }
 
+async function openFlList(userId, type) {
+  const ov = document.getElementById('fl-overlay');
+  const body = document.getElementById('fl-body');
+  const title = document.getElementById('fl-title');
+  if (!ov || !body || !title) return;
+  title.textContent = type === 'followers' ? 'Followers' : 'Following';
+  body.innerHTML = '<div style="padding:30px;text-align:center;color:var(--mu);font-size:.8rem">Loading…</div>';
+  ov.style.display = 'flex';
+  try {
+    const r = await fetch('/api/profiles/' + encodeURIComponent(userId) + '/' + type);
+    const j = await safeJson(r);
+    const list = j.users || [];
+    if (!list.length) {
+      body.innerHTML = '<div style="padding:30px;text-align:center;color:var(--mu);font-size:.8rem">' + (type === 'followers' ? 'No followers yet.' : 'Not following anyone yet.') + '</div>';
+      return;
+    }
+    body.innerHTML = list.map(p => {
+      const init  = (p.display_name||p.username||'?')[0].toUpperCase();
+      const isOrg = ['organizer','business'].includes(p.role);
+      const grad  = isOrg ? 'linear-gradient(135deg,#FF5C00,#FF2D78)' : 'linear-gradient(135deg,#B026FF,#FF5C00)';
+      const vbadge = p.is_verified ? '<span class="puls-badge" title="Verified by Pulsefy" style="width:11px;height:11px;margin-left:3px"></span>' : '';
+      const av   = p.avatar_url ? '<img src="' + x(p.avatar_url) + '" style="width:100%;height:100%;object-fit:cover">' : init;
+      const onClickStr = 'document.getElementById(\u0027fl-overlay\u0027).style.display=\u0027none\u0027;openProfile(\u0027' + x(p.id) + '\u0027)';
+      return '<div onclick="' + onClickStr + '" style="display:flex;align-items:center;gap:10px;padding:10px 6px;cursor:pointer;border-bottom:1px solid var(--border)"><div style="width:40px;height:40px;border-radius:50%;background:' + grad + ';display:flex;align-items:center;justify-content:center;font-family:\u0027Syne\u0027,sans-serif;font-weight:700;color:#fff;font-size:.9rem;flex-shrink:0;overflow:hidden">' + av + '</div><div style="flex:1;min-width:0"><div style="font-family:\u0027Syne\u0027,sans-serif;font-size:.84rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + x(p.display_name || p.username || 'User') + vbadge + '</div><div style="font-size:.7rem;color:var(--mu)">@' + x(p.username || 'user') + (p.city ? ' · ' + x(p.city) : '') + '</div></div></div>';
+    }).join('');
+  } catch (e) {
+    body.innerHTML = '<div style="padding:30px;text-align:center;color:var(--pk);font-size:.8rem">Could not load list.</div>';
+  }
+}
+
 async function openProfile(userId) {
   if (!userId) return;
   const ov   = document.getElementById('prof-overlay');
@@ -669,8 +711,8 @@ async function openProfile(userId) {
       genresHtml +
       '<div style="display:flex;gap:24px;margin-bottom:'+(recent_posts.length?'16px':'0')+'">' +
         '<div style="text-align:center"><div style="font-family:\u0027Bebas Neue\u0027,sans-serif;font-size:1.3rem;color:var(--or)">'+posts_count+'</div><div style="font-size:.58rem;color:var(--mu);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Posts</div></div>' +
-        '<div style="text-align:center"><div style="font-family:\u0027Bebas Neue\u0027,sans-serif;font-size:1.3rem;color:var(--or)">'+followers_count+'</div><div style="font-size:.58rem;color:var(--mu);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Followers</div></div>' +
-        '<div style="text-align:center"><div style="font-family:\u0027Bebas Neue\u0027,sans-serif;font-size:1.3rem;color:var(--or)">'+following_count+'</div><div style="font-size:.58rem;color:var(--mu);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Following</div></div>' +
+        '<div style="text-align:center;cursor:pointer" onclick="openFlList(\u0027'+x(userId)+'\u0027,\u0027followers\u0027)"><div style="font-family:\u0027Bebas Neue\u0027,sans-serif;font-size:1.3rem;color:var(--or)">'+followers_count+'</div><div style="font-size:.58rem;color:var(--mu);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Followers</div></div>' +
+        '<div style="text-align:center;cursor:pointer" onclick="openFlList(\u0027'+x(userId)+'\u0027,\u0027following\u0027)"><div style="font-family:\u0027Bebas Neue\u0027,sans-serif;font-size:1.3rem;color:var(--or)">'+following_count+'</div><div style="font-size:.58rem;color:var(--mu);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em">Following</div></div>' +
       '</div>' +
       '<a href="/user-profile?id='+x(userId)+'" style="display:block;text-align:center;padding:10px 14px;margin-top:14px;background:rgba(176,38,255,.12);border:1px solid rgba(176,38,255,.3);border-radius:50px;color:var(--pu);font-family:\u0027Syne\u0027,sans-serif;font-size:.78rem;font-weight:700;text-decoration:none">View Full Profile →</a>' +
       (postsHtml ? '<div style="font-family:\u0027Syne\u0027,sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin:14px 0 8px">Places Attended</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">'+postsHtml+'</div>' : '');

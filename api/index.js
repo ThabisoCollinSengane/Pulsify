@@ -325,6 +325,46 @@ module.exports = async (req, res) => {
       });
     }
 
+    /* ─── GET /profiles/:id/followers ──────────────────────── */
+    const followersMatch = url.match(/^\/profiles\/([^/]+)\/followers$/);
+    if (followersMatch && req.method === 'GET') {
+      const targetId = followersMatch[1];
+      const { data, error } = await sb()
+        .from('follows')
+        .select('follower_id, created_at, profiles:follower_id(id, display_name, username, avatar_url, is_verified, role, city)')
+        .eq('following_id', targetId)
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (error) return res.status(400).json({ error: error.message });
+      const users = (data || []).map(r => r.profiles).filter(Boolean);
+      return res.status(200).json({ users });
+    }
+
+    /* ─── GET /profiles/:id/following ──────────────────────── */
+    const followingMatch = url.match(/^\/profiles\/([^/]+)\/following$/);
+    if (followingMatch && req.method === 'GET') {
+      const sourceId = followingMatch[1];
+      const { data, error } = await sb()
+        .from('follows')
+        .select('following_id, created_at, profiles:following_id(id, display_name, username, avatar_url, is_verified, role, city)')
+        .eq('follower_id', sourceId)
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (error) return res.status(400).json({ error: error.message });
+      const users = (data || []).map(r => r.profiles).filter(Boolean);
+      return res.status(200).json({ users });
+    }
+
+    /* ─── GET /suggestions ─────────────────────────────────── */
+    if (url === '/suggestions' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const limit = Math.min(50, parseInt(q.limit || '20'));
+      const { data, error } = await sb().rpc('get_friend_suggestions', { p_user_id: auth.user.id, p_limit: limit });
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ suggestions: data || [] });
+    }
+
     /* ─── POST /ticket/purchase ───────────────────────────── */
     if (url === '/ticket/purchase' && req.method === 'POST') {
       const body = req.body || {};

@@ -102,11 +102,11 @@ body{padding-bottom:32px}
     <div class="phandle" id="phandle">@user</div>
     <div class="pbio" id="pbio"></div>
     <div class="follow-row">
-      <div class="follow-stat" id="followers-stat">
+      <div class="follow-stat" id="followers-stat" style="cursor:pointer" onclick="openFlList('followers')">
         <div class="follow-num" id="followers-count">0</div>
         <div class="follow-label">Followers</div>
       </div>
-      <div class="follow-stat" id="following-stat">
+      <div class="follow-stat" id="following-stat" style="cursor:pointer" onclick="openFlList('following')">
         <div class="follow-num" id="following-count">0</div>
         <div class="follow-label">Following</div>
       </div>
@@ -478,6 +478,42 @@ let _postImageFile = null;
 function previewPost(input) { /* ... implementation unchanged ... */ }
 async function submitPost() { /* ... implementation largely unchanged, but ensure it uses currentUser.id ... */ }
 
+
+async function openFlList(type) {
+  if (!profileId) return;
+  let ov = document.getElementById('fl-overlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'fl-overlay';
+    ov.style.cssText = 'display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);align-items:flex-end;justify-content:center';
+    ov.onclick = (e) => { if (e.target === ov) ov.style.display = 'none'; };
+    ov.innerHTML = `<div style="width:100%;max-width:520px;max-height:80vh;background:var(--bg2);border:1px solid var(--border2);border-bottom:none;border-radius:22px 22px 0 0;display:flex;flex-direction:column"><div style="width:40px;height:4px;border-radius:2px;background:var(--border2);margin:10px auto 0;flex-shrink:0"></div><div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 8px"><div id="fl-title" style="font-family:'Syne',sans-serif;font-size:.92rem;font-weight:800">Followers</div><button onclick="document.getElementById('fl-overlay').style.display='none'" style="background:var(--surf);border:none;color:var(--mu2);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:.9rem">✕</button></div><div id="fl-body" style="flex:1;overflow-y:auto;padding:4px 14px 22px"></div></div>`;
+    document.body.appendChild(ov);
+  }
+  document.getElementById('fl-title').textContent = type === 'followers' ? 'Followers' : 'Following';
+  const body = document.getElementById('fl-body');
+  body.innerHTML = '<div style="padding:30px;text-align:center;color:var(--mu);font-size:.8rem">Loading…</div>';
+  ov.style.display = 'flex';
+  try {
+    const r = await fetch('/api/profiles/' + encodeURIComponent(profileId) + '/' + type);
+    const j = await r.json().catch(() => ({}));
+    const list = j.users || [];
+    if (!list.length) {
+      body.innerHTML = '<div style="padding:30px;text-align:center;color:var(--mu);font-size:.8rem">' + (type === 'followers' ? 'No followers yet.' : 'Not following anyone yet.') + '</div>';
+      return;
+    }
+    const esc = (s) => String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    body.innerHTML = list.map(p => {
+      const init = (p.display_name || p.username || '?')[0].toUpperCase();
+      const isOrg = ['organizer','business'].includes(p.role);
+      const grad = isOrg ? 'linear-gradient(135deg,#FF5C00,#FF2D78)' : 'linear-gradient(135deg,#B026FF,#FF5C00)';
+      const av = p.avatar_url ? '<img src="' + esc(p.avatar_url) + '" style="width:100%;height:100%;object-fit:cover">' : init;
+      return `<a href="/user-profile?id=${esc(p.id)}" style="display:flex;align-items:center;gap:10px;padding:10px 6px;cursor:pointer;border-bottom:1px solid var(--border);text-decoration:none;color:var(--tx)"><div style="width:40px;height:40px;border-radius:50%;background:${grad};display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:.9rem;flex-shrink:0;overflow:hidden">${av}</div><div style="flex:1;min-width:0"><div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700">${esc(p.display_name || p.username || "User")}</div><div style="font-size:.7rem;color:var(--mu)">@${esc(p.username || "user")}${p.city ? " · " + esc(p.city) : ""}</div></div></a>`;
+    }).join('');
+  } catch (e) {
+    body.innerHTML = '<div style="padding:30px;text-align:center;color:var(--pk);font-size:.8rem">Could not load list.</div>';
+  }
+}
 
 document.addEventListener('DOMContentLoaded', loadUserData);
 </script>

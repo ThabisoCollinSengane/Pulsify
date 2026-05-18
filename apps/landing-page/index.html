@@ -804,6 +804,18 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 <style>@keyframes npIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}</style>
 
 <!-- PROFILE OVERLAY -->
+<!-- Followers/Following list overlay -->
+<div id="fl-overlay" style="display:none;position:fixed;inset:0;z-index:2700;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)document.getElementById('fl-overlay').style.display='none'">
+  <div style="width:100%;max-width:520px;max-height:80vh;background:var(--bg2);border:1px solid var(--border2);border-bottom:none;border-radius:22px 22px 0 0;display:flex;flex-direction:column;animation:su .25s ease">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--border2);margin:10px auto 0;flex-shrink:0"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 8px;flex-shrink:0">
+      <div id="fl-title" style="font-family:'Syne',sans-serif;font-size:.92rem;font-weight:800">Followers</div>
+      <button onclick="document.getElementById('fl-overlay').style.display='none'" style="background:var(--surf);border:none;color:var(--mu2);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:.9rem">✕</button>
+    </div>
+    <div id="fl-body" style="flex:1;overflow-y:auto;padding:4px 14px 22px"></div>
+  </div>
+</div>
+
 <div id="prof-overlay" style="display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeProfOverlay()">
   <div style="width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;max-height:94vh;display:flex;flex-direction:column;animation:su .25s ease;position:relative">
     <div style="width:40px;height:4px;border-radius:2px;background:var(--border2);margin:10px auto 0;flex-shrink:0"></div>
@@ -3194,6 +3206,14 @@ async function toggleFollow(targetId, btn) {
   btn.disabled = false;
 }
 
+function _whatsappInviteCard() {
+  const uid = currentUser?.id || '';
+  const link = 'https://pulsefy.co.za/?ref=' + encodeURIComponent(uid);
+  const txt  = encodeURIComponent("Hey! I'm on Pulsify 🇿🇦 — South Africa's live event app. Join me and let's find vibes together: " + link);
+  const wa   = 'https://wa.me/?text=' + txt;
+  return `<a href="${wa}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(37,211,102,.18),rgba(176,38,255,.12));border:1px solid rgba(37,211,102,.35);border-radius:14px;padding:10px 12px;text-decoration:none;color:var(--tx);margin-bottom:14px"><div style="width:36px;height:36px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem">💬</div><div style="flex:1;min-width:0"><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:800">Invite friends via WhatsApp</div><div style="font-size:.7rem;color:var(--mu)">Share Pulsify — they'll auto-follow you on signup</div></div><div style="color:var(--li);font-size:1rem">→</div></a>`;
+}
+
 async function renderSquad() {
   const el = document.getElementById('squad-content');
   const sb = getSB();
@@ -3201,7 +3221,6 @@ async function renderSquad() {
 
   el.innerHTML = '<div style="padding:12px 16px;font-size:.78rem;color:var(--mu)">Loading…</div>';
 
-  // Always verify a live Supabase session — localStorage p_user may be stale/expired
   if (sb) {
     try {
       const { data: { user } } = await sb.auth.getUser();
@@ -3211,51 +3230,41 @@ async function renderSquad() {
   }
 
   if (!currentUser || !sb) {
-    el.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Sign in to see your friends.</div>';
+    el.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Sign in to see suggestions.</div>';
     return;
   }
-  el.innerHTML = '<div style="padding:12px 16px;font-size:.78rem;color:var(--mu)">Loading…</div>';
+
   try {
-    const { data: follows, error } = await sb
-      .from('follows')
-      .select('following_id')
-      .eq('follower_id', currentUser.id);
-    if (error) throw error;
-    _squadFollowing = new Set((follows||[]).map(f=>f.following_id));
-    if (!follows || !follows.length) {
-      el.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Not following anyone yet. Search above ↑</div>';
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session?.access_token;
+    const r = await fetch(API + '/suggestions?limit=20', { headers: token ? { 'Authorization': 'Bearer ' + token } : {} });
+    const { suggestions } = await safeJson(r);
+    const list = suggestions || [];
+    if (!list.length) {
+      el.innerHTML = _whatsappInviteCard() + '<div style="padding:24px 16px;text-align:center;font-size:.78rem;color:var(--mu)"><div style="font-size:2rem;margin-bottom:6px">👋</div>No suggestions yet — add your genres &amp; city in <a href="/profile-settings" style="color:var(--or);font-weight:700">Profile Settings</a> so we can match you.</div>';
       return;
     }
-    const ids = follows.map(f => f.following_id);
-    const { data: profs, error: pErr } = await sb
-      .from('profiles')
-      .select('id,username,display_name,avatar_url,city,role,is_verified')
-      .in('id', ids);
-    if (pErr) throw pErr;
-    if (!profs || !profs.length) {
-      el.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Not following anyone yet. Search above ↑</div>';
-      return;
-    }
-    el.innerHTML = profs.map(p => {
+    el.innerHTML = _whatsappInviteCard() + list.map(p => {
       const isOrg = ['organizer','business'].includes(p.role);
       const init  = (p.display_name||p.username||'?')[0].toUpperCase();
       const grad  = isOrg ? 'linear-gradient(135deg,#FF5C00,#FF2D78)' : 'linear-gradient(135deg,#B026FF,#FF5C00)';
-      const badge = isOrg ? '<span style="display:inline-block;padding:1px 7px;border-radius:50px;background:rgba(255,92,0,.15);color:var(--or);font-family:\'Syne\',sans-serif;font-size:.56rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-left:6px;vertical-align:middle">'+x(p.role)+'</span>' : '';
       const vbadge = p.is_verified ? '<span class="puls-badge" title="Verified by Pulsefy" style="width:12px;height:12px;margin-left:4px"></span>' : '';
       const av   = p.avatar_url ? '<img src="'+x(p.avatar_url)+'" style="width:100%;height:100%;object-fit:cover">' : init;
+      // Reason chip — show what matched
+      let reason = '';
+      if (p.mutual_follows > 0) reason = `<span style="font-size:.6rem;color:var(--cy)">${p.mutual_follows} mutual</span>`;
+      else if (p.shared_genres > 0) reason = `<span style="font-size:.6rem;color:var(--pu)">${p.shared_genres} shared genre${p.shared_genres>1?'s':''}</span>`;
+      else if (p.city) reason = `<span style="font-size:.6rem;color:var(--mu)">📍 ${x(p.city)}</span>`;
       return '<div class="pc pc-click" onclick="openProfile(\''+x(p.id)+'\')" style="padding:10px 14px;cursor:pointer">' +
         '<div class="pav" style="background:'+grad+';font-size:.9rem;font-weight:700;overflow:hidden">' + av + '</div>' +
-        '<div style="flex:1;min-width:0"><div class="pn">' + x(p.display_name||p.username||'User') + vbadge + badge + '</div>' +
-        '<div class="ph">@' + x(p.username||'user') + (p.city?' · '+x(p.city):'') + '</div></div>' +
-        '<button class="vb cd" onclick="event.stopPropagation();toggleFollow(\''+x(p.id)+'\',this)">✓ Following</button>' +
+        '<div style="flex:1;min-width:0"><div class="pn">' + x(p.display_name||p.username||'User') + vbadge + '</div>' +
+        '<div class="ph">@' + x(p.username||'user') + (reason?' · '+reason:'') + '</div></div>' +
+        '<button class="vb" onclick="event.stopPropagation();toggleFollow(\''+x(p.id)+'\',this)">+ Follow</button>' +
       '</div>';
     }).join('');
   } catch(e) {
-    const msg = (e.message||'').includes('permission denied')
-      ? 'Sign in to see your friends.'
-      : 'Could not load friends. Try again.';
-    el.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">' + msg + '</div>';
     console.error('renderSquad error:', e);
+    el.innerHTML = _whatsappInviteCard() + '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Could not load suggestions. Try again.</div>';
   }
 }
 
@@ -3469,6 +3478,35 @@ async function saveMySocialLinks() {
 /* ══════════════════════════════════════════════════
    PROFILE OVERLAY (click any username)
 ══════════════════════════════════════════════════ */
+async function openFollowList(userId, type) {
+  const ov   = document.getElementById('fl-overlay');
+  const body = document.getElementById('fl-body');
+  const title = document.getElementById('fl-title');
+  if (!ov || !body || !title) return;
+  title.textContent = type === 'followers' ? 'Followers' : 'Following';
+  body.innerHTML = '<div style="padding:30px;text-align:center;color:var(--mu);font-size:.8rem">Loading…</div>';
+  ov.style.display = 'flex';
+  try {
+    const r = await fetch(API + '/profiles/' + encodeURIComponent(userId) + '/' + type);
+    const { users } = await safeJson(r);
+    const list = users || [];
+    if (!list.length) {
+      body.innerHTML = `<div style="padding:30px;text-align:center;color:var(--mu);font-size:.8rem">${type === 'followers' ? 'No followers yet.' : 'Not following anyone yet.'}</div>`;
+      return;
+    }
+    body.innerHTML = list.map(p => {
+      const init  = (p.display_name||p.username||'?')[0].toUpperCase();
+      const isOrg = ['organizer','business'].includes(p.role);
+      const grad  = isOrg ? 'linear-gradient(135deg,#FF5C00,#FF2D78)' : 'linear-gradient(135deg,#B026FF,#FF5C00)';
+      const vbadge = p.is_verified ? '<span class="puls-badge" title="Verified by Pulsefy" style="width:12px;height:12px;margin-left:4px"></span>' : '';
+      const av   = p.avatar_url ? `<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover">` : init;
+      return `<div onclick="document.getElementById('fl-overlay').style.display='none';openProfile('${x(p.id)}')" style="display:flex;align-items:center;gap:10px;padding:10px 6px;cursor:pointer;border-bottom:1px solid var(--border)"><div style="width:40px;height:40px;border-radius:50%;background:${grad};display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:.9rem;flex-shrink:0;overflow:hidden">${av}</div><div style="flex:1;min-width:0"><div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(p.display_name||p.username||'User')}${vbadge}</div><div style="font-size:.7rem;color:var(--mu)">@${x(p.username||'user')}${p.city?' · '+x(p.city):''}</div></div></div>`;
+    }).join('');
+  } catch (e) {
+    body.innerHTML = '<div style="padding:30px;text-align:center;color:var(--pk);font-size:.8rem">Could not load list.</div>';
+  }
+}
+
 async function openProfile(userId) {
   const ov = document.getElementById('prof-overlay');
   const body = document.getElementById('prof-overlay-body');
@@ -3543,8 +3581,8 @@ async function openProfile(userId) {
       ${_renderSocIcons(profile.social_links)}
       <div style="display:flex;gap:8px;margin-bottom:16px">
         <div style="flex:1;text-align:center;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:10px 4px"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--or);line-height:1">${posts_count}</div><div style="font-size:.58rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-top:3px">Posts</div></div>
-        <div style="flex:1;text-align:center;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:10px 4px"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--or);line-height:1">${followers_count}</div><div style="font-size:.58rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-top:3px">Followers</div></div>
-        <div style="flex:1;text-align:center;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:10px 4px"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--or);line-height:1">${following_count}</div><div style="font-size:.58rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-top:3px">Following</div></div>
+        <div onclick="openFollowList('${x(userId)}','followers')" style="flex:1;text-align:center;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:10px 4px;cursor:pointer"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--or);line-height:1">${followers_count}</div><div style="font-size:.58rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-top:3px">Followers</div></div>
+        <div onclick="openFollowList('${x(userId)}','following')" style="flex:1;text-align:center;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:10px 4px;cursor:pointer"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--or);line-height:1">${following_count}</div><div style="font-size:.58rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-top:3px">Following</div></div>
       </div>
       ${prefsHtml}
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">

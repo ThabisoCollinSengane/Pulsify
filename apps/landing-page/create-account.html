@@ -250,7 +250,14 @@ function setAccType(t) {
   });
   document.getElementById('isorg').value = t;
 }
-document.addEventListener('DOMContentLoaded', () => setAccType('user'));
+document.addEventListener('DOMContentLoaded', () => {
+  setAccType('user');
+  // Persist ?ref= so auto-follow still works after email confirmation round-trip
+  try {
+    var refId = new URL(window.location.href).searchParams.get('ref');
+    if (refId && /^[0-9a-f-]{36}$/i.test(refId)) localStorage.setItem('p_ref', refId);
+  } catch(e) {}
+});
 
 function togPw(id,btn){ var i=document.getElementById(id); var s=i.type==='password'; i.type=s?'text':'password'; btn.textContent=s?'Hide':'Show'; }
 
@@ -325,6 +332,20 @@ function goStep1() {
 async function saveSessionAndProfile(session, profileData) {
   var user = session.user;
   localStorage.setItem('p_token', session.access_token);
+
+  // WhatsApp referral — if user signed up via ?ref=<userid>, auto-follow the referrer
+  try {
+    var refId = new URL(window.location.href).searchParams.get('ref') || localStorage.getItem('p_ref');
+    if (refId && /^[0-9a-f-]{36}$/i.test(refId) && refId !== user.id) {
+      fetch('/api/follows', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+        body: JSON.stringify({ following_id: refId })
+      }).catch(() => {});
+      localStorage.removeItem('p_ref');
+    }
+  } catch(e) {}
+
   try {
     var r = await fetch('/api/auth/profile', {
       method:'POST',
