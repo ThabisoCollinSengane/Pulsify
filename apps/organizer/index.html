@@ -131,7 +131,7 @@ select.inp option{background:#0D1424}
     <div class="tab" onclick="switchTab(this,'pane-event')">🎟 Event</div>
     <div class="tab" onclick="switchTab(this,'pane-myposts')">📋 Posts</div>
     <div class="tab" onclick="switchTab(this,'pane-discover')">🌍 Discover</div>
-    <div class="tab" onclick="window.location.href='/feeds'" title="See what users are saying">📰 Feed</div>
+    <div class="tab" onclick="switchTab(this,'pane-feed')">📰 Feed</div>
     <div class="tab" onclick="switchTab(this,'pane-scan')">📷 Scan</div>
     <div class="tab" onclick="switchTab(this,'pane-promote')">🚀 Promote</div>
     <div class="tab" onclick="switchTab(this,'pane-settings')">⚙️ Settings</div>
@@ -190,9 +190,22 @@ select.inp option{background:#0D1424}
           <option value="other">Other</option>
         </select>
         <textarea class="inp" id="ev-desc" placeholder="Event description (optional)" maxlength="500"></textarea>
+        <div style="margin-bottom:8px">
+          <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:5px">Banner Image (optional)</div>
+          <div id="ev-img-preview" style="display:none;border-radius:10px;overflow:hidden;height:90px;background:#111;margin-bottom:8px"><img id="ev-img-thumb" style="width:100%;height:100%;object-fit:cover"/></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button type="button" class="btn-sec" style="padding:8px 14px;font-size:.78rem" onclick="document.getElementById('ev-img-file').click()">📷 Choose Image</button>
+            <span id="ev-img-name" style="font-size:.72rem;color:var(--mu2)">No file chosen</span>
+          </div>
+          <input type="file" id="ev-img-file" accept="image/*" style="display:none" onchange="previewEvImg(this)"/>
+        </div>
         <button class="btn-primary" id="ev-btn" onclick="submitEvent()">Create Event 🎉</button>
       </div>
     </div>
+  </div>
+
+  <div class="pane" id="pane-feed" style="padding:0">
+    <iframe id="feed-iframe" src="" style="width:100%;height:calc(100vh - 130px);border:none;display:block" loading="lazy"></iframe>
   </div>
 
   <div class="pane" id="pane-myposts">
@@ -852,6 +865,7 @@ function switchTab(btn, paneId, _noPush) {
   if (paneId === 'pane-myposts') loadMyPosts();
   if (paneId === 'pane-promote') { loadOrgPromoEvents(); loadMyOrgPromos(); }
   if (paneId === 'pane-discover') loadDiscoverEvents();
+  if (paneId === 'pane-feed') { const fr = document.getElementById('feed-iframe'); if (!fr.src || fr.src === location.origin + '/') fr.src = '/feeds'; }
   if (paneId === 'pane-scan') {
     const sel = document.getElementById('scan-event-sel');
     if (sel.options.length <= 1) loadScanEvents(); else loadScanStats();
@@ -1022,6 +1036,17 @@ async function submitPost() {
   btn.disabled = false; btn.textContent = 'Publish 🚀';
 }
 
+function previewEvImg(input) {
+  const file = input.files[0]; if (!file) return;
+  document.getElementById('ev-img-name').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('ev-img-thumb').src = e.target.result;
+    document.getElementById('ev-img-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
 async function submitEvent() {
   const name  = document.getElementById('ev-name').value.trim();
   const date  = document.getElementById('ev-date').value;
@@ -1031,6 +1056,7 @@ async function submitEvent() {
   const price = parseFloat(document.getElementById('ev-price').value) || 0;
   const genre = document.getElementById('ev-genre').value;
   const desc  = document.getElementById('ev-desc').value.trim();
+  const evImgFile = document.getElementById('ev-img-file')?.files[0];
 
   if (!name) return toast('Enter an event name', 'err');
   if (!date) return toast('Select a date', 'err');
@@ -1041,6 +1067,15 @@ async function submitEvent() {
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Creating…';
 
   try {
+    let imgUrl = null;
+    if (evImgFile) {
+      const ext  = evImgFile.name.split('.').pop() || 'jpg';
+      const path = currentUser.id + '/events/' + Date.now() + '.' + ext;
+      const { error: upErr } = await sb.storage.from('post-images').upload(path, evImgFile, { upsert: false });
+      if (upErr) throw new Error('Image upload failed: ' + upErr.message);
+      imgUrl = sb.storage.from('post-images').getPublicUrl(path).data.publicUrl;
+    }
+
     const eventId = 'org_' + currentUser.id.slice(0,8) + '_' + Date.now();
 
     const { error } = await sb.from('events').insert({
@@ -1051,6 +1086,7 @@ async function submitEvent() {
       venue_name: venue,
       venue_city: city,
       venue_province: currentProfile.province || null,
+      image_url: imgUrl || null,
       genre: genre || 'other',
       description: desc || null,
       price_min: price,
@@ -1092,6 +1128,9 @@ async function submitEvent() {
     document.getElementById('ev-price').value = '';
     document.getElementById('ev-genre').value = '';
     document.getElementById('ev-desc').value = '';
+    document.getElementById('ev-img-file').value = '';
+    document.getElementById('ev-img-preview').style.display = 'none';
+    document.getElementById('ev-img-name').textContent = 'No file chosen';
     document.getElementById('stat-events').textContent = parseInt(document.getElementById('stat-events').textContent||0)+1;
   } catch(e) {
     toast('Error: ' + e.message, 'err');

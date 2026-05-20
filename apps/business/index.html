@@ -1093,7 +1093,7 @@ function showNoBusinessAccountGate(user, role) {
           You're signed in as <strong>${user.email || 'a user'}</strong> (${roleLabel}). The business dashboard is only available to accounts with the <strong>business</strong> role.
         </p>
         <button onclick="createBusinessAccount()" style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:13px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;margin-bottom:10px">Create a business account</button>
-        <button onclick="window.location.href='/feeds'" style="width:100%;background:var(--surf2);border:1px solid var(--border2);border-radius:50px;padding:11px;font-family:'Syne',sans-serif;font-size:.82rem;color:var(--tx);cursor:pointer;margin-bottom:10px">Back to feeds</button>
+        <button onclick="showTab('home')" style="width:100%;background:var(--surf2);border:1px solid var(--border2);border-radius:50px;padding:11px;font-family:'Syne',sans-serif;font-size:.82rem;color:var(--tx);cursor:pointer;margin-bottom:10px">← Back to Dashboard</button>
         <button onclick="doLogoutInline()" style="background:none;border:none;color:var(--mu);font-size:.78rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;padding:6px">Sign out</button>
       </div>
     </div>`;
@@ -1590,71 +1590,72 @@ async function submitEvent() {
   const desc  = document.getElementById('ev-desc').value.trim();
   let imgUrl = document.getElementById('ev-img').value.trim();
   const evImgFile = document.getElementById('ev-img-file')?.files[0];
-  if (evImgFile) {
-    try { imgUrl = await uploadToUploads(evImgFile, 'events'); }
-    catch(e) { toast('Image upload failed: ' + e.message, 'err'); return; }
-  }
 
-  const ev = {
-    id: id || 'ev_' + Date.now(), name,
-    date, time, venue, city, genre, price, isFree: price === 0,
-    hype: parseInt(document.getElementById('ev-hype').value) || 75,
-    desc,
-    lineup: lineupRaw ? lineupRaw.split(',').map(s => s.trim()) : [],
-    img: imgUrl,
-    created: id ? undefined : new Date().toISOString(),
-    bizId: getBizId(), bizName: BIZ.name, bizType: BIZ.type,
-  };
-  const evs = load('events', []);
-  if (id) { const i = evs.findIndex(e => e.id === id); if (i >= 0) evs[i] = { ...evs[i], ...ev }; } else { evs.push(ev); }
-  save('events', evs);
+  const btn = document.querySelector('#event-sheet .btn-primary[onclick="submitEvent()"]') || { disabled: false, textContent: '' };
+  btn.disabled = true; btn.textContent = id ? 'Saving…' : 'Publishing…';
 
-  // Sync new events to Supabase so they appear on the landing page feed
-  if (!id) {
-    const sb = getSB();
-    if (sb) {
-      try {
-        const { data: { session } } = await sb.auth.getSession();
-        if (session) {
-          await sb.from('events').insert({
-            id: ev.id, name,
-            date_local: date || null,
-            time_local: time || null,
-            venue_name: venue,
-            venue_city: city,
-            genre: genre || 'other',
-            description: desc || null,
-            price_min: price, price_max: price,
-            currency: 'ZAR',
-            image_url: imgUrl || null,
-            organiser_name: BIZ.name,
-            organiser_id: session.user.id,
-            is_active: true,
-            source: 'business',
-          });
-          if (price > 0) {
-            await sb.from('ticket_tiers').insert({
-              event_id: ev.id, name: 'General Admission',
-              price, is_free: false, sort_order: 0
-            }).catch(() => {});
-          }
-          await fetch('/api/posts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-            body: JSON.stringify({
-              caption: '🎉 ' + name + ' — ' + venue + (city ? ', ' + city : '') + (date ? ' · ' + date : '') + (price > 0 ? ' · R' + price : ' · FREE') + (desc ? '\n' + desc : ''),
-              event_id: ev.id, event_name: name, post_type: 'business_event',
-            }),
-          }).catch(() => {});
-        }
-      } catch(e) { console.warn('[event sync]', e); }
+  try {
+    if (evImgFile) {
+      try { imgUrl = await uploadToUploads(evImgFile, 'events'); }
+      catch(e) { toast('Image upload failed: ' + e.message, 'err'); btn.disabled = false; btn.textContent = id ? 'Save Event 🎟' : 'Save Event 🎟'; return; }
     }
-  }
 
-  closeSheet('event-sheet');
-  resetEventForm();
-  toast(id ? 'Event updated ✅' : 'Event published to feed! ✅', 'ok');
-  renderEvents(); renderStats();
+    const sb2 = getSB();
+    if (!sb2) throw new Error('Not connected');
+    const { data: { session } } = await sb2.auth.getSession();
+    if (!session) throw new Error('Session expired — please log in again');
+
+    const eventId = id || 'biz_' + session.user.id.slice(0,8) + '_' + Date.now();
+    const lineup  = lineupRaw ? lineupRaw.split(',').map(s => s.trim()) : [];
+
+    if (id) {
+      const { error: upErr } = await sb2.from('events').update({
+        name, date_local: date || null, time_local: time || null,
+        venue_name: venue, venue_city: city, genre: genre || 'other',
+        description: desc || null, price_min: price, price_max: price,
+        is_free: price === 0, image_url: imgUrl || null,
+        lineup: lineup.length ? lineup : null,
+      }).eq('id', id).eq('organiser_id', session.user.id);
+      if (upErr) throw new Error(upErr.message);
+    } else {
+      const { error: insErr } = await sb2.from('events').insert({
+        id: eventId, name,
+        date_local: date || null, time_local: time || null,
+        venue_name: venue, venue_city: city,
+        genre: genre || 'other', description: desc || null,
+        price_min: price, price_max: price, is_free: price === 0,
+        currency: 'ZAR', image_url: imgUrl || null,
+        organiser_name: BIZ?.name || session.user.email?.split('@')[0],
+        organiser_id: session.user.id,
+        is_active: true, source: 'business',
+        lineup: lineup.length ? lineup : null,
+      });
+      if (insErr) throw new Error(insErr.message);
+
+      if (price > 0) {
+        await sb2.from('ticket_tiers').insert({
+          event_id: eventId, name: 'General Admission',
+          price, is_free: false, sort_order: 0,
+        }).catch(() => {});
+      }
+      await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+        body: JSON.stringify({
+          caption: '🎉 ' + name + ' — ' + venue + (city ? ', ' + city : '') + (date ? ' · ' + date : '') + (price > 0 ? ' · R' + price : ' · FREE') + (desc ? '\n' + desc : ''),
+          event_id: eventId, event_name: name, post_type: 'business_event',
+        }),
+      }).catch(() => {});
+    }
+
+    closeSheet('event-sheet');
+    resetEventForm();
+    toast(id ? 'Event updated ✅' : 'Event published to feed! ✅', 'ok');
+    renderEvents(); renderStats();
+  } catch(e) {
+    toast('Error: ' + e.message, 'err');
+  }
+  btn.disabled = false; btn.textContent = 'Save Event 🎟';
 }
 
 function editEvent(id) {

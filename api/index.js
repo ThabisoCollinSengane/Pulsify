@@ -694,7 +694,7 @@ module.exports = async (req, res) => {
       if (!following_id) return res.status(400).json({ error: 'following_id required' });
       if (following_id === user.id) return res.status(400).json({ error: 'Cannot follow yourself' });
 
-      const { error } = await sb().from('follows').insert({ follower_id: user.id, following_id });
+      const { error } = await sbAs(token).from('follows').insert({ follower_id: user.id, following_id });
       if (error && error.code !== '23505') return res.status(400).json({ error: error.message });
 
       if (!error) {
