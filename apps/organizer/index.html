@@ -101,6 +101,36 @@ select.inp option{background:#0D1424}
 .puls-badge::before{content:'';position:absolute;inset:-4px;border-radius:50%;background:linear-gradient(135deg,rgba(255,92,0,.35),rgba(255,45,120,.35));animation:puls-ring 2.2s ease-out infinite;z-index:-1}
 .puls-badge::after{content:'';width:7px;height:7px;border-radius:50%;background:#fff;opacity:.95}
 @keyframes puls-ring{0%{transform:scale(1);opacity:.5}70%{transform:scale(1.9);opacity:0}100%{transform:scale(1.9);opacity:0}}
+/* ── Feed post cards ── */
+.ofc{border-bottom:1px solid var(--border);background:var(--surf);margin-bottom:0}
+.ofh{display:flex;align-items:center;gap:10px;padding:12px 14px 8px}
+.ofa{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;border:1.5px solid rgba(255,92,0,.5);overflow:hidden;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;font-family:'Syne',sans-serif;font-weight:700}
+.ofa img{width:100%;height:100%;object-fit:cover}
+.ofo{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;line-height:1.2}
+.ofl{font-size:.66rem;color:var(--mu)}
+.ofb{width:100%;max-height:320px;object-fit:cover;display:block}
+.ofd{padding:10px 14px;font-size:.84rem;line-height:1.6;color:var(--mu2);white-space:pre-wrap}
+.ofac{display:flex;align-items:center;gap:8px;padding:6px 14px 12px}
+.oab{display:flex;align-items:center;gap:5px;background:transparent;border:none;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu);cursor:pointer;padding:4px 8px;border-radius:50px;-webkit-tap-highlight-color:transparent}
+.oab:active{background:rgba(255,255,255,.05)}
+.oab.lk{color:#FF2D78}
+.ocmt-wrap{background:rgba(0,0,0,.2);border-top:1px solid var(--border);display:none}
+.ocmt-item{display:flex;gap:9px;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.03)}
+.ocmt-item:last-of-type{border-bottom:none}
+.ocmt-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:.78rem;overflow:hidden;color:#fff;font-family:'Syne',sans-serif;font-weight:700;background:linear-gradient(135deg,#B026FF,#FF5C00)}
+.ocmt-av img{width:100%;height:100%;object-fit:cover}
+.ocmt-name{font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;margin-bottom:2px}
+.ocmt-text{font-size:.78rem;color:var(--mu2);line-height:1.45}
+.ocmt-time{font-size:.6rem;color:var(--mu);margin-top:3px}
+.ocmt-reply-btn{background:none;border:none;color:var(--mu);font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.04em;cursor:pointer;padding:2px 0;margin-top:3px}
+.ocmt-replies{margin-left:36px;border-left:1px solid var(--border);padding-left:8px;margin-top:4px}
+.ocir{display:flex;align-items:center;gap:8px;padding:8px 14px 12px}
+.oci{flex:1;background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:8px 14px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none}
+.oci:focus{border-color:var(--or)}
+.oci::placeholder{color:var(--mu)}
+.ocsnd{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.reply-banner-of{padding:4px 14px 0;font-size:.7rem;color:var(--mu);display:flex;align-items:center;gap:6px}
+.reply-banner-of button{background:none;border:none;color:var(--mu);cursor:pointer;font-size:.8rem}
 </style>
 </head>
 <body>
@@ -866,28 +896,192 @@ function toast(m, t='') { const el=document.getElementById('toast'); el.textCont
 async function safeJson(r) { try { const t = await r.text(); return t ? JSON.parse(t) : {}; } catch(e) { return {}; } }
 
 let _orgFeedLoaded = false;
+function _ofTimeAgo(ts) {
+  const d = (Date.now() - new Date(ts)) / 1000;
+  if (d < 60) return 'just now';
+  if (d < 3600) return Math.floor(d/60)+'m ago';
+  if (d < 86400) return Math.floor(d/3600)+'h ago';
+  return Math.floor(d/86400)+'d ago';
+}
+function _ofFn(n) { n = +n||0; return n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n); }
+
+const _ofCmtCache = {};
+const _ofReplyTo  = {};
+const _ofLiked    = {};
+
+function _ofBuildCmts(comments, postId) {
+  if (!comments?.length) return '<div style="padding:10px 14px;font-size:.76rem;color:var(--mu)">No comments yet. Be first 💬</div>';
+  const renderOne = (c, isReply) => {
+    const p    = c.profile || c.profiles || {};
+    const name = p.display_name || p.username || 'Someone';
+    const init = (name[0]||'?').toUpperCase();
+    const avEl = p.avatar_url
+      ? `<div class="ocmt-av"><img src="${x(p.avatar_url)}" loading="lazy" onerror="this.parentNode.textContent='${x(init)}'"/></div>`
+      : `<div class="ocmt-av">${x(init)}</div>`;
+    const replyBtn = !isReply
+      ? `<button class="ocmt-reply-btn" onclick="ofStartReply('${x(postId)}','${x(c.id)}','${x(name).replace(/'/g,"&#39;")}')">↩ Reply</button>`
+      : '';
+    const repliesHtml = c.replies?.length
+      ? `<div class="ocmt-replies">${c.replies.map(r => renderOne(r, true)).join('')}</div>`
+      : '';
+    const body = c.body || c.content || c.text || '';
+    return `<div class="ocmt-item" id="ofc-${x(c.id)}">${avEl}
+      <div style="flex:1;min-width:0">
+        <div class="ocmt-name">${x(name)}</div>
+        <div class="ocmt-text">${x(body)}</div>
+        <div class="ocmt-time">${_ofTimeAgo(c.created_at)}</div>
+        ${replyBtn}
+      </div></div>${repliesHtml}`;
+  };
+  return comments.map(c => renderOne(c, false)).join('');
+}
+
+async function ofToggleCmt(postId) {
+  const el = document.getElementById('ofcmt-'+postId);
+  if (!el) return;
+  const opening = el.style.display !== 'block';
+  el.style.display = opening ? 'block' : 'none';
+  if (opening && !_ofCmtCache[postId]) await ofLoadComments(postId);
+}
+
+async function ofLoadComments(postId) {
+  const lEl = document.getElementById('ofcmtl-'+postId);
+  if (lEl) lEl.innerHTML = '<div style="padding:10px 14px;font-size:.74rem;color:var(--mu)">Loading…</div>';
+  try {
+    const res  = await fetch('/api/comments?entity_id='+encodeURIComponent(postId)+'&entity_type=post');
+    const json = await (res.ok ? res.json() : {});
+    const top  = (json.comments||[]).map(c => ({...c, profile: c.profile||c.profiles||{}}));
+    _ofCmtCache[postId] = top;
+    const cEl = document.getElementById('ofcc-'+postId);
+    if (cEl) cEl.textContent = _ofFn((json.flat||json.comments||[]).length);
+    if (lEl) lEl.innerHTML = top.length ? _ofBuildCmts(top, postId) : '<div style="padding:14px;text-align:center;font-size:.74rem;color:var(--mu)">Be the first to comment</div>';
+  } catch(e) {
+    if (lEl) lEl.innerHTML = '<div style="padding:10px 14px;font-size:.74rem;color:var(--mu)">Could not load comments</div>';
+  }
+}
+
+function ofStartReply(postId, parentId, name) {
+  _ofReplyTo[postId] = { parent_id: parentId, name };
+  const wrap = document.getElementById('ofcmt-'+postId);
+  if (!wrap) return;
+  let bn = wrap.querySelector('.reply-banner-of');
+  if (!bn) { bn = document.createElement('div'); bn.className = 'reply-banner-of'; wrap.querySelector('.ocir').before(bn); }
+  bn.innerHTML = `Replying to <strong>${x(name)}</strong> <button onclick="ofCancelReply('${x(postId)}')">✕</button>`;
+  const inp = document.getElementById('ofci-'+postId);
+  if (inp) { inp.placeholder = 'Write your reply…'; inp.focus(); }
+}
+function ofCancelReply(postId) {
+  delete _ofReplyTo[postId];
+  const wrap = document.getElementById('ofcmt-'+postId);
+  const bn   = wrap?.querySelector('.reply-banner-of');
+  if (bn) bn.remove();
+  const inp  = document.getElementById('ofci-'+postId);
+  if (inp) inp.placeholder = 'Add a comment…';
+}
+
+async function ofDoComment(postId) {
+  if (!currentUser) return toast('Sign in to comment', 'err');
+  const inp  = document.getElementById('ofci-'+postId);
+  const txt  = inp?.value.trim(); if (!txt) return;
+  const reply = _ofReplyTo[postId] || null;
+  inp.value = '';
+  ofCancelReply(postId);
+  const localCmt = {
+    id: 'tmp_'+Date.now(), user_id: currentUser.id, body: txt,
+    parent_id: reply?.parent_id || null, created_at: new Date().toISOString(),
+    profile: { display_name: currentProfile?.display_name||'You', username: currentProfile?.username||'you', avatar_url: currentProfile?.avatar_url||null },
+    replies: []
+  };
+  const cache = _ofCmtCache[postId] = _ofCmtCache[postId] || [];
+  if (reply?.parent_id) {
+    const parent = cache.find(c => c.id === reply.parent_id);
+    if (parent) parent.replies.push(localCmt); else cache.push(localCmt);
+  } else { cache.push(localCmt); }
+  const lEl = document.getElementById('ofcmtl-'+postId);
+  if (lEl) lEl.innerHTML = _ofBuildCmts(cache, postId);
+  try {
+    const res = await fetch('/api/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token },
+      body: JSON.stringify({ entity_id: postId, entity_type: 'post', body: txt, parent_id: reply?.parent_id || undefined }),
+    });
+    if (res.ok) ofLoadComments(postId);
+  } catch(e) { toast('Could not post comment', 'err'); }
+}
+
+async function ofDoLike(postId, btn) {
+  if (!currentUser) return toast('Sign in to like', 'err');
+  const liked = _ofLiked[postId] || false;
+  _ofLiked[postId] = !liked;
+  btn.classList.toggle('lk', !liked);
+  const ai = btn.querySelector('.oai');
+  const cnt = document.getElementById('oflc-'+postId);
+  if (ai) ai.textContent = liked ? '🤍' : '❤️';
+  if (cnt) cnt.textContent = _ofFn(Math.max(0, parseInt(cnt.textContent||0) + (liked ? -1 : 1)));
+  fetch('/api/reactions', {
+    method: liked ? 'DELETE' : 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token },
+    body: JSON.stringify({ entity_type: 'post', entity_id: postId, type: 'like' }),
+  }).catch(()=>{});
+}
+
 async function loadOrgFeed() {
   if (_orgFeedLoaded) return;
   const el = document.getElementById('feed-list'); if (!el) return;
   el.innerHTML = '<div class="empty" style="padding-top:40px">Loading…</div>';
   try {
-    const today = new Date().toISOString().split('T')[0];
     const { data, error } = await sb.from('posts')
-      .select('id,caption,image_url,created_at,post_type,like_count,comment_count,user_id,profiles!posts_user_id_fkey(display_name,avatar_url,role)')
+      .select('id,caption,image_url,created_at,post_type,like_count,comment_count,user_id,profiles!posts_user_id_fkey(display_name,avatar_url,username,role)')
       .order('created_at', { ascending: false }).limit(40);
     if (error) throw error;
     const posts = data || [];
-    if (!posts.length) { el.innerHTML = '<div class="empty" style="padding-top:40px">No posts in feed yet</div>'; return; }
+    if (!posts.length) { el.innerHTML = '<div class="empty" style="padding-top:40px">No posts in feed yet</div>'; _orgFeedLoaded = true; return; }
+
+    // Pre-fetch my likes for these posts
+    try {
+      const ids = posts.map(p => p.id);
+      const { data: myLikes } = await sb.from('reactions').select('entity_id').eq('user_id', currentUser.id).eq('entity_type','post').in('entity_id', ids);
+      (myLikes||[]).forEach(r => { _ofLiked[r.entity_id] = true; });
+    } catch(e) {}
+
     el.innerHTML = posts.map(p => {
-      const av = p.profiles?.avatar_url ? `<img src="${x(p.profiles.avatar_url)}" style="width:34px;height:34px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'"/>` : `<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0">🎪</div>`;
-      const ago = (() => { const d = (Date.now() - new Date(p.created_at)) / 1000; if (d < 60) return 'just now'; if (d < 3600) return Math.floor(d/60)+'m'; if (d < 86400) return Math.floor(d/3600)+'h'; return Math.floor(d/86400)+'d'; })();
-      const img = p.image_url ? `<img src="${x(p.image_url)}" loading="lazy" style="width:100%;max-height:220px;object-fit:cover" onerror="this.style.display='none'"/>` : '';
-      return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:10px">
-        ${img}
-        <div style="padding:12px 14px">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">${av}<div><div style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700">${x(p.profiles?.display_name||'User')}</div><div style="font-size:.65rem;color:var(--mu)">${ago} · ${p.post_type||'post'}</div></div></div>
-          ${p.caption ? `<div style="font-size:.84rem;line-height:1.5;color:var(--tx);margin-bottom:8px;white-space:pre-wrap">${x(p.caption)}</div>` : ''}
-          <div style="display:flex;gap:14px"><span style="font-size:.72rem;color:var(--mu)">🤍 ${p.like_count||0}</span><span style="font-size:.72rem;color:var(--mu)">💬 ${p.comment_count||0}</span></div>
+      const prof = p.profiles || {};
+      const init = (prof.display_name||'U')[0].toUpperCase();
+      const avEl = prof.avatar_url
+        ? `<div class="ofa"><img src="${x(prof.avatar_url)}" loading="lazy" onerror="this.style.display='none'"/></div>`
+        : `<div class="ofa">${x(init)}</div>`;
+      const isOrg = ['organizer','business'].includes(prof.role);
+      const imgEl = (() => {
+        if (!p.image_url) return '';
+        let urls = [];
+        if (typeof p.image_url === 'string' && p.image_url.trim().startsWith('[')) {
+          try { urls = JSON.parse(p.image_url); } catch(e) { urls = [p.image_url]; }
+        } else { urls = [p.image_url]; }
+        if (!urls.length) return '';
+        return urls.length === 1
+          ? `<img class="ofb" src="${x(urls[0])}" loading="lazy" onerror="this.remove()"/>`
+          : `<div style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none">${urls.map(u=>`<img src="${x(u)}" loading="lazy" onerror="this.remove()" style="width:100%;flex:0 0 100%;max-height:280px;object-fit:cover;scroll-snap-align:start"/>`).join('')}</div>`;
+      })();
+      const liked = !!_ofLiked[p.id];
+      return `<div class="ofc">
+        <div class="ofh">${avEl}
+          <div style="flex:1;min-width:0">
+            <div class="ofo">${x(prof.display_name||'User')}${isOrg?'<span style="font-size:.6rem;color:var(--or);font-family:\'Syne\',sans-serif;font-weight:700;margin-left:4px">📢</span>':''}</div>
+            <div class="ofl">@${x(prof.username||'user')} · ${_ofTimeAgo(p.created_at)} · ${p.post_type||'post'}</div>
+          </div>
+        </div>
+        ${imgEl}
+        ${p.caption ? `<div class="ofd">${x(p.caption)}</div>` : ''}
+        <div class="ofac">
+          <button class="oab${liked?' lk':''}" onclick="ofDoLike('${x(p.id)}',this)"><span class="oai">${liked?'❤️':'🤍'}</span> <span id="oflc-${x(p.id)}">${_ofFn(p.like_count||0)}</span></button>
+          <button class="oab" onclick="ofToggleCmt('${x(p.id)}')"><span>💬</span> <span id="ofcc-${x(p.id)}">${_ofFn(p.comment_count||0)}</span></button>
+        </div>
+        <div class="ocmt-wrap" id="ofcmt-${x(p.id)}">
+          <div id="ofcmtl-${x(p.id)}"><div style="padding:10px 14px;font-size:.74rem;color:var(--mu)">Tap 💬 to load comments…</div></div>
+          <div class="ocir">
+            <input class="oci" id="ofci-${x(p.id)}" placeholder="Add a comment…" maxlength="500" onkeydown="if(event.key==='Enter')ofDoComment('${x(p.id)}')"/>
+            <button class="ocsnd" onclick="ofDoComment('${x(p.id)}')">➤</button>
+          </div>
         </div>
       </div>`;
     }).join('');
