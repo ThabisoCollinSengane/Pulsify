@@ -3145,10 +3145,12 @@ async function postComment() {
   inp.disabled = true;
   const token = localStorage.getItem('p_token') || '';
   try {
+    const payload = { entity_id: activeEntityId, entity_type: activeEntityType, content: val };
+    if (window._cmtReplyTo) payload.parent_id = window._cmtReplyTo;
     const res = await fetch('/api/comments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ entity_id: activeEntityId, entity_type: activeEntityType, content: val }),
+      body: JSON.stringify(payload),
     });
     const json = await safeJson(res);
     if (!res.ok) throw new Error(json.error || 'Could not save — please retry');
@@ -3159,6 +3161,8 @@ async function postComment() {
       ...json.comment,
       profiles: { display_name: prof.display_name || currentUser.email?.split('@')[0] || 'User', avatar_url: prof.avatar_url || null, username: prof.username || null },
     });
+    window._cmtReplyTo = null;
+    inp.placeholder = 'Add a comment…';
     renderComments();
     inp.value = '';
   } catch(e) {

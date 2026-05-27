@@ -211,6 +211,8 @@ select.inp option{background:#0D1424}
         <button class="btn-primary" id="ev-btn" onclick="submitEvent()">Create Event 🎉</button>
       </div>
     </div>
+    <div class="section-label" style="margin-top:16px">My Events</div>
+    <div id="my-events-list" class="card"><div class="empty">Loading…</div></div>
   </div>
 
   <div class="pane" id="pane-feed">
@@ -668,14 +670,18 @@ async function loadOrgSettingsStatus() {
       }
     }
   } catch(e) { console.warn('[verif status]', e); }
-  // Payment status (still from localStorage)
+  // Payment status — prefer live profile data, fallback to localStorage
   try {
-    const pm = JSON.parse(localStorage.getItem('org_payment') || '{}');
-    if (pm.bank) {
-      const el = document.getElementById('org-payment-status');
-      if (el) el.textContent = `${pm.bank} ••••${(pm.account||'').slice(-4)}`;
-      const btn = document.getElementById('org-payment-btn');
+    const { data: payProf } = await sb.from('profiles').select('paystack_bank_name,paystack_account_number,paystack_subaccount_code').eq('id', (await sb.auth.getSession()).data.session?.user.id).single();
+    const el = document.getElementById('org-payment-status');
+    const btn = document.getElementById('org-payment-btn');
+    if (payProf?.paystack_bank_name) {
+      if (el) el.textContent = `${payProf.paystack_bank_name} ••••${(payProf.paystack_account_number||'').slice(-4)}${payProf.paystack_subaccount_code ? ' · Payouts active ✅' : ''}`;
       if (btn) btn.textContent = 'Edit →';
+    } else {
+      const pm = JSON.parse(localStorage.getItem('org_payment') || '{}');
+      if (pm.bank && el) el.textContent = `${pm.bank} ••••${(pm.account||'').slice(-4)}`;
+      if (pm.bank && btn) btn.textContent = 'Edit →';
     }
   } catch(e) {}
 }
@@ -799,7 +805,7 @@ async function submitOrgVerification() {
   }
 }
 
-function submitOrgPayment() {
+async function submitOrgPayment() {
   const bank    = document.getElementById('opm-bank').value;
   const name    = document.getElementById('opm-name').value.trim();
   const account = document.getElementById('opm-account').value.trim();
@@ -807,11 +813,25 @@ function submitOrgPayment() {
   if (!bank || !name || !account || !type) {
     showOrgMsg('org-payment-msg', 'Please fill in all required fields.', 'err'); return;
   }
-  const pm = { bank, name, account, type, branch: document.getElementById('opm-branch').value.trim() };
-  localStorage.setItem('org_payment', JSON.stringify(pm));
-  showOrgMsg('org-payment-msg', '✅ Payment method saved.', 'ok');
-  loadOrgSettingsStatus();
-  setTimeout(() => closeOrgSheet('org-payment-sheet'), 1800);
+  const btn = document.querySelector('#org-payment-sheet .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const res = await fetch('/api/auth/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token },
+      body: JSON.stringify({ bank_name: bank, account_number: account, business_name: name }),
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || 'Save failed');
+    localStorage.setItem('org_payment', JSON.stringify({ bank, name, account, type }));
+    showOrgMsg('org-payment-msg', d.paystack_subaccount_code ? '✅ Bank account saved & payout account created!' : '✅ Bank account saved.', 'ok');
+    loadOrgSettingsStatus();
+    setTimeout(() => closeOrgSheet('org-payment-sheet'), 2000);
+  } catch(e) {
+    showOrgMsg('org-payment-msg', '❌ ' + e.message, 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Payment Method 💳'; }
+  }
 }
 
 // ── Post Preview ──────────────────────────────────────────────
@@ -919,6 +939,7 @@ function switchTab(btn, paneId, _noPush) {
   document.getElementById(paneId).classList.add('active');
   if (!_noPush) history.pushState({ pane: paneId }, '');
   if (paneId === 'pane-myposts') loadMyPosts();
+  if (paneId === 'pane-event') loadMyEvents();
   if (paneId === 'pane-promote') { loadOrgPromoEvents(); loadMyOrgPromos(); }
   if (paneId === 'pane-discover') loadDiscoverEvents();
   if (paneId === 'pane-feed') loadOrgFeed();
@@ -1212,10 +1233,32 @@ async function submitEvent() {
     document.getElementById('ev-tiers-list').innerHTML = `<div class="ev-tier-row" style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center"><input class="inp" style="margin-bottom:0" placeholder="Tier name" value="General Admission"/><input class="inp" style="margin-bottom:0" type="number" placeholder="Price (R, 0=free)" min="0"/><div style="width:30px"></div></div>`;
     document.getElementById('stat-events').textContent = parseInt(document.getElementById('stat-events').textContent||0)+1;
     _orgFeedLoaded = false; // invalidate feed cache so new event post appears
+    loadMyEvents();
   } catch(e) {
     toast('Error: ' + e.message, 'err');
   }
   btn.disabled = false; btn.textContent = 'Create Event 🎉';
+}
+
+async function loadMyEvents() {
+  const el = document.getElementById('my-events-list');
+  if (!el || !currentUser) return;
+  try {
+    const { data: evs } = await sb.from('events').select('id,name,date_local,venue_city,approved,is_active').eq('organiser_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
+    if (!evs?.length) { el.innerHTML = '<div class="empty">No events yet. Create your first above!</div>'; return; }
+    el.innerHTML = evs.map(e => {
+      const badge = e.approved
+        ? `<span style="background:rgba(0,229,100,.12);color:#00e564;border:1px solid rgba(0,229,100,.3);border-radius:20px;padding:2px 8px;font-size:.65rem;font-weight:700">✅ Live</span>`
+        : `<span style="background:rgba(255,180,0,.1);color:#FFB400;border:1px solid rgba(255,180,0,.25);border-radius:20px;padding:2px 8px;font-size:.65rem;font-weight:700">⏳ Pending Approval</span>`;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border)">
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x(e.name)}</div>
+          <div style="font-size:.7rem;color:var(--mu)">${x(e.date_local||'')} · ${x(e.venue_city||'')}</div>
+        </div>
+        <div style="margin-left:10px;flex-shrink:0">${badge}</div>
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = '<div class="empty">Could not load events</div>'; }
 }
 
 async function loadMyPosts() {
@@ -1663,7 +1706,7 @@ renderOrgFAQ();
 loadOrgSettingsStatus();
 loadOrgSocialLinks();
 history.replaceState({ pane: 'pane-post' }, '');
-init().then(() => initNotifBell());
+init().then(() => { initNotifBell(); loadMyEvents(); });
 </script>
 
 <!-- NOTIFICATION PANEL -->
