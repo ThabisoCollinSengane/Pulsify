@@ -345,6 +345,30 @@ select.inp option{background:#0D1424}
         <div class="section-label">🎁 Squad Deals</div>
         <div style="font-size:.76rem;color:var(--mu);margin-bottom:14px;line-height:1.5">Create exclusive squad deals for groups attending your events. Admin reviews all deals before they appear in squad feeds.</div>
 
+        <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">⚡ Quick-Start Templates</div>
+        <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;margin-bottom:16px;scrollbar-width:none;-webkit-overflow-scrolling:touch">
+          <div onclick="applyOrgDealTemplate('vip_bundle')" style="flex-shrink:0;width:148px;background:linear-gradient(135deg,rgba(176,38,255,.12),rgba(255,92,0,.08));border:1.5px solid rgba(176,38,255,.3);border-radius:14px;padding:12px;cursor:pointer">
+            <div style="font-size:1.4rem;margin-bottom:5px">🥂</div>
+            <div style="font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;margin-bottom:3px">VIP Bundle</div>
+            <div style="font-size:.64rem;color:var(--mu);line-height:1.4">4–8 people · R1 200<br/>Skip queue + VIP entry</div>
+          </div>
+          <div onclick="applyOrgDealTemplate('group_entry')" style="flex-shrink:0;width:148px;background:linear-gradient(135deg,rgba(0,229,255,.08),rgba(176,38,255,.06));border:1.5px solid rgba(0,229,255,.2);border-radius:14px;padding:12px;cursor:pointer">
+            <div style="font-size:1.4rem;margin-bottom:5px">🎪</div>
+            <div style="font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;margin-bottom:3px">Group Entry</div>
+            <div style="font-size:.64rem;color:var(--mu);line-height:1.4">4–6 people · R350<br/>4 for the price of 3</div>
+          </div>
+          <div onclick="applyOrgDealTemplate('early_bird')" style="flex-shrink:0;width:148px;background:linear-gradient(135deg,rgba(198,255,74,.08),rgba(0,229,255,.06));border:1.5px solid rgba(198,255,74,.2);border-radius:14px;padding:12px;cursor:pointer">
+            <div style="font-size:1.4rem;margin-bottom:5px">🎤</div>
+            <div style="font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;margin-bottom:3px">Early Bird Squad</div>
+            <div style="font-size:.64rem;color:var(--mu);line-height:1.4">6–10 people · R800<br/>20% off early tickets</div>
+          </div>
+          <div onclick="applyOrgDealTemplate('table_package')" style="flex-shrink:0;width:148px;background:linear-gradient(135deg,rgba(255,92,0,.1),rgba(255,45,120,.08));border:1.5px solid rgba(255,92,0,.25);border-radius:14px;padding:12px;cursor:pointer">
+            <div style="font-size:1.4rem;margin-bottom:5px">🎶</div>
+            <div style="font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;margin-bottom:3px">Table Package</div>
+            <div style="font-size:.64rem;color:var(--mu);line-height:1.4">6–12 people · R2 500<br/>VIP table + bottles</div>
+          </div>
+        </div>
+
         <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Deal Type</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px" id="org-deal-type-grid">
           <div onclick="setOrgDealType('event')" id="odt-event" style="background:rgba(198,255,74,.08);border:1.5px solid rgba(198,255,74,.3);border-radius:12px;padding:10px;text-align:center;cursor:pointer">
@@ -1973,6 +1997,27 @@ history.replaceState({ pane: 'pane-post' }, '');
 init().then(() => { initNotifBell(); loadMyEvents(); });
 
 /* ─── Squad Deals ─── */
+const ORG_DEAL_TEMPLATES = {
+  vip_bundle:    { deal_type:'nightlife', title:'Squad VIP Bundle',          squad_min:4,  squad_max:8,  total_price:1200, valid_days:'Fri–Sun', description:'Skip the queue and get VIP entry for your whole squad. Show this deal at the door. Reserved section with welcome drinks included.' },
+  group_entry:   { deal_type:'nightlife', title:'Group Entry Special',        squad_min:4,  squad_max:6,  total_price:350,  valid_days:'Fri–Sat', description:'Squad entry discount — 4 for the price of 3. Show this deal at the door when you arrive together as a group.' },
+  early_bird:    { deal_type:'event',     title:'Early Bird Squad Tickets',   squad_min:6,  squad_max:10, total_price:800,  valid_days:'',        description:'Book as a squad and get 20% off early bird tickets. First 50 squads only — grab this before tickets go up in price.' },
+  table_package: { deal_type:'nightlife', title:'Squad Table Package',        squad_min:6,  squad_max:12, total_price:2500, valid_days:'Fri–Sun', description:'A reserved VIP table for your squad with bottle service included. Perfect for birthdays, celebrations, or just a big night out.' },
+};
+
+function applyOrgDealTemplate(name) {
+  const t = ORG_DEAL_TEMPLATES[name]; if (!t) return;
+  setOrgDealType(t.deal_type);
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
+  set('org-sqp-title', t.title);
+  set('org-sqp-min',   t.squad_min);
+  set('org-sqp-max',   t.squad_max);
+  set('org-sqp-price', t.total_price || '');
+  set('org-sqp-days',  t.valid_days || '');
+  set('org-sqp-desc',  t.description);
+  document.getElementById('org-sqp-venue')?.focus();
+  document.getElementById('org-sqp-title')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 let _orgDealType = 'event';
 const DEAL_ICONS = { food:'🍔', nightlife:'🎶', event:'🎟', chill:'☕' };
 const DEAL_LABELS = { food:'Food Deal', nightlife:'Nightlife Deal', event:'Event Deal', chill:'Chill Deal' };

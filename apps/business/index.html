@@ -401,6 +401,30 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
   <div style="padding:0 14px 80px">
     <div style="font-size:.78rem;color:var(--mu);margin-bottom:14px;line-height:1.6">Attract groups to your venue with squad-exclusive deals. Admin reviews all deals before they appear in squad feeds.</div>
 
+    <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">⚡ Quick-Start Templates</div>
+    <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;margin-bottom:16px;scrollbar-width:none;-webkit-overflow-scrolling:touch">
+      <div onclick="applyBizDealTemplate('burger_bundle')" style="flex-shrink:0;width:148px;background:linear-gradient(135deg,rgba(255,92,0,.1),rgba(255,45,120,.06));border:1.5px solid rgba(255,92,0,.25);border-radius:14px;padding:12px;cursor:pointer">
+        <div style="font-size:1.4rem;margin-bottom:5px">🍔</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;margin-bottom:3px">Squad Burger Deal</div>
+        <div style="font-size:.64rem;color:var(--mu2);line-height:1.4">4–6 people · R250<br/>4 burgers + 4 drinks</div>
+      </div>
+      <div onclick="applyBizDealTemplate('shisanyama')" style="flex-shrink:0;width:148px;background:linear-gradient(135deg,rgba(255,92,0,.12),rgba(176,38,255,.06));border:1.5px solid rgba(255,92,0,.3);border-radius:14px;padding:12px;cursor:pointer">
+        <div style="font-size:1.4rem;margin-bottom:5px">🍖</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;margin-bottom:3px">Shisa Platter</div>
+        <div style="font-size:.64rem;color:var(--mu2);line-height:1.4">6–10 people · R580<br/>Meat + pap + sides</div>
+      </div>
+      <div onclick="applyBizDealTemplate('study_squad')" style="flex-shrink:0;width:148px;background:linear-gradient(135deg,rgba(0,229,255,.08),rgba(198,255,74,.06));border:1.5px solid rgba(0,229,255,.2);border-radius:14px;padding:12px;cursor:pointer">
+        <div style="font-size:1.4rem;margin-bottom:5px">☕</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;margin-bottom:3px">Study Squad</div>
+        <div style="font-size:.64rem;color:var(--mu2);line-height:1.4">3–6 people · R180<br/>Coffee + toasties</div>
+      </div>
+      <div onclick="applyBizDealTemplate('table_deal')" style="flex-shrink:0;width:148px;background:linear-gradient(135deg,rgba(176,38,255,.1),rgba(0,229,255,.06));border:1.5px solid rgba(176,38,255,.25);border-radius:14px;padding:12px;cursor:pointer">
+        <div style="font-size:1.4rem;margin-bottom:5px">🥂</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;margin-bottom:3px">VIP Table Deal</div>
+        <div style="font-size:.64rem;color:var(--mu2);line-height:1.4">4–8 people · R1 800<br/>Reserved table + drinks</div>
+      </div>
+    </div>
+
     <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Deal Type</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
       <div onclick="setBizDealType('food')" id="bdt-food" style="background:rgba(198,255,74,.08);border:1.5px solid rgba(198,255,74,.3);border-radius:12px;padding:10px;text-align:center;cursor:pointer">
@@ -2452,6 +2476,27 @@ async function saveBizSocialLinks() {
 }
 
 /* ─── Squad Deals ─── */
+const BIZ_DEAL_TEMPLATES = {
+  burger_bundle: { deal_type:'food',      title:'Squad Burger Deal',          squad_min:4, squad_max:6,  total_price:250,  valid_days:'Mon–Sun', description:'4 loaded burgers + 4 cold drinks for your squad. Available all week — no booking needed, just show this deal at the counter.' },
+  shisanyama:    { deal_type:'food',      title:'Squad Shisa Platter',         squad_min:6, squad_max:10, total_price:580,  valid_days:'Fri–Sun', description:'A full shisanyama experience for 6–10 people. Includes a mixed meat platter, pap, chakalaka and salad. Available Friday to Sunday.' },
+  study_squad:   { deal_type:'chill',     title:'Study Squad Special',         squad_min:3, squad_max:6,  total_price:180,  valid_days:'Mon–Thu', description:'3 filter coffees or Americanos + 3 toasties of your choice. Perfect for study groups or remote work crews. Mon–Thu only.' },
+  table_deal:    { deal_type:'nightlife', title:'VIP Table Deal for Squads',   squad_min:4, squad_max:8,  total_price:1800, valid_days:'Fri–Sat', description:'Reserved table for your squad on Friday or Saturday night with a welcome drinks package included. Book via this deal.' },
+};
+
+function applyBizDealTemplate(name) {
+  const t = BIZ_DEAL_TEMPLATES[name]; if (!t) return;
+  setBizDealType(t.deal_type);
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
+  set('biz-sqp-title', t.title);
+  set('biz-sqp-min',   t.squad_min);
+  set('biz-sqp-max',   t.squad_max);
+  set('biz-sqp-price', t.total_price || '');
+  set('biz-sqp-days',  t.valid_days || '');
+  set('biz-sqp-desc',  t.description);
+  document.getElementById('biz-sqp-venue')?.focus();
+  document.getElementById('biz-sqp-title')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 let _bizDealType = 'food';
 const BIZ_DEAL_ICONS  = { food:'🍔', nightlife:'🎶', event:'🎟', chill:'☕' };
 
