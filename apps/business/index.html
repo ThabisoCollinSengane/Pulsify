@@ -234,7 +234,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <button class="btn-primary" onclick="openSheet('post-sheet')">+ New Post</button>
       <button class="btn-primary" onclick="openSheet('event-sheet')">+ New Event</button>
-      <button class="btn-sec" onclick="openSheet('menu-sheet')">+ Menu Item</button>
+      <button class="btn-sec" onclick="tryAddMenuItem()">+ Menu Item</button>
       <button class="btn-sec" onclick="showTab('orders')">View Orders</button>
     </div>
   </div>
@@ -279,7 +279,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <div class="panel" id="tab-menu-mgr">
   <div class="sec-head">
     <div><div class="sec-title">Menu Manager</div><div class="sec-sub">Items customers can order for pickup</div></div>
-    <button class="btn-primary" onclick="openSheet('menu-sheet')">+ Item</button>
+    <button class="btn-primary" onclick="tryAddMenuItem()">+ Item</button>
   </div>
   <div id="menu-list"></div>
   <div style="margin:4px 14px 20px">
@@ -1339,7 +1339,7 @@ async function renderAnalytics() {
     { data: events },
   ] = await Promise.all([
     sb.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', uid),
-    sb.from('posts').select('id,caption,image_url,likes_count,comments_count,created_at').eq('user_id', uid).order('created_at', { ascending: false }).limit(20),
+    sb.from('posts').select('id,caption,image_url,like_count,comment_count,created_at').eq('user_id', uid).order('created_at', { ascending: false }).limit(20),
     sb.from('events').select('id,name,date_local,capacity,tickets_sold,attendance_count').eq('organiser_id', uid).order('date_local', { ascending: false }).limit(10),
   ]);
 
@@ -1366,9 +1366,9 @@ async function renderAnalytics() {
 
   // Post engagement totals
   const postList = posts || [];
-  const totalLikes    = postList.reduce((s, p) => s + (p.likes_count || 0), 0);
-  const totalComments = postList.reduce((s, p) => s + (p.comments_count || 0), 0);
-  const topPost = postList.sort((a, b) => ((b.likes_count||0) + (b.comments_count||0)) - ((a.likes_count||0) + (a.comments_count||0)))[0];
+  const totalLikes    = postList.reduce((s, p) => s + (p.like_count || 0), 0);
+  const totalComments = postList.reduce((s, p) => s + (p.comment_count || 0), 0);
+  const topPost = postList.sort((a, b) => ((b.like_count||0) + (b.comment_count||0)) - ((a.like_count||0) + (a.comment_count||0)))[0];
 
   // Event stats
   const evList = events || [];
@@ -1430,8 +1430,8 @@ async function renderAnalytics() {
         <div style="flex:1;min-width:0">
           <div style="font-size:.8rem;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px">${xe2((topPost.caption || 'No caption').slice(0, 80))}</div>
           <div style="display:flex;gap:14px;font-size:.72rem;color:var(--mu)">
-            <span>❤️ ${topPost.likes_count || 0}</span>
-            <span>💬 ${topPost.comments_count || 0}</span>
+            <span>❤️ ${topPost.like_count || 0}</span>
+            <span>💬 ${topPost.comment_count || 0}</span>
             <span>${new Date(topPost.created_at).toLocaleDateString('en-ZA')}</span>
           </div>
         </div>
@@ -1804,6 +1804,19 @@ async function deleteEvent(id) {
 // ════════════════════════════════════════════════════════════
 //  MENU ITEMS
 // ════════════════════════════════════════════════════════════
+async function tryAddMenuItem() {
+  const sb = getSB();
+  const bizId = getBizId();
+  if (!sb || !bizId) { openSheet('menu-sheet'); return; }
+  const { count } = await sb.from('menu_items').select('id', { count: 'exact', head: true }).eq('business_id', bizId);
+  if ((count || 0) >= 10) {
+    showTab('menu-mgr');
+    await renderMenu(); // ensure banner is visible
+    return;
+  }
+  openSheet('menu-sheet');
+}
+
 async function renderMenu() {
   const el = document.getElementById('menu-list');
   el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--mu)">Loading…</div>';
@@ -1814,8 +1827,19 @@ async function renderMenu() {
   const { data: items } = await sb.from('menu_items').select('*').eq('business_id', bizId).order('sort_order').order('created_at');
   if (!items?.length) { el.innerHTML = emptyState('🍽️', 'No menu items', 'Add items to your menu. Customers can order them for pickup via your public order page.'); return; }
   const cats = [...new Set(items.map(i => i.category || 'General'))];
+  // Update Add button state based on item count
+  const addBtn = document.querySelector('#tab-menu-mgr .sec-head .btn-primary');
+  if (addBtn) {
+    if (items.length >= 10) {
+      addBtn.textContent = '⭐ Upgrade';
+      addBtn.setAttribute('onclick', "showTab('profile')");
+    } else {
+      addBtn.textContent = '+ Item';
+      addBtn.setAttribute('onclick', "openSheet('menu-sheet')");
+    }
+  }
   // Free account cap warning
-  const capHtml = items.length >= 10 ? `<div style="margin:10px 14px;padding:10px 14px;background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.3);border-radius:10px;font-size:.74rem;color:var(--or)">⚠️ Free plan limit: 10 items. Upgrade to premium for unlimited menu items.</div>` : '';
+  const capHtml = items.length >= 10 ? `<div style="margin:10px 14px;padding:14px 16px;background:linear-gradient(135deg,rgba(255,92,0,.12),rgba(176,38,255,.08));border:1px solid rgba(255,92,0,.4);border-radius:14px"><div style="font-size:.85rem;font-weight:700;color:var(--or);margin-bottom:4px">⭐ Menu item limit reached</div><div style="font-size:.74rem;color:var(--mu);margin-bottom:10px">Free plan: max 10 menu items. Upgrade to Premium for unlimited.</div><button class="btn-primary" style="width:100%" onclick="showTab('profile')">Upgrade to Premium →</button></div>` : '';
   el.innerHTML = capHtml + cats.map(cat =>
     `<div style="padding:10px 14px 0"><div class="section-label">${xe(cat)}</div></div>` +
     items.filter(i => (i.category || 'General') === cat).map(item => `

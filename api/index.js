@@ -1710,17 +1710,33 @@ module.exports = async (req, res) => {
       if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
       const eventId = adminEventMatch[1];
       const { approved } = req.body || {};
-      const { data: evtRow } = await sb().from('events').select('name,organiser_name').eq('id', eventId).single();
+      const { data: evtRow } = await sb().from('events').select('name,organiser_name,organiser_id').eq('id', eventId).single();
       const adminName = auth.profile.display_name || auth.user.email || 'Admin';
       if (approved === false) {
         const { error } = await sb().from('events').delete().eq('id', eventId);
         if (error) return res.status(400).json({ error: error.message });
         await logAdminAction(auth.user.id, adminName, 'event_reject', eventId, evtRow?.name || eventId, {});
+        if (evtRow?.organiser_id) {
+          await sb().from('notifications').insert({
+            user_id: evtRow.organiser_id, type: 'event_rejected',
+            entity_id: eventId, entity_type: 'event',
+            from_display_name: 'Pulsefy Admin',
+            message: `Your event "${evtRow.name}" was not approved. Please review and resubmit, or contact support.`,
+          }).catch(() => {});
+        }
         return res.status(200).json({ success: true, deleted: true });
       }
       const { data, error } = await sb().from('events').update({ approved: true }).eq('id', eventId).select().single();
       if (error) return res.status(400).json({ error: error.message });
       await logAdminAction(auth.user.id, adminName, 'event_approve', eventId, evtRow?.name || eventId, {});
+      if (evtRow?.organiser_id) {
+        await sb().from('notifications').insert({
+          user_id: evtRow.organiser_id, type: 'event_approved',
+          entity_id: eventId, entity_type: 'event',
+          from_display_name: 'Pulsefy Admin',
+          message: `🎉 Your event "${evtRow.name}" has been approved and is now live on the map!`,
+        }).catch(() => {});
+      }
       return res.status(200).json({ success: true, event: data });
     }
 

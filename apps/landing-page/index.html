@@ -1804,6 +1804,8 @@ async function openEv(evId) {
     const tiers = evTiers || [], photos = evPhotos || [];
 
     selTier = tiers[0] || null; selQty = 1;
+    window._tierCache = window._tierCache || {};
+    window._tierCache[evId] = tiers;
     const iF = ev.is_free, bg = gg(ev.genre), emo = ge(ev.genre);
     const lc = ev.like_count || 0, cc = ev.comment_count || 0;
     const totalCap = tiers.reduce((s, t) => s + (t.capacity || 0), 0) || ev.capacity || 0;

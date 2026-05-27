@@ -1365,8 +1365,17 @@ async function submitPost() {
     });
     const _txt = await res.text();
     let data = {}; try { data = JSON.parse(_txt); } catch(e) {}
-    if (!res.ok) throw new Error(data.error || 'Post failed');
+    if (!res.ok) {
+      if (res.status === 403 && data.error === 'POST_LIMIT_REACHED') {
+        showPostLimitPrompt(data.message);
+        btn.disabled = false; btn.textContent = 'Publish 🚀';
+        return;
+      }
+      throw new Error(data.error || 'Post failed');
+    }
 
+    const limitBanner = document.getElementById('post-limit-prompt');
+    if (limitBanner) limitBanner.remove();
     toast('🔥 Published to feed!', 'ok');
     document.getElementById('post-caption').value = '';
     document.getElementById('post-event-tag').value = '';
@@ -1380,6 +1389,22 @@ async function submitPost() {
     toast('Error: ' + e.message, 'err');
   }
   btn.disabled = false; btn.textContent = 'Publish 🚀';
+}
+
+function showPostLimitPrompt(msg) {
+  let banner = document.getElementById('post-limit-prompt');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'post-limit-prompt';
+    const pane = document.getElementById('pane-post');
+    if (pane) pane.insertAdjacentElement('afterbegin', banner);
+  }
+  banner.innerHTML = `<div style="margin:10px 14px 4px;padding:14px 16px;background:linear-gradient(135deg,rgba(255,92,0,.12),rgba(176,38,255,.08));border:1px solid rgba(255,92,0,.4);border-radius:14px">
+    <div style="font-size:.85rem;font-weight:700;color:var(--or);margin-bottom:4px">📮 Monthly post limit reached</div>
+    <div style="font-size:.74rem;color:var(--mu);margin-bottom:10px">${msg || 'Free plan: 5 posts/month. Upgrade to Premium for unlimited posts.'}</div>
+    <button class="btn-primary" style="width:100%" onclick="const b=document.querySelector('.tab[onclick*=pane-settings]');if(b)switchTab(b,'pane-settings')">Upgrade to Premium →</button>
+  </div>`;
+  banner.scrollIntoView({ behavior: 'smooth' });
 }
 
 function previewEvImg(input) {
