@@ -2798,10 +2798,20 @@ module.exports = async (req, res) => {
       if (!business_id || !customer_name || !customer_phone || !items?.length)
         return res.status(400).json({ error: 'business_id, customer_name, customer_phone, items required' });
       const order_ref = `ORD-${Date.now()}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
+      // capture user_id if the caller is authenticated
+      let placing_user_id = null;
+      const placingToken = tokenFrom(req);
+      if (placingToken) {
+        try {
+          const { data: { user } } = await createClient(SUPA_URL, SUPA_ANON).auth.getUser(placingToken);
+          if (user) placing_user_id = user.id;
+        } catch(_) {}
+      }
       const { data: order, error: oErr } = await sb().from('pickup_orders').insert({
         order_ref, business_id, customer_name, customer_phone,
         items, notes: notes || null, pickup_time: pickup_time || null,
         total: +total || 0, status: 'pending',
+        ...(placing_user_id ? { user_id: placing_user_id } : {}),
       }).select().single();
       if (oErr) return res.status(400).json({ error: oErr.message });
       const { data: biz } = await sb().from('businesses').select('owner_id,name').eq('id', business_id).maybeSingle();
@@ -2825,6 +2835,28 @@ module.exports = async (req, res) => {
       if (error || !data) return res.status(404).json({ error: 'Order not found' });
       const { data: biz } = await sb().from('businesses').select('name').eq('id', data.business_id).maybeSingle();
       return res.status(200).json({ ...data, business_name: biz?.name || '' });
+    }
+
+    /* ─── GET /user/pickup-orders ────────────────────────── */
+    if (url === '/user/pickup-orders' && req.method === 'GET') {
+      const token = tokenFrom(req);
+      if (!token) return res.status(401).json({ error: 'Unauthorised' });
+      const { data: { user } } = await createClient(SUPA_URL, SUPA_ANON).auth.getUser(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorised' });
+      const { data: orders, error } = await sb().from('pickup_orders')
+        .select('order_ref,status,items,total,pickup_time,created_at,business_id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(30);
+      if (error) return res.status(400).json({ error: error.message });
+      // attach business names in one shot
+      const bizIds = [...new Set((orders || []).map(o => o.business_id).filter(Boolean))];
+      let bizMap = {};
+      if (bizIds.length) {
+        const { data: bizRows } = await sb().from('businesses').select('id,name').in('id', bizIds);
+        (bizRows || []).forEach(b => { bizMap[b.id] = b.name; });
+      }
+      return res.status(200).json({ orders: (orders || []).map(o => ({ ...o, business_name: bizMap[o.business_id] || '' })) });
     }
 
     /* ─── GET /squad-promos ──────────────────────────────── */
