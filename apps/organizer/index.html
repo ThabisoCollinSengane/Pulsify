@@ -817,7 +817,7 @@ async function submitOrgPayment() {
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
     const res = await fetch('/api/auth/profile', {
-      method: 'POST',
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token },
       body: JSON.stringify({ bank_name: bank, account_number: account, business_name: name }),
     });

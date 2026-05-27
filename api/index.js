@@ -854,6 +854,41 @@ module.exports = async (req, res) => {
       return res.status(200).json({ profile: created, created: true });
     }
 
+    /* ─── PATCH /auth/profile ─────────────────────────────── */
+    if (url === '/auth/profile' && req.method === 'PATCH') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+      const userSb = createClient(SUPA_URL, SUPA_ANON);
+      const { data: { user } } = await userSb.auth.getUser(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const b = req.body || {};
+      const updates = {};
+      if (b.bank_name)       updates.paystack_bank_name      = b.bank_name;
+      if (b.account_number)  updates.paystack_account_number = String(b.account_number);
+      if (b.business_name)   updates.paystack_business_name  = b.business_name;
+
+      if (!Object.keys(updates).length) return res.status(400).json({ error: 'No fields to update' });
+
+      const { data: updated, error: upErr } = await sb().from('profiles').update(updates).eq('id', user.id).select().single();
+      if (upErr) return res.status(500).json({ error: upErr.message });
+
+      // Auto-create or refresh Paystack subaccount
+      let subCode = updated?.paystack_subaccount_code || null;
+      if (!subCode && b.bank_name && b.account_number) {
+        const { data: prof } = await sb().from('profiles').select('role,display_name,email').eq('id', user.id).single();
+        if (['organizer','business'].includes(prof?.role)) {
+          subCode = await createPaystackSubaccount(
+            b.business_name || prof.display_name, b.bank_name, String(b.account_number), user.email || prof.email
+          );
+          if (subCode) await sb().from('profiles').update({ paystack_subaccount_code: subCode }).eq('id', user.id);
+        }
+      }
+
+      return res.status(200).json({ ok: true, paystack_subaccount_code: subCode || null });
+    }
+
     /* ─── GET /health ─────────────────────────────────────── */
     if (url === '/health' && req.method === 'GET') {
       return res.status(200).json({ status: 'ok', ts: new Date().toISOString() });
