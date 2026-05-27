@@ -165,6 +165,7 @@ select.inp option{background:#0D1424}
     <div class="tab" onclick="switchTab(this,'pane-feed')">📰 Feed</div>
     <div class="tab" onclick="switchTab(this,'pane-scan')">📷 Scan</div>
     <div class="tab" onclick="switchTab(this,'pane-promote')">🚀 Promote</div>
+    <div class="tab" onclick="switchTab(this,'pane-sqpromos')">🎁 Deals</div>
     <div class="tab" onclick="switchTab(this,'pane-settings')">⚙️ Settings</div>
   </div>
 
@@ -335,6 +336,55 @@ select.inp option{background:#0D1424}
         <div id="discover-list"><div style="padding:30px 0;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div></div>
       </div>
     </div>
+  </div>
+
+  <!-- ══ SQUAD DEALS ══ -->
+  <div class="pane" id="pane-sqpromos">
+    <div class="card">
+      <div class="card-body">
+        <div class="section-label">🎁 Squad Deals</div>
+        <div style="font-size:.76rem;color:var(--mu);margin-bottom:14px;line-height:1.5">Create exclusive squad deals for groups attending your events. Admin reviews all deals before they appear in squad feeds.</div>
+
+        <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Deal Type</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px" id="org-deal-type-grid">
+          <div onclick="setOrgDealType('event')" id="odt-event" style="background:rgba(198,255,74,.08);border:1.5px solid rgba(198,255,74,.3);border-radius:12px;padding:10px;text-align:center;cursor:pointer">
+            <div style="font-size:1.3rem">🎟</div><div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--li);margin-top:3px">Event Deal</div>
+            <div style="font-size:.62rem;color:var(--mu)">Discounted tickets, VIP</div>
+          </div>
+          <div onclick="setOrgDealType('nightlife')" id="odt-nightlife" style="background:var(--surf2);border:1.5px solid var(--border);border-radius:12px;padding:10px;text-align:center;cursor:pointer">
+            <div style="font-size:1.3rem">🎶</div><div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;margin-top:3px">Nightlife Deal</div>
+            <div style="font-size:.62rem;color:var(--mu)">Entry discounts, tables</div>
+          </div>
+          <div onclick="setOrgDealType('food')" id="odt-food" style="background:var(--surf2);border:1.5px solid var(--border);border-radius:12px;padding:10px;text-align:center;cursor:pointer">
+            <div style="font-size:1.3rem">🍔</div><div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;margin-top:3px">Food Deal</div>
+            <div style="font-size:.62rem;color:var(--mu)">Platters, bundle combos</div>
+          </div>
+          <div onclick="setOrgDealType('chill')" id="odt-chill" style="background:var(--surf2);border:1.5px solid var(--border);border-radius:12px;padding:10px;text-align:center;cursor:pointer">
+            <div style="font-size:1.3rem">☕</div><div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;margin-top:3px">Chill Deal</div>
+            <div style="font-size:.62rem;color:var(--mu)">Coffee, study specials</div>
+          </div>
+        </div>
+
+        <input class="inp" id="org-sqp-title" placeholder="Deal title e.g. Squad VIP Bundle *" style="margin-bottom:8px"/>
+        <input class="inp" id="org-sqp-venue" placeholder="Venue name *" style="margin-bottom:8px"/>
+        <input class="inp" id="org-sqp-city" placeholder="City (e.g. Johannesburg)" style="margin-bottom:8px"/>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <input class="inp" id="org-sqp-min" type="number" placeholder="Min squad size" min="2" max="20" value="4" style="margin-bottom:0"/>
+          <input class="inp" id="org-sqp-max" type="number" placeholder="Max squad size" min="2" max="100" value="10" style="margin-bottom:0"/>
+        </div>
+        <input class="inp" id="org-sqp-price" type="number" placeholder="Total group price (R) — leave blank if free" min="0" style="margin-bottom:8px"/>
+        <input class="inp" id="org-sqp-days" placeholder="Valid days e.g. Fri–Sun or Mon–Thu" style="margin-bottom:8px"/>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <input class="inp" id="org-sqp-from" type="date" style="margin-bottom:0"/>
+          <input class="inp" id="org-sqp-to" type="date" style="margin-bottom:0"/>
+        </div>
+        <textarea class="inp" id="org-sqp-desc" placeholder="Describe the deal for squads…" rows="3" style="resize:none;margin-bottom:12px"></textarea>
+        <button class="btn-primary" id="org-sqp-btn" onclick="submitOrgSquadPromo()">Submit Deal for Approval 🎁</button>
+      </div>
+    </div>
+
+    <div class="section-label" style="padding:16px 16px 6px">My Squad Deals</div>
+    <div id="org-sqpromos-list" style="padding:0 16px 80px"></div>
   </div>
 
   <div class="pane" id="pane-settings">
@@ -1135,6 +1185,7 @@ function switchTab(btn, paneId, _noPush) {
   if (paneId === 'pane-myposts') loadMyPosts();
   if (paneId === 'pane-event') loadMyEvents();
   if (paneId === 'pane-promote') { loadOrgPromoEvents(); loadMyOrgPromos(); }
+  if (paneId === 'pane-sqpromos') loadMyOrgSquadPromos();
   if (paneId === 'pane-discover') loadDiscoverEvents();
   if (paneId === 'pane-feed') loadOrgFeed();
   if (paneId === 'pane-scan') {
@@ -1920,6 +1971,102 @@ loadOrgSettingsStatus();
 loadOrgSocialLinks();
 history.replaceState({ pane: 'pane-post' }, '');
 init().then(() => { initNotifBell(); loadMyEvents(); });
+
+/* ─── Squad Deals ─── */
+let _orgDealType = 'event';
+const DEAL_ICONS = { food:'🍔', nightlife:'🎶', event:'🎟', chill:'☕' };
+const DEAL_LABELS = { food:'Food Deal', nightlife:'Nightlife Deal', event:'Event Deal', chill:'Chill Deal' };
+
+function setOrgDealType(type) {
+  _orgDealType = type;
+  ['event','nightlife','food','chill'].forEach(t => {
+    const el = document.getElementById('odt-' + t);
+    if (!el) return;
+    if (t === type) {
+      el.style.background = 'rgba(198,255,74,.08)';
+      el.style.borderColor = 'rgba(198,255,74,.3)';
+      el.querySelector('div:nth-child(2)').style.color = 'var(--li)';
+    } else {
+      el.style.background = 'var(--surf2)';
+      el.style.borderColor = 'var(--border)';
+      el.querySelector('div:nth-child(2)').style.color = 'var(--tx)';
+    }
+  });
+}
+
+async function submitOrgSquadPromo() {
+  const btn = document.getElementById('org-sqp-btn');
+  const title = document.getElementById('org-sqp-title')?.value?.trim();
+  const venue = document.getElementById('org-sqp-venue')?.value?.trim();
+  if (!title || !venue) { toast('Title and venue are required', 'err'); return; }
+  btn.disabled = true; btn.textContent = 'Submitting…';
+  const token = (await sb.auth.getSession()).data.session?.access_token || '';
+  const body = {
+    title, venue_name: venue,
+    deal_type: _orgDealType,
+    location_city: document.getElementById('org-sqp-city')?.value?.trim() || '',
+    squad_min: document.getElementById('org-sqp-min')?.value || 4,
+    squad_max: document.getElementById('org-sqp-max')?.value || 10,
+    total_price: document.getElementById('org-sqp-price')?.value || null,
+    valid_days: document.getElementById('org-sqp-days')?.value?.trim() || '',
+    valid_from: document.getElementById('org-sqp-from')?.value || null,
+    valid_to: document.getElementById('org-sqp-to')?.value || null,
+    description: document.getElementById('org-sqp-desc')?.value?.trim() || '',
+  };
+  try {
+    const r = await fetch('/api/squad-promos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(body),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'Failed');
+    toast('Deal submitted for admin approval ✅', 'ok');
+    ['org-sqp-title','org-sqp-venue','org-sqp-city','org-sqp-price','org-sqp-days','org-sqp-from','org-sqp-to','org-sqp-desc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    loadMyOrgSquadPromos();
+  } catch(e) {
+    toast(e.message || 'Error submitting deal', 'err');
+  }
+  btn.disabled = false; btn.textContent = 'Submit Deal for Approval 🎁';
+}
+
+async function loadMyOrgSquadPromos() {
+  const el = document.getElementById('org-sqpromos-list');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--mu);font-size:.8rem;padding:12px 0">Loading…</div>';
+  try {
+    const token = (await sb.auth.getSession()).data.session?.access_token || '';
+    const r = await fetch('/api/squad-promos/mine', { headers: { 'Authorization': 'Bearer ' + token } });
+    const j = await r.json();
+    const promos = j.promos || [];
+    if (!promos.length) { el.innerHTML = '<div style="color:var(--mu);font-size:.8rem;padding:12px 0;text-align:center">No squad deals yet. Submit one above!</div>'; return; }
+    el.innerHTML = promos.map(p => {
+      const badge = p.approved
+        ? `<span style="background:rgba(198,255,74,.12);border:1px solid rgba(198,255,74,.3);color:var(--li);font-size:.6rem;font-family:'Syne',sans-serif;font-weight:700;padding:2px 9px;border-radius:50px">✅ Live</span>`
+        : p.rejected
+          ? `<span style="background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.25);color:var(--pk);font-size:.6rem;font-family:'Syne',sans-serif;font-weight:700;padding:2px 9px;border-radius:50px">❌ Rejected</span>`
+          : `<span style="background:rgba(255,200,0,.08);border:1px solid rgba(255,200,0,.2);color:#FFC800;font-size:.6rem;font-family:'Syne',sans-serif;font-weight:700;padding:2px 9px;border-radius:50px">⏳ Pending</span>`;
+      return `<div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:1.1rem">${DEAL_ICONS[p.deal_type] || '🎁'}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(p.title)}</div>
+            <div style="font-size:.68rem;color:var(--mu)">${x(p.venue_name)}${p.location_city ? ' · ' + x(p.location_city) : ''}</div>
+          </div>
+          ${badge}
+        </div>
+        <div style="display:flex;gap:12px;font-size:.7rem;color:var(--mu2)">
+          <span>👥 ${p.squad_min}–${p.squad_max} people</span>
+          ${p.total_price ? `<span>💰 R${p.total_price}</span>` : ''}
+          ${p.valid_days ? `<span>📅 ${x(p.valid_days)}</span>` : ''}
+        </div>
+        ${p.reject_reason ? `<div style="margin-top:6px;font-size:.7rem;color:var(--pk)">Reason: ${x(p.reject_reason)}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--mu);font-size:.8rem;padding:12px 0">Could not load deals</div>';
+  }
+}
 </script>
 
 <!-- NOTIFICATION PANEL -->

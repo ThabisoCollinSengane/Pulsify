@@ -2777,6 +2777,72 @@ module.exports = async (req, res) => {
       return res.status(200).json({ success: true, order_ref, order_id: order.id });
     }
 
+    /* ─── GET /squad-promos ──────────────────────────────── */
+    if (url === '/squad-promos' && req.method === 'GET') {
+      const city = (q.city || '').toLowerCase();
+      const { data, error } = await sb().from('squad_promos')
+        .select('*').eq('approved', true).eq('is_active', true)
+        .order('created_at', { ascending: false });
+      if (error) return res.status(400).json({ error: error.message });
+      const promos = city
+        ? (data || []).filter(p => !p.location_city || p.location_city.toLowerCase().includes(city) || city.includes(p.location_city.toLowerCase()))
+        : (data || []);
+      return res.status(200).json({ promos });
+    }
+
+    /* ─── POST /squad-promos ─────────────────────────────── */
+    if (url === '/squad-promos' && req.method === 'POST') {
+      const token = tokenFrom(req);
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { role } = auth.profile;
+      if (!['organizer','business','admin'].includes(role))
+        return res.status(403).json({ error: 'Organizer or business account required' });
+      const { title, description, deal_type, venue_name, location_city,
+              squad_min, squad_max, total_price, valid_days,
+              valid_from, valid_to, image_url } = req.body || {};
+      if (!title || !venue_name) return res.status(400).json({ error: 'title and venue_name are required' });
+      const { data: promo, error } = await sbAs(token).from('squad_promos').insert({
+        title, description: description || null,
+        deal_type: deal_type || 'food', venue_name,
+        location_city: location_city || null,
+        squad_min: parseInt(squad_min) || 2, squad_max: parseInt(squad_max) || 10,
+        total_price: total_price ? parseFloat(total_price) : null,
+        valid_days: valid_days || null,
+        valid_from: valid_from || null, valid_to: valid_to || null,
+        image_url: image_url || null,
+        owner_id: auth.user.id, owner_role: role,
+        approved: role === 'admin',
+      }).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(201).json({ promo });
+    }
+
+    /* ─── GET /squad-promos/mine ─────────────────────────── */
+    if (url === '/squad-promos/mine' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { data, error } = await sb().from('squad_promos')
+        .select('*').eq('owner_id', auth.user.id)
+        .order('created_at', { ascending: false });
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ promos: data || [] });
+    }
+
+    /* ─── PATCH /squad-promos/:id/approve|reject ─────────── */
+    const sqPromoAction = url.match(/^\/squad-promos\/([^/]+)\/(approve|reject)$/);
+    if (sqPromoAction && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const [, promoId, action] = sqPromoAction;
+      const updates = action === 'approve'
+        ? { approved: true, rejected: false }
+        : { approved: false, rejected: true, reject_reason: req.body?.reason || null };
+      const { data, error } = await sb().from('squad_promos').update(updates).eq('id', promoId).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ promo: data });
+    }
+
     return res.status(404).json({ error: `Route not found: ${req.method} ${url}` });
 
   } catch (err) {

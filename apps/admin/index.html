@@ -164,6 +164,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="tab-btn" onclick="switchTab('notifications',this)">🔔 Notify</div>
     <div class="tab-btn" onclick="switchTab('reports',this)">🚩 Reports</div>
     <div class="tab-btn" onclick="switchTab('promotions',this)">🚀 Promos</div>
+    <div class="tab-btn" onclick="switchTab('squad-promos',this)">🎁 Deals</div>
     <div class="tab-btn" onclick="switchTab('system',this)">⚙️ System</div>
   </div>
 
@@ -691,6 +692,34 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div id="promotions-list"><div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div></div>
   </div>
 
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: SQUAD PROMOS -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <div id="tab-squad-promos" class="tab-content">
+    <div style="margin-bottom:20px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Squad Deals</div>
+      <div style="font-size:.82rem;color:var(--mu2)">Review and approve squad promo deals from organizers and businesses</div>
+    </div>
+
+    <div class="stats-bar" style="margin-bottom:20px">
+      <div class="stat"><div class="stat-n warn-n" id="sqp-kpi-pending">—</div><div class="stat-l">Pending</div></div>
+      <div class="stat"><div class="stat-n ok-n" id="sqp-kpi-live">—</div><div class="stat-l">Live</div></div>
+      <div class="stat"><div class="stat-n" id="sqp-kpi-rejected">—</div><div class="stat-l">Rejected</div></div>
+    </div>
+
+    <div class="search-row">
+      <select class="inp" id="sqp-filter" onchange="loadAdminSquadPromos()" style="max-width:180px">
+        <option value="pending">⏳ Pending Review</option>
+        <option value="live">✅ Live</option>
+        <option value="rejected">❌ Rejected</option>
+        <option value="all">All</option>
+      </select>
+      <button class="btn btn-surf" onclick="loadAdminSquadPromos()">↺ Refresh</button>
+    </div>
+    <div id="msg-squad-promos" class="msg"></div>
+    <div id="squad-promos-list"><div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div></div>
+  </div>
+
   <div id="tab-system" class="tab-content">
     <div style="margin-bottom:20px">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">System Settings</div>
@@ -856,6 +885,7 @@ function switchTab(tab, btn) {
   else if (tab === 'notifications') { loadNotifHistory(); loadActivityLog(); }
   else if (tab === 'reports') loadReports();
   else if (tab === 'promotions') loadAdminPromos();
+  else if (tab === 'squad-promos') loadAdminSquadPromos();
   else if (tab === 'system') { loadSystemStats(); loadAdminSocialLinks(); }
 }
 
@@ -2391,6 +2421,86 @@ async function saveAdminSocialLinks() {
     if (r.ok) { if (st) st.textContent = '✅ Saved!'; setTimeout(() => { if(st) st.textContent=''; }, 3000); }
     else { if (st) st.textContent = '❌ Save failed'; }
   } catch(e) { if (st) st.textContent = '❌ Error: '+e.message; }
+}
+
+/* ─── Admin: Squad Deals ─── */
+const ADM_DEAL_ICONS = { food:'🍔', nightlife:'🎶', event:'🎟', chill:'☕' };
+
+async function loadAdminSquadPromos() {
+  const el = document.getElementById('squad-promos-list');
+  const filter = document.getElementById('sqp-filter')?.value || 'pending';
+  if (!el) return;
+  el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div>';
+  try {
+    const { data, error } = await sb.from('squad_promos')
+      .select('*, profiles(display_name, username, role)')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    const all = data || [];
+    const pending  = all.filter(p => !p.approved && !p.rejected);
+    const live     = all.filter(p => p.approved && !p.rejected);
+    const rejected = all.filter(p => p.rejected);
+    document.getElementById('sqp-kpi-pending').textContent  = pending.length;
+    document.getElementById('sqp-kpi-live').textContent     = live.length;
+    document.getElementById('sqp-kpi-rejected').textContent = rejected.length;
+    const shown = filter === 'pending' ? pending : filter === 'live' ? live : filter === 'rejected' ? rejected : all;
+    if (!shown.length) { el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">No deals in this filter</div>'; return; }
+    el.innerHTML = shown.map(p => {
+      const ownerName = p.profiles?.display_name || p.profiles?.username || '—';
+      const statusBadge = p.approved
+        ? '<span style="background:rgba(198,255,74,.1);border:1px solid rgba(198,255,74,.3);color:#C6FF4A;font-size:.6rem;font-family:\'Syne\',sans-serif;font-weight:700;padding:2px 9px;border-radius:50px">✅ Live</span>'
+        : p.rejected
+          ? '<span style="background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.25);color:#FF2D78;font-size:.6rem;font-family:\'Syne\',sans-serif;font-weight:700;padding:2px 9px;border-radius:50px">❌ Rejected</span>'
+          : '<span style="background:rgba(255,200,0,.08);border:1px solid rgba(255,200,0,.2);color:#FFC800;font-size:.6rem;font-family:\'Syne\',sans-serif;font-weight:700;padding:2px 9px;border-radius:50px">⏳ Pending</span>';
+      return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:12px">
+        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px">
+          <span style="font-size:1.4rem;flex-shrink:0">${ADM_DEAL_ICONS[p.deal_type]||'🎁'}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;margin-bottom:2px">${escHtml(p.title)}</div>
+            <div style="font-size:.72rem;color:var(--mu2)">📍 ${escHtml(p.venue_name)}${p.location_city?' · '+escHtml(p.location_city):''}</div>
+            <div style="font-size:.7rem;color:var(--mu);margin-top:3px">By: ${escHtml(ownerName)} (${p.owner_role||'—'}) · ${new Date(p.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})}</div>
+          </div>
+          ${statusBadge}
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:.72rem;color:var(--mu2);margin-bottom:10px">
+          <span>👥 ${p.squad_min}–${p.squad_max} people</span>
+          ${p.total_price?`<span>💰 R${p.total_price}</span>`:'<span>Free</span>'}
+          ${p.valid_days?`<span>📅 ${escHtml(p.valid_days)}</span>`:''}
+        </div>
+        ${p.description?`<div style="font-size:.76rem;color:var(--mu2);margin-bottom:10px;line-height:1.5">${escHtml(p.description)}</div>`:''}
+        ${!p.approved && !p.rejected ? `<div style="display:flex;gap:8px">
+          <button onclick="adminSqpApprove('${escHtml(p.id)}')" style="flex:1;background:rgba(198,255,74,.12);border:1px solid rgba(198,255,74,.3);color:#C6FF4A;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;padding:9px;border-radius:10px;cursor:pointer">✅ Approve</button>
+          <button onclick="adminSqpReject('${escHtml(p.id)}')" style="flex:1;background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);color:#FF2D78;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;padding:9px;border-radius:10px;cursor:pointer">❌ Reject</button>
+        </div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--pk)">Error: ' + e.message + '</div>';
+  }
+}
+
+async function adminSqpApprove(promoId) {
+  const token = (await sb.auth.getSession()).data.session?.access_token || '';
+  const r = await fetch('/api/squad-promos/' + promoId + '/approve', {
+    method: 'PATCH', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  });
+  const msgEl = document.getElementById('msg-squad-promos');
+  if (r.ok) { if (msgEl) { msgEl.textContent = 'Squad deal approved ✅'; msgEl.className = 'msg ok'; setTimeout(() => { msgEl.textContent=''; }, 3000); } loadAdminSquadPromos(); }
+  else { const j = await r.json(); if (msgEl) { msgEl.textContent = 'Error: ' + (j.error || 'Failed'); msgEl.className = 'msg err'; } }
+}
+
+async function adminSqpReject(promoId) {
+  const reason = prompt('Rejection reason (optional):');
+  if (reason === null) return;
+  const token = (await sb.auth.getSession()).data.session?.access_token || '';
+  const r = await fetch('/api/squad-promos/' + promoId + '/reject', {
+    method: 'PATCH',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason: reason || null }),
+  });
+  const msgEl2 = document.getElementById('msg-squad-promos');
+  if (r.ok) { if (msgEl2) { msgEl2.textContent = 'Squad deal rejected'; msgEl2.className = 'msg ok'; setTimeout(() => { msgEl2.textContent=''; }, 3000); } loadAdminSquadPromos(); }
+  else { const j = await r.json(); if (msgEl2) { msgEl2.textContent = 'Error: ' + (j.error || 'Failed'); msgEl2.className = 'msg err'; } }
 }
 </script>
 </body>

@@ -4656,11 +4656,13 @@ function renderSquadWorkspace(detail, container) {
       <button id="sqt-calendar" onclick="showSqTab('calendar','${x(squad.id)}')" style="flex:1;padding:8px 2px;background:transparent;border:1.5px solid var(--border);border-radius:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer">🗓 Calendar</button>
       <button id="sqt-chat" onclick="showSqTab('chat','${x(squad.id)}')" style="flex:1;padding:8px 2px;background:transparent;border:1.5px solid var(--border);border-radius:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer">💬 Chat</button>
       <button id="sqt-members" onclick="showSqTab('members','${x(squad.id)}')" style="flex:1;padding:8px 2px;background:transparent;border:1.5px solid var(--border);border-radius:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer">👥 Members</button>
+      <button id="sqt-deals" onclick="showSqTab('deals','${x(squad.id)}')" style="flex:1;padding:8px 2px;background:transparent;border:1.5px solid var(--border);border-radius:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer">🔥 Deals</button>
     </div>
     <div id="sq-tab-plans"></div>
     <div id="sq-tab-calendar" style="display:none"></div>
     <div id="sq-tab-chat" style="display:none"></div>
-    <div id="sq-tab-members" style="display:none"></div>`;
+    <div id="sq-tab-members" style="display:none"></div>
+    <div id="sq-tab-deals" style="display:none"></div>`;
 
   loadSquadPlans(squad.id);
 }
@@ -4685,7 +4687,7 @@ async function sqEditAbout(squadId, current) {
 }
 
 function showSqTab(tab, squadId) {
-  ['plans','calendar','chat','members'].forEach(t => {
+  ['plans','calendar','chat','members','deals'].forEach(t => {
     const btn = document.getElementById('sqt-' + t);
     const pane = document.getElementById('sq-tab-' + t);
     if (btn) {
@@ -4698,6 +4700,7 @@ function showSqTab(tab, squadId) {
   else if (tab === 'calendar') loadSqCalendar(squadId);
   else if (tab === 'chat') loadSqChat(squadId);
   else if (tab === 'members') loadSqMembers(squadId);
+  else if (tab === 'deals') loadSquadDeals(squadId);
 }
 
 const OUTING_TYPES = [
@@ -4978,6 +4981,74 @@ function loadSqMembers(squadId) {
     ? `<button onclick="leaveSquad('${x(squadId)}')" style="width:100%;padding:11px;background:rgba(255,45,120,.1);border:1.5px solid rgba(255,45,120,.3);border-radius:50px;color:var(--pk);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;margin-top:8px">Leave Squad</button>`
     : `<button onclick="joinSquad('${x(squadId)}')" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;margin-top:14px">Join Squad</button>`;
   pane.innerHTML = `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Members (${members.length})</div>${membersHtml}${shareSection}${actionBtn}`;
+}
+
+const SQ_DEAL_META = {
+  food:      { icon: '🍔', label: 'Food Deal',      color: '#FF5C00', bg: 'rgba(255,92,0,.08)',   border: 'rgba(255,92,0,.25)' },
+  nightlife: { icon: '🎶', label: 'Nightlife Deal',  color: '#B026FF', bg: 'rgba(176,38,255,.08)', border: 'rgba(176,38,255,.25)' },
+  event:     { icon: '🎟', label: 'Event Deal',      color: '#00E5FF', bg: 'rgba(0,229,255,.06)',  border: 'rgba(0,229,255,.2)' },
+  chill:     { icon: '☕', label: 'Chill Deal',      color: '#C6FF4A', bg: 'rgba(198,255,74,.06)', border: 'rgba(198,255,74,.2)' },
+};
+
+async function loadSquadDeals(squadId) {
+  const pane = document.getElementById('sq-tab-deals');
+  if (!pane) return;
+  pane.innerHTML = '<div style="padding:20px;font-size:.78rem;color:var(--mu)">Loading deals…</div>';
+  try {
+    const city = _sqCurrentSquad?.location_city || '';
+    const url = '/api/squad-promos' + (city ? '?city=' + encodeURIComponent(city) : '');
+    const r = await fetch(url);
+    const j = await r.json();
+    const promos = j.promos || [];
+    if (!promos.length) {
+      pane.innerHTML = `<div style="padding:28px 16px;text-align:center">
+        <div style="font-size:2.5rem;margin-bottom:10px">🎁</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;margin-bottom:6px">No squad deals yet</div>
+        <div style="font-size:.76rem;color:var(--mu);line-height:1.5">When venues and organizers post squad-exclusive deals, they'll appear here.</div>
+      </div>`;
+      return;
+    }
+    pane.innerHTML = `
+      <div style="font-size:.7rem;color:var(--mu);padding:8px 0 12px;line-height:1.5">🔥 Exclusive deals for your squad. Show this screen at the venue.</div>
+      ${promos.map(p => {
+        const meta = SQ_DEAL_META[p.deal_type] || SQ_DEAL_META.food;
+        const price = p.total_price ? `<span style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800;color:var(--or)">R${p.total_price}</span><span style="font-size:.66rem;color:var(--mu);margin-left:2px">total</span>` : `<span style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800;color:#C6FF4A">Free</span>`;
+        return `<div style="background:var(--surf);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin-bottom:14px">
+          <div style="background:${meta.bg};border-bottom:1px solid ${meta.border};padding:10px 14px;display:flex;align-items:center;gap:8px">
+            <span style="font-size:1.1rem">${meta.icon}</span>
+            <span style="font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:${meta.color}">${meta.label}</span>
+          </div>
+          <div style="padding:14px">
+            <div style="font-family:'Syne',sans-serif;font-size:.98rem;font-weight:800;margin-bottom:4px">${x(p.title)}</div>
+            <div style="font-size:.76rem;color:var(--mu2);margin-bottom:10px">${x(p.venue_name)}${p.location_city ? ' · ' + x(p.location_city) : ''}</div>
+            ${p.description ? `<div style="font-size:.78rem;color:var(--mu2);line-height:1.5;margin-bottom:10px">${x(p.description)}</div>` : ''}
+            <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px">
+              <div style="display:flex;align-items:center;gap:5px">
+                <span style="font-size:.9rem">👥</span>
+                <span style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700">${p.squad_min}–${p.squad_max} people</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:5px">
+                <span style="font-size:.9rem">💰</span>
+                <div>${price}</div>
+              </div>
+              ${p.valid_days ? `<div style="display:flex;align-items:center;gap:5px"><span style="font-size:.9rem">📅</span><span style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700">${x(p.valid_days)}</span></div>` : ''}
+            </div>
+            <button style="width:100%;padding:12px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer;letter-spacing:.02em" onclick="sqJoinDeal('${x(p.id)}','${x(p.title)}','${x(p.venue_name)}')">👥 Join This Deal</button>
+          </div>
+        </div>`;
+      }).join('')}`;
+  } catch(e) {
+    pane.innerHTML = '<div style="padding:20px;font-size:.78rem;color:var(--mu)">Could not load deals</div>';
+  }
+}
+
+function sqJoinDeal(dealId, title, venue) {
+  const msg = `🔥 My squad is joining the "${title}" deal at ${venue}! Check it out on Pulsefy 👉 ${window.location.origin}`;
+  if (navigator.share) {
+    navigator.share({ title: 'Squad Deal — ' + title, text: msg }).catch(() => {});
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(msg).then(() => showToast && showToast('Deal link copied! Share with your squad 🎁'));
+  }
 }
 
 async function loadSqCalendar(squadId) {

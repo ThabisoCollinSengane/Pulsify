@@ -216,6 +216,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
   <button class="bb" data-tab="orders" onclick="showTab('orders')"><span class="bb-ico">📦</span><span class="bb-lbl">Orders</span><span class="bb-badge" id="orders-badge">0</span></button>
   <button class="bb" data-tab="analytics" onclick="showTab('analytics')"><span class="bb-ico">📊</span><span class="bb-lbl">Analytics</span></button>
   <button class="bb" data-tab="promote" onclick="showTab('promote')"><span class="bb-ico">🚀</span><span class="bb-lbl">Promote</span></button>
+  <button class="bb" data-tab="sqpromos" onclick="showTab('sqpromos')"><span class="bb-ico">🎁</span><span class="bb-lbl">Deals</span></button>
   <button class="bb" data-tab="profile" onclick="showTab('profile')"><span class="bb-ico">⚙️</span><span class="bb-lbl">Profile</span></button>
 </nav>
 
@@ -390,6 +391,55 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <div><div class="sec-title">Analytics</div><div class="sec-sub">Last 7 days — premium feature</div></div>
   </div>
   <div id="analytics-body" style="padding:0 14px 60px"></div>
+</div>
+
+<!-- ══ SQUAD DEALS ══ -->
+<div class="panel" id="tab-sqpromos">
+  <div class="sec-head">
+    <div><div class="sec-title">Squad Deals</div><div class="sec-sub">Create group deals for squads</div></div>
+  </div>
+  <div style="padding:0 14px 80px">
+    <div style="font-size:.78rem;color:var(--mu);margin-bottom:14px;line-height:1.6">Attract groups to your venue with squad-exclusive deals. Admin reviews all deals before they appear in squad feeds.</div>
+
+    <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Deal Type</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+      <div onclick="setBizDealType('food')" id="bdt-food" style="background:rgba(198,255,74,.08);border:1.5px solid rgba(198,255,74,.3);border-radius:12px;padding:10px;text-align:center;cursor:pointer">
+        <div style="font-size:1.3rem">🍔</div><div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--li);margin-top:3px">Food Deal</div>
+        <div style="font-size:.62rem;color:var(--mu)">Platters, bundle combos</div>
+      </div>
+      <div onclick="setBizDealType('nightlife')" id="bdt-nightlife" style="background:var(--surf);border:1.5px solid var(--border);border-radius:12px;padding:10px;text-align:center;cursor:pointer">
+        <div style="font-size:1.3rem">🎶</div><div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;margin-top:3px">Nightlife Deal</div>
+        <div style="font-size:.62rem;color:var(--mu)">Entry discounts, tables</div>
+      </div>
+      <div onclick="setBizDealType('chill')" id="bdt-chill" style="background:var(--surf);border:1.5px solid var(--border);border-radius:12px;padding:10px;text-align:center;cursor:pointer">
+        <div style="font-size:1.3rem">☕</div><div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;margin-top:3px">Chill Deal</div>
+        <div style="font-size:.62rem;color:var(--mu)">Coffee, study specials</div>
+      </div>
+      <div onclick="setBizDealType('event')" id="bdt-event" style="background:var(--surf);border:1.5px solid var(--border);border-radius:12px;padding:10px;text-align:center;cursor:pointer">
+        <div style="font-size:1.3rem">🎟</div><div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;margin-top:3px">Event Deal</div>
+        <div style="font-size:.62rem;color:var(--mu)">Tickets, early access</div>
+      </div>
+    </div>
+
+    <input class="ff" type="text" id="biz-sqp-title" placeholder="Deal title e.g. Squad Burger Bundle *"/>
+    <input class="ff" type="text" id="biz-sqp-venue" placeholder="Venue name *"/>
+    <input class="ff" type="text" id="biz-sqp-city" placeholder="City (e.g. Durban)"/>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <input class="ff" type="number" id="biz-sqp-min" placeholder="Min squad" min="2" max="20" value="4" style="margin-bottom:0"/>
+      <input class="ff" type="number" id="biz-sqp-max" placeholder="Max squad" min="2" max="100" value="10" style="margin-bottom:0"/>
+    </div>
+    <input class="ff" type="number" id="biz-sqp-price" placeholder="Total group price (R) — leave blank if free" min="0"/>
+    <input class="ff" type="text" id="biz-sqp-days" placeholder="Valid days e.g. Fri–Sun"/>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <input class="ff" type="date" id="biz-sqp-from" style="margin-bottom:0"/>
+      <input class="ff" type="date" id="biz-sqp-to" style="margin-bottom:0"/>
+    </div>
+    <textarea class="ff" id="biz-sqp-desc" placeholder="Describe the deal for squads…" rows="3" style="resize:none"></textarea>
+    <button class="btn" id="biz-sqp-btn" onclick="submitBizSquadPromo()" style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;padding:13px;border-radius:12px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;border:none;margin-bottom:20px">Submit Deal for Approval 🎁</button>
+
+    <div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:10px">My Squad Deals</div>
+    <div id="biz-sqpromos-list"></div>
+  </div>
 </div>
 
 <!-- ══ PROFILE ══ -->
@@ -1023,6 +1073,7 @@ function showTab(name, _noPush) {
   if (name === 'analytics') renderAnalytics();
   if (name === 'promote')   loadBizPromotions();
   if (name === 'events')    loadDiscoverEvents();
+  if (name === 'sqpromos')  loadMyBizSquadPromos();
   if (name === 'profile')   renderBizFAQ();
   if (name === 'profile')   loadBizSocialLinks();
 }
@@ -2398,6 +2449,105 @@ async function saveBizSocialLinks() {
     if (r.ok) { toast('Social links saved!'); if (st) st.textContent=''; }
     else { const d=await r.json(); if (st) st.textContent='❌ '+(d.error||'Save failed'); }
   } catch(e) { if (st) st.textContent='❌ Error'; }
+}
+
+/* ─── Squad Deals ─── */
+let _bizDealType = 'food';
+const BIZ_DEAL_ICONS  = { food:'🍔', nightlife:'🎶', event:'🎟', chill:'☕' };
+
+function setBizDealType(type) {
+  _bizDealType = type;
+  ['food','nightlife','chill','event'].forEach(t => {
+    const el = document.getElementById('bdt-' + t);
+    if (!el) return;
+    if (t === type) {
+      el.style.background = 'rgba(198,255,74,.08)';
+      el.style.borderColor = 'rgba(198,255,74,.3)';
+      el.querySelector('div:nth-child(2)').style.color = '#C6FF4A';
+    } else {
+      el.style.background = 'var(--surf)';
+      el.style.borderColor = 'var(--border)';
+      el.querySelector('div:nth-child(2)').style.color = 'var(--tx)';
+    }
+  });
+}
+
+async function submitBizSquadPromo() {
+  const btn = document.getElementById('biz-sqp-btn');
+  const title = document.getElementById('biz-sqp-title')?.value?.trim();
+  const venue = document.getElementById('biz-sqp-venue')?.value?.trim();
+  if (!title || !venue) { toast('Title and venue are required'); return; }
+  btn.disabled = true; btn.textContent = 'Submitting…';
+  const session = JSON.parse(localStorage.getItem('biz_session') || '{}');
+  const { data: { session: authSession } } = await getSB().auth.getSession();
+  const token = authSession?.access_token || '';
+  const body = {
+    title, venue_name: venue, deal_type: _bizDealType,
+    location_city: document.getElementById('biz-sqp-city')?.value?.trim() || '',
+    squad_min: document.getElementById('biz-sqp-min')?.value || 4,
+    squad_max: document.getElementById('biz-sqp-max')?.value || 10,
+    total_price: document.getElementById('biz-sqp-price')?.value || null,
+    valid_days: document.getElementById('biz-sqp-days')?.value?.trim() || '',
+    valid_from: document.getElementById('biz-sqp-from')?.value || null,
+    valid_to: document.getElementById('biz-sqp-to')?.value || null,
+    description: document.getElementById('biz-sqp-desc')?.value?.trim() || '',
+  };
+  try {
+    const r = await fetch('/api/squad-promos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(body),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'Failed');
+    toast('Deal submitted for admin approval ✅');
+    ['biz-sqp-title','biz-sqp-venue','biz-sqp-city','biz-sqp-price','biz-sqp-days','biz-sqp-from','biz-sqp-to','biz-sqp-desc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    loadMyBizSquadPromos();
+  } catch(e) {
+    toast(e.message || 'Error submitting deal');
+  }
+  btn.disabled = false; btn.textContent = 'Submit Deal for Approval 🎁';
+}
+
+function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function loadMyBizSquadPromos() {
+  const el = document.getElementById('biz-sqpromos-list');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--mu);font-size:.8rem;padding:12px 0">Loading…</div>';
+  try {
+    const { data: { session } } = await getSB().auth.getSession();
+    const token = session?.access_token || '';
+    const r = await fetch('/api/squad-promos/mine', { headers: { 'Authorization': 'Bearer ' + token } });
+    const j = await r.json();
+    const promos = j.promos || [];
+    if (!promos.length) { el.innerHTML = '<div style="color:var(--mu);font-size:.8rem;padding:12px 0;text-align:center">No squad deals yet. Submit one above!</div>'; return; }
+    el.innerHTML = promos.map(p => {
+      const badge = p.approved
+        ? `<span style="background:rgba(198,255,74,.12);border:1px solid rgba(198,255,74,.3);color:#C6FF4A;font-size:.6rem;font-family:'Syne',sans-serif;font-weight:700;padding:2px 9px;border-radius:50px">✅ Live</span>`
+        : p.rejected
+          ? `<span style="background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.25);color:#FF2D78;font-size:.6rem;font-family:'Syne',sans-serif;font-weight:700;padding:2px 9px;border-radius:50px">❌ Rejected</span>`
+          : `<span style="background:rgba(255,200,0,.08);border:1px solid rgba(255,200,0,.2);color:#FFC800;font-size:.6rem;font-family:'Syne',sans-serif;font-weight:700;padding:2px 9px;border-radius:50px">⏳ Pending</span>`;
+      return `<div style="background:var(--surf2);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+          <span style="font-size:1.1rem">${BIZ_DEAL_ICONS[p.deal_type]||'🎁'}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_esc(p.title)}</div>
+            <div style="font-size:.68rem;color:var(--mu)">${_esc(p.venue_name)}${p.location_city?' · '+_esc(p.location_city):''}</div>
+          </div>
+          ${badge}
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:.7rem;color:var(--mu2)">
+          <span>👥 ${p.squad_min}–${p.squad_max} people</span>
+          ${p.total_price?`<span>💰 R${p.total_price}</span>`:''}
+          ${p.valid_days?`<span>📅 ${_esc(p.valid_days)}</span>`:''}
+        </div>
+        ${p.reject_reason?`<div style="margin-top:5px;font-size:.7rem;color:#FF2D78">Reason: ${_esc(p.reject_reason)}</div>`:''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--mu);font-size:.8rem">Could not load deals</div>';
+  }
 }
 </script>
 
