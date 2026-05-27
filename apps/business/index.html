@@ -1205,14 +1205,26 @@ async function checkSubscriptionBanner() {
   }
 }
 
-function renderStats() {
-  const posts   = load('posts', []);
-  const events  = load('events', []);
+async function renderStats() {
   const today   = new Date().toISOString().split('T')[0];
   const todayRevenue = ORDERS.filter(o => o.status !== 'cancelled' && (o.created_at||'').startsWith(today)).reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
   const pending = ORDERS.filter(o => o.status === 'pending').length;
+  let postsCnt = 0, eventsCnt = 0;
+  try {
+    const sb2 = getSB();
+    if (sb2) {
+      const { data: { session } } = await sb2.auth.getSession();
+      if (session) {
+        const [{ count: pc }, { count: ec }] = await Promise.all([
+          sb2.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', session.user.id),
+          sb2.from('events').select('id', { count: 'exact', head: true }).eq('organiser_id', session.user.id),
+        ]);
+        postsCnt = pc || 0; eventsCnt = ec || 0;
+      }
+    }
+  } catch(_) {}
   document.getElementById('stats-row').innerHTML =
-    stat(posts.length, 'Posts') + stat(events.length, 'Events') +
+    stat(postsCnt, 'Posts') + stat(eventsCnt, 'Events') +
     stat(pending, 'Pending', 'var(--pk)') + stat('R' + todayRevenue.toFixed(0), 'Revenue', 'var(--li)');
 }
 function stat(n, l, color = '') {
@@ -1533,28 +1545,42 @@ async function deletePost(id, isSupa) {
 // ════════════════════════════════════════════════════════════
 //  EVENTS — synced to shared business_events for index.html
 // ════════════════════════════════════════════════════════════
-function renderEvents() {
-  const evs = load('events', []);
-  const el  = document.getElementById('events-list');
-  if (!evs.length) { el.innerHTML = emptyState('🎉', 'No events yet', 'Create your first event. It will appear on the Pulsefy home feed for all users to discover.'); return; }
-  el.innerHTML = evs.slice().reverse().map(ev => {
-    const emo = GENRE_EMOJI[(ev.genre || '').toLowerCase()] || '🎉';
-    return `<div class="ev-row">
-      <div class="ev-thumb">${ev.img ? `<img src="${xe(ev.img)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : ''}${emo}</div>
-      <div class="ev-info">
-        <div class="ev-name">${xe(ev.name)}</div>
-        <div class="ev-sub">${ev.date || 'Date TBD'} ${ev.time ? '· '+ev.time : ''} · ${xe(ev.venue || ev.city || 'Venue TBD')}</div>
-        <div class="ev-sub" style="color:var(--pu);margin-top:2px">${xe(ev.genre || '')}</div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
-        <span class="ev-price">${ev.price > 0 ? 'R' + ev.price : 'FREE'}</span>
-        <div style="display:flex;gap:5px">
-          <button class="btn-ghost" onclick="editEvent('${ev.id}')">Edit</button>
-          <button class="btn-danger" onclick="deleteEvent('${ev.id}')">🗑</button>
+async function renderEvents() {
+  const el = document.getElementById('events-list');
+  el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--mu)">Loading…</div>';
+  const sb2 = getSB();
+  if (!sb2) { el.innerHTML = emptyState('🎉', 'No events yet', 'Create your first event.'); return; }
+  try {
+    const { data: { session } } = await sb2.auth.getSession();
+    if (!session) { el.innerHTML = emptyState('🎉', 'No events yet', 'Sign in to see your events.'); return; }
+    const { data: evs, error } = await sb2.from('events')
+      .select('id,name,date_local,time_local,venue_name,venue_city,price_min,is_free,image_url,genre,source')
+      .eq('organiser_id', session.user.id)
+      .order('date_local', { ascending: false })
+      .limit(50);
+    if (error) throw error;
+    if (!evs || !evs.length) { el.innerHTML = emptyState('🎉', 'No events yet', 'Create your first event. It will appear on the Pulsefy home feed for all users to discover.'); return; }
+    el.innerHTML = evs.map(ev => {
+      const emo = GENRE_EMOJI[(ev.genre || '').toLowerCase()] || '🎉';
+      return `<div class="ev-row">
+        <div class="ev-thumb">${ev.image_url ? `<img src="${xe(ev.image_url)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : ''}${emo}</div>
+        <div class="ev-info">
+          <div class="ev-name">${xe(ev.name)}</div>
+          <div class="ev-sub">${ev.date_local || 'Date TBD'} ${ev.time_local ? '· '+ev.time_local : ''} · ${xe(ev.venue_name || ev.venue_city || 'Venue TBD')}</div>
+          <div class="ev-sub" style="color:var(--pu);margin-top:2px">${xe(ev.genre || '')}</div>
         </div>
-      </div>
-    </div>`;
-  }).join('');
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
+          <span class="ev-price">${ev.is_free || !ev.price_min ? 'FREE' : 'R' + ev.price_min}</span>
+          <div style="display:flex;gap:5px">
+            <button class="btn-ghost" onclick="editEvent('${ev.id}')">Edit</button>
+            <button class="btn-danger" onclick="deleteEvent('${ev.id}')">🗑</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--mu)">Could not load events: ${xe(e.message)}</div>`;
+  }
 }
 
 function previewEvImg(input) {
@@ -1658,14 +1684,29 @@ async function submitEvent() {
   btn.disabled = false; btn.textContent = 'Save Event 🎟';
 }
 
-function editEvent(id) {
-  const ev = load('events', []).find(e => e.id === id); if (!ev) return;
-  document.getElementById('ev-edit-id').value = id;
+async function editEvent(id) {
+  const sb2 = getSB(); if (!sb2) return;
+  const { data: ev, error } = await sb2.from('events')
+    .select('id,name,date_local,time_local,venue_name,venue_city,genre,price_min,description,image_url,lineup')
+    .eq('id', id).maybeSingle();
+  if (error || !ev) { toast('Could not load event', 'err'); return; }
+  document.getElementById('ev-edit-id').value = ev.id;
   document.getElementById('ev-sheet-title').textContent = 'Edit Event';
-  ['name','date','time','venue','city','genre','price','hype','desc','img'].forEach(f => {
-    const el = document.getElementById('ev-' + f); if (el) el.value = ev[f] || '';
-  });
-  document.getElementById('ev-lineup').value = (ev.lineup || []).join(', ');
+  document.getElementById('ev-name').value  = ev.name || '';
+  document.getElementById('ev-date').value  = ev.date_local || '';
+  document.getElementById('ev-time').value  = ev.time_local || '';
+  document.getElementById('ev-venue').value = ev.venue_name || '';
+  document.getElementById('ev-city').value  = ev.venue_city || '';
+  document.getElementById('ev-genre').value = ev.genre || '';
+  document.getElementById('ev-price').value = ev.price_min || 0;
+  document.getElementById('ev-desc').value  = ev.description || '';
+  document.getElementById('ev-img').value   = ev.image_url || '';
+  document.getElementById('ev-lineup').value = Array.isArray(ev.lineup) ? ev.lineup.join(', ') : (ev.lineup || '');
+  if (ev.image_url) {
+    document.getElementById('ev-img-thumb').src = ev.image_url;
+    document.getElementById('ev-img-preview').style.display = 'block';
+    document.getElementById('ev-img-name').textContent = 'Current image';
+  }
   openSheet('event-sheet');
 }
 
@@ -1675,19 +1716,14 @@ function resetEventForm() {
   ['name','date','time','venue','city','genre','price','hype','desc','img','lineup'].forEach(f => { const el = document.getElementById('ev-' + f); if (el) el.value = ''; });
 }
 
-function deleteEvent(id) {
+async function deleteEvent(id) {
   if (!confirm('Delete this event?')) return;
-  save('events', load('events', []).filter(e => e.id !== id));
-  const shared = JSON.parse(localStorage.getItem('business_events') || '[]');
-  localStorage.setItem('business_events', JSON.stringify(shared.filter(e => e.id !== id)));
+  const sb2 = getSB(); if (!sb2) { toast('Not connected', 'err'); return; }
+  const { data: { session } } = await sb2.auth.getSession();
+  if (!session) { toast('Session expired', 'err'); return; }
+  const { error } = await sb2.from('events').delete().eq('id', id).eq('organiser_id', session.user.id);
+  if (error) { toast('Delete failed: ' + error.message, 'err'); return; }
   renderEvents(); renderStats(); toast('Event deleted');
-}
-
-function syncToSharedEvents(ev) {
-  const shared = JSON.parse(localStorage.getItem('business_events') || '[]');
-  const i = shared.findIndex(e => e.id === ev.id);
-  if (i >= 0) shared[i] = { ...shared[i], ...ev }; else shared.unshift(ev);
-  localStorage.setItem('business_events', JSON.stringify(shared.slice(0, 200)));
 }
 
 // ════════════════════════════════════════════════════════════
