@@ -2882,6 +2882,57 @@ module.exports = async (req, res) => {
       return res.status(200).json({ promo: data });
     }
 
+    /* ─── POST /claim-profile ─────────────────────────────── */
+    if (url === '/claim-profile' && req.method === 'POST') {
+      const { business_id, business_name, claimant_name, claimant_email, claimant_phone, reason } = req.body || {};
+      if (!claimant_name || !claimant_email || !claimant_phone || !reason || !business_name)
+        return res.status(400).json({ error: 'All fields are required' });
+      const { data, error } = await sb().from('profile_claims').insert({
+        business_id: business_id || null,
+        business_name,
+        claimant_name,
+        claimant_email,
+        claimant_phone,
+        reason,
+      }).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      // Notify all admins
+      const { data: admins } = await sb().from('profiles').select('id').eq('role', 'admin');
+      for (const admin of admins || []) {
+        await sb().from('notifications').insert({
+          user_id: admin.id, type: 'system',
+          from_display_name: 'Pulsefy System',
+          message: `New profile claim submitted for "${business_name}" by ${claimant_name} (${claimant_email}).`,
+          entity_type: 'claim', entity_id: data.id,
+          read: false,
+        }).catch(() => {});
+      }
+      return res.status(201).json({ success: true, claim_id: data.id });
+    }
+
+    /* ─── GET /admin/claims ──────────────────────────────── */
+    if (url === '/admin/claims' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const filter = req.query?.filter || 'all';
+      let q = sb().from('profile_claims').select('*').order('created_at', { ascending: false });
+      if (filter !== 'all') q = q.eq('status', filter);
+      const { data, error } = await q;
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ claims: data || [] });
+    }
+
+    /* ─── PATCH /admin/claims/:id ────────────────────────── */
+    const claimMatch = url.match(/^\/admin\/claims\/([^/]+)$/);
+    if (claimMatch && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const { status, admin_notes } = req.body || {};
+      const { data, error } = await sb().from('profile_claims').update({ status, admin_notes }).eq('id', claimMatch[1]).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ claim: data });
+    }
+
     return res.status(404).json({ error: `Route not found: ${req.method} ${url}` });
 
   } catch (err) {

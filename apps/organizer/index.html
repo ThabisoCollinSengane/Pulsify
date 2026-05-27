@@ -684,12 +684,14 @@ function closeOrgSheet(id) { const el = document.getElementById(id); if (el) el.
 
 // ── Org FAQ ───────────────────────────────────────────────────
 const ORG_FAQ = [
-  { q: 'How do I get a verified badge?', a: 'Go to Settings → Verify Profile, complete the form. Takes 1–3 business days to review.' },
-  { q: 'How do I earn from my events?', a: 'Add a payment method in Settings. Payouts from ticket sales are processed weekly.' },
-  { q: 'Can I edit an event after posting?', a: 'Yes — go to My Posts, find the event card, and tap Edit.' },
-  { q: 'How do I reach more people?', a: 'Tag your events with a genre and city. Verified organisers get boosted placement in the discover feed.' },
-  { q: 'What genres are supported?', a: 'Amapiano, Gqom, Hip Hop, House, Afrobeats, Maskandi, Jazz, Gospel, Rock, Sport, Comedy, and more.' },
-  { q: 'How long does verification take?', a: '1–3 business days. You\'ll receive a notification once your application is reviewed.' },
+  { q: 'How do I create an event?', a: 'Tap <b>🎟 Event</b> in the bottom nav, fill in your event details, set your ticket tiers (General, VIP, Early Bird — any number of tiers with custom pricing), and hit Publish. Premium accounts go live instantly; free accounts wait for admin approval (usually within a few hours). 🎉' },
+  { q: 'How does ticket scanning work?', a: 'Tap the <b>📷 Scan</b> tab, select your event from the list, and tap <b>Scan Ticket at Door</b>. Point your phone camera at the attendee\'s QR code — it validates instantly and marks them as checked in. You can see real-time entry stats right on the scan screen. Works entirely in your browser, no app download needed. 📲' },
+  { q: 'What are Pulsefy\'s fees?', a: 'Pulsefy charges 8% per ticket sold. Paystack processing fees apply separately. Free events (R0 tickets) have no platform fee. Payouts are processed to your registered bank account after your event ends. 💳' },
+  { q: 'How do Squad Deals help me sell more tickets?', a: 'Squads are groups of friends planning their weekend together — and they\'re actively looking for reasons to go out. Post a Squad Deal under <b>🎁 Deals</b> (e.g. "4 tickets for the price of 3" or "VIP upgrade for groups of 6+") and it appears directly in their planning feed. A group that finds your deal becomes a confirmed booking. Groups also tend to buy higher-tier tickets and arrive committed — no last-minute cancellations. 🎯' },
+  { q: 'Free vs Premium — what\'s the difference?', a: '<b>Free:</b> Post up to 1 event/month, events require admin approval before going live, basic stats. <b>Premium (R199/mo):</b> Unlimited events, instant publish (no approval needed), full analytics, priority support, and featured placement in discovery feeds. Upgrade in <b>⚙ Settings</b>. ⭐' },
+  { q: 'Can I scan tickets without internet?', a: 'Currently the scanner requires an active data connection to validate tickets against our database in real time. We recommend having mobile data on at the venue. Offline mode is on our roadmap. 📶' },
+  { q: 'How do I get my verified badge?', a: 'Go to <b>⚙ Settings → Verify Profile</b>, complete the KYC form (upload a selfie and ID document), and submit. Verification is reviewed within 1–3 business days. Verified organisers get a badge, boosted placement, and higher trust with attendees. ✅' },
+  { q: 'Can I edit an event after publishing?', a: 'Yes — go to <b>📋 My Posts</b>, find your event card, and tap Edit. Note: ticket prices cannot be changed after the first ticket is sold. You can update description, lineup, venue details, and cover image anytime. ✏️' },
 ];
 function renderOrgFAQ() {
   const el = document.getElementById('faq-org');

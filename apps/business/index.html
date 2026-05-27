@@ -808,13 +808,14 @@ function save(k, v)   { localStorage.setItem(key(k), JSON.stringify(v)); }
 
 // ── FAQ ──────────────────────────────────────────────────────
 const BIZ_FAQ = [
-  { q: 'How do I get more followers?', a: 'Post regularly with photos, tag events, and engage with your community. Accounts with verified badges and active posts rank higher in search.' },
-  { q: 'How long does profile verification take?', a: 'Verified applications are reviewed within 1–3 business days. You\'ll receive a notification once reviewed.' },
-  { q: 'How do customers find my menu?', a: 'Share your public menu link found in the Profile tab. Customers can browse and place pickup orders directly from it.' },
-  { q: 'When do I receive payouts?', a: 'Payouts are processed weekly to your registered bank account once you have added a payment method.' },
-  { q: 'Can I post upcoming events?', a: 'Yes! Tap "New Event" to publish events to the shared Pulsefy discovery feed visible to all users.' },
-  { q: 'How do I update my business hours?', a: 'Include your trading hours in your Tagline / Description in the Profile tab.' },
-  { q: 'Can I delete a post?', a: 'Yes, go to the Posts tab, find the post and tap the Delete button.' },
+  { q: 'How do pickup orders work?', a: 'Customers browse your listing on Pulsefy, tap the <b>🍽 Menu</b> tab, add items to their cart, enter their name, phone number, and preferred pickup time, then place the order. You\'ll get an instant notification in your Orders tab — mark it Ready when it\'s done, Completed when they collect. No delivery, no middleman, no commission. 🛒' },
+  { q: 'What are Squad Deals and why should I offer them?', a: 'Squads are groups of friends planning their night out together. A Squad Deal lets you offer group-specific pricing (e.g. "Table for 8 — 15% off" or "Buy 5 get 1 free"). When a squad of 6–10 people sees your deal in their planning feed, they\'ll choose your venue over the next. Groups spend significantly more than individuals, they arrive together, and they tell their other squads about it. Post a deal under <b>🎁 Deals</b> and watch group bookings come in. 💰' },
+  { q: 'How does my menu appear to customers?', a: 'Your menu is visible to anyone who opens your business on the Pulsefy map or discovery feed — they just tap the <b>🍽 Menu</b> tab. Free accounts can list up to 10 items. Upgrade to Premium for unlimited items, plus featured carousel placement so more people find you first. 🍔' },
+  { q: 'How do I promote my venue?', a: 'Go to <b>🚀 Promote</b> in your dashboard. Choose a template (Club Night, Shisanyama Sunday, BnB Weekend, or Custom), fill in your details, upload a cover photo, and submit. After admin approval (usually within a few hours), your promo appears in user feeds and the homepage featured section. 📣' },
+  { q: 'How do I claim my existing Pulsefy listing?', a: 'If your venue is already on the map (added from our database), tap it in the app and use the <b>Claim Profile →</b> button. Fill in your name, contact number, and reason for claiming. We verify your ownership and hand over management access within 1–3 business days. 🔑' },
+  { q: 'What does Premium unlock?', a: '<b>Free:</b> Map listing, up to 10 menu items, basic posts (5/month), standard placement. <b>Premium (R499/mo):</b> Featured map placement, unlimited menu items, full analytics (views, saves, orders by day), banner ad slots, unlimited posts, and priority support. Upgrade under <b>⚙ Settings</b>. ⭐' },
+  { q: 'How do I get my verified badge?', a: 'Go to <b>⚙ Settings → Verify Profile</b>, complete the form with your business registration details and ID. Review takes 1–3 business days. Verified businesses rank higher in search, get a trust badge, and unlock additional premium features. ✅' },
+  { q: 'How do I get more followers and visibility?', a: 'Post consistently (photos, menus, upcoming events), tag the correct genre and city, and create Squad Deals to attract groups. Verified accounts with recent activity rank higher in search and map discovery. Premium users also get featured carousel placement seen by everyone browsing your area. 📈' },
 ];
 function renderBizFAQ() {
   const el = document.getElementById('faq-biz');

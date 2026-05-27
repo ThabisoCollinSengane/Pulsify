@@ -138,7 +138,7 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
   <div class="asw">No account? <a href="/create-account">Sign up free →</a></div>
 </div>
 
-<div class="back"><a href="/">← Back to Pulsify</a></div>
+<div class="back"><a href="/">← Back to Pulsefy</a></div>
 <div class="toast" id="t"></div>
 
 <script>
@@ -159,7 +159,7 @@ function selectType(t) {
   });
   const sub = document.getElementById('card-sub');
   const btn = document.getElementById('btn');
-  if (sub) sub.textContent = t === 'organizer' ? 'Sign in to your organizer dashboard' : t === 'business' ? 'Sign in to your business dashboard' : 'Sign in to your Pulsify account';
+  if (sub) sub.textContent = t === 'organizer' ? 'Sign in to your organizer dashboard' : t === 'business' ? 'Sign in to your business dashboard' : 'Sign in to your Pulsefy account';
   if (btn) btn.textContent = t === 'organizer' ? 'Sign In as Organizer' : t === 'business' ? 'Sign In as Business' : 'Sign In';
   hideMsg();
 }
