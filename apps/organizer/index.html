@@ -873,7 +873,7 @@ async function loadOrgFeed() {
   try {
     const today = new Date().toISOString().split('T')[0];
     const { data, error } = await sb.from('posts')
-      .select('id,caption,image_url,created_at,post_type,likes_count,comments_count,user_id,profiles!posts_user_id_fkey(display_name,avatar_url,role)')
+      .select('id,caption,image_url,created_at,post_type,like_count,comment_count,user_id,profiles!posts_user_id_fkey(display_name,avatar_url,role)')
       .order('created_at', { ascending: false }).limit(40);
     if (error) throw error;
     const posts = data || [];
@@ -887,7 +887,7 @@ async function loadOrgFeed() {
         <div style="padding:12px 14px">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">${av}<div><div style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700">${x(p.profiles?.display_name||'User')}</div><div style="font-size:.65rem;color:var(--mu)">${ago} · ${p.post_type||'post'}</div></div></div>
           ${p.caption ? `<div style="font-size:.84rem;line-height:1.5;color:var(--tx);margin-bottom:8px;white-space:pre-wrap">${x(p.caption)}</div>` : ''}
-          <div style="display:flex;gap:14px"><span style="font-size:.72rem;color:var(--mu)">🤍 ${p.likes_count||0}</span><span style="font-size:.72rem;color:var(--mu)">💬 ${p.comments_count||0}</span></div>
+          <div style="display:flex;gap:14px"><span style="font-size:.72rem;color:var(--mu)">🤍 ${p.like_count||0}</span><span style="font-size:.72rem;color:var(--mu)">💬 ${p.comment_count||0}</span></div>
         </div>
       </div>`;
     }).join('');
@@ -1268,8 +1268,17 @@ async function loadMyPosts() {
     const { data: posts, error } = await sb.from('posts').select('id,caption,image_url,created_at,post_type').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(30);
     if (error) throw error;
     if (!posts?.length) { card.innerHTML = '<div class="empty">No posts yet. Share your first update above!</div>'; return; }
-
-    card.innerHTML = posts.map(p => '<div class="post-item"><div class="post-row">'+(p.image_url ? '<img class="post-img-thumb" src="'+x(p.image_url)+'" loading="lazy" onerror="this.style.display=\u0027none\u0027"/>' : '')+'<div style="flex:1;min-width:0"><div class="post-cap">'+x(p.caption || '(no caption)')+'</div><div class="post-meta">'+new Date(p.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})+' · '+(p.post_type||'post')+'</div></div><button class="del-btn" onclick="deletePost(\u0027'+x(p.id)+'\u0027,this)">Delete</button></div></div>').join('');
+    card.innerHTML = posts.map(p => {
+      const esc = (s) => String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `<div class="post-item" id="post-item-${x(p.id)}"><div class="post-row">${p.image_url?`<img class="post-img-thumb" src="${x(p.image_url)}" loading="lazy" onerror="this.style.display='none'"/>`:''}
+        <div style="flex:1;min-width:0"><div class="post-cap" id="post-cap-${x(p.id)}">${x(p.caption||'(no caption)')}</div>
+        <div class="post-meta">${new Date(p.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})} · ${p.post_type||'post'}</div></div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="del-btn" style="color:var(--or)" onclick="editPost('${x(p.id)}','${esc(p.caption||'')}')">Edit</button>
+          <button class="del-btn" onclick="deletePost('${x(p.id)}',this)">Delete</button>
+        </div></div></div>`;
+    }).join('');
+    return;
   } catch(e) {
     card.innerHTML = '<div class="empty">Could not load posts</div>';
   }
@@ -1284,6 +1293,16 @@ async function deletePost(postId, btn) {
   const n = parseInt(document.getElementById('stat-posts').textContent||0)-1;
   document.getElementById('stat-posts').textContent = Math.max(0,n);
   toast('Post deleted', 'ok');
+}
+
+async function editPost(postId, currentCaption) {
+  const newCaption = prompt('Edit caption:', currentCaption);
+  if (newCaption === null) return;
+  const { error } = await sb.from('posts').update({ caption: newCaption.trim(), updated_at: new Date().toISOString() }).eq('id', postId).eq('user_id', currentUser.id);
+  if (error) { toast('Could not save edit', 'err'); return; }
+  const el = document.getElementById('post-cap-' + postId);
+  if (el) el.textContent = newCaption.trim() || '(no caption)';
+  toast('Post updated ✅', 'ok');
 }
 
 // ── SOCIAL NOTIFICATIONS ─────────────────────────────────────

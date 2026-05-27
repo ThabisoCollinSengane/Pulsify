@@ -2026,9 +2026,12 @@ module.exports = async (req, res) => {
 
     /* ─── POST /promotions/create ────────────────────────── */
     if (url === '/promotions/create' && req.method === 'POST') {
+      const _promoToken = (req.headers.authorization || '').replace('Bearer ', '').trim();
       const auth = await authUser(req);
       if (!auth) return res.status(401).json({ error: 'Unauthorized' });
       const { role } = auth.profile;
+      // Use user's JWT for RLS so auth.uid() matches owner_id in the insert policy
+      const _promoDB = _promoToken ? sbAs(_promoToken) : sb();
       if (!['organizer','business','admin'].includes(role)) return res.status(403).json({ error: 'Organizer or business account required' });
 
       const {
@@ -2055,7 +2058,7 @@ module.exports = async (req, res) => {
       // Trusted submitters (or admins) bypass the approval queue
       const autoApprove = role === 'admin' || !!auth.profile.is_trusted_submitter;
 
-      const { data: promo, error } = await sb().from('promotions').insert({
+      const { data: promo, error } = await _promoDB.from('promotions').insert({
         title, organiser_name: organiser_name || auth.profile.display_name || null,
         venue_name: venue_name || null, venue_city: venue_city || null,
         date_local: date_local || null, time_local: time_local || null,
