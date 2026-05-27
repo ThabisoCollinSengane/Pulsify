@@ -1945,46 +1945,37 @@ async function initPay(evId) {
   const amount = selTier ? selTier.price * selQty * 100 : 0; // cents
 
   if (!isFree && amount > 0) {
-    // Paid ticket — Paystack popup
-    const token = localStorage.getItem('p_token');
-    if (!token) return showToast('Sign in to purchase tickets', 'err');
+    // Paid ticket — use /ticket/init to create pending booking + get split-enabled Paystack reference
+    if (!_paystackPK) return showToast('Payment system unavailable — try again shortly', 'err');
 
-    // Initiate payment via API (creates pending row)
-    let ref = '';
+    showToast('Preparing checkout…');
+    let initData;
     try {
-      const ir = await fetch('/api/payments/initiate', {
+      const ir = await fetch(API + '/ticket/init', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-        body: JSON.stringify({ type: 'ticket', entity_id: evId, amount, email }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event_id: evId, tier_id: selTier?.id || null, quantity: selQty, buyer_name: name, buyer_email: email, user_id: currentUser?.id || null }),
       });
-      const id = await ir.json();
-      if (!ir.ok) return showToast(id.error || 'Payment initiation failed', 'err');
-      ref = id.reference;
+      initData = await safeJson(ir);
+      if (!ir.ok) return showToast(initData.error || 'Payment initiation failed', 'err');
     } catch(e) { return showToast('Payment error — try again', 'err'); }
 
     PaystackPop.setup({
       key:      _paystackPK,
       email,
-      amount,
+      amount:   initData.amount_kobo,
       currency: 'ZAR',
-      ref,
-      metadata: { user_id: currentUser?.id, type: 'ticket', entity_id: evId, buyer_name: name },
-      callback: async function(res) {
-        showToast('Verifying payment…');
+      ref:      initData.paystack_ref,
+      metadata: { user_id: currentUser?.id, type: 'ticket', booking_id: initData.booking_id, buyer_name: name },
+      callback: async function(psRes) {
+        showToast('Confirming your ticket…');
         try {
-          const vr = await fetch(`/api/payments/verify?ref=${res.reference}`, { headers: { Authorization: 'Bearer ' + token } });
-          const vd = await vr.json();
-          if (!vd.success) return showToast('Payment verification failed', 'err');
-          // Create ticket booking after payment confirmed
-          const br = await fetch(API + '/ticket/purchase', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ event_id: evId, tier_id: selTier?.id || null, quantity: selQty, buyer_name: name, buyer_email: email, user_id: currentUser?.id || null }),
-          });
-          const bd = await br.json();
-          showTicketConfirm({ ...bd, quantity: selQty });
+          const cr = await fetch(API + '/ticket/confirm?ref=' + encodeURIComponent(psRes.reference));
+          const cd = await safeJson(cr);
+          if (!cr.ok) return showToast(cd.error || 'Check My Tickets tab — booking may be confirmed shortly', 'err');
+          showTicketConfirm({ ...cd, quantity: initData.quantity, event_name: initData.event_name, tier_name: initData.tier_name });
           renderBookings();
-        } catch(e) { showToast('Booking error — contact support', 'err'); }
+        } catch(e) { showToast('Check My Tickets tab — your booking may already be confirmed', 'err'); }
       },
       onClose: function() { showToast('Payment cancelled'); },
     }).openIframe();
@@ -2934,9 +2925,53 @@ function renderProfile() {
 /* ══════════════════════════════════════════════════
    BOOKINGS / SAVED
 ══════════════════════════════════════════════════ */
-function renderBookings() {
+async function renderBookings() {
   const bl = document.getElementById('bookings-list');
-  if (bl) bl.innerHTML = `<div class="no-results"><div class="no-results-ico">🎟</div><div class="no-results-title">No bookings yet</div><div class="no-results-sub">Your tickets appear here with QR codes for entry.</div><button class="no-results-btn" onclick="showTab('home')">Browse Events</button></div>`;
+  if (!bl) { renderSaved(); return; }
+
+  const token = localStorage.getItem('p_token');
+  if (!token || !currentUser) {
+    bl.innerHTML = `<div class="no-results"><div class="no-results-ico">🎟</div><div class="no-results-title">Sign in to see your tickets</div><button class="no-results-btn" onclick="window.location.href='/signin'">Sign In</button></div>`;
+    renderSaved(); return;
+  }
+
+  bl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--mu);font-size:.82rem">Loading your tickets…</div>';
+  try {
+    const r = await fetch(API + '/user/bookings', { headers: { Authorization: 'Bearer ' + token } });
+    const d = await safeJson(r);
+    const bookings = d.bookings || [];
+    if (!bookings.length) {
+      bl.innerHTML = `<div class="no-results"><div class="no-results-ico">🎟</div><div class="no-results-title">No tickets yet</div><div class="no-results-sub">Your confirmed tickets appear here with QR codes for entry.</div><button class="no-results-btn" onclick="showTab('home')">Browse Events</button></div>`;
+      renderSaved(); return;
+    }
+    const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    bl.innerHTML = bookings.map(b => {
+      const ev = b.events || {};
+      const ti = b.ticket_tiers || {};
+      const dateLabel = ev.date_local ? new Date(ev.date_local).toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short',year:'numeric'}) : '';
+      const priceLabel = b.unit_price === 0 ? 'FREE' : `R${Number(b.total_paid).toFixed(2)}`;
+      const qrUrl = b.qr_data ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(b.qr_data)}&bgcolor=090D1A&color=FF5C00&margin=2` : '';
+      const checkedIn = b.checked_in ? `<div style="margin-top:8px;padding:5px 12px;background:rgba(198,255,74,.1);border:1px solid rgba(198,255,74,.3);border-radius:8px;font-size:.7rem;color:var(--li);text-align:center">✅ Checked in${b.checked_in_at ? ' · '+new Date(b.checked_in_at).toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'}) : ''}</div>` : '';
+      return `<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;margin-bottom:12px;overflow:hidden">
+        ${ev.image_url ? `<img src="${esc(ev.image_url)}" style="width:100%;height:100px;object-fit:cover" loading="lazy"/>` : ''}
+        <div style="padding:14px 16px">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;margin-bottom:2px">${esc(ev.name||'Event')}</div>
+          <div style="font-size:.72rem;color:var(--mu2);margin-bottom:8px">${dateLabel ? '📅 '+dateLabel+' ' : ''}${ev.venue_city ? '· 📍'+esc(ev.venue_city) : ''}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <div>
+              ${ti.name ? `<div style="font-size:.72rem;color:var(--mu)">🎫 ${esc(ti.name)} × ${b.quantity}</div>` : `<div style="font-size:.72rem;color:var(--mu)">🎫 ${b.quantity} ticket${b.quantity>1?'s':''}</div>`}
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:${b.unit_price===0?'var(--li)':'var(--or)'}">${priceLabel}</div>
+              <div style="font-size:.65rem;color:var(--mu);font-family:monospace">Ref: ${esc(b.booking_ref)}</div>
+              ${checkedIn}
+            </div>
+            ${qrUrl ? `<div style="flex-shrink:0"><img src="${qrUrl}" width="80" height="80" style="border-radius:10px;background:var(--surf)" loading="lazy"/></div>` : ''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    bl.innerHTML = `<div style="padding:20px;text-align:center;color:var(--mu);font-size:.8rem">Could not load tickets<br/><button class="no-results-btn" onclick="renderBookings()">Retry</button></div>`;
+  }
   renderSaved();
 }
 async function renderSaved() {

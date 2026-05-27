@@ -1,6 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
-const { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail } = require('./email');
+const { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail, sendTicketEmail } = require('./email');
 
 const SUPA_URL  = process.env.SUPABASE_URL  || 'https://cjzewfvtdayjgjdpdmln.supabase.co';
 const SUPA_ANON = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
@@ -28,6 +28,93 @@ const CORS = {
   'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type,Authorization',
 };
+
+const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || '';
+const QR_SECRET       = process.env.QR_SECRET || 'pulsefy-qr-fallback-secret';
+const PAYSTACK_BASE   = 'https://api.paystack.co';
+
+// SA bank name → Paystack clearing code
+const SA_BANK_CODES = {
+  'Absa':          '632005',
+  'Capitec':       '470010',
+  'FNB':           '250655',
+  'Nedbank':       '198765',
+  'Standard Bank': '051001',
+  'Investec':      '580105',
+  'TymeBank':      '678910',
+  'African Bank':  '430000',
+};
+
+function signQr(bookingRef, eventId) {
+  return crypto.createHmac('sha256', QR_SECRET).update(`${bookingRef}:${eventId}`).digest('hex').slice(0, 16);
+}
+
+function verifyQr(bookingRef, eventId, sig) {
+  return signQr(bookingRef, eventId) === sig;
+}
+
+async function paystackPost(path, body) {
+  const https = require('https');
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify(body);
+    const opts = {
+      hostname: 'api.paystack.co',
+      path,
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${PAYSTACK_SECRET}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+      },
+    };
+    const r = https.request(opts, res => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { resolve({}); } });
+    });
+    r.on('error', reject);
+    r.write(payload);
+    r.end();
+  });
+}
+
+async function paystackGet(path) {
+  const https = require('https');
+  return new Promise((resolve, reject) => {
+    const opts = {
+      hostname: 'api.paystack.co',
+      path,
+      method: 'GET',
+      headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` },
+    };
+    const r = https.request(opts, res => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { resolve({}); } });
+    });
+    r.on('error', reject);
+    r.end();
+  });
+}
+
+async function createPaystackSubaccount(businessName, bankName, accountNumber, email) {
+  if (!PAYSTACK_SECRET || PAYSTACK_SECRET === '') return null;
+  const bankCode = SA_BANK_CODES[bankName] || '';
+  if (!bankCode || !accountNumber || !businessName) return null;
+  try {
+    const res = await paystackPost('/subaccount', {
+      business_name: businessName,
+      settlement_bank: bankCode,
+      account_number: accountNumber,
+      percentage_charge: 0,
+      primary_contact_email: email,
+    });
+    return res?.data?.subaccount_code || null;
+  } catch(e) {
+    console.error('[paystack/subaccount]', e.message);
+    return null;
+  }
+}
 
 function haverBox(lat, lon, km) {
   const R = 111, d = km / R, dl = km / (R * Math.cos(lat * Math.PI / 180));
@@ -388,17 +475,25 @@ module.exports = async (req, res) => {
       const total_paid  = +(subtotal + commission + psf).toFixed(2);
       const booking_ref = `PKF-${Date.now()}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
 
+      const qr_sig    = signQr(booking_ref, event_id);
+      const qr_data   = `PULSIFY:${booking_ref}:${event_id}:${qr_sig}`;
       const { data: booking, error: bErr } = await sb().from('bookings').insert({
         booking_ref, event_id,
         tier_id:     tier_id || null,
         buyer_name,  buyer_email,
         buyer_phone: buyer_phone || null,
         quantity:    qty, unit_price, commission, total_paid,
-        status:      'confirmed', // Paystack disabled — auto-confirm all
-        qr_data:     `PULSIFY:${booking_ref}:${event_id}:VALID`,
+        status:      'confirmed',
+        qr_data,
+        qr_token:    qr_sig,
+        user_id:     body.user_id || null,
       }).select().single();
 
       if (bErr) return res.status(400).json({ error: bErr.message });
+
+      // Send ticket email (non-blocking)
+      sendTicketEmail(buyer_email, buyer_name, ev.name, ev.date_local, ev.venue_name, ev.venue_city, booking_ref, tier?.name || null, qty, total_paid, unit_price === 0, qr_data)
+        .catch(e => console.error('[email/ticket]', e.message));
 
       // Notify the buyer if they're a registered user
       const { user_id } = body;
@@ -419,11 +514,173 @@ module.exports = async (req, res) => {
         buyer_email,
         buyer_name,
         is_free:     unit_price === 0,
-        qr_data:     booking.qr_data,
+        qr_data,
         event_name:  ev.name,
+        event_date:  ev.date_local,
+        venue_name:  ev.venue_name,
+        venue_city:  ev.venue_city,
         tier_name:   tier?.name || null,
         quantity:    qty,
       });
+    }
+
+    /* ─── POST /ticket/init ───────────────────────────────── */
+    // For paid tickets: creates pending booking + initialises Paystack transaction with split
+    if (url === '/ticket/init' && req.method === 'POST') {
+      const body = req.body || {};
+      const { event_id, tier_id, quantity = 1, buyer_name, buyer_email, buyer_phone, user_id: uid } = body;
+
+      if (!event_id || !buyer_name || !buyer_email)
+        return res.status(400).json({ error: 'event_id, buyer_name and buyer_email required' });
+
+      const [{ data: ev }, { data: tier }] = await Promise.all([
+        sb().from('events').select('id,name,date_local,time_local,venue_name,venue_city,organiser_id').eq('id', event_id).single(),
+        tier_id ? sb().from('ticket_tiers').select('*').eq('id', tier_id).single() : { data: null },
+      ]);
+
+      if (!ev) return res.status(404).json({ error: 'Event not found' });
+
+      const qty        = Math.max(1, parseInt(quantity));
+      const unit_price = tier?.price || 0;
+      const subtotal   = unit_price * qty;
+      const commission = unit_price > 0 ? +(subtotal * 0.08).toFixed(2) : 0;
+      const psf        = unit_price > 0 ? +(subtotal * 0.015 + 1.5).toFixed(2) : 0;
+      const total_paid = +(subtotal + commission + psf).toFixed(2);
+
+      if (unit_price === 0) return res.status(400).json({ error: 'Use /ticket/purchase for free tickets' });
+
+      const booking_ref = `PKF-${Date.now()}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
+      const qr_sig      = signQr(booking_ref, event_id);
+      const qr_data     = `PULSIFY:${booking_ref}:${event_id}:${qr_sig}`;
+
+      const { data: booking, error: bErr } = await sb().from('bookings').insert({
+        booking_ref, event_id,
+        tier_id:     tier_id || null,
+        buyer_name,  buyer_email,
+        buyer_phone: buyer_phone || null,
+        quantity:    qty, unit_price, commission, total_paid,
+        status:      'pending',
+        qr_data,
+        qr_token:    qr_sig,
+        user_id:     uid || null,
+      }).select().single();
+
+      if (bErr) return res.status(400).json({ error: bErr.message });
+
+      // Build Paystack transaction with optional split
+      const amountKobo = Math.round(total_paid * 100);
+      const txBody = {
+        email:     buyer_email,
+        amount:    amountKobo,
+        currency:  'ZAR',
+        reference: booking_ref,
+        metadata:  { booking_id: booking.id, booking_ref, event_id, user_id: uid || null, buyer_name, type: 'ticket' },
+        callback_url: `${process.env.APP_URL || 'https://pulsefy.co.za'}/tickets`,
+      };
+
+      // Add split if organizer has a subaccount
+      if (ev.organiser_id) {
+        const { data: orgProfile } = await sb().from('profiles').select('paystack_subaccount_code').eq('id', ev.organiser_id).single();
+        if (orgProfile?.paystack_subaccount_code) {
+          txBody.split = {
+            type: 'percentage',
+            bearer_type: 'account',
+            subaccounts: [{ subaccount: orgProfile.paystack_subaccount_code, share: 92 }],
+          };
+        }
+      }
+
+      let paystack_ref = booking_ref;
+      if (PAYSTACK_SECRET) {
+        try {
+          const txRes = await paystackPost('/transaction/initialize', txBody);
+          if (txRes?.data?.reference) paystack_ref = txRes.data.reference;
+        } catch(e) { console.error('[paystack/init]', e.message); }
+      }
+
+      return res.status(200).json({
+        booking_ref,
+        booking_id: booking.id,
+        paystack_ref,
+        amount_kobo: amountKobo,
+        total_paid,
+        is_free: false,
+        event_name: ev.name,
+        tier_name: tier?.name || null,
+        quantity: qty,
+      });
+    }
+
+    /* ─── GET /ticket/confirm ─────────────────────────────── */
+    // Called by frontend after Paystack popup success callback
+    if (url === '/ticket/confirm' && req.method === 'GET') {
+      const ref = q.ref || q.reference;
+      if (!ref) return res.status(400).json({ error: 'ref required' });
+
+      // Verify with Paystack
+      let verified = false;
+      if (PAYSTACK_SECRET) {
+        try {
+          const vr = await paystackGet(`/transaction/verify/${encodeURIComponent(ref)}`);
+          verified = vr?.data?.status === 'success';
+        } catch(e) { console.error('[paystack/verify]', e.message); }
+      }
+      if (!verified) return res.status(400).json({ error: 'Payment not verified' });
+
+      // Confirm the booking
+      const { data: booking, error: bErr } = await sb().from('bookings')
+        .update({ status: 'confirmed' })
+        .eq('booking_ref', ref).eq('status', 'pending')
+        .select('*,events(name,date_local,venue_name,venue_city),ticket_tiers(name)')
+        .single();
+
+      if (bErr || !booking) {
+        // Already confirmed — just return success
+        const { data: existing } = await sb().from('bookings')
+          .select('*,events(name,date_local,venue_name,venue_city),ticket_tiers(name)')
+          .eq('booking_ref', ref).single();
+        if (existing) return res.status(200).json({ success: true, booking_ref: existing.booking_ref, qr_data: existing.qr_data, event_name: existing.events?.name, tier_name: existing.ticket_tiers?.name, quantity: existing.quantity, total_paid: existing.total_paid, buyer_name: existing.buyer_name, buyer_email: existing.buyer_email });
+        return res.status(404).json({ error: 'Booking not found' });
+      }
+
+      // Send ticket email
+      sendTicketEmail(booking.buyer_email, booking.buyer_name, booking.events?.name, booking.events?.date_local, booking.events?.venue_name, booking.events?.venue_city, booking.booking_ref, booking.ticket_tiers?.name, booking.quantity, booking.total_paid, booking.unit_price === 0, booking.qr_data)
+        .catch(e => console.error('[email/ticket]', e.message));
+
+      if (booking.user_id) {
+        await sb().from('notifications').insert({
+          user_id: booking.user_id, type: 'ticket',
+          from_display_name: 'Pulsefy',
+          entity_id: booking.event_id, entity_type: 'events',
+          message: `Your ticket for ${booking.events?.name} is confirmed! Ref: ${booking.booking_ref} · R${booking.total_paid}`,
+          data: { booking_ref: booking.booking_ref },
+        }).catch(() => {});
+      }
+
+      return res.status(200).json({
+        success:     true,
+        booking_ref: booking.booking_ref,
+        qr_data:     booking.qr_data,
+        event_name:  booking.events?.name,
+        tier_name:   booking.ticket_tiers?.name,
+        quantity:    booking.quantity,
+        total_paid:  booking.total_paid,
+        buyer_name:  booking.buyer_name,
+        buyer_email: booking.buyer_email,
+      });
+    }
+
+    /* ─── GET /user/bookings ──────────────────────────────── */
+    if (url === '/user/bookings' && req.method === 'GET') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+      const { data, error } = await sb().from('bookings')
+        .select('id,booking_ref,event_id,tier_id,quantity,unit_price,total_paid,status,qr_data,checked_in,checked_in_at,created_at,events(name,date_local,time_local,venue_name,venue_city,image_url),ticket_tiers(name,price)')
+        .eq('user_id', user.id).eq('status', 'confirmed')
+        .order('created_at', { ascending: false }).limit(50);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ bookings: data || [] });
     }
 
     /* ─── GET /booking/:ref ───────────────────────────────── */
@@ -446,11 +703,16 @@ module.exports = async (req, res) => {
       if (!qr_data) return res.status(400).json({ error: 'qr_data required' });
 
       const parts = String(qr_data).split(':');
-      if (parts.length < 4 || parts[0] !== 'PULSEFY' || parts[3] !== 'VALID')
+      if (parts.length < 4 || parts[0] !== 'PULSEFY')
         return res.status(400).json({ error: 'Invalid QR code' });
 
       const booking_ref = parts[1];
       const event_id    = parts[2];
+      const qr_sig      = parts[3];
+
+      // Accept old VALID format OR new HMAC-signed format
+      if (qr_sig !== 'VALID' && !verifyQr(booking_ref, event_id, qr_sig))
+        return res.status(400).json({ error: 'QR signature invalid' });
 
       const { data: booking } = await sb().from('bookings')
         .select('*,events(name,date_local,venue_name,organiser_id),ticket_tiers(name)')
@@ -496,9 +758,35 @@ module.exports = async (req, res) => {
         const ref    = req.body.data?.reference;
         const meta   = req.body.data?.metadata || {};
         const userId = meta.user_id || null;
+
+        // Confirm booking (match by id OR booking_ref)
+        let confirmedBooking = null;
         if (meta.booking_id) {
-          await sb().from('bookings').update({ status: 'confirmed' }).eq('id', meta.booking_id);
+          const { data: b } = await sb().from('bookings')
+            .update({ status: 'confirmed' }).eq('id', meta.booking_id).eq('status', 'pending')
+            .select('*,events(name,date_local,venue_name,venue_city),ticket_tiers(name)').single();
+          confirmedBooking = b;
+        } else if (ref) {
+          const { data: b } = await sb().from('bookings')
+            .update({ status: 'confirmed' }).eq('booking_ref', ref).eq('status', 'pending')
+            .select('*,events(name,date_local,venue_name,venue_city),ticket_tiers(name)').single();
+          confirmedBooking = b;
         }
+
+        if (confirmedBooking) {
+          // Send ticket email (non-blocking)
+          sendTicketEmail(confirmedBooking.buyer_email, confirmedBooking.buyer_name, confirmedBooking.events?.name, confirmedBooking.events?.date_local, confirmedBooking.events?.venue_name, confirmedBooking.events?.venue_city, confirmedBooking.booking_ref, confirmedBooking.ticket_tiers?.name, confirmedBooking.quantity, confirmedBooking.total_paid, confirmedBooking.unit_price === 0, confirmedBooking.qr_data)
+            .catch(e => console.error('[email/ticket/webhook]', e.message));
+          if (userId) {
+            await sb().from('notifications').insert({
+              user_id: userId, type: 'ticket', from_display_name: 'Pulsefy',
+              entity_id: confirmedBooking.event_id, entity_type: 'events',
+              message: `Your ticket for ${confirmedBooking.events?.name} is confirmed! Ref: ${confirmedBooking.booking_ref}`,
+              data: { booking_ref: confirmedBooking.booking_ref },
+            }).catch(() => {});
+          }
+        }
+
         if (userId && ref) {
           await sb().from('payments').upsert({
             user_id: userId, reference: ref, type: meta.type || 'ticket',
@@ -506,7 +794,7 @@ module.exports = async (req, res) => {
             amount: req.body.data?.amount || 0, status: 'success',
             completed_at: new Date().toISOString(),
             metadata: { paystack: req.body.data },
-          }, { onConflict: 'reference' });
+          }, { onConflict: 'reference' }).catch(() => {});
         }
       }
       return res.status(200).json({ received: true });
@@ -544,7 +832,21 @@ module.exports = async (req, res) => {
         phone:        b.phone ? String(b.phone).slice(0, 20) : null,
         province:     b.province || null,
         city:         b.city || null,
+        paystack_bank_name:     b.bank_name || null,
+        paystack_account_number: b.account_number ? String(b.account_number) : null,
+        paystack_business_name: b.business_name || displayName,
       }).select().single();
+
+      // Auto-create Paystack subaccount for organizer/business
+      if (['organizer','business'].includes(role) && b.bank_name && b.account_number) {
+        const subCode = await createPaystackSubaccount(
+          b.business_name || displayName, b.bank_name, String(b.account_number), user.email
+        );
+        if (subCode) {
+          await sb().from('profiles').update({ paystack_subaccount_code: subCode }).eq('id', user.id);
+          if (created) created.paystack_subaccount_code = subCode;
+        }
+      }
 
       // Non-blocking welcome email
       sendWelcomeEmail(user.email, displayName).catch(e => console.error('[email/welcome]', e.message));

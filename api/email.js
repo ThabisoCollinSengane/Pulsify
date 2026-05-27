@@ -217,4 +217,41 @@ async function sendPaymentConfirmEmail(to, displayName, amountCents, type) {
   await send(to, `Payment Confirmed — R${(amountCents / 100).toFixed(2)}`, paymentConfirmHtml(displayName, amountCents, type));
 }
 
-module.exports = { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail };
+// ─── Ticket email ─────────────────────────────────────────────────────────────
+function ticketHtml(buyerName, eventName, eventDate, venueName, venueCity, bookingRef, tierName, quantity, totalPaid, isFree, qrData) {
+  const priceLabel = isFree ? 'FREE' : `R${Number(totalPaid).toFixed(2)}`;
+  const dateLabel  = eventDate ? new Date(eventDate).toLocaleDateString('en-ZA', { weekday:'long', year:'numeric', month:'long', day:'numeric' }) : '';
+  const qrUrl      = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}&bgcolor=0d0d0d&color=FF5C00&margin=2`;
+  return layout(`
+    ${card(`
+      <p style="font-size:36px;margin:0 0 12px">🎟️</p>
+      <h1 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#ffffff">Your ticket is confirmed!</h1>
+      <p style="margin:0 0 20px;font-size:14px;color:#a0a0a0">Hi ${buyerName || 'there'}, you're going to <strong style="color:#fff">${eventName}</strong>.</p>
+
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;background:rgba(255,92,0,.07);border:1px solid rgba(255,92,0,.25);border-radius:12px;padding:16px">
+        <tr><td style="padding:4px 0">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            ${eventDate ? `<tr><td style="font-size:12px;color:#707070;padding-bottom:8px">📅 Date</td><td align="right" style="font-size:13px;font-weight:700;color:#fff;padding-bottom:8px">${dateLabel}</td></tr>` : ''}
+            ${venueName || venueCity ? `<tr><td style="font-size:12px;color:#707070;padding-bottom:8px">📍 Venue</td><td align="right" style="font-size:13px;font-weight:700;color:#fff;padding-bottom:8px">${[venueName,venueCity].filter(Boolean).join(', ')}</td></tr>` : ''}
+            ${tierName ? `<tr><td style="font-size:12px;color:#707070;padding-bottom:8px">🎫 Ticket</td><td align="right" style="font-size:13px;font-weight:700;color:#fff;padding-bottom:8px">${tierName} × ${quantity}</td></tr>` : `<tr><td style="font-size:12px;color:#707070;padding-bottom:8px">🎫 Qty</td><td align="right" style="font-size:13px;font-weight:700;color:#fff;padding-bottom:8px">${quantity} ticket${quantity>1?'s':''}</td></tr>`}
+            <tr><td style="font-size:12px;color:#707070;padding-bottom:8px">💳 Total</td><td align="right" style="font-size:15px;font-weight:800;color:#C6FF4A;padding-bottom:8px">${priceLabel}</td></tr>
+            <tr><td style="font-size:12px;color:#707070">🔖 Ref</td><td align="right" style="font-size:13px;font-weight:700;color:#FF5C00;font-family:monospace">${bookingRef}</td></tr>
+          </table>
+        </td></tr>
+      </table>
+
+      <p style="font-size:13px;color:#a0a0a0;margin:0 0 12px;text-align:center">Show this QR code at the entrance:</p>
+      <div style="text-align:center;margin-bottom:16px">
+        <img src="${qrUrl}" width="180" height="180" alt="QR Code" style="border-radius:12px;background:#1a1a1a"/>
+      </div>
+      <p style="font-size:11px;color:#555;text-align:center;margin:0 0 16px">QR ref: ${bookingRef}</p>
+      ${btn(APP_URL + '/tickets', 'View My Tickets →')}
+    `)}
+  `);
+}
+
+async function sendTicketEmail(to, buyerName, eventName, eventDate, venueName, venueCity, bookingRef, tierName, quantity, totalPaid, isFree, qrData) {
+  await send(to, `🎟 Your ticket for ${eventName}`, ticketHtml(buyerName, eventName, eventDate, venueName, venueCity, bookingRef, tierName, quantity, totalPaid, isFree, qrData));
+}
+
+module.exports = { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail, sendTicketEmail };

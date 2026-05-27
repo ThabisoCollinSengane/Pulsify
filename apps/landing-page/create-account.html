@@ -192,6 +192,28 @@ select.inp option{background:#0D1424}
     </div>
     <input type="hidden" id="isorg" value="user"/>
 
+    <!-- Bank details — only shown for organizer/business -->
+    <div id="bank-section" style="display:none">
+      <div class="sec-div">Bank Details <span style="font-size:.6rem;font-weight:400;color:var(--mu);text-transform:none;letter-spacing:0">(for ticket payouts)</span></div>
+      <div style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:10px 14px;font-size:.74rem;color:var(--mu);margin-bottom:14px;line-height:1.5">🏦 Your bank details are used to pay out ticket revenue directly to your account via Paystack. These are stored securely.</div>
+      <label class="lbl">Business / Organisation Name</label>
+      <input class="inp" id="biz-name" type="text" placeholder="e.g. Events SA or your DJ name"/>
+      <label class="lbl">Bank</label>
+      <select class="inp" id="bank-name">
+        <option value="">Select bank…</option>
+        <option>Absa</option>
+        <option>Capitec</option>
+        <option>FNB</option>
+        <option>Nedbank</option>
+        <option>Standard Bank</option>
+        <option>Investec</option>
+        <option>TymeBank</option>
+        <option>African Bank</option>
+      </select>
+      <label class="lbl">Account Number</label>
+      <input class="inp" id="bank-account" type="text" inputmode="numeric" placeholder="Bank account number"/>
+    </div>
+
     <div class="sec-div">Terms</div>
     <div class="terms-row" id="trow" onclick="togTerms()">
       <div class="chkbox" id="tchk"></div>
@@ -249,6 +271,9 @@ function setAccType(t) {
     }
   });
   document.getElementById('isorg').value = t;
+  // Show bank details for organizer/business
+  const bankSection = document.getElementById('bank-section');
+  if (bankSection) bankSection.style.display = (t === 'organizer' || t === 'business') ? 'block' : 'none';
 }
 document.addEventListener('DOMContentLoaded', () => {
   setAccType('user');
@@ -412,11 +437,17 @@ async function doCreate() {
   var session = data.session;
   var user    = data.user;
 
+  var bankName    = (document.getElementById('bank-name')?.value || '').trim();
+  var bankAccount = (document.getElementById('bank-account')?.value || '').trim();
+  var bizName     = (document.getElementById('biz-name')?.value || fn).trim();
+
   var profileData = {
     display_name: fn, username: un, email: em, role, is_page: isOrg,
     dob, phone, province: prov, city, genres,
     bio: '', avatar_url: null, agree_terms: true,
-    terms_date: new Date().toISOString()
+    terms_date: new Date().toISOString(),
+    // bank info for subaccount (only sent for organizer/business)
+    ...(isOrg && bankName && bankAccount ? { bank_name: bankName, account_number: bankAccount, business_name: bizName } : {}),
   };
 
   if (session) {
