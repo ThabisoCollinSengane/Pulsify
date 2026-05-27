@@ -1644,6 +1644,13 @@ module.exports = async (req, res) => {
 
       const { error } = await sb().from('profiles').update(updatePayload).eq('id', user.id);
 
+      // Audit trail: upsert KYC document records
+      const kycRows = [];
+      const extractPath = (u) => { try { return u.split('/verification-docs/')[1].split('?')[0]; } catch { return u; } };
+      if (face_scan_url) kycRows.push({ user_id: user.id, file_type: 'face_scan', storage_path: extractPath(face_scan_url), mime_type: 'image/jpeg' });
+      if (id_doc_url)    kycRows.push({ user_id: user.id, file_type: 'id_doc',    storage_path: extractPath(id_doc_url)    });
+      if (kycRows.length) await sb().from('kyc_documents').upsert(kycRows, { onConflict: 'user_id,file_type,storage_path' }).catch(() => {});
+
       // Notify admin about new verification request
       const { data: admins } = await sb().from('profiles').select('id').eq('role', 'admin');
       for (const admin of admins || []) {
@@ -1689,6 +1696,22 @@ module.exports = async (req, res) => {
         id_doc_url:    await signOne(row.id_doc_url),
       })));
       return res.status(200).json({ verifications });
+    }
+
+    /* ─── GET /admin/kyc/:userId ────────────────────────────── */
+    const kycMatch = url.match(/^\/admin\/kyc\/([^/]+)$/);
+    if (kycMatch && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const { data: docs } = await sb().from('kyc_documents').select('*').eq('user_id', kycMatch[1]).order('uploaded_at', { ascending: false });
+      // Generate a signed URL for each document
+      const withSigned = await Promise.all((docs || []).map(async (d) => {
+        try {
+          const { data: s } = await sb().storage.from('verification-docs').createSignedUrl(d.storage_path, 86400); // 24h
+          return { ...d, signed_url: s?.signedUrl || null };
+        } catch { return { ...d, signed_url: null }; }
+      }));
+      return res.status(200).json({ documents: withSigned });
     }
 
     /* ─── GET /admin/events ─────────────────────────────────── */

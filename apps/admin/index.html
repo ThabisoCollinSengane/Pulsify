@@ -160,7 +160,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="tab-btn" onclick="switchTab('events',this)">🎉 Events</div>
     <div class="tab-btn" onclick="switchTab('leads',this)">📊 Leads</div>
     <div class="tab-btn" onclick="switchTab('verifications',this)">🏆 Verify</div>
-    <div class="tab-btn" onclick="switchTab('banners',this)" style="display:none" title="Banner CRUD — coming in v2">🖼 Banners</div>
+    <div class="tab-btn" onclick="switchTab('banners',this)">🖼 Banners</div>
     <div class="tab-btn" onclick="switchTab('notifications',this)">🔔 Notify</div>
     <div class="tab-btn" onclick="switchTab('reports',this)">🚩 Reports</div>
     <div class="tab-btn" onclick="switchTab('promotions',this)">🚀 Promos</div>
@@ -942,17 +942,61 @@ function renderVerifList() {
         <div><strong>Address:</strong> ${esc(req.address || '—')}</div>
       </div>
       ${req.description ? `<div style="font-size:.75rem;color:var(--mu2);margin-bottom:12px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:8px">${esc(req.description)}</div>` : ''}
-      ${(req.face_scan_url || req.id_doc_url || v.face_scan_url || v.id_doc_url) ? `
+      ${(v.face_scan_url || req.face_scan_url || v.id_doc_url || req.id_doc_url) ? `
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-        ${(req.face_scan_url || v.face_scan_url) ? `<div><div style="font-size:.62rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Face Scan</div><a href="${req.face_scan_url || v.face_scan_url}" target="_blank"><img src="${req.face_scan_url || v.face_scan_url}" style="height:100px;border-radius:10px;object-fit:cover;border:1px solid var(--border)" onerror="this.style.opacity='.3'"/></a></div>` : ''}
-        ${(req.id_doc_url || v.id_doc_url) ? `<div><div style="font-size:.62rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">ID Document</div><a href="${req.id_doc_url || v.id_doc_url}" target="_blank"><img src="${req.id_doc_url || v.id_doc_url}" style="height:100px;border-radius:10px;object-fit:cover;border:1px solid var(--border)" onerror="this.parentElement.innerHTML='<span style=\\'font-size:.74rem;color:var(--or)\\'>📄 View Doc</span>'"/></a></div>` : ''}
+        ${(v.face_scan_url || req.face_scan_url) ? `<div>
+          <div style="font-size:.62rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Face Scan / Selfie</div>
+          <a href="${v.face_scan_url || req.face_scan_url}" target="_blank">
+            <img src="${v.face_scan_url || req.face_scan_url}" style="height:100px;border-radius:10px;object-fit:cover;border:1px solid var(--border);display:block;margin-bottom:4px" onerror="this.style.opacity='.3'" loading="lazy"/>
+          </a>
+          <a href="${v.face_scan_url || req.face_scan_url}" target="_blank" download style="font-size:.65rem;color:var(--or);text-decoration:none">📥 Download Selfie</a>
+        </div>` : ''}
+        ${(v.id_doc_url || req.id_doc_url) ? `<div>
+          <div style="font-size:.62rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">ID Document</div>
+          <a href="${v.id_doc_url || req.id_doc_url}" target="_blank">
+            <img src="${v.id_doc_url || req.id_doc_url}" style="height:100px;border-radius:10px;object-fit:cover;border:1px solid var(--border);display:block;margin-bottom:4px" onerror="this.parentElement.insertAdjacentHTML('afterbegin','<div style=&quot;background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.3);border-radius:8px;padding:8px 12px;font-size:.74rem;margin-bottom:4px&quot;>📄 Non-image doc — use Download link below</div>');this.remove()" loading="lazy"/>
+          </a>
+          <a href="${v.id_doc_url || req.id_doc_url}" target="_blank" download style="font-size:.65rem;color:var(--or);text-decoration:none">📥 Download ID Doc</a>
+        </div>` : ''}
       </div>` : ''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${v.verif_status === 'pending' ? '8px' : '0'}">
+        <button class="btn btn-surf" onclick="loadKycDocs('${v.id}','kyc-${v.id}')" style="flex:1;font-size:.72rem">🗂 All KYC Files</button>
+      </div>
+      <div id="kyc-${v.id}" style="display:none;margin-bottom:8px"></div>
       ${v.verif_status === 'pending' ? `<div style="display:flex;gap:8px">
         <button class="btn btn-li" onclick="reviewVerif('${v.id}','approve')" style="flex:1">✅ Approve &amp; Verify</button>
         <button class="btn btn-pk" onclick="reviewVerif('${v.id}','reject')" style="flex:1">❌ Reject</button>
       </div>` : ''}
     </div>`;
   }).join('');
+}
+
+async function loadKycDocs(userId, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (el.style.display !== 'none') { el.style.display = 'none'; return; } // toggle
+  el.style.display = '';
+  el.innerHTML = '<div style="font-size:.74rem;color:var(--mu);padding:6px 0">Loading KYC files…</div>';
+  try {
+    const r = await fetch(`/api/admin/kyc/${userId}`, { headers: { Authorization: 'Bearer ' + adminToken } });
+    const { documents, error } = await safeJson(r);
+    if (!r.ok || !documents?.length) {
+      el.innerHTML = '<div style="font-size:.74rem;color:var(--mu);padding:6px 0">No KYC files on record.</div>';
+      return;
+    }
+    el.innerHTML = `<div style="background:rgba(0,0,0,.15);border-radius:10px;padding:10px 12px">
+      <div style="font-size:.65rem;font-family:\'Syne\',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);margin-bottom:8px">KYC Document Audit Trail (${documents.length} file${documents.length>1?'s':''})</div>
+      ${documents.map(d => `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+        <div style="font-size:.8rem">${d.file_type === 'face_scan' ? '🤳' : d.file_type === 'id_doc' ? '🪪' : '📄'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.74rem;font-weight:600">${d.file_type === 'face_scan' ? 'Selfie / Face Scan' : d.file_type === 'id_doc' ? 'ID Document' : 'Other'}</div>
+          <div style="font-size:.62rem;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.storage_path)}</div>
+          <div style="font-size:.62rem;color:var(--mu)">${new Date(d.uploaded_at).toLocaleString('en-ZA')}</div>
+        </div>
+        ${d.signed_url ? `<a href="${esc(d.signed_url)}" target="_blank" download style="flex-shrink:0;font-size:.65rem;font-weight:700;color:var(--or);text-decoration:none;background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.3);border-radius:50px;padding:4px 10px">📥 Save</a>` : '<span style="font-size:.65rem;color:var(--mu)">—</span>'}
+      </div>`).join('')}
+    </div>`;
+  } catch(e) { el.innerHTML = `<div style="font-size:.74rem;color:var(--pk)">Error: ${esc(e.message)}</div>`; }
 }
 
 async function reviewVerif(userId, action) {
