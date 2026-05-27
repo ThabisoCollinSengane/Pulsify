@@ -2169,6 +2169,8 @@ module.exports = async (req, res) => {
       if (!membership) return res.status(403).json({ error: 'Not a squad member' });
       const { data: alreadyMember } = await sb().from('squad_members').select('user_id').eq('squad_id', squadId).eq('user_id', inviteeId).single();
       if (alreadyMember) return res.status(400).json({ error: 'User is already a member' });
+      const { data: pendingInvite } = await sb().from('squad_invites').select('id').eq('squad_id', squadId).eq('invitee_id', inviteeId).eq('status', 'pending').maybeSingle();
+      if (pendingInvite) return res.status(200).json({ ok: true, status: 'already_invited' });
       const { error } = await sb().from('squad_invites').insert({ squad_id: squadId, inviter_id: auth.user.id, invitee_id: inviteeId, status: 'pending' });
       if (error) return res.status(400).json({ error: error.message });
       const [{ data: squad }, { data: inviter }] = await Promise.all([

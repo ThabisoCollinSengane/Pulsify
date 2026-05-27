@@ -685,6 +685,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
       <input class="si" type="search" id="friend-search" placeholder="Search friends, businesses, organizers" autocomplete="off" oninput="searchUsers(this.value)"/>
     </div>
     <div id="search-results" style="margin-top:12px"></div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button onclick="showAllFriends('following')" style="flex:1;padding:9px 8px;background:rgba(176,38,255,.12);border:1px solid rgba(176,38,255,.3);border-radius:50px;color:#B026FF;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">👥 Following</button>
+      <button onclick="showAllFriends('followers')" style="flex:1;padding:9px 8px;background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.3);border-radius:50px;color:var(--or);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">🌟 Followers</button>
+    </div>
     <div style="margin-top:16px">
       <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">✨ People You May Know</div>
       <div id="squad-content"></div>
@@ -853,6 +857,18 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 </div>
 
 <!-- FAQ OVERLAY -->
+<!-- FRIENDS LIST OVERLAY -->
+<div id="friends-list-overlay" style="display:none;position:fixed;inset:0;z-index:2400;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
+  <div style="width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;max-height:80vh;display:flex;flex-direction:column;animation:su .25s ease">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--border2);margin:10px auto 0;flex-shrink:0"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0">
+      <div id="friends-list-title" style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.03em">Friends</div>
+      <button onclick="document.getElementById('friends-list-overlay').style.display='none'" style="width:30px;height:30px;border-radius:50%;background:var(--surf);border:none;color:var(--tx);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <div id="friends-list-body" style="overflow-y:auto;flex:1;padding-bottom:32px;scrollbar-width:none"></div>
+  </div>
+</div>
+
 <div id="faq-overlay" style="display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeFAQ()">
   <div style="width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;max-height:90vh;display:flex;flex-direction:column;animation:su .25s ease">
     <div style="width:40px;height:4px;border-radius:2px;background:var(--border2);margin:10px auto 0;flex-shrink:0"></div>
@@ -3764,6 +3780,35 @@ async function toggleFollowOverlay(targetId) {
     }
   } catch(e) { showToast('Error: ' + e.message); }
   if (btn) btn.disabled = false;
+}
+
+async function showAllFriends(type) {
+  if (!currentUser) { showToast('Sign in to view friends'); return; }
+  const overlay = document.getElementById('friends-list-overlay');
+  const title   = document.getElementById('friends-list-title');
+  const body    = document.getElementById('friends-list-body');
+  if (!overlay) return;
+  title.textContent = type === 'following' ? '👥 People You Follow' : '🌟 Your Followers';
+  body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div>';
+  overlay.style.display = 'flex';
+  const sb2 = getSB();
+  try {
+    let data;
+    if (type === 'following') {
+      const r = await sb2.from('follows').select('following_id,profiles!follows_following_id_fkey(id,display_name,username,avatar_url,role)').eq('follower_id', currentUser.id).limit(100);
+      data = (r.data || []).map(x => x.profiles).filter(Boolean);
+    } else {
+      const r = await sb2.from('follows').select('follower_id,profiles!follows_follower_id_fkey(id,display_name,username,avatar_url,role)').eq('following_id', currentUser.id).limit(100);
+      data = (r.data || []).map(x => x.profiles).filter(Boolean);
+    }
+    if (!data.length) { body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--mu);font-size:.82rem">' + (type === 'following' ? "You're not following anyone yet" : "No followers yet") + '</div>'; return; }
+    const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    body.innerHTML = data.map(p => `<div onclick="document.getElementById('friends-list-overlay').style.display='none';openProfile('${esc(p.id)}')" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;-webkit-tap-highlight-color:transparent">
+      <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.1rem">${p.avatar_url?`<img src="${esc(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>`:''}</div>
+      <div style="flex:1;min-width:0"><div style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;color:var(--tx)">${esc(p.display_name||'User')}</div><div style="font-size:.7rem;color:var(--mu)">@${esc(p.username||p.id.slice(0,8))}${p.role&&p.role!=='user'?' · '+p.role:''}</div></div>
+      <span style="color:var(--or);font-size:.8rem">→</span>
+    </div>`).join('');
+  } catch(e) { body.innerHTML = '<div style="padding:16px;text-align:center;color:var(--pk);font-size:.8rem">Could not load</div>'; }
 }
 
 /* ══════════════════════════════════════════════════
