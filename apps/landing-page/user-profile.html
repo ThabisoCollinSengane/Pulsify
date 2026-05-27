@@ -81,6 +81,24 @@ body{padding-bottom:32px}
 .modal-cancel{width:100%;background:transparent;border:1px solid var(--border);border-radius:12px;padding:13px;font-family:'Syne',sans-serif;font-size:.86rem;font-weight:700;color:var(--mu);cursor:pointer}
 .follow-btn{margin-left:auto;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:7px 16px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer}
 .follow-btn.following{background:transparent;border:1px solid var(--border2);color:var(--mu2)}
+.pa.lk{color:#FF2D78}
+.up-cmt-wrap{background:rgba(0,0,0,.2);border-top:1px solid var(--border);display:none}
+.up-cmt-item{display:flex;gap:9px;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.03)}
+.up-cmt-item:last-of-type{border-bottom:none}
+.up-cmt-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.78rem;overflow:hidden;font-family:'Syne',sans-serif;font-weight:700;color:#fff;background:linear-gradient(135deg,#B026FF,#FF5C00)}
+.up-cmt-av img{width:100%;height:100%;object-fit:cover}
+.up-cmt-name{font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;margin-bottom:2px}
+.up-cmt-text{font-size:.78rem;color:var(--mu2);line-height:1.45}
+.up-cmt-time{font-size:.6rem;color:var(--mu);margin-top:3px}
+.up-cmt-reply-btn{background:none;border:none;color:var(--mu);font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;cursor:pointer;padding:2px 0;margin-top:3px}
+.up-cmt-replies{margin-left:36px;border-left:1px solid var(--border);padding-left:8px;margin-top:4px}
+.up-cmt-input-row{display:flex;align-items:center;gap:8px;padding:8px 14px 12px}
+.up-cmt-inp{flex:1;background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:8px 14px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none}
+.up-cmt-inp:focus{border-color:var(--or)}
+.up-cmt-inp::placeholder{color:var(--mu)}
+.up-cmt-snd{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.up-reply-banner{padding:4px 14px 0;font-size:.7rem;color:var(--mu);display:flex;align-items:center;gap:6px}
+.up-reply-banner button{background:none;border:none;color:var(--mu);cursor:pointer;font-size:.8rem}
 </style>
 </head>
 <body>
@@ -160,6 +178,10 @@ const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 let currentUser = null;
 let profileId = null;
 let isFollowing = false;
+let _upToken = '';
+const _upCmtCache = {};
+const _upLiked = {};
+const _upReplyTo = {};
 
 const GENRE_LABELS = {
   amapiano: '🎶 Amapiano', gqom: '🔊 Gqom', hiphop: '🎤 Hip Hop',
@@ -203,6 +225,7 @@ async function loadUserData() {
     if (!profileId) { window.location.href = '/signin'; return; }
   } else {
     currentUser = session.user;
+    _upToken = session.access_token || '';
   }
   
   if (!profileId && currentUser) {
@@ -377,12 +400,18 @@ async function renderPosts(userId) {
       el.innerHTML = '<div class="empty"><div class="empty-ico">📸</div><div class="empty-title">No posts yet</div></div>';
       return;
     }
+    if (currentUser && posts.length) {
+      const { data: myLikes } = await sb.from('reactions').select('entity_id').eq('user_id', currentUser.id).eq('entity_type', 'post').eq('type', 'like').in('entity_id', posts.map(p => p.id));
+      (myLikes || []).forEach(r => { _upLiked[r.entity_id] = true; });
+    }
     el.innerHTML = posts.map(p => {
       const img = _firstImageUrl(p.image_url);
       const likes = p.like_count || 0;
       const cmts  = p.comment_count || 0;
+      const lk = _upLiked[p.id] ? ' lk' : '';
+      const pid = escHtml(p.id);
       return `
-      <div class="post" id="post-${escHtml(p.id)}">
+      <div class="post" id="post-${pid}">
         ${img ? `<img class="post-img" src="${escHtml(img)}" loading="lazy" onerror="this.style.display='none'"/>` : '<div class="post-img-placeholder">📸</div>'}
         <div class="post-body">
           ${p.event_name ? `<div class="post-ev">🎟 ${escHtml(p.event_name)}</div>` : ''}
@@ -390,15 +419,141 @@ async function renderPosts(userId) {
           <div class="post-foot">
             <span class="post-date">${new Date(p.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})}</span>
             <div class="post-actions">
-              <span class="pa">❤️ ${likes}</span>
-              <span class="pa">💬 ${cmts}</span>
+              <button class="pa${lk}" id="up-lk-${pid}" onclick="upLike('${pid}',this)">❤️ <span id="up-lkc-${pid}">${likes}</span></button>
+              <button class="pa" onclick="upToggleCmt('${pid}')">💬 <span id="up-cmc-${pid}">${cmts}</span></button>
             </div>
+          </div>
+        </div>
+        <div class="up-cmt-wrap" id="up-cmt-${pid}">
+          <div class="up-reply-banner" id="up-rb-${pid}" style="display:none">
+            <span id="up-rb-txt-${pid}"></span>
+            <button onclick="upCancelReply('${pid}')">✕</button>
+          </div>
+          <div id="up-cmt-list-${pid}"></div>
+          <div class="up-cmt-input-row">
+            <input class="up-cmt-inp" id="up-cmt-inp-${pid}" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')upDoComment('${pid}')"/>
+            <button class="up-cmt-snd" onclick="upDoComment('${pid}')">➤</button>
           </div>
         </div>
       </div>`;
     }).join('');
   } catch(e) {
     el.innerHTML = '<div class="empty"><div class="empty-ico">📸</div><div class="empty-title">Could not load posts</div></div>';
+  }
+}
+
+async function upLike(postId, btn) {
+  if (!currentUser) { showToast('Sign in to like', ''); return; }
+  const isLiked = _upLiked[postId];
+  const cnt = document.getElementById('up-lkc-' + postId);
+  const cur = parseInt(cnt?.textContent || '0', 10);
+  if (isLiked) {
+    _upLiked[postId] = false;
+    btn.classList.remove('lk');
+    if (cnt) cnt.textContent = Math.max(0, cur - 1);
+    await sb.from('reactions').delete().eq('user_id', currentUser.id).eq('entity_id', postId).eq('entity_type', 'post').eq('type', 'like');
+    await sb.from('posts').update({ like_count: Math.max(0, cur - 1) }).eq('id', postId);
+  } else {
+    _upLiked[postId] = true;
+    btn.classList.add('lk');
+    if (cnt) cnt.textContent = cur + 1;
+    await sb.from('reactions').upsert({ user_id: currentUser.id, entity_id: postId, entity_type: 'post', type: 'like' }, { onConflict: 'user_id,entity_id,entity_type,type' });
+    await sb.from('posts').update({ like_count: cur + 1 }).eq('id', postId);
+  }
+}
+
+function upToggleCmt(postId) {
+  const wrap = document.getElementById('up-cmt-' + postId);
+  if (!wrap) return;
+  const open = wrap.style.display === 'block';
+  wrap.style.display = open ? 'none' : 'block';
+  if (!open && !_upCmtCache[postId]) upLoadComments(postId);
+}
+
+async function upLoadComments(postId) {
+  const listEl = document.getElementById('up-cmt-list-' + postId);
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="padding:10px 14px;font-size:.75rem;color:var(--mu)">Loading…</div>';
+  try {
+    const r = await fetch('/api/comments?entity_id=' + encodeURIComponent(postId) + '&entity_type=post');
+    const j = await r.json();
+    _upCmtCache[postId] = j.comments || [];
+    listEl.innerHTML = upBuildCmts(postId);
+  } catch(e) {
+    listEl.innerHTML = '<div style="padding:10px 14px;font-size:.74rem;color:var(--mu)">Could not load comments</div>';
+  }
+}
+
+function upBuildCmts(postId) {
+  const cmts = _upCmtCache[postId] || [];
+  if (!cmts.length) return '<div style="padding:10px 14px;font-size:.75rem;color:var(--mu)">No comments yet. Be first!</div>';
+  const top = cmts.filter(c => !c.parent_id);
+  function renderOne(c, depth) {
+    const replies = cmts.filter(r => r.parent_id === c.id);
+    const av = c.profiles?.avatar_url
+      ? `<img src="${escHtml(c.profiles.avatar_url)}" alt=""/>`
+      : escHtml((c.profiles?.display_name || '?')[0].toUpperCase());
+    const name = escHtml(c.profiles?.display_name || c.profiles?.username || 'User');
+    const t = new Date(c.created_at);
+    const timeStr = t.toLocaleDateString('en-ZA',{day:'numeric',month:'short'}) + ' ' + t.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});
+    const cid = escHtml(c.id);
+    const pid = escHtml(postId);
+    return `<div class="up-cmt-item">
+      <div class="up-cmt-av">${av}</div>
+      <div style="flex:1;min-width:0">
+        <div class="up-cmt-name">${name}</div>
+        <div class="up-cmt-text">${escHtml(c.content || c.body || '')}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="up-cmt-time">${timeStr}</div>
+          ${depth < 2 ? `<button class="up-cmt-reply-btn" onclick="upStartReply('${pid}','${cid}','${name}')">↩ Reply</button>` : ''}
+        </div>
+        ${replies.length ? `<div class="up-cmt-replies">${replies.map(r => renderOne(r, depth + 1)).join('')}</div>` : ''}
+      </div>
+    </div>`;
+  }
+  return top.map(c => renderOne(c, 0)).join('');
+}
+
+function upStartReply(postId, cmtId, name) {
+  _upReplyTo[postId] = cmtId;
+  const rb = document.getElementById('up-rb-' + postId);
+  const rbt = document.getElementById('up-rb-txt-' + postId);
+  if (rb) rb.style.display = 'flex';
+  if (rbt) rbt.textContent = 'Replying to ' + name;
+  const inp = document.getElementById('up-cmt-inp-' + postId);
+  if (inp) { inp.placeholder = 'Reply to ' + name + '…'; inp.focus(); }
+}
+
+function upCancelReply(postId) {
+  _upReplyTo[postId] = null;
+  const rb = document.getElementById('up-rb-' + postId);
+  if (rb) rb.style.display = 'none';
+  const inp = document.getElementById('up-cmt-inp-' + postId);
+  if (inp) inp.placeholder = 'Add a comment…';
+}
+
+async function upDoComment(postId) {
+  if (!currentUser) { showToast('Sign in to comment', ''); return; }
+  const inp = document.getElementById('up-cmt-inp-' + postId);
+  const val = inp?.value?.trim();
+  if (!val) return;
+  inp.value = '';
+  const payload = { entity_id: postId, entity_type: 'post', content: val };
+  if (_upReplyTo[postId]) payload.parent_id = _upReplyTo[postId];
+  try {
+    const r = await fetch('/api/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _upToken },
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) throw new Error('fail');
+    upCancelReply(postId);
+    delete _upCmtCache[postId];
+    await upLoadComments(postId);
+    const cnt = document.getElementById('up-cmc-' + postId);
+    if (cnt) cnt.textContent = parseInt(cnt.textContent || '0', 10) + 1;
+  } catch(e) {
+    showToast('Could not post comment', '');
   }
 }
 
