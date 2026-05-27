@@ -667,10 +667,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   <div style="padding:24px 16px 8px;font-family:'Bebas Neue',sans-serif;font-size:2.2rem;letter-spacing:.02em">🎟 My Pulsefy</div>
   <div class="stbs">
     <div class="stb active" onclick="switchST(this,'sp-bk')">🎟 Bookings</div>
+    <div class="stb" onclick="switchST(this,'sp-orders');renderPickupOrders()">📦 Orders</div>
     <div class="stb" onclick="switchST(this,'sp-sev')">🔖 Saved Events</div>
     <div class="stb" onclick="switchST(this,'sp-sbiz')">🏠 Saved Places</div>
   </div>
   <div class="sp active" id="sp-bk"><div id="bookings-list"></div></div>
+  <div class="sp" id="sp-orders"><div id="pickup-orders-list"></div></div>
   <div class="sp" id="sp-sev"><div id="sev-list"></div></div>
   <div class="sp" id="sp-sbiz"><div id="sbiz-list"></div></div>
 </div>
@@ -2259,6 +2261,12 @@ async function submitPickupOrder(bizId) {
   const j = await res.json().catch(() => ({}));
   if (!res.ok) { showToast(j.error || 'Order failed', 'err'); return; }
   document.getElementById('pickup-form-overlay')?.remove();
+  // save order ref to localStorage so user can track status
+  try {
+    const saved = JSON.parse(localStorage.getItem('pf_orders') || '[]');
+    saved.unshift({ ref: j.order_ref, bizId: bizId || Object.values(_bizCart)[0]?.bizId, bizName: Object.values(_bizCart)[0]?.bizName || '', total, placed_at: new Date().toISOString() });
+    localStorage.setItem('pf_orders', JSON.stringify(saved.slice(0, 20)));
+  } catch(_) {}
   _bizCart = {};
   const bar = document.getElementById('biz-cart-bar');
   if (bar) bar.style.display = 'none';
@@ -3057,6 +3065,40 @@ async function renderBookings() {
   }
   renderSaved();
 }
+async function renderPickupOrders() {
+  const el = document.getElementById('pickup-orders-list');
+  if (!el) return;
+  let refs = [];
+  try { refs = JSON.parse(localStorage.getItem('pf_orders') || '[]'); } catch(_) {}
+  if (!refs.length) {
+    el.innerHTML = `<div style="padding:40px 20px;text-align:center;color:var(--mu)"><div style="font-size:2.5rem;margin-bottom:10px">📦</div><div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:6px">No orders yet</div><div style="font-size:.78rem">Place a pickup order from any venue's menu and it will appear here.</div></div>`;
+    return;
+  }
+  el.innerHTML = `<div style="padding:12px 16px 4px;font-size:.68rem;font-weight:700;font-family:'Syne',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--mu)">Your Recent Orders</div>` +
+    refs.map(o => `<div style="margin:0 12px 10px;padding:14px;background:var(--surf);border:1px solid var(--border);border-radius:16px" id="ord-${esc(o.ref)}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.84rem">${esc(o.bizName || 'Venue')}</div><div style="font-size:.65rem;color:var(--mu);margin-top:2px">Ref: ${esc(o.ref)}</div></div>
+        <span id="status-${esc(o.ref)}" style="font-size:.62rem;font-weight:700;padding:4px 10px;border-radius:50px;background:rgba(255,92,0,.12);color:var(--or)">Loading…</span>
+      </div>
+      <div style="font-size:.74rem;color:var(--mu2)">Placed ${new Date(o.placed_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+    </div>`).join('');
+  // fetch live status for each order
+  for (const o of refs) {
+    try {
+      const r = await fetch(`/api/pickup-order-status/${encodeURIComponent(o.ref)}`);
+      const d = await r.json();
+      const badge = document.getElementById(`status-${esc(o.ref)}`);
+      if (!badge) continue;
+      const colors = { pending:'rgba(255,92,0,.12)|var(--or)', confirmed:'rgba(0,229,255,.1)|var(--cy)', ready:'rgba(198,255,74,.1)|var(--li)', completed:'rgba(0,212,170,.1)|var(--te)', cancelled:'rgba(255,45,120,.1)|var(--pk)' };
+      const [bg, col] = (colors[d.status] || 'rgba(255,255,255,.06)|var(--mu2)').split('|');
+      const labels = { pending:'⏳ Pending', confirmed:'✅ Confirmed', ready:'🔔 Ready for pickup!', completed:'✓ Collected', cancelled:'✕ Cancelled' };
+      badge.style.background = bg; badge.style.color = col;
+      badge.textContent = labels[d.status] || d.status;
+      if (d.status === 'ready') badge.style.animation = 'p 1.5s ease-in-out infinite';
+    } catch(_) {}
+  }
+}
+
 async function renderSaved() {
   const el = document.getElementById('sev-list');
   const bl = document.getElementById('sbiz-list');

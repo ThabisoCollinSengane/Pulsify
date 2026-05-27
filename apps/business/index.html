@@ -1300,11 +1300,12 @@ async function renderStats() {
     }
   } catch(_) {}
   document.getElementById('stats-row').innerHTML =
-    stat(postsCnt, 'Posts') + stat(eventsCnt, 'Events') +
-    stat(pending, 'Pending', 'var(--pk)') + stat('R' + todayRevenue.toFixed(0), 'Revenue', 'var(--li)');
+    stat(postsCnt, 'Posts', '', 'posts') + stat(eventsCnt, 'Events', '', 'events') +
+    stat(pending, 'Pending', 'var(--pk)', 'orders') + stat('R' + todayRevenue.toFixed(0), 'Revenue', 'var(--li)', 'analytics');
 }
-function stat(n, l, color = '') {
-  return `<div class="stat-card"><div class="stat-num" ${color ? 'style="color:' + color + '"' : ''}>${n}</div><div class="stat-lbl">${l}</div></div>`;
+function stat(n, l, color = '', tab = '') {
+  const click = tab ? `onclick="showTab('${tab}')" style="cursor:pointer"` : '';
+  return `<div class="stat-card" ${click}><div class="stat-num" ${color ? 'style="color:' + color + '"' : ''}>${n}</div><div class="stat-lbl">${l}</div></div>`;
 }
 
 async function renderAnalytics() {
@@ -2068,13 +2069,13 @@ function renderHomeOrdersPreview() {
   const el     = document.getElementById('home-orders-preview');
   if (!orders.length) { el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--mu);font-size:.8rem">No pending orders right now</div>'; return; }
   el.innerHTML = orders.map(o => `
-    <div style="display:flex;align-items:center;gap:10px;background:var(--surf);border:1px solid rgba(255,92,0,.25);border-radius:14px;padding:12px 14px;margin-bottom:8px">
+    <div onclick="showTab('orders')" style="display:flex;align-items:center;gap:10px;background:var(--surf);border:1px solid rgba(255,92,0,.25);border-radius:14px;padding:12px 14px;margin-bottom:8px;cursor:pointer">
       <div style="font-size:1.4rem">📦</div>
       <div style="flex:1;min-width:0">
         <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem">${xe(o.customer_name||'')} — R${parseFloat(o.total||0).toFixed(2)}</div>
         <div style="font-size:.68rem;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${xe(o.pickup_time||'Time not set')} · ${xe((o.items||[]).map(i=>i.name).join(', '))}</div>
       </div>
-      <span class="status-badge s-pending">Pending</span>
+      <span class="status-badge s-pending">Pending ›</span>
     </div>`).join('');
 }
 

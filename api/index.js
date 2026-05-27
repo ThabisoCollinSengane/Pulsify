@@ -2816,6 +2816,17 @@ module.exports = async (req, res) => {
       return res.status(200).json({ success: true, order_ref, order_id: order.id });
     }
 
+    /* ─── GET /pickup-order-status/:ref ─────────────────── */
+    const orderStatusRef = url.match(/^\/pickup-order-status\/([^/]+)$/)?.[1];
+    if (orderStatusRef && req.method === 'GET') {
+      const { data, error } = await sb().from('pickup_orders')
+        .select('order_ref,status,customer_name,items,total,pickup_time,created_at,business_id')
+        .eq('order_ref', orderStatusRef).maybeSingle();
+      if (error || !data) return res.status(404).json({ error: 'Order not found' });
+      const { data: biz } = await sb().from('businesses').select('name').eq('id', data.business_id).maybeSingle();
+      return res.status(200).json({ ...data, business_name: biz?.name || '' });
+    }
+
     /* ─── GET /squad-promos ──────────────────────────────── */
     if (url === '/squad-promos' && req.method === 'GET') {
       const city = (q.city || '').toLowerCase();
