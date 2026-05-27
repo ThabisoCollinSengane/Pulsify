@@ -2213,9 +2213,11 @@ function _cartAdd(itemId, price, name, bizId, bizName) {
   if (tot) tot.textContent = 'R' + total.toFixed(2);
 }
 
-function showPickupOrderForm() {
+async function showPickupOrderForm() {
   const total = Object.values(_bizCart).reduce((s, i) => s + i.qty * i.price, 0);
   if (!total) return;
+  const { data: { session } } = await getSB().auth.getSession();
+  if (!session) { showToast('Sign in to place an order', 'err'); showTab('profile'); return; }
   const firstItem = Object.values(_bizCart)[0];
   const bizName = firstItem?.bizName || '';
   const bizId   = firstItem?.bizId   || '';
