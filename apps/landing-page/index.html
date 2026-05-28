@@ -1389,13 +1389,14 @@ function getSB() {
 
 /* ── NAVIGATION ── */
 function showTab(name, _noPush) {
+  sessionStorage.setItem('p_last_tab', name);
   prevTab = curTab; curTab = name;
   document.querySelectorAll('.panel').forEach(p => { p.classList.remove('active'); p.style.display = ''; });
   document.querySelectorAll('.bb').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   const panel = document.getElementById('tab-' + name);
   if (panel) { panel.classList.add('active'); panel.style.display = name === 'home' ? 'flex' : 'block'; panel.scrollTop = 0; }
   document.getElementById('back-btn').classList.remove('show');
-  if (!_noPush) history.pushState({ tab: name, detail: false }, '');
+  if (!_noPush) history.replaceState({ tab: name, detail: false }, '');
   setTimeout(triggerRev, 80);
   if (name === 'me')      { renderProfile(); }
   if (name === 'tickets') renderBookings();
@@ -1497,13 +1498,14 @@ window.addEventListener('popstate', e => {
     return;
   }
 
-  // Priority 2 — normal tab/detail navigation
+  // Priority 2 — detail views that pushed their own history entry
   const s = e.state;
   if (s?.tab) {
     if (s.detail) showDetailTab(s.tab, true);
     else showTab(s.tab, true);
   } else {
-    // Bottom of browser history — stay on current tab instead of defaulting to home
+    // No SPA state — user has backed out of all in-app history.
+    // Re-anchor to current tab so a second back-press actually leaves the page.
     history.replaceState({ tab: curTab, detail: false }, '');
   }
 });
@@ -4608,12 +4610,15 @@ document.addEventListener('DOMContentLoaded', initSupabaseSession);
 })();
 
 window.addEventListener('DOMContentLoaded', () => {
-  history.replaceState({ tab: 'home', detail: false }, '');
-  // Load live data immediately
+  // Restore the last active tab (survives navigating away and coming back within the session)
+  const _restoredTab = sessionStorage.getItem('p_last_tab') || 'home';
+  history.replaceState({ tab: _restoredTab, detail: false }, '');
+  // Always preload home feed data in the background
   loadFeed(true);
   loadFrontline();
   loadPromoBanners();
-  triggerRev();
+  if (_restoredTab !== 'home') showTab(_restoredTab, true);
+  else triggerRev();
 
   // Deep-link from /map: ?eid=xxx or ?bid=xxx
   const _qp = new URLSearchParams(location.search);
