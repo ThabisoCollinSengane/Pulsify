@@ -1475,12 +1475,12 @@ window.addEventListener('popstate', e => {
   }
   // Style-toggled overlays (display:flex or display:block when visible)
   const styleOverlays = [
-    ['social-sheet-ov',      () => { document.getElementById('social-sheet-ov').style.display = 'none'; }],
-    ['friends-list-overlay', () => { document.getElementById('friends-list-overlay').style.display = 'none'; }],
-    ['fl-overlay',           () => { document.getElementById('fl-overlay').style.display = 'none'; }],
-    ['prof-overlay',         closeProfOverlay],
-    ['squad-invite-overlay', closeSquadInvite],
-    ['notif-overlay',        closeNotifPanel],
+    ['friends-list-overlay', () => { document.getElementById('friends-list-overlay').style.display = 'none'; }], // z:3000
+    ['fl-overlay',           () => { document.getElementById('fl-overlay').style.display = 'none'; }],           // z:2700
+    ['squad-invite-overlay', closeSquadInvite],                                                                    // z:2700
+    ['social-sheet-ov',      () => { document.getElementById('social-sheet-ov').style.display = 'none'; }],      // z:2600
+    ['prof-overlay',         closeProfOverlay],                                                                    // z:2500
+    ['notif-overlay',        closeNotifPanel],                                                                     // z:2000
   ];
   for (const [id, fn] of styleOverlays) {
     const el = document.getElementById(id);
