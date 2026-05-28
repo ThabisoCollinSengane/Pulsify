@@ -405,68 +405,72 @@ async function doCreate() {
   btn.innerHTML = '<span class="spinner"></span>Creating account…';
   btn.disabled  = true;
 
-  var fn   = document.getElementById('fn').value.trim();
-  var un   = document.getElementById('un').value.trim().replace('@','');
-  var em   = document.getElementById('em').value.trim();
-  var pw   = document.getElementById('pw').value;
-  var dob  = document.getElementById('dob').value || null;
-  var prov = document.getElementById('prov').value;
-  var city = document.getElementById('city').value.trim();
-  var ph   = document.getElementById('ph').value.trim();
-  var accType = document.getElementById('isorg').value || 'user';
-  var isOrg   = accType !== 'user';
-  var role    = accType;
-  var phone= ph ? '+27'+ph.replace(/^0/,'').replace(/\s/g,'') : null;
+  try {
+    var fn   = document.getElementById('fn').value.trim();
+    var un   = document.getElementById('un').value.trim().replace('@','');
+    var em   = document.getElementById('em').value.trim();
+    var pw   = document.getElementById('pw').value;
+    var dob  = document.getElementById('dob').value || null;
+    var prov = document.getElementById('prov').value;
+    var city = document.getElementById('city').value.trim();
+    var ph   = document.getElementById('ph').value.trim();
+    var accType = document.getElementById('isorg').value || 'user';
+    var isOrg   = accType !== 'user';
+    var role    = accType;
+    var phone   = ph ? '+27'+ph.replace(/^0/,'').replace(/\s/g,'') : null;
 
-  var { data, error } = await sb.auth.signUp({
-    email: em, password: pw,
-    options: {
-      data: { full_name: fn, username: un },
-      emailRedirectTo: window.location.origin + '/'
+    var { data, error } = await sb.auth.signUp({
+      email: em, password: pw,
+      options: {
+        data: { full_name: fn, username: un },
+        emailRedirectTo: window.location.origin + '/'
+      }
+    });
+
+    if (error) {
+      btn.innerHTML='Create My Account 🔥'; btn.disabled=false;
+      if ((error.message||'').toLowerCase().includes('already registered') || (error.message||'').toLowerCase().includes('already been registered')) {
+        return showErr('An account with this email already exists. <a href="/signin" style="color:var(--or)">Sign in instead →</a>');
+      }
+      return showErr(error.message || 'Sign-up failed. Please try again.');
     }
-  });
 
-  if (error) {
+    var session = data.session;
+    var user    = data.user;
+
+    var bankName    = (document.getElementById('bank-name')?.value || '').trim();
+    var bankAccount = (document.getElementById('bank-account')?.value || '').trim();
+    var bizName     = (document.getElementById('biz-name')?.value || fn).trim();
+
+    var profileData = {
+      display_name: fn, username: un, email: em, role, is_page: isOrg,
+      dob, phone, province: prov, city, genres,
+      bio: '', avatar_url: null, agree_terms: true,
+      terms_date: new Date().toISOString(),
+      ...(isOrg && bankName && bankAccount ? { bank_name: bankName, account_number: bankAccount, business_name: bizName } : {}),
+    };
+
+    if (session) {
+      await saveSessionAndProfile(session, profileData);
+      if (role !== 'user') {
+        try { await sb.from('profiles').update({ role, is_page: isOrg }).eq('id', user.id); } catch(e) {}
+      }
+      const destLabel = role === 'organizer' ? '🎪 Organizer account created! Setting up your dashboard…'
+        : role === 'business' ? '🏪 Business account created! Setting up your dashboard…'
+        : '🎉 Welcome to Pulsefy!';
+      toast(destLabel, 'ok');
+      const dest = role === 'organizer' ? '/organizer'
+        : role === 'business' ? '/business'
+        : '/';
+      setTimeout(()=>window.location.href=dest, 1200);
+    } else {
+      btn.innerHTML='Create My Account 🔥'; btn.disabled=false;
+      localStorage.setItem('p_pending_profile', JSON.stringify(profileData));
+      showOk('<div style="font-size:1.4rem;margin-bottom:8px">📧</div><strong>Check your inbox!</strong><br/>We sent a confirmation link to <strong>' + em + '</strong>.<br/>Click the link in that email to activate your account. You\'ll be redirected to your dashboard after verification.<br/><span style="font-size:.74rem;color:var(--mu)">Didn\'t get it? Check spam or <a id="resend-link" href="#" onclick="resendEmail(\'' + em + '\')" style="color:var(--li)">resend →</a></span>');
+    }
+  } catch(e) {
     btn.innerHTML='Create My Account 🔥'; btn.disabled=false;
-    if (error.message.includes('already registered') || error.message.includes('already been registered')) {
-      return showErr('An account with this email already exists. <a href="/signin" style="color:var(--or)">Sign in instead →</a>');
-    }
-    return showErr(error.message);
-  }
-
-  var session = data.session;
-  var user    = data.user;
-
-  var bankName    = (document.getElementById('bank-name')?.value || '').trim();
-  var bankAccount = (document.getElementById('bank-account')?.value || '').trim();
-  var bizName     = (document.getElementById('biz-name')?.value || fn).trim();
-
-  var profileData = {
-    display_name: fn, username: un, email: em, role, is_page: isOrg,
-    dob, phone, province: prov, city, genres,
-    bio: '', avatar_url: null, agree_terms: true,
-    terms_date: new Date().toISOString(),
-    // bank info for subaccount (only sent for organizer/business)
-    ...(isOrg && bankName && bankAccount ? { bank_name: bankName, account_number: bankAccount, business_name: bizName } : {}),
-  };
-
-  if (session) {
-    await saveSessionAndProfile(session, profileData);
-    if (role !== 'user') {
-      try { await sb.from('profiles').update({ role, is_page: isOrg }).eq('id', user.id); } catch(e) {}
-    }
-    const destLabel = role === 'organizer' ? '🎪 Organizer account created! Setting up your dashboard…'
-      : role === 'business' ? '🏪 Business account created! Setting up your dashboard…'
-      : '🎉 Welcome to Pulsefy!';
-    toast(destLabel, 'ok');
-    const dest = role === 'organizer' ? '/organizer'
-      : role === 'business' ? '/business'
-      : '/';
-    setTimeout(()=>window.location.href=dest, 1200);
-  } else {
-    btn.innerHTML='Create My Account 🔥'; btn.disabled=false;
-    showOk('<div style="font-size:1.4rem;margin-bottom:8px">📧</div><strong>Check your inbox!</strong><br/>We sent a confirmation link to <strong>' + em + '</strong>.<br/>Click the link in that email to activate your account. You\'ll be redirected to your dashboard after verification.<br/><span style="font-size:.74rem;color:var(--mu)">Didn\'t get it? Check spam or <a id="resend-link" href="#" onclick="resendEmail(\'' + em + '\')" style="color:var(--li)">resend →</a></span>');
-    localStorage.setItem('p_pending_profile', JSON.stringify(profileData));
+    showErr('Something went wrong: ' + (e.message || 'please try again.'));
   }
 }
 
