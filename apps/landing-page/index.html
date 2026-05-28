@@ -1459,12 +1459,52 @@ function goBack() { history.back(); }
 function goHome() { showTab('home'); }
 
 window.addEventListener('popstate', e => {
+  // Priority 1 — close any open overlay/panel; keep user on current tab
+  // Class-toggled panels
+  const classOverlays = [
+    ['biz-page-overlay', 'open', closeBizPage],
+    ['map-panel',        'open', closeMapPanel],
+  ];
+  for (const [id, cls, fn] of classOverlays) {
+    if (document.getElementById(id)?.classList.contains(cls)) {
+      fn();
+      history.replaceState({ tab: curTab, detail: false }, '');
+      return;
+    }
+  }
+  // Style-toggled overlays (display:flex or display:block when visible)
+  const styleOverlays = [
+    ['social-sheet-ov',      () => { document.getElementById('social-sheet-ov').style.display = 'none'; }],
+    ['friends-list-overlay', () => { document.getElementById('friends-list-overlay').style.display = 'none'; }],
+    ['fl-overlay',           () => { document.getElementById('fl-overlay').style.display = 'none'; }],
+    ['prof-overlay',         closeProfOverlay],
+    ['squad-invite-overlay', closeSquadInvite],
+    ['notif-overlay',        closeNotifPanel],
+  ];
+  for (const [id, fn] of styleOverlays) {
+    const el = document.getElementById(id);
+    if (el && el.style.display !== '' && el.style.display !== 'none') {
+      fn();
+      history.replaceState({ tab: curTab, detail: false }, '');
+      return;
+    }
+  }
+  // Dynamic overlays created at runtime (e.g. location help sheet)
+  const locHelp = document.getElementById('loc-help-overlay');
+  if (locHelp) {
+    locHelp.remove();
+    history.replaceState({ tab: curTab, detail: false }, '');
+    return;
+  }
+
+  // Priority 2 — normal tab/detail navigation
   const s = e.state;
   if (s?.tab) {
     if (s.detail) showDetailTab(s.tab, true);
     else showTab(s.tab, true);
   } else {
-    showTab('home', true);
+    // Bottom of browser history — stay on current tab instead of defaulting to home
+    history.replaceState({ tab: curTab, detail: false }, '');
   }
 });
 
