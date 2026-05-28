@@ -742,8 +742,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
           <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.3rem">👤</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">My Profile &amp; Posts</div><div style="font-size:.67rem;color:var(--mu)">Your memories and events attended</div></div></div>
           <span style="color:var(--or);font-size:.8rem">→</span>
         </button>
-        <button onclick="showTab('tickets')" style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:14px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
-          <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.3rem">🎟</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">My Bookings</div><div style="font-size:.67rem;color:var(--mu)">Tickets, QR codes &amp; pickup orders</div></div></div>
+        <button onclick="window.location.href='/organizer'" style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:14px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.3rem">🎪</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Organizer Dashboard</div><div style="font-size:.67rem;color:var(--mu)">Create &amp; manage events</div></div></div>
           <span style="color:var(--or);font-size:.8rem">→</span>
         </button>
         <button onclick="window.location.href='/business'" style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:14px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
@@ -912,7 +912,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 
 <!-- FAQ OVERLAY -->
 <!-- FRIENDS LIST OVERLAY -->
-<div id="friends-list-overlay" style="display:none;position:fixed;inset:0;z-index:2400;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
+<div id="friends-list-overlay" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
   <div style="width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;max-height:80vh;display:flex;flex-direction:column;animation:su .25s ease">
     <div style="width:40px;height:4px;border-radius:2px;background:var(--border2);margin:10px auto 0;flex-shrink:0"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0">
@@ -4884,24 +4884,17 @@ function renderSquadWorkspace(detail, container) {
   const isAdmin = (members || []).some(m => m.user_id === currentUser?.id && m.role === 'admin');
 
   container.innerHTML = `
-    <div style="background:rgba(176,38,255,.06);border:1px solid rgba(176,38,255,.2);border-radius:12px;padding:10px 12px;margin-bottom:12px;display:flex;gap:10px;align-items:flex-start">
-      <span style="font-size:1.1rem;flex-shrink:0">👥</span>
-      <div>
-        <div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:800;color:var(--pu);margin-bottom:2px">SQUADS — Plan Together</div>
-        <div style="font-size:.7rem;color:var(--mu2);line-height:1.45">Create outings, chat with your crew, track RSVPs and link real events. Invite friends via WhatsApp or a share link.</div>
-      </div>
-    </div>
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
       ${isAdmin
         ? `<label style="position:relative;cursor:pointer;flex-shrink:0;display:block" title="Upload squad photo">
-             <div style="width:48px;height:48px;border-radius:12px;background:${squad.avatar_url ? '#000' : `linear-gradient(135deg,${tmpl.color}22,${tmpl.color}55)`};display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;border:1.5px solid var(--border2)">${squad.avatar_url ? `<img src="${x(squad.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>` : tmpl.icon}</div>
-             <div style="position:absolute;bottom:-3px;right:-3px;width:18px;height:18px;border-radius:50%;background:var(--or);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.6rem;border:2px solid var(--bg);font-weight:900">📷</div>
+             <div style="width:40px;height:40px;border-radius:10px;background:${squad.avatar_url ? '#000' : `linear-gradient(135deg,${tmpl.color}22,${tmpl.color}55)`};display:flex;align-items:center;justify-content:center;font-size:1.2rem;overflow:hidden;border:1.5px solid var(--border2)">${squad.avatar_url ? `<img src="${x(squad.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>` : tmpl.icon}</div>
+             <div style="position:absolute;bottom:-3px;right:-3px;width:15px;height:15px;border-radius:50%;background:var(--or);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.5rem;border:2px solid var(--bg);font-weight:900">📷</div>
              <input type="file" accept="image/*" style="display:none" onchange="uploadSquadAvatar('${x(squad.id)}', this)"/>
            </label>`
-        : `<div style="width:48px;height:48px;border-radius:12px;background:${squad.avatar_url ? '#000' : `linear-gradient(135deg,${tmpl.color}22,${tmpl.color}55)`};display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;overflow:hidden">${squad.avatar_url ? `<img src="${x(squad.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>` : tmpl.icon}</div>`}
+        : `<div style="width:40px;height:40px;border-radius:10px;background:${squad.avatar_url ? '#000' : `linear-gradient(135deg,${tmpl.color}22,${tmpl.color}55)`};display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;overflow:hidden">${squad.avatar_url ? `<img src="${x(squad.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>` : tmpl.icon}</div>`}
       <div style="flex:1;min-width:0">
-        <div style="font-family:'Syne',sans-serif;font-size:.98rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(squad.name)}</div>
-        <div style="font-size:.7rem;color:var(--mu)">👥 ${squad.member_count} · ${squad.is_public?'🌍 Public':'🔒 Private'}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(squad.name)}</div>
+        <div style="font-size:.65rem;color:var(--mu)">👥 ${squad.member_count} member${squad.member_count!==1?'s':''} · ${squad.is_public?'🌍 Public':'🔒 Private'}</div>
       </div>
     </div>
     ${squad.description
@@ -5044,8 +5037,11 @@ function renderPlansList(pane, plans, squadId) {
     </div>`;
   };
   let html = createBtn;
-  if (upcoming.length) html += upcoming.map(renderCard).join('');
-  if (past.length) html += `<div style="font-size:.7rem;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin:14px 0 10px;border-top:1px solid var(--border);padding-top:12px">Past Outings</div>` + past.map(renderCard).join('');
+  if (upcoming.length) {
+    html += upcoming.map(renderCard).join('');
+  } else {
+    html += `<div style="text-align:center;padding:20px 0"><div style="font-size:2rem;margin-bottom:8px">📅</div><div style="font-size:.78rem;color:var(--mu)">No upcoming outings.<br>Check the 🗓 Calendar for past ones.</div></div>`;
+  }
   pane.innerHTML = html;
 }
 
@@ -5463,17 +5459,20 @@ function renderInvitesBanner(invites) {
     banner = document.createElement('div'); banner.id = 'sq-invites-banner';
     squadsPane.insertBefore(banner, squadsPane.firstChild);
   }
-  banner.innerHTML = `<div style="background:rgba(176,38,255,.1);border:1.5px solid rgba(176,38,255,.3);border-radius:14px;padding:12px 14px;margin-bottom:12px">
-    <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;margin-bottom:10px">📬 ${invites.length} Squad Invite${invites.length>1?'s':''}</div>
+  banner.innerHTML = `<div style="background:rgba(176,38,255,.08);border:1px solid rgba(176,38,255,.25);border-radius:12px;padding:10px 12px;margin-bottom:10px">
+    <div style="font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--pu);margin-bottom:8px">📬 ${invites.length} Pending Invite${invites.length>1?'s':''}</div>
     ${invites.map(inv => {
       const sq=inv.squads||{}; const by=inv.profiles?.display_name||'Someone';
-      return `<div id="inv-banner-${x(inv.id)}" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07)">
+      const declined = inv.status === 'rejected';
+      return `<div id="inv-banner-${x(inv.id)}" style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.06)">
         <div style="flex:1;min-width:0">
-          <div style="font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(sq.name||'Squad')}</div>
-          <div style="font-size:.68rem;color:var(--mu)">Invited by ${x(by)}</div>
+          <div style="font-size:.78rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(sq.name||'Squad')}</div>
+          <div style="font-size:.64rem;color:var(--mu)">${declined?'<span style="color:var(--pk)">Declined</span> · ':''}Invited by ${x(by)}</div>
         </div>
-        <button onclick="acceptInvite('${x(inv.id)}')" style="padding:6px 12px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">Accept</button>
-        <button onclick="rejectInvite('${x(inv.id)}')" style="padding:6px 10px;background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.3);border-radius:50px;color:var(--pk);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">Decline</button>
+        ${declined
+          ? `<button onclick="deleteInvite('${x(inv.id)}')" style="padding:5px 10px;background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);border-radius:50px;color:var(--pk);font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;cursor:pointer">Remove</button>`
+          : `<button onclick="acceptInvite('${x(inv.id)}')" style="padding:5px 10px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;cursor:pointer">Accept</button>
+             <button onclick="rejectInvite('${x(inv.id)}')" style="padding:5px 8px;background:transparent;border:1px solid var(--border2);border-radius:50px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;cursor:pointer">✕</button>`}
       </div>`;
     }).join('')}
   </div>`;
@@ -5490,6 +5489,15 @@ async function acceptInvite(inviteId) {
 }
 
 async function rejectInvite(inviteId) {
+  const sb2 = getSB(); if (!sb2) return;
+  const session = (await sb2.auth.getSession()).data?.session; if (!session) return;
+  try {
+    await fetch(API + '/squads/invites/' + inviteId + '/reject', { method: 'POST', headers: { 'Authorization': 'Bearer ' + session.access_token } });
+    const row = document.getElementById('inv-banner-' + inviteId); if (row) row.remove();
+  } catch(e) {}
+}
+
+async function deleteInvite(inviteId) {
   const sb2 = getSB(); if (!sb2) return;
   const session = (await sb2.auth.getSession()).data?.session; if (!session) return;
   try {
