@@ -677,21 +677,127 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   <div class="sp" id="sp-sbiz"><div id="sbiz-list"></div></div>
 </div>
 
-<!-- ══ ME (Social + Profile combined) ══ -->
-<div class="panel" id="tab-me" style="padding:0">
-  <div class="stbs" style="padding:12px 16px 0">
-    <div class="stb active" id="me-stab-social" onclick="switchST(this,'me-sp-social')">👥 Social</div>
-    <div class="stb" id="me-stab-profile" onclick="switchST(this,'me-sp-profile');renderProfile()">👤 Profile</div>
+<!-- ══ ME ══ -->
+<div class="panel" id="tab-me" style="padding:0 0 80px;overflow-y:auto">
+
+  <!-- Signed-out state -->
+  <div id="prof-out" style="padding:70px 24px;text-align:center">
+    <div style="width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:2.2rem;margin:0 auto 20px;border:3px solid rgba(255,255,255,.08)">😊</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;margin-bottom:8px;letter-spacing:.04em">Sign In to Pulsefy</div>
+    <div style="font-size:.84rem;color:var(--mu);margin-bottom:28px;line-height:1.5">Access your tickets, saves &amp; squad</div>
+    <button class="fmb" onclick="window.location.href='/signin'" style="border-radius:50px;padding:14px;letter-spacing:.05em;margin-bottom:12px">Sign In</button>
+    <div style="font-size:.78rem;color:var(--mu)">No account? <a href="/create-account" style="color:var(--or);font-weight:700;text-decoration:none">Sign up free →</a></div>
   </div>
-  <!-- Social sub-pane -->
-  <div class="sp active" id="me-sp-social" style="padding:0">
-    <div style="padding:12px 16px 8px">
-      <div class="sq-sub-tabs">
+
+  <!-- Signed-in state -->
+  <div id="prof-in" style="display:none">
+
+    <!-- Banner + avatar -->
+    <div style="height:88px;background:linear-gradient(135deg,rgba(176,38,255,.35),rgba(255,92,0,.22));position:relative"></div>
+    <div style="padding:0 16px;margin-top:-42px;margin-bottom:10px;display:flex;align-items:flex-end;justify-content:space-between">
+      <div id="profile-av" style="width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:2.1rem;border:3px solid var(--bg);overflow:hidden;flex-shrink:0">😊</div>
+      <button onclick="window.location.href='/profile-settings'" style="background:var(--surf);border:1px solid var(--border2);border-radius:50px;padding:8px 16px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu2);cursor:pointer;margin-bottom:4px">⚙️ Settings</button>
+    </div>
+    <div style="padding:0 16px 2px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;line-height:1;margin-bottom:3px" id="profile-name">Your Name</div>
+      <div style="font-size:.76rem;color:var(--mu)" id="profile-sub">@handle</div>
+    </div>
+    <div class="vsr" style="margin:10px 0 4px">
+      <div class="vs"><div class="vn" id="ps-saved">0</div><div class="vl">Saved</div></div>
+      <div class="vs"><div class="vn" id="ps-tickets">0</div><div class="vl">Tickets</div></div>
+      <div class="vs"><div class="vn" id="ps-posts">0</div><div class="vl">Posts</div></div>
+    </div>
+
+    <!-- ── SOCIAL section ── -->
+    <div style="padding:18px 16px 4px">
+      <div style="font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Social</div>
+      <!-- 2-col grid: Friends + Squads -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <button onclick="openSocialSheet('friends')" style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:16px 14px;text-align:left;cursor:pointer">
+          <div style="font-size:1.5rem;margin-bottom:6px">👥</div>
+          <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx);margin-bottom:2px">Friends</div>
+          <div style="font-size:.66rem;color:var(--mu)">Search &amp; follow people</div>
+        </button>
+        <button onclick="openSocialSheet('squads')" style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:16px 14px;text-align:left;cursor:pointer">
+          <div style="font-size:1.5rem;margin-bottom:6px">👥</div>
+          <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx);margin-bottom:2px">Squads</div>
+          <div style="font-size:.66rem;color:var(--mu)">Groups &amp; workspaces</div>
+        </button>
+      </div>
+      <!-- Social feed full-width -->
+      <button onclick="window.location.href='/feeds'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:14px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:1.3rem">📰</span>
+          <div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Social Feed</div><div style="font-size:.67rem;color:var(--mu)">Posts from people you follow</div></div>
+        </div>
+        <span style="color:var(--or);font-size:.8rem">→</span>
+      </button>
+    </div>
+
+    <!-- ── MY STUFF section ── -->
+    <div style="padding:18px 16px 4px">
+      <div style="font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">My Stuff</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button onclick="window.location.href='/user-profile'" style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:14px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.3rem">👤</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">My Profile &amp; Posts</div><div style="font-size:.67rem;color:var(--mu)">Your memories and events attended</div></div></div>
+          <span style="color:var(--or);font-size:.8rem">→</span>
+        </button>
+        <button onclick="showTab('tickets')" style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:14px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.3rem">🎟</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">My Bookings</div><div style="font-size:.67rem;color:var(--mu)">Tickets, QR codes &amp; pickup orders</div></div></div>
+          <span style="color:var(--or);font-size:.8rem">→</span>
+        </button>
+        <button onclick="window.location.href='/business'" style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:14px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.3rem">🏪</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Business Dashboard</div><div style="font-size:.67rem;color:var(--mu)">Manage your venue or event page</div></div></div>
+          <span style="color:var(--or);font-size:.8rem">→</span>
+        </button>
+        <button id="promo-btn" onclick="openPromoManager()" style="display:none;background:linear-gradient(135deg,rgba(255,92,0,.08),rgba(255,45,120,.06));border:1px solid rgba(255,92,0,.25);border-radius:16px;padding:14px 16px;text-align:left;cursor:pointer;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.3rem">📣</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Promotions</div><div style="font-size:.67rem;color:var(--mu)">Create and manage promos</div></div></div>
+          <span style="color:var(--or);font-size:.8rem">→</span>
+        </button>
+        <button id="admin-promo-btn" onclick="openAdminPromos()" style="display:none;background:linear-gradient(135deg,rgba(176,38,255,.08),rgba(0,229,255,.06));border:1px solid rgba(176,38,255,.25);border-radius:16px;padding:14px 16px;text-align:left;cursor:pointer;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.3rem">👮</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Admin · Approve Promos</div><div style="font-size:.67rem;color:var(--mu)">Review pending submissions</div></div></div>
+          <span style="color:#B026FF;font-size:.8rem">→</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS section ── -->
+    <div style="padding:18px 16px 4px">
+      <div style="font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Settings</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button onclick="openMySocialSheet()" style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:14px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.3rem">🔗</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Social Links</div><div style="font-size:.67rem;color:var(--mu)">WhatsApp, Instagram, TikTok &amp; more</div></div></div>
+          <span style="color:var(--or);font-size:.8rem">→</span>
+        </button>
+        <button onclick="openFAQ()" style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:14px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.3rem">❓</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Help &amp; FAQ</div><div style="font-size:.67rem;color:var(--mu)">Get help and answers</div></div></div>
+          <span style="color:var(--or);font-size:.8rem">→</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Sign out -->
+    <div style="padding:20px 16px 8px">
+      <button id="signout-btn" style="width:100%;background:rgba(255,45,120,.07);border:1px solid rgba(255,45,120,.2);color:var(--pk);border-radius:50px;padding:14px;font-family:'Syne',sans-serif;font-size:.86rem;font-weight:700;cursor:pointer">Sign Out</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ SOCIAL SHEET (Friends + Squads overlay) ══ -->
+<div id="social-sheet-ov" style="display:none;position:fixed;inset:0;z-index:2600;background:rgba(0,0,0,.75);backdrop-filter:blur(10px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeSocialSheet()">
+  <div style="width:100%;max-width:520px;max-height:88vh;background:var(--bg2);border:1px solid var(--border2);border-bottom:none;border-radius:22px 22px 0 0;display:flex;flex-direction:column;animation:su .25s ease">
+    <div style="width:40px;height:4px;border-radius:2px;background:var(--border2);margin:10px auto 0;flex-shrink:0"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0;flex-shrink:0">
+      <div class="sq-sub-tabs" style="flex:1;border-bottom:none;margin:0">
         <button class="sq-stab active" id="stab-friends" onclick="showSquadSubTab('friends')">👥 Friends</button>
         <button class="sq-stab" id="stab-squads" onclick="showSquadSubTab('squads')">👥 Squads</button>
       </div>
-      <!-- Friends sub-pane -->
-      <div id="squad-friends-pane" style="padding:8px 0">
+      <button onclick="closeSocialSheet()" style="background:none;border:none;color:var(--mu);font-size:1.1rem;cursor:pointer;padding:4px 8px;margin-left:8px">✕</button>
+    </div>
+    <div style="overflow-y:auto;flex:1;padding-bottom:20px">
+      <!-- Friends pane -->
+      <div id="squad-friends-pane" style="padding:12px 16px 8px">
         <div class="sw" style="padding:0;margin-bottom:12px">
           <span class="sic">🔍</span>
           <input class="si" type="search" id="friend-search" placeholder="Search friends, businesses, organizers" autocomplete="off" oninput="searchUsers(this.value)"/>
@@ -706,75 +812,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
           <div id="squad-content"></div>
         </div>
       </div>
-      <!-- Squads sub-pane -->
-      <div id="squad-squads-pane" style="display:none;padding:0 0 80px;overflow-y:auto">
-        <div id="sq-tabs-row" style="display:flex;gap:6px;overflow-x:auto;padding:10px 0;border-bottom:1px solid var(--border);scrollbar-width:none"></div>
-        <div id="sq-workspace" style="padding:14px 0"></div>
-      </div>
-    </div>
-  </div>
-  <!-- Profile sub-pane -->
-  <div class="sp" id="me-sp-profile" style="padding:0 0 20px">
-    <div id="prof-out" style="padding:40px 20px;text-align:center">
-      <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 16px;border:3px solid rgba(255,255,255,.1)">😊</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;margin-bottom:6px">Sign In to Pulsefy</div>
-      <div style="font-size:.82rem;color:var(--mu);margin-bottom:24px">Access your tickets, saves &amp; squad</div>
-      <button class="fmb" onclick="window.location.href='/signin'" style="border-radius:50px;padding:13px;letter-spacing:.05em;margin-bottom:10px">Sign In</button>
-      <div style="font-size:.78rem;color:var(--mu)">No account? <a href="/create-account" style="color:var(--or);font-weight:700;text-decoration:none">Sign up free →</a></div>
-    </div>
-    <div id="prof-in" style="display:none">
-      <div style="height:90px;background:linear-gradient(135deg,rgba(176,38,255,.3),rgba(255,92,0,.2));position:relative"></div>
-      <div style="padding:0 16px;margin-top:-40px;margin-bottom:12px;display:flex;align-items:flex-end;justify-content:space-between">
-        <div id="profile-av" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:2rem;border:3px solid var(--bg);overflow:hidden;flex-shrink:0">😊</div>
-        <div style="display:flex;gap:8px;padding-bottom:6px">
-          <button onclick="window.location.href='/profile-settings'" style="background:var(--surf);border:1px solid var(--border2);border-radius:50px;padding:7px 14px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu2);cursor:pointer">⚙️ Settings</button>
-        </div>
-      </div>
-      <div style="padding:0 16px 6px">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.7rem;line-height:1;margin-bottom:2px" id="profile-name">Your Name</div>
-        <div style="font-size:.76rem;color:var(--mu);margin-bottom:12px" id="profile-sub">@handle</div>
-      </div>
-      <div class="vsr" style="margin:0 0 4px">
-        <div class="vs"><div class="vn" id="ps-saved">0</div><div class="vl">Saved</div></div>
-        <div class="vs"><div class="vn" id="ps-tickets">0</div><div class="vl">Tickets</div></div>
-        <div class="vs"><div class="vn" id="ps-posts">0</div><div class="vl">Posts</div></div>
-      </div>
-      <div style="padding:8px 14px">
-        <button onclick="window.location.href='/feeds'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">📰</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Social Feed</div><div style="font-size:.68rem;color:var(--mu)">Posts from people you follow</div></div></div>
-          <span style="color:var(--or);font-size:.8rem">→</span>
-        </button>
-        <button onclick="window.location.href='/user-profile'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">👤</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">My Profile &amp; Posts</div><div style="font-size:.68rem;color:var(--mu)">Your memories and events attended</div></div></div>
-          <span style="color:var(--or);font-size:.8rem">→</span>
-        </button>
-        <button onclick="showTab('tickets')" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">🎟</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">My Bookings</div><div style="font-size:.68rem;color:var(--mu)">Tickets and QR codes</div></div></div>
-          <span style="color:var(--or);font-size:.8rem">→</span>
-        </button>
-        <button onclick="window.location.href='/business'" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">🏪</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Business Dashboard</div><div style="font-size:.68rem;color:var(--mu)">Manage your venue or event page</div></div></div>
-          <span style="color:var(--or);font-size:.8rem">→</span>
-        </button>
-      </div>
-      <div style="padding:0 14px 20px">
-        <button id="promo-btn" onclick="openPromoManager()" style="display:none;width:100%;background:linear-gradient(135deg,rgba(255,92,0,.1),rgba(255,45,120,.08));border:1px solid rgba(255,92,0,.3);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">📣</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Promotions</div><div style="font-size:.68rem;color:var(--mu)">Create and manage promos</div></div></div>
-          <span style="color:var(--or);font-size:.8rem">→</span>
-        </button>
-        <button id="admin-promo-btn" onclick="openAdminPromos()" style="display:none;width:100%;background:linear-gradient(135deg,rgba(176,38,255,.1),rgba(0,229,255,.08));border:1px solid rgba(176,38,255,.3);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">👮</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Admin · Approve Promos</div><div style="font-size:.68rem;color:var(--mu)">Review pending submissions</div></div></div>
-          <span style="color:#B026FF;font-size:.8rem">→</span>
-        </button>
-        <button onclick="openMySocialSheet()" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">🔗</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Social Links</div><div style="font-size:.68rem;color:var(--mu)">WhatsApp, Instagram, TikTok &amp; more</div></div></div>
-          <span style="color:var(--or);font-size:.8rem">→</span>
-        </button>
-        <button onclick="openFAQ()" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:14px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">❓</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Help & FAQ</div><div style="font-size:.68rem;color:var(--mu)">Get help and answers</div></div></div>
-          <span style="color:var(--or);font-size:.8rem">→</span>
-        </button>
-        <button id="signout-btn" style="width:100%;background:rgba(255,45,120,.07);border:1px solid rgba(255,45,120,.2);color:var(--pk);border-radius:14px;padding:13px;font-family:'Syne',sans-serif;font-size:.86rem;font-weight:700;cursor:pointer">Sign Out</button>
+      <!-- Squads pane -->
+      <div id="squad-squads-pane" style="display:none;padding:0 0 40px">
+        <div id="sq-tabs-row" style="display:flex;gap:6px;overflow-x:auto;padding:10px 16px;border-bottom:1px solid var(--border);scrollbar-width:none"></div>
+        <div id="sq-workspace" style="padding:14px 16px"></div>
       </div>
     </div>
   </div>
@@ -1356,7 +1397,7 @@ function showTab(name, _noPush) {
   document.getElementById('back-btn').classList.remove('show');
   if (!_noPush) history.pushState({ tab: name, detail: false }, '');
   setTimeout(triggerRev, 80);
-  if (name === 'me')      { renderProfile(); renderSquad(); showSquadSubTab('friends'); }
+  if (name === 'me')      { renderProfile(); }
   if (name === 'tickets') renderBookings();
   if (name === 'discover') loadDiscover();
   if (name === 'map') {
@@ -2706,6 +2747,16 @@ const _MAP_HOME = { center: [30.9753, -29.8587], zoom: 10 };
 function snapMapBack() {
   if (!mapObj) return;
   mapObj.flyTo({ center: _MAP_HOME.center, zoom: _MAP_HOME.zoom, duration: 900, essential: true });
+}
+
+function openSocialSheet(tab) {
+  renderSquad();
+  const ov = document.getElementById('social-sheet-ov');
+  ov.style.display = 'flex';
+  showSquadSubTab(tab || 'friends');
+}
+function closeSocialSheet() {
+  document.getElementById('social-sheet-ov').style.display = 'none';
 }
 
 function showLocationHelp(retryFn) {
