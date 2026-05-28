@@ -874,7 +874,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   </div>
 </div>
 
-<div id="prof-overlay" style="display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeProfOverlay()">
+<div id="prof-overlay" style="display:none;position:fixed;inset:0;z-index:3500;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeProfOverlay()">
   <div style="width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;max-height:94vh;display:flex;flex-direction:column;animation:su .25s ease;position:relative">
     <div style="width:40px;height:4px;border-radius:2px;background:var(--border2);margin:10px auto 0;flex-shrink:0"></div>
     <button onclick="closeProfOverlay()" style="position:absolute;top:14px;right:14px;background:rgba(0,0,0,.5);border:1px solid var(--border2);color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;z-index:5">✕</button>
@@ -1475,11 +1475,11 @@ window.addEventListener('popstate', e => {
   }
   // Style-toggled overlays (display:flex or display:block when visible)
   const styleOverlays = [
+    ['prof-overlay',         closeProfOverlay],                                                                    // z:3500
     ['friends-list-overlay', () => { document.getElementById('friends-list-overlay').style.display = 'none'; }], // z:3000
     ['fl-overlay',           () => { document.getElementById('fl-overlay').style.display = 'none'; }],           // z:2700
     ['squad-invite-overlay', closeSquadInvite],                                                                    // z:2700
     ['social-sheet-ov',      () => { document.getElementById('social-sheet-ov').style.display = 'none'; }],      // z:2600
-    ['prof-overlay',         closeProfOverlay],                                                                    // z:2500
     ['notif-overlay',        closeNotifPanel],                                                                     // z:2000
   ];
   for (const [id, fn] of styleOverlays) {
