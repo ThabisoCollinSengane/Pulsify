@@ -394,7 +394,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   border:2.5px solid rgba(255,255,255,.45);
   cursor:pointer;
   position:relative;
-  will-change:transform;
 }
 .mp-dot:active{filter:brightness(1.3) saturate(1.4)}
 .mp-dot::after{content:'';position:absolute;top:50%;left:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;background:#fff;box-shadow:0 0 3px rgba(0,0,0,.9);pointer-events:none}
@@ -635,7 +634,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   </div>
 
   <!-- Map canvas — truly full screen; header + chips float on top -->
-  <div id="mc" style="position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;will-change:transform;background:#05080F"></div>
+  <div id="mc" style="position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;background:#05080F"></div>
 
   <!-- Legend — collapsible, bottom-left -->
   <div id="map-legend" style="position:absolute;bottom:14px;left:12px;z-index:100;background:rgba(5,8,15,.93);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;pointer-events:auto">
@@ -3023,18 +3022,12 @@ function addPulseAnimation() {
   const style = document.createElement('style');
   style.textContent = `
     @keyframes mapPulse {
-      0%, 100% { 
-        transform: scale(1); 
-        opacity: 1; 
-      }
-      50% { 
-        transform: scale(1.15); 
-        opacity: 0.8; 
-      }
+      0%, 100% { filter: brightness(1) saturate(1); }
+      50%       { filter: brightness(1.35) saturate(1.4); }
     }
-    
+
     .mp-dot:hover {
-      animation: mapPulse 0.6s ease-in-out;
+      animation: mapPulse 0.5s ease-in-out;
     }
   `;
   document.head.appendChild(style);
