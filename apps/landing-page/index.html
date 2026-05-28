@@ -1226,6 +1226,7 @@ let userLon        = null;
 let mapInited      = false;
 let mapObj         = null;
 let mapMarkers     = [];
+let _mapFitDone    = false; // true after first fit; reset when user explicitly opens map tab
 let selTier        = null;
 let selQty         = 1;
 let activeEvId     = null;
@@ -1403,6 +1404,7 @@ function showTab(name, _noPush) {
   if (name === 'tickets') renderBookings();
   if (name === 'discover') loadDiscover();
   if (name === 'map') {
+    _mapFitDone = false; // always re-fit to current markers when user opens map tab
     if (!mapInited) {
       // First open — show splash, init map, ensure business pins
       showMapSplash();
@@ -2777,15 +2779,12 @@ function placeMapMarkers() {
   const cntEl = document.getElementById('map-cnt');
   if (cntEl) cntEl.textContent = mapMarkers.length;
 
-  // Auto-fit to KZN/eastern SA markers
-  const kznMarkers = mapMarkers.filter(m => {
-    const ll = m.getLngLat();
-    return ll.lng >= 28.5 && ll.lng <= 32.5 && ll.lat >= -31 && ll.lat <= -27;
-  });
-  if (kznMarkers.length > 0) {
+  // Fit to ALL current markers once per tab-open; don't re-fit on filter changes or background updates
+  if (!_mapFitDone && mapMarkers.length > 0) {
+    _mapFitDone = true;
     const bounds = new mapboxgl.LngLatBounds();
-    kznMarkers.forEach(m => bounds.extend(m.getLngLat()));
-    mapObj.fitBounds(bounds, { padding: 100, maxZoom: 12, duration: 1200 });
+    mapMarkers.forEach(m => bounds.extend(m.getLngLat()));
+    mapObj.fitBounds(bounds, { padding: 80, maxZoom: 13, duration: 1200 });
   }
 }
 
