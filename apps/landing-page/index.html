@@ -2560,106 +2560,109 @@ function initMap() {
         'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 8, 1, 12, 0]
       },
     });
-    // ── Cluster visuals: Pulsify branded box ─────────────────────────────
-    // Draw a rounded-rect box on canvas and register as a stretchable Mapbox image
-    (function _buildClusterBox() {
-      const pr = 2;                              // retina pixel ratio
-      const W = 64*pr, H = 30*pr, R = 7*pr;    // canvas dimensions + corner radius
-      const PAD = 4*pr;                          // glow bleed padding
-      const CW = W + PAD*2, CH = H + PAD*2;
-      const cv = document.createElement('canvas');
-      cv.width = CW; cv.height = CH;
-      const ctx = cv.getContext('2d');
+    // ── Cluster visuals: pulsing branded box ─────────────────────────────
+    // Mapbox StyleImageInterface — animated canvas redrawn every frame by the GL loop.
+    // render() draws both the pulsing rings AND the solid box so everything is one image.
+    const _CS = 100;  // canvas size (logical px, pixelRatio applied separately)
+    const _clusterImg = {
+      width: _CS, height: _CS,
+      data: new Uint8Array(_CS * _CS * 4),
+      _cv: null, _ctx: null,
+      onAdd() {
+        this._cv = document.createElement('canvas');
+        this._cv.width = _CS; this._cv.height = _CS;
+        this._ctx = this._cv.getContext('2d');
+      },
+      render() {
+        const ctx = this._ctx;
+        if (!ctx) return false;
+        const t  = (Date.now() % 2200) / 2200;   // 0→1 every 2.2 s
+        const t2 = (t + 0.55) % 1;               // second ring, offset half-phase
+        const cx = _CS / 2, cy = _CS / 2;
 
-      // Helper: draw rounded rect path
-      function rr(x,y,w,h,r){
-        ctx.beginPath();
-        ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
-        ctx.arcTo(x+w,y,x+w,y+r,r); ctx.lineTo(x+w,y+h-r);
-        ctx.arcTo(x+w,y+h,x+w-r,y+h,r); ctx.lineTo(x+r,y+h);
-        ctx.arcTo(x,y+h,x,y+h-r,r); ctx.lineTo(x,y+r);
-        ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
+        ctx.clearRect(0, 0, _CS, _CS);
+
+        // ── Pulsing rings (expand outward and fade) ──
+        [[t, 4, 0.65], [t2, 2.5, 0.45]].forEach(([ti, lw, maxA]) => {
+          ctx.beginPath();
+          ctx.arc(cx, cy, 10 + ti * 38, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(255,75,0,${(1 - ti) * maxA})`;
+          ctx.lineWidth = lw;
+          ctx.stroke();
+        });
+
+        // ── Rounded-rect box ──
+        const BW = 56, BH = 26, BR = 7;
+        const bx = cx - BW/2, by = cy - BH/2;
+        function rr(x,y,w,h,r) {
+          ctx.beginPath();
+          ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+          ctx.arcTo(x+w,y,x+w,y+r,r); ctx.lineTo(x+w,y+h-r);
+          ctx.arcTo(x+w,y+h,x+w-r,y+h,r); ctx.lineTo(x+r,y+h);
+          ctx.arcTo(x,y+h,x,y+h-r,r); ctx.lineTo(x,y+r);
+          ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
+        }
+        // Fill: red→orange gradient
+        rr(bx, by, BW, BH, BR);
+        const g = ctx.createLinearGradient(bx, by, bx+BW, by+BH);
+        g.addColorStop(0,   '#BF1500');
+        g.addColorStop(0.4, '#FF3B00');
+        g.addColorStop(1,   '#FF6A1A');
+        ctx.fillStyle = g;
+        ctx.fill();
+        // Border
+        ctx.strokeStyle = 'rgba(255,195,120,.85)';
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+        // Top gloss
+        rr(bx, by, BW, BH/2, BR);
+        const sh = ctx.createLinearGradient(0, by, 0, by+BH/2);
+        sh.addColorStop(0, 'rgba(255,255,255,.22)');
+        sh.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = sh;
+        ctx.fill();
+
+        this.data = ctx.getImageData(0, 0, _CS, _CS).data;
+        mapObj.triggerRepaint();   // keep the GL loop running every frame
+        return true;
       }
+    };
+    mapObj.addImage('cluster-anim', _clusterImg);
 
-      // 1. Neon outer glow (draw before fill so it bleeds outward)
-      ctx.save();
-      ctx.shadowColor = 'rgba(255,80,0,.9)';
-      ctx.shadowBlur  = 8*pr;
-      rr(PAD, PAD, W, H, R);
-      ctx.fillStyle = 'rgba(0,0,0,0)';  // transparent fill, only the shadow matters
-      ctx.fill();
-      ctx.restore();
-
-      // 2. Red→orange gradient fill
-      rr(PAD, PAD, W, H, R);
-      const grad = ctx.createLinearGradient(PAD, PAD, PAD+W, PAD+H);
-      grad.addColorStop(0,   '#B81400');
-      grad.addColorStop(0.4, '#FF3B00');
-      grad.addColorStop(1,   '#FF6B20');
-      ctx.fillStyle = grad;
-      ctx.fill();
-
-      // 3. Bright warm border
-      ctx.strokeStyle = 'rgba(255,200,130,.75)';
-      ctx.lineWidth   = 1.5*pr;
-      ctx.stroke();
-
-      // 4. Top-half gloss shine
-      rr(PAD, PAD, W, H/2, R);
-      const shine = ctx.createLinearGradient(0, PAD, 0, PAD+H/2);
-      shine.addColorStop(0, 'rgba(255,255,255,.22)');
-      shine.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = shine;
-      ctx.fill();
-
-      mapObj.addImage('cluster-box', cv, {
-        pixelRatio: pr,
-        // Middle 8px horizontal band is stretchable — box auto-widens for 3-digit counts
-        stretchX: [[ CW/2 - 4*pr, CW/2 + 4*pr ]],
-        stretchY: [[ CH/2 - 3*pr, CH/2 + 3*pr ]],
-        // Text lives inside the box inset from edges
-        content:  [ PAD + 3*pr, PAD + 3*pr, PAD + W - 3*pr, PAD + H - 3*pr ],
-      });
-    })();
-
-    // Soft blurred circle aura — gives the box a glowing halo behind it
+    // Layer 1: animated image (pulsing rings + box background)
     mapObj.addLayer({
-      id: 'clusters-glow',
-      type: 'circle',
+      id: 'clusters-anim',
+      type: 'symbol',
       source: 'pulsify-spots',
       filter: ['has', 'point_count'],
-      paint: {
-        'circle-color': '#FF4500',
-        'circle-radius': ['step', ['get', 'point_count'], 36, 10, 48, 25, 60],
-        'circle-opacity': 0.18,
-        'circle-blur': 0.75,
+      layout: {
+        'icon-image': 'cluster-anim',
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
+        'icon-size': ['step', ['get', 'point_count'], 0.72, 10, 0.88, 25, 1.05],
       },
     });
-    // Box symbol — icon stretches to fit the count text
+    // Layer 2: count text on top of the box
     mapObj.addLayer({
       id: 'clusters',
       type: 'symbol',
       source: 'pulsify-spots',
       filter: ['has', 'point_count'],
       layout: {
-        'icon-image': 'cluster-box',
-        'icon-text-fit': 'both',
-        'icon-text-fit-padding': [6, 14, 6, 14],
         'text-field': '{point_count_abbreviated}',
         'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
         'text-size': 13,
-        'icon-allow-overlap': true,
         'text-allow-overlap': true,
-        'symbol-sort-key': ['get', 'point_count'],
+        'text-ignore-placement': true,
       },
       paint: {
         'text-color': '#ffffff',
-        'text-halo-color': 'rgba(0,0,0,.3)',
-        'text-halo-width': 0.5,
+        'text-halo-color': 'rgba(0,0,0,.35)',
+        'text-halo-width': 1,
       },
     });
-    mapObj.on('click', 'clusters', (e) => {
-      const features = mapObj.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+    mapObj.on('click', 'clusters-anim', (e) => {
+      const features = mapObj.queryRenderedFeatures(e.point, { layers: ['clusters-anim'] });
       if (!features.length) return;
       const clusterId = features[0].properties.cluster_id;
       mapObj.getSource('pulsify-spots').getClusterExpansionZoom(clusterId, (err, zoom) => {
@@ -2667,10 +2670,8 @@ function initMap() {
         mapObj.easeTo({ center: features[0].geometry.coordinates, zoom });
       });
     });
-    ['clusters','clusters-glow'].forEach(id => {
-      mapObj.on('mouseenter', id, () => { mapObj.getCanvas().style.cursor = 'pointer'; });
-      mapObj.on('mouseleave', id, () => { mapObj.getCanvas().style.cursor = ''; });
-    });
+    mapObj.on('mouseenter', 'clusters-anim', () => { mapObj.getCanvas().style.cursor = 'pointer'; });
+    mapObj.on('mouseleave', 'clusters-anim', () => { mapObj.getCanvas().style.cursor = ''; });
 
     // Hide DOM markers below the cluster cutoff so only cluster bubbles/heatmap show at far-out zoom
     const _toggleMarkers = () => {
