@@ -2840,21 +2840,22 @@ function closeSocialSheet() {
 function showLocationHelp(retryFn) {
   const existing = document.getElementById('loc-help-overlay');
   if (existing) existing.remove();
+  window._locRetry = retryFn;
   const ov = document.createElement('div');
   ov.id = 'loc-help-overlay';
   ov.style.cssText = 'position:fixed;inset:0;z-index:3500;background:rgba(0,0,0,.75);backdrop-filter:blur(10px);display:flex;align-items:flex-end;justify-content:center';
   ov.innerHTML = `
     <div style="width:100%;max-width:520px;background:var(--bg2);border:1px solid var(--border2);border-bottom:none;border-radius:22px 22px 0 0;padding:20px 20px 34px;animation:su .25s ease">
       <div style="width:40px;height:4px;border-radius:2px;background:var(--border2);margin:0 auto 18px"></div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;margin-bottom:6px">📍 Location Access Needed</div>
-      <div style="font-size:.82rem;color:var(--mu);margin-bottom:16px;line-height:1.5">Chrome couldn't show the location permission prompt — this usually happens when another app's floating icon is on your screen (Messenger chat heads, WhatsApp bubbles, etc.).</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;margin-bottom:6px">&#128205; Location Access Needed</div>
+      <div style="font-size:.82rem;color:var(--mu);margin-bottom:16px;line-height:1.5">Chrome couldn&#39;t show the location permission prompt &#8212; this usually happens when another app&#39;s floating icon is on your screen (Messenger chat heads, WhatsApp bubbles, etc.).</div>
       <div style="font-size:.8rem;color:var(--tx);margin-bottom:16px;line-height:1.6">
         <div style="margin-bottom:8px"><strong style="color:var(--or)">Fix option 1:</strong> Close or dismiss any floating chat bubbles or app overlays, then tap Try Again below.</div>
-        <div><strong style="color:var(--or)">Fix option 2:</strong> Open Chrome → tap ⋮ → Settings → Site Settings → Location → find <strong>pulsefy.co.za</strong> → set to Allow.</div>
+        <div><strong style="color:var(--or)">Fix option 2:</strong> Open Chrome &#8594; tap &#8942; &#8594; Settings &#8594; Site Settings &#8594; Location &#8594; find <strong>pulsefy.co.za</strong> &#8594; set to Allow.</div>
       </div>
       <div style="display:flex;gap:10px">
         <button onclick="document.getElementById('loc-help-overlay').remove()" style="flex:1;padding:12px;background:var(--surf);border:1px solid var(--border2);border-radius:50px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--mu2);cursor:pointer">Dismiss</button>
-        <button onclick="document.getElementById('loc-help-overlay').remove();(${retryFn.toString()})()" style="flex:2;padding:12px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:#fff;cursor:pointer">Try Again</button>
+        <button onclick="document.getElementById('loc-help-overlay').remove();window._locRetry&&window._locRetry()" style="flex:2;padding:12px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:#fff;cursor:pointer">Try Again</button>
       </div>
     </div>`;
   ov.onclick = e => { if (e.target === ov) ov.remove(); };
@@ -2878,9 +2879,9 @@ function goToMyLocation() {
       const el = document.createElement('div');
       el.style.cssText = 'position:absolute;top:0;left:0;width:22px;height:22px';
       el.innerHTML = `
-        <div style="position:absolute;inset:-12px;border-radius:50%;background:rgba(0,229,255,.15);animation:locPulse 2s ease-out infinite;pointer-events:none"></div>
-        <div style="position:absolute;inset:-6px;border-radius:50%;border:1.5px solid rgba(0,229,255,.5);animation:locPulse 2s ease-out .5s infinite;pointer-events:none"></div>
-        <div style="position:absolute;inset:0;border-radius:50%;background:rgba(0,229,255,.95);border:2.5px solid #fff;box-shadow:0 0 10px rgba(0,229,255,1),0 0 22px rgba(0,229,255,.8),0 0 40px rgba(0,229,255,.45),0 2px 8px rgba(0,0,0,.9)"></div>
+        <div style="position:absolute;width:46px;height:46px;top:50%;left:50%;margin-top:-23px;margin-left:-23px;border-radius:50%;background:rgba(0,229,255,.12);animation:locPulse 2.2s ease-out infinite;pointer-events:none"></div>
+        <div style="position:absolute;width:34px;height:34px;top:50%;left:50%;margin-top:-17px;margin-left:-17px;border-radius:50%;border:1.5px solid rgba(0,229,255,.45);animation:locPulse 2.2s ease-out .6s infinite;pointer-events:none"></div>
+        <div style="position:absolute;width:22px;height:22px;top:0;left:0;border-radius:50%;background:rgba(0,229,255,.95);border:2.5px solid #fff;box-shadow:0 0 10px rgba(0,229,255,1),0 0 22px rgba(0,229,255,.8),0 0 40px rgba(0,229,255,.45),0 2px 8px rgba(0,0,0,.9)"></div>
         <div style="position:absolute;top:26px;left:50%;transform:translateX(-50%);background:rgba(0,229,255,.95);color:#000;font-family:'Syne',sans-serif;font-size:.5rem;font-weight:900;padding:2px 6px;border-radius:4px;white-space:nowrap;letter-spacing:.12em;box-shadow:0 0 10px rgba(0,229,255,.7)">YOU</div>
       `;
       window._myLocMarker = new mapboxgl.Marker({ element: el, anchor: 'center' }).setLngLat([lon, lat]).addTo(mapObj);
