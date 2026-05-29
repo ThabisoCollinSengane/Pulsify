@@ -2560,17 +2560,49 @@ function initMap() {
         'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 8, 1, 12, 0]
       },
     });
+    // ── Cluster visuals: three-ring alert beacon ──────────────────────────
+    // Layer 1: wide blurred outer glow (radar-ping halo)
+    mapObj.addLayer({
+      id: 'clusters-glow',
+      type: 'circle',
+      source: 'pulsify-spots',
+      filter: ['has', 'point_count'],
+      paint: {
+        'circle-color': ['step', ['get', 'point_count'], '#FF3B30', 10, '#FF6B35', 25, '#FF2D78'],
+        'circle-radius': ['step', ['get', 'point_count'], 42, 10, 56, 25, 70],
+        'circle-opacity': 0.18,
+        'circle-blur': 0.65,
+      },
+    });
+    // Layer 2: medium ring (inner glow band)
+    mapObj.addLayer({
+      id: 'clusters-ring',
+      type: 'circle',
+      source: 'pulsify-spots',
+      filter: ['has', 'point_count'],
+      paint: {
+        'circle-color': ['step', ['get', 'point_count'], '#FF3B30', 10, '#FF6B35', 25, '#FF2D78'],
+        'circle-radius': ['step', ['get', 'point_count'], 28, 10, 38, 25, 48],
+        'circle-opacity': 0.28,
+        'circle-blur': 0.35,
+        'circle-stroke-color': ['step', ['get', 'point_count'], '#FF3B30', 10, '#FF6B35', 25, '#FF2D78'],
+        'circle-stroke-width': 1.5,
+        'circle-stroke-opacity': 0.45,
+      },
+    });
+    // Layer 3: tight solid core with crisp white border
     mapObj.addLayer({
       id: 'clusters',
       type: 'circle',
       source: 'pulsify-spots',
       filter: ['has', 'point_count'],
       paint: {
-        'circle-color': ['step', ['get', 'point_count'], '#FF5C00', 5, '#FF2D78', 15, '#B026FF'],
-        'circle-radius': ['step', ['get', 'point_count'], 18, 5, 24, 15, 30],
-        'circle-stroke-color': 'rgba(255,255,255,.85)',
-        'circle-stroke-width': 2,
-        'circle-blur': 0.05,
+        'circle-color': ['step', ['get', 'point_count'], '#FF3B30', 10, '#FF6B35', 25, '#FF2D78'],
+        'circle-radius': ['step', ['get', 'point_count'], 18, 10, 24, 25, 30],
+        'circle-opacity': 0.95,
+        'circle-stroke-color': 'rgba(255,255,255,.92)',
+        'circle-stroke-width': 2.5,
+        'circle-blur': 0,
       },
     });
     mapObj.addLayer({
@@ -2583,7 +2615,7 @@ function initMap() {
         'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
         'text-size': 13,
       },
-      paint: { 'text-color': '#fff' },
+      paint: { 'text-color': '#fff', 'text-halo-color': 'rgba(0,0,0,.4)', 'text-halo-width': 1 },
     });
     mapObj.on('click', 'clusters', (e) => {
       const features = mapObj.queryRenderedFeatures(e.point, { layers: ['clusters'] });
@@ -2594,8 +2626,10 @@ function initMap() {
         mapObj.easeTo({ center: features[0].geometry.coordinates, zoom });
       });
     });
-    mapObj.on('mouseenter', 'clusters', () => { mapObj.getCanvas().style.cursor = 'pointer'; });
-    mapObj.on('mouseleave', 'clusters', () => { mapObj.getCanvas().style.cursor = ''; });
+    ['clusters','clusters-ring','clusters-glow'].forEach(id => {
+      mapObj.on('mouseenter', id, () => { mapObj.getCanvas().style.cursor = 'pointer'; });
+      mapObj.on('mouseleave', id, () => { mapObj.getCanvas().style.cursor = ''; });
+    });
 
     // Hide DOM markers below the cluster cutoff so only cluster bubbles/heatmap show at far-out zoom
     const _toggleMarkers = () => {
