@@ -2560,62 +2560,103 @@ function initMap() {
         'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 8, 1, 12, 0]
       },
     });
-    // ── Cluster visuals: three-ring alert beacon ──────────────────────────
-    // Layer 1: wide blurred outer glow (radar-ping halo)
+    // ── Cluster visuals: Pulsify branded box ─────────────────────────────
+    // Draw a rounded-rect box on canvas and register as a stretchable Mapbox image
+    (function _buildClusterBox() {
+      const pr = 2;                              // retina pixel ratio
+      const W = 64*pr, H = 30*pr, R = 7*pr;    // canvas dimensions + corner radius
+      const PAD = 4*pr;                          // glow bleed padding
+      const CW = W + PAD*2, CH = H + PAD*2;
+      const cv = document.createElement('canvas');
+      cv.width = CW; cv.height = CH;
+      const ctx = cv.getContext('2d');
+
+      // Helper: draw rounded rect path
+      function rr(x,y,w,h,r){
+        ctx.beginPath();
+        ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+        ctx.arcTo(x+w,y,x+w,y+r,r); ctx.lineTo(x+w,y+h-r);
+        ctx.arcTo(x+w,y+h,x+w-r,y+h,r); ctx.lineTo(x+r,y+h);
+        ctx.arcTo(x,y+h,x,y+h-r,r); ctx.lineTo(x,y+r);
+        ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
+      }
+
+      // 1. Neon outer glow (draw before fill so it bleeds outward)
+      ctx.save();
+      ctx.shadowColor = 'rgba(255,80,0,.9)';
+      ctx.shadowBlur  = 8*pr;
+      rr(PAD, PAD, W, H, R);
+      ctx.fillStyle = 'rgba(0,0,0,0)';  // transparent fill, only the shadow matters
+      ctx.fill();
+      ctx.restore();
+
+      // 2. Red→orange gradient fill
+      rr(PAD, PAD, W, H, R);
+      const grad = ctx.createLinearGradient(PAD, PAD, PAD+W, PAD+H);
+      grad.addColorStop(0,   '#B81400');
+      grad.addColorStop(0.4, '#FF3B00');
+      grad.addColorStop(1,   '#FF6B20');
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // 3. Bright warm border
+      ctx.strokeStyle = 'rgba(255,200,130,.75)';
+      ctx.lineWidth   = 1.5*pr;
+      ctx.stroke();
+
+      // 4. Top-half gloss shine
+      rr(PAD, PAD, W, H/2, R);
+      const shine = ctx.createLinearGradient(0, PAD, 0, PAD+H/2);
+      shine.addColorStop(0, 'rgba(255,255,255,.22)');
+      shine.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = shine;
+      ctx.fill();
+
+      mapObj.addImage('cluster-box', cv, {
+        pixelRatio: pr,
+        // Middle 8px horizontal band is stretchable — box auto-widens for 3-digit counts
+        stretchX: [[ CW/2 - 4*pr, CW/2 + 4*pr ]],
+        stretchY: [[ CH/2 - 3*pr, CH/2 + 3*pr ]],
+        // Text lives inside the box inset from edges
+        content:  [ PAD + 3*pr, PAD + 3*pr, PAD + W - 3*pr, PAD + H - 3*pr ],
+      });
+    })();
+
+    // Soft blurred circle aura — gives the box a glowing halo behind it
     mapObj.addLayer({
       id: 'clusters-glow',
       type: 'circle',
       source: 'pulsify-spots',
       filter: ['has', 'point_count'],
       paint: {
-        'circle-color': ['step', ['get', 'point_count'], '#FF3B30', 10, '#FF6B35', 25, '#FF2D78'],
-        'circle-radius': ['step', ['get', 'point_count'], 42, 10, 56, 25, 70],
+        'circle-color': '#FF4500',
+        'circle-radius': ['step', ['get', 'point_count'], 36, 10, 48, 25, 60],
         'circle-opacity': 0.18,
-        'circle-blur': 0.65,
+        'circle-blur': 0.75,
       },
     });
-    // Layer 2: medium ring (inner glow band)
-    mapObj.addLayer({
-      id: 'clusters-ring',
-      type: 'circle',
-      source: 'pulsify-spots',
-      filter: ['has', 'point_count'],
-      paint: {
-        'circle-color': ['step', ['get', 'point_count'], '#FF3B30', 10, '#FF6B35', 25, '#FF2D78'],
-        'circle-radius': ['step', ['get', 'point_count'], 28, 10, 38, 25, 48],
-        'circle-opacity': 0.28,
-        'circle-blur': 0.35,
-        'circle-stroke-color': ['step', ['get', 'point_count'], '#FF3B30', 10, '#FF6B35', 25, '#FF2D78'],
-        'circle-stroke-width': 1.5,
-        'circle-stroke-opacity': 0.45,
-      },
-    });
-    // Layer 3: tight solid core with crisp white border
+    // Box symbol — icon stretches to fit the count text
     mapObj.addLayer({
       id: 'clusters',
-      type: 'circle',
-      source: 'pulsify-spots',
-      filter: ['has', 'point_count'],
-      paint: {
-        'circle-color': ['step', ['get', 'point_count'], '#FF3B30', 10, '#FF6B35', 25, '#FF2D78'],
-        'circle-radius': ['step', ['get', 'point_count'], 18, 10, 24, 25, 30],
-        'circle-opacity': 0.95,
-        'circle-stroke-color': 'rgba(255,255,255,.92)',
-        'circle-stroke-width': 2.5,
-        'circle-blur': 0,
-      },
-    });
-    mapObj.addLayer({
-      id: 'cluster-count',
       type: 'symbol',
       source: 'pulsify-spots',
       filter: ['has', 'point_count'],
       layout: {
+        'icon-image': 'cluster-box',
+        'icon-text-fit': 'both',
+        'icon-text-fit-padding': [6, 14, 6, 14],
         'text-field': '{point_count_abbreviated}',
         'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
         'text-size': 13,
+        'icon-allow-overlap': true,
+        'text-allow-overlap': true,
+        'symbol-sort-key': ['get', 'point_count'],
       },
-      paint: { 'text-color': '#fff', 'text-halo-color': 'rgba(0,0,0,.4)', 'text-halo-width': 1 },
+      paint: {
+        'text-color': '#ffffff',
+        'text-halo-color': 'rgba(0,0,0,.3)',
+        'text-halo-width': 0.5,
+      },
     });
     mapObj.on('click', 'clusters', (e) => {
       const features = mapObj.queryRenderedFeatures(e.point, { layers: ['clusters'] });
@@ -2626,7 +2667,7 @@ function initMap() {
         mapObj.easeTo({ center: features[0].geometry.coordinates, zoom });
       });
     });
-    ['clusters','clusters-ring','clusters-glow'].forEach(id => {
+    ['clusters','clusters-glow'].forEach(id => {
       mapObj.on('mouseenter', id, () => { mapObj.getCanvas().style.cursor = 'pointer'; });
       mapObj.on('mouseleave', id, () => { mapObj.getCanvas().style.cursor = ''; });
     });
