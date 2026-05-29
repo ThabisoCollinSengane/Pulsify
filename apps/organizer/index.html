@@ -968,7 +968,7 @@ function previewOrgPost() {
 }
 
 function x(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function toast(m, t='') { const el=document.getElementById('toast'); el.textContent=m; el.className='toast '+t+' show'; setTimeout(()=>el.classList.remove('show'),3500); }
+function toast(m, t='') { const el=document.getElementById('toast'); el.textContent=m; el.className='toast '+t+' show'; setTimeout(()=>el.classList.remove('show'),4500); }
 async function safeJson(r) { try { const t = await r.text(); return t ? JSON.parse(t) : {}; } catch(e) { return {}; } }
 
 let _orgFeedLoaded = false;
@@ -1337,6 +1337,7 @@ function previewImgs(input) {
 }
 
 async function submitPost() {
+  if (!currentUser) { toast('Please sign in first', 'err'); return; }
   const caption = document.getElementById('post-caption').value.trim();
   const evTag   = document.getElementById('post-event-tag').value.trim();
   if (!caption && !_imgFiles.length) return toast('Add a caption or image to post', 'err');
@@ -1430,6 +1431,7 @@ function addEvTierRow() {
 }
 
 async function submitEvent() {
+  if (!currentUser) { toast('Please sign in first', 'err'); return; }
   const name  = document.getElementById('ev-name').value.trim();
   const date  = document.getElementById('ev-date').value;
   const time  = document.getElementById('ev-time').value;

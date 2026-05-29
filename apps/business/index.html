@@ -1150,7 +1150,7 @@ function renderDiscoverCard(ev) {
 }
 function openSheet(id)  { document.getElementById(id).classList.add('open'); }
 function closeSheet(id) { document.getElementById(id).classList.remove('open'); }
-function toast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast ' + type + ' show'; setTimeout(() => t.className = 'toast', 2600); }
+function toast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast ' + type + ' show'; setTimeout(() => t.className = 'toast', 4500); }
 async function doLogout() {
   try { const sb = getSB(); if (sb) await sb.auth.signOut(); } catch(e) {}
   ['biz_session','p_user','p_profile','p_token'].forEach(k => localStorage.removeItem(k));
@@ -1542,7 +1542,7 @@ async function renderPosts() {
 
 async function submitPost() {
   const cap = document.getElementById('post-cap').value.trim();
-  if (!cap && !_bizImgFile) { toast('Add a caption or photo', 'err'); return; }
+  if (!cap && !_bizImgFiles.length) { toast('Add a caption or photo', 'err'); return; }
 
   const btn = document.querySelector('#post-sheet .btn-primary');
   if (btn) { btn.disabled = true; btn.textContent = 'Publishing…'; }
