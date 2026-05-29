@@ -654,10 +654,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     </div>
   </div>
 
-  <!-- Centred card overlay — appears on marker tap -->
-  <div id="map-panel" onclick="if(event.target===this)closeMapPanel()">
-    <div id="mp-card"><div id="mp-content"></div></div>
-  </div>
 </div>
 
 <!-- ══ BOOKINGS ══ -->
@@ -2739,12 +2735,15 @@ function placeMapMarkers() {
       inset 0 1px 0 rgba(255,255,255,.5)
     `;
 
-    // Pulsing ring on every marker — events get a faster/brighter ring
+    // Pulsing ring — explicit size/margin instead of inset to avoid mobile overflow bugs
+    const ringSize = isEv ? 56 : 46;
     const ring = document.createElement('div');
     ring.className = 'mp-ring';
     ring.style.cssText = `
       position:absolute;
-      inset:${isEv ? '-7px' : '-5px'};
+      width:${ringSize}px;height:${ringSize}px;
+      top:50%;left:50%;
+      margin-top:-${ringSize/2}px;margin-left:-${ringSize/2}px;
       border-radius:50%;
       border:${isEv ? '2px' : '1.5px'} solid ${s.bg};
       animation:gring ${isEv ? '1.8s' : '2.6s'} ease-out infinite;
@@ -2773,11 +2772,13 @@ function placeMapMarkers() {
       `;
     });
 
-    el.addEventListener('click', e => {
+    const _markerOpen = e => {
       e.stopPropagation();
       if (window._mapMarkerTapped) window._mapMarkerTapped();
       showMapPanel(item, type, s);
-    });
+    };
+    el.addEventListener('click', _markerOpen);
+    el.addEventListener('touchend', _markerOpen, { passive: false });
 
     mapMarkers.push(new mapboxgl.Marker({element: el, anchor: 'center'}).setLngLat([lon, lat]).addTo(mapObj));
   });
@@ -2864,6 +2865,15 @@ function showLocationHelp(retryFn) {
 
 function goToMyLocation() {
   if (!mapObj) return;
+  // Toggle: if YOU marker is already showing, remove it and reset button
+  if (window._myLocMarker) {
+    window._myLocMarker.remove();
+    window._myLocMarker = null;
+    const btn = document.getElementById('map-loc-btn');
+    if (btn) { btn.textContent = '📍'; btn.style.background = 'rgba(5,8,15,.7)'; btn.style.border = '1px solid rgba(0,229,255,.4)'; }
+    showToast('Location hidden');
+    return;
+  }
   if (!navigator.geolocation) { showToast('Location not supported on this device', 'err'); return; }
   const btn = document.getElementById('map-loc-btn');
   if (btn) { btn.textContent = '⏳'; btn.style.background = 'rgba(0,229,255,.15)'; }
@@ -2871,7 +2881,7 @@ function goToMyLocation() {
     pos => {
       const { latitude: lat, longitude: lon } = pos.coords;
       const inSA = lat >= -35 && lat <= -22 && lon >= 16 && lon <= 34;
-      if (btn) { btn.textContent = '📍'; btn.style.background = inSA ? 'rgba(0,229,255,.2)' : 'rgba(5,8,15,.7)'; }
+      if (btn) { btn.textContent = '📍'; btn.style.background = inSA ? 'rgba(0,229,255,.2)' : 'rgba(5,8,15,.7)'; btn.style.border = inSA ? '1px solid rgba(0,229,255,.9)' : '1px solid rgba(0,229,255,.4)'; }
       if (!inSA) { showToast('You appear to be outside South Africa'); return; }
       mapObj.flyTo({ center: [lon, lat], zoom: 13, duration: 1200, essential: true });
       // Add/refresh user location marker
@@ -6055,5 +6065,9 @@ function obClose() {
 }
 
 </script>
+<!-- Map card overlay — must be body-level so position:fixed has root stacking context (not inside tab-map's z-index:20 context) -->
+<div id="map-panel" onclick="if(event.target===this)closeMapPanel()">
+  <div id="mp-card"><div id="mp-content"></div></div>
+</div>
 </body>
 </html>
