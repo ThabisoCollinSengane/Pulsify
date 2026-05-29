@@ -120,3 +120,46 @@ npx vercel --prod --yes --force --token=<VT>
 - **Always read before editing.** Check the actual file state — past sessions may have left partial changes.
 - **Claude can merge PRs** using the GitHub MCP tools (`mcp__github__merge_pull_request`). Do this when CI is green and work is complete.
 - Subscribe to PR activity with `mcp__github__subscribe_pr_activity` to watch CI and auto-fix failures.
+
+---
+
+## 7. Fixes Log (branch `claude/fix-event-organizer-feeds-ZCzRM`)
+
+Major fixes applied. Read this before touching the related areas — these are non-obvious and easy to regress.
+
+### Overlay z-index hierarchy + back button
+Overlays must stack and close in descending z-index order.
+- `fl-overlay` (followers/following) **4000** → `prof-overlay` **3500** → `friends-list-overlay` **3000** → `squad-invite-overlay` **2700** → `social-sheet-ov` **2600** → `notif-overlay` **2000** → `#map-panel` **400**.
+- The `popstate` handler's `styleOverlays` array must list overlays in this same descending order so the back button closes the topmost one first.
+- **PWA exit guard:** `DOMContentLoaded` seeds two history entries (`replaceState` base sentinel + `pushState` current). When `popstate` reaches the sentinel, `showExitConfirm()` shows an "Exit Pulsify?" dialog instead of letting the app close. `_exitConfirmed` flag lets the real exit through on the second back.
+
+### Map marker positioning (CSS specificity — the big one)
+**Root cause:** the page `<style>` loads *after* `mapbox-gl.css` with equal specificity, so `.mp-dot { position:relative }` overrode Mapbox's required `.mapboxgl-marker { position:absolute; top:0; left:0 }`. This caused markers to drift (correct at max zoom, drifting to the ocean at low zoom — flow-offset that's tiny in pixels but huge in km when zoomed out).
+- **Fix:** `.mp-dot` must explicitly set `position:absolute; top:0; left:0`. **Never** set `position:relative` on a marker element.
+- Removed `will-change:transform` from `.mp-dot` and `#mc` (GPU compositor fought Mapbox's main-thread positioning on Android Chrome).
+- Hover/active effects use `filter`/`box-shadow` only — **never `transform`** (Mapbox owns the element's `transform`).
+- Marker rings & the "YOU" pin use explicit `width/height` + negative margins for centering — **never `inset:-Npx`** (on Android Chrome `inset` on an absolutely-positioned child resolved against the map canvas, blowing the ring up to full-screen size).
+
+### Map "snap back to Durban"
+Every `placeMapMarkers()` call used to filter to KZN and `fitBounds`. Replaced with a `_mapFitDone` flag — fit to **all** markers exactly once per explicit map-tab open, never on filter changes or background refreshes.
+
+### Map popup card not opening
+**Root cause:** `#map-panel` lived inside `#tab-map` (`position:fixed; z-index:20`), which creates a stacking context — capping the panel's effective z-index at 20 globally, so the bottom nav (`z-index:800`) painted over it.
+- **Fix:** `#map-panel` must be a **direct child of `<body>`**, not nested in any positioned/z-indexed panel.
+- Markers listen to both `click` and `touchend` (Android Chrome sometimes drops `click` on Mapbox elements).
+
+### Marker icons render as text
+`el.textContent = svgString` printed raw `<svg>` markup. Icons are SVG strings now — use `el.innerHTML` / `insertAdjacentHTML` with a `pointer-events:none` wrapper span.
+
+### Live-location help sheet showed raw JS
+`showLocationHelp` built its retry button with `retryFn.toString()` inlined into an `onclick` attribute — the function body contained `<div>` tags that broke HTML parsing and dumped source as visible text. **Fix:** store the retry fn in `window._locRetry` and call `window._locRetry()` from the handler. Never inline `.toString()` of a function into HTML.
+- The 📍 location button is a **toggle**: if the "YOU" marker is already shown, tapping hides it; otherwise it requests geolocation. Active state = bright cyan border.
+
+### Map: globe projection + free navigation
+Map uses `projection:'globe'` with `minZoom:1.5`, `dragRotate/pitch/touchPitch` enabled, touch rotation on, and `setFog()` atmosphere — gives the spinnable "circle/sphere" look. `maxBounds` was **removed** for free navigation.
+- **This does NOT affect marker positioning** — that's a pure-CSS concern (see above). Globe/rotation/pitch are orthogonal; Mapbox recomputes marker transforms every frame.
+- `snapMapBack()` (⌂ button) resets `bearing:0, pitch:0` too, so users can undo free rotation.
+- **Trade-off:** removing `maxBounds` lets users pan off South Africa. The ⌂ reset and the once-per-open auto-fit keep the default view anchored on SA.
+
+### Database coordinates
+Inspected `cjzewfvtdayjgjdpdmln` — coordinates were clean (no positive lats, no zeros, 1 null). A one-time geocoding migration (`_archive/patches/geocode_migration.py`, Nominatim) and SA-bounds validation triggers exist for future bad data. SA bounds: **lat -35 to -22, lon 16 to 33** (Hard rule #5).
