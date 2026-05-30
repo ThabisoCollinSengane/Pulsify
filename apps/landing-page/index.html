@@ -615,16 +615,16 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 <div class="panel dp" id="tab-biz-detail"><div id="biz-detail"></div></div>
 
 <!-- ══ MAP ══ -->
-<div class="panel" id="tab-map" style="overflow:hidden">
-  <!-- Header bar — floats over map -->
-  <div style="position:absolute;top:0;left:0;right:0;height:56px;z-index:50;background:linear-gradient(180deg,rgba(5,8,15,.88) 0%,rgba(5,8,15,0) 100%);backdrop-filter:blur(12px);display:flex;align-items:center;padding:0 14px;gap:8px">
+<div class="panel" id="tab-map" style="overflow:hidden;top:0!important;bottom:0!important">
+  <!-- Header bar — floats over map, sits below app top bar + ticker -->
+  <div style="position:absolute;top:calc(var(--th) + var(--tk));left:0;right:0;height:56px;z-index:50;background:linear-gradient(180deg,rgba(5,8,15,.82) 0%,rgba(5,8,15,0) 100%);backdrop-filter:blur(10px);display:flex;align-items:center;padding:0 14px;gap:8px">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.06em;color:#fff;flex:1;text-shadow:0 2px 8px rgba(0,0,0,.6)">📍 PULSEFY MAP</div>
-    <div style="display:flex;align-items:center;gap:5px;background:rgba(5,8,15,.6);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);border-radius:50px;padding:4px 12px;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:800;color:#fff;letter-spacing:.04em"><b id="map-cnt" style="color:var(--li)">0</b>&nbsp;spots</div>
-    <button id="map-loc-btn" onclick="goToMyLocation()" title="My Location" style="width:36px;height:36px;border-radius:50%;background:rgba(5,8,15,.7);border:1px solid rgba(0,229,255,.4);color:var(--cy);font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">📍</button>
-    <button onclick="snapMapBack()" title="Reset view" style="width:36px;height:36px;border-radius:50%;background:rgba(5,8,15,.7);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">⌂</button>
+    <div style="display:flex;align-items:center;gap:5px;background:rgba(5,8,15,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);border-radius:50px;padding:4px 12px;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:800;color:#fff;letter-spacing:.04em"><b id="map-cnt" style="color:var(--li)">0</b>&nbsp;spots</div>
+    <button id="map-loc-btn" onclick="goToMyLocation()" title="My Location" style="width:36px;height:36px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(0,229,255,.4);color:var(--cy);font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">📍</button>
+    <button onclick="snapMapBack()" title="Reset view" style="width:36px;height:36px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">⌂</button>
   </div>
-  <!-- Filter chips — floats over map -->
-  <div style="position:absolute;top:56px;left:0;right:0;z-index:49;display:flex;gap:6px;padding:8px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;background:linear-gradient(180deg,rgba(5,8,15,.6) 0%,rgba(5,8,15,0) 100%);backdrop-filter:blur(4px)">
+  <!-- Filter chips — floats over map, below header -->
+  <div style="position:absolute;top:calc(var(--th) + var(--tk) + 56px);left:0;right:0;z-index:49;display:flex;gap:6px;padding:8px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;background:linear-gradient(180deg,rgba(5,8,15,.5) 0%,rgba(5,8,15,0) 100%);backdrop-filter:blur(4px)">
     <button class="mcb active" onclick="setMapFilter('all',this)">✦ All</button>
     <button class="mcb" onclick="setMapFilter('event',this)">🎟 Events</button>
     <button class="mcb" onclick="setMapFilter('business',this)">🏪 Businesses</button>
@@ -633,24 +633,26 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     <button class="mcb" onclick="setMapFilter('nightclub',this)">🎵 Nightlife</button>
   </div>
 
-  <!-- Map canvas — truly full screen; header + chips float on top -->
+  <!-- Map canvas — truly full screen; all overlays float on top -->
   <div id="mc" style="position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;background:#05080F"></div>
 
-  <!-- Legend — collapsible, bottom-left -->
-  <div id="map-legend" style="position:absolute;bottom:14px;left:12px;z-index:100;background:rgba(5,8,15,.93);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;pointer-events:auto">
+  <!-- Legend — collapsible, bottom-left, floats above bottom nav -->
+  <div id="map-legend" style="position:absolute;bottom:calc(var(--bh) + 14px);left:12px;z-index:100;background:rgba(5,8,15,.88);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;pointer-events:auto;max-width:180px">
     <div id="map-legend-toggle" onclick="toggleLegend()" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;cursor:pointer">
       <span style="font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--or)">Map Key</span>
       <span id="legend-arrow" style="font-size:.6rem;color:var(--mu);margin-left:10px;transition:transform .25s">▾</span>
     </div>
     <div id="map-legend-body" style="padding:4px 12px 10px;display:none">
-      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:18px;text-align:center">🔊</span>Gqom / Nightlife</div>
-      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:18px;text-align:center">🎵</span>Amapiano</div>
-      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:18px;text-align:center">⚽</span>Sport</div>
-      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:18px;text-align:center">✊</span>March</div>
-      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:18px;text-align:center">🔥</span>Shisanyama</div>
-      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:18px;text-align:center">🍻</span>Bar / Club</div>
-      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:18px;text-align:center">🏨</span>Hotel</div>
-      <div style="display:flex;align-items:center;gap:7px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:18px;text-align:center">🛏</span>BnB / Stay</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:10px;height:10px;border-radius:50%;background:#FF2D78;flex-shrink:0;box-shadow:0 0 6px rgba(255,45,120,.7)"></span>Gqom / Nightlife</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:10px;height:10px;border-radius:50%;background:#B026FF;flex-shrink:0;box-shadow:0 0 6px rgba(176,38,255,.7)"></span>Amapiano</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:10px;height:10px;border-radius:50%;background:#7B2FFF;flex-shrink:0;box-shadow:0 0 6px rgba(123,47,255,.7)"></span>Festival / Club</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:10px;height:10px;border-radius:50%;background:#00D4AA;flex-shrink:0;box-shadow:0 0 6px rgba(0,212,170,.7)"></span>Sport</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:10px;height:10px;border-radius:50%;background:#FF5C00;flex-shrink:0;box-shadow:0 0 6px rgba(255,92,0,.7)"></span>Events / Shisanyama</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:10px;height:10px;border-radius:50%;background:#C0392B;flex-shrink:0;box-shadow:0 0 6px rgba(192,57,43,.7)"></span>Shisanyama Spot</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:10px;height:10px;border-radius:50%;background:#E67E22;flex-shrink:0;box-shadow:0 0 6px rgba(230,126,34,.7)"></span>Restaurant</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:10px;height:10px;border-radius:50%;background:#8E44AD;flex-shrink:0;box-shadow:0 0 6px rgba(142,68,173,.7)"></span>Bar / Club</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:10px;height:10px;border-radius:50%;background:#2471A3;flex-shrink:0;box-shadow:0 0 6px rgba(36,113,163,.7)"></span>Hotel</div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:.62rem;font-weight:700;color:var(--mu2);font-family:'Syne',sans-serif"><span style="width:10px;height:10px;border-radius:50%;background:#1A8A5A;flex-shrink:0;box-shadow:0 0 6px rgba(26,138,90,.7)"></span>BnB / Stay</div>
     </div>
   </div>
 
@@ -2866,6 +2868,30 @@ function placeMapMarkers() {
     };
     el.addEventListener('click', _markerOpen);
     el.addEventListener('touchend', _markerOpen, { passive: false });
+
+    // Name label pill below marker
+    const label = document.createElement('div');
+    label.style.cssText = `
+      position:absolute;
+      top:100%;margin-top:5px;
+      left:50%;transform:translateX(-50%);
+      white-space:nowrap;
+      background:rgba(5,8,15,.78);
+      backdrop-filter:blur(6px);
+      border:1px solid rgba(255,255,255,.13);
+      border-radius:50px;
+      padding:2px 7px;
+      font-family:'Syne',sans-serif;
+      font-size:.52rem;
+      font-weight:700;
+      color:#fff;
+      pointer-events:none;
+      max-width:90px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    `;
+    label.textContent = (item.name||'').substring(0, 18);
+    el.appendChild(label);
 
     mapMarkers.push(new mapboxgl.Marker({element: el, anchor: 'center'}).setLngLat([lon, lat]).addTo(mapObj));
   });
