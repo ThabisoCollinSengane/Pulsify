@@ -800,8 +800,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
         </div>
         <div id="search-results" style="margin-top:12px"></div>
         <div style="margin-top:12px;display:flex;gap:8px">
-          <button onclick="showAllFriends('following')" style="flex:1;padding:9px 8px;background:rgba(176,38,255,.12);border:1px solid rgba(176,38,255,.3);border-radius:50px;color:#B026FF;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">👥 Following</button>
-          <button onclick="showAllFriends('followers')" style="flex:1;padding:9px 8px;background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.3);border-radius:50px;color:var(--or);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">🌟 Followers</button>
+          <button onclick="showAllFriends('following')" style="flex:1;padding:9px 8px;background:rgba(176,38,255,.12);border:1px solid rgba(176,38,255,.3);border-radius:50px;color:#B026FF;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">👥 Following <span id="me-fwing-cnt" style="opacity:.8"></span></button>
+          <button onclick="showAllFriends('followers')" style="flex:1;padding:9px 8px;background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.3);border-radius:50px;color:var(--or);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">🌟 Followers <span id="me-fwers-cnt" style="opacity:.8"></span></button>
         </div>
         <div style="margin-top:16px">
           <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">✨ People You May Know</div>
@@ -962,6 +962,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
         <div class="faq-item" onclick="toggleFAQ(this)">
           <div class="faq-q">What can I do on Pulsefy without paying?</div>
           <div class="faq-a">Everything discovery-related is free: browse and search events, explore venues on the live map, follow people and places, post to your feed, join or create a squad, and RSVP to squad plans. Tickets cost what the organizer charges — the Pulsefy app itself is free to use. ✅</div>
+        </div>
+        <div class="faq-item" onclick="toggleFAQ(this)">
+          <div class="faq-q">How are events and businesses listed on Pulsefy?</div>
+          <div class="faq-a">Events come from two sources: <b>organizer accounts</b> (real event organizers who post directly on the platform) and <b>affiliate partners</b> like Ticketmaster, Quicket, and Eventbrite. Affiliate events are listed at the distributor's set price — we never add surcharges or embed checkout. Tapping "Buy on Ticketmaster →" opens the partner's site directly. Businesses (restaurants, bars, shisanyamas, clubs, hotels) are listed by their owners through a business account — no scraping, no third parties. 🏪</div>
         </div>
       </div>
 
@@ -2914,6 +2918,21 @@ function openSocialSheet(tab) {
   const ov = document.getElementById('social-sheet-ov');
   ov.style.display = 'flex';
   showSquadSubTab(tab || 'friends');
+  loadMeFollowCounts();
+}
+async function loadMeFollowCounts() {
+  if (!currentUser) return;
+  const sb2 = getSB(); if (!sb2) return;
+  try {
+    const [{ count: fwing }, { count: fwers }] = await Promise.all([
+      sb2.from('follows').select('id', { count: 'exact', head: true }).eq('follower_id', currentUser.id),
+      sb2.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', currentUser.id),
+    ]);
+    const cwing = document.getElementById('me-fwing-cnt');
+    const cwers = document.getElementById('me-fwers-cnt');
+    if (cwing) cwing.textContent = fwing || 0;
+    if (cwers) cwers.textContent = fwers || 0;
+  } catch(_) {}
 }
 function showExitConfirm() {
   if (document.getElementById('exit-confirm-ov')) return;

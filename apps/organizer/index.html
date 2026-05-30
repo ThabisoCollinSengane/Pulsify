@@ -27,7 +27,7 @@ body{padding-bottom:calc(var(--bh) + env(safe-area-inset-bottom, 0px) + 32px)}
 .hero{background:linear-gradient(135deg,rgba(176,38,255,.15),rgba(255,92,0,.1));border:1px solid rgba(176,38,255,.2);border-radius:20px;padding:20px;margin-bottom:16px}
 .hero-name{font-family:'Bebas Neue',sans-serif;font-size:2rem;line-height:1;margin-bottom:4px}
 .hero-sub{font-size:.78rem;color:var(--mu2)}
-.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
 .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center}
 .stat-n{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--or);line-height:1}
 .stat-l{font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-top:4px}
@@ -154,6 +154,7 @@ select.inp option{background:#0D1424}
   <div class="stats-row">
     <div class="stat-card" onclick="document.querySelector('.tab[onclick*=pane-myposts]').click()" style="cursor:pointer"><div class="stat-n" id="stat-posts">0</div><div class="stat-l">Posts</div></div>
     <div class="stat-card" onclick="openFollowersSheet()" style="cursor:pointer"><div class="stat-n" id="stat-followers">0</div><div class="stat-l">Followers</div></div>
+    <div class="stat-card" onclick="openFollowingSheet()" style="cursor:pointer"><div class="stat-n" id="stat-following">0</div><div class="stat-l">Following</div></div>
     <div class="stat-card" onclick="document.querySelector('.tab[onclick*=pane-scan]').click()" style="cursor:pointer"><div class="stat-n" id="stat-events">0</div><div class="stat-l">Events</div></div>
   </div>
 
@@ -1447,6 +1448,20 @@ async function openFollowersSheet() {
     body.innerHTML = followers.map(p => `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)"><div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);overflow:hidden;flex-shrink:0">${p.avatar_url?`<img src="${xe(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>`:''}</div><div><div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700">${xe(p.display_name||'User')}</div><div style="font-size:.68rem;color:var(--mu)">@${xe(p.username||p.id.slice(0,8))}</div></div></div>`).join('');
   } catch(e) { body.innerHTML = '<div class="empty" style="color:var(--pk)">Failed to load</div>'; }
 }
+async function openFollowingSheet() {
+  if (!currentUser) return;
+  const sheet = document.getElementById('following-sheet');
+  if (!sheet) return;
+  sheet.classList.add('open');
+  const body = document.getElementById('following-sheet-body');
+  body.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const { data } = await sb.from('follows').select('following_id,profiles!follows_following_id_fkey(id,display_name,username,avatar_url)').eq('follower_id', currentUser.id).limit(100);
+    const following = (data || []).map(r => r.profiles).filter(Boolean);
+    if (!following.length) { body.innerHTML = '<div class="empty">Not following anyone yet</div>'; return; }
+    body.innerHTML = following.map(p => `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)"><div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);overflow:hidden;flex-shrink:0">${p.avatar_url?`<img src="${xe(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>`:''}</div><div><div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700">${xe(p.display_name||'User')}</div><div style="font-size:.68rem;color:var(--mu)">@${xe(p.username||p.id.slice(0,8))}</div></div></div>`).join('');
+  } catch(e) { body.innerHTML = '<div class="empty" style="color:var(--pk)">Failed to load</div>'; }
+}
 
 function showOrgSubBanner(profile) {
   const banner = document.getElementById('org-sub-banner');
@@ -1589,14 +1604,16 @@ async function init() {
   document.getElementById('org-handle').textContent = '@' + (currentProfile.username || 'organizer') + ' · Event Organizer';
   showOrgSubBanner(currentProfile);
 
-  const [{ count: postsCount }, { count: followersCount }, { count: eventsCount }] = await Promise.all([
+  const [{ count: postsCount }, { count: followersCount }, { count: followingCount }, { count: eventsCount }] = await Promise.all([
     sb.from('posts').select('*', {count:'exact',head:true}).eq('user_id', currentUser.id),
     sb.from('follows').select('*', {count:'exact',head:true}).eq('following_id', currentUser.id),
+    sb.from('follows').select('*', {count:'exact',head:true}).eq('follower_id', currentUser.id),
     sb.from('events').select('*', {count:'exact',head:true}).eq('organiser_id', currentUser.id),
   ]);
 
   document.getElementById('stat-posts').textContent = postsCount || 0;
   document.getElementById('stat-followers').textContent = followersCount || 0;
+  document.getElementById('stat-following').textContent = followingCount || 0;
   document.getElementById('stat-events').textContent = eventsCount || 0;
 }
 
@@ -2608,6 +2625,15 @@ setTimeout(startOnboardingOrg, 1500);
     <div class="sn-handle"></div>
     <div class="sn-head"><div class="sn-title">Followers</div><button class="sn-close" onclick="document.getElementById('followers-sheet').classList.remove('open')">✕</button></div>
     <div class="sn-body" id="followers-sheet-body" style="padding-bottom:32px"></div>
+  </div>
+</div>
+
+<!-- FOLLOWING SHEET -->
+<div class="sn-overlay" id="following-sheet" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="sn-sheet">
+    <div class="sn-handle"></div>
+    <div class="sn-head"><div class="sn-title">Following</div><button class="sn-close" onclick="document.getElementById('following-sheet').classList.remove('open')">✕</button></div>
+    <div class="sn-body" id="following-sheet-body" style="padding-bottom:32px"></div>
   </div>
 </div>
 
