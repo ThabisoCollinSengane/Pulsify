@@ -790,6 +790,22 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
   </div>
 </div>
 
+<!-- EDIT POST SHEET -->
+<div class="overlay" id="edit-post-sheet" onclick="if(event.target===this)closeSheet('edit-post-sheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div class="sheet-title">✏️ Edit Post</div><button class="sheet-close" onclick="closeSheet('edit-post-sheet')">✕</button></div>
+    <div class="sheet-body">
+      <label class="ff-label">Caption</label>
+      <textarea class="ff" id="edit-biz-post-cap" placeholder="Update your post caption…" rows="4"></textarea>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn-sec" style="flex:1" onclick="closeSheet('edit-post-sheet')">Cancel</button>
+        <button class="btn-primary" style="flex:2" id="save-biz-post-btn" onclick="saveBizPostEdit()">Save Changes ✅</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ════════════════════════════════════════════════════════════
 //  STATE & SESSION
@@ -1532,11 +1548,16 @@ async function renderPosts() {
   if (!posts.length) posts = load('posts', []).slice().reverse().map(p => ({ ...p, _supa: false }));
 
   if (!posts.length) { el.innerHTML = emptyState('📸', 'No posts yet', 'Create your first post to share updates with your followers on the Pulsefy feed.'); return; }
+  _bizPostMap = {};
+  posts.forEach(p => { _bizPostMap[p.id] = p; });
   el.innerHTML = posts.map(p => `
-    <div class="post-card">
+    <div class="post-card" id="biz-post-${p.id}">
       ${p.img ? `<img class="post-img" src="${xe(p.img)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : '<div class="post-img-placeholder">📷</div>'}
-      <div class="post-body"><div class="post-cap">${xe(p.cap||'')}</div><div class="post-meta">${fmtDate(p.created)} · ${xe(BIZ.name)}</div></div>
-      <div class="post-actions"><button class="btn-danger" onclick="deletePost('${p.id}', ${p._supa})">🗑 Delete</button></div>
+      <div class="post-body"><div class="post-cap" id="biz-post-cap-${p.id}">${xe(p.cap||'')}</div><div class="post-meta">${fmtDate(p.created)} · ${xe(BIZ.name)}</div></div>
+      <div class="post-actions">
+        <button class="btn-ghost" onclick="openEditBizPostSheet('${p.id}')">Edit</button>
+        <button class="btn-danger" onclick="deletePost('${p.id}', ${p._supa}, this)">🗑 Delete</button>
+      </div>
     </div>`).join('');
 }
 
@@ -1609,8 +1630,50 @@ async function submitPost() {
   if (btn) { btn.disabled = false; btn.textContent = 'Publish Post 🚀'; }
 }
 
-async function deletePost(id, isSupa) {
-  if (!confirm('Delete this post?')) return;
+let _bizPostMap = {};
+let _editBizPostId = null;
+
+function openEditBizPostSheet(postId) {
+  _editBizPostId = postId;
+  const p = _bizPostMap[postId] || {};
+  document.getElementById('edit-biz-post-cap').value = p.cap || '';
+  openSheet('edit-post-sheet');
+}
+
+async function saveBizPostEdit() {
+  if (!_editBizPostId) return;
+  const cap = document.getElementById('edit-biz-post-cap').value.trim();
+  const btn = document.getElementById('save-biz-post-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const sb = getSB();
+  if (sb) {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      const { error } = await sb.from('posts').update({ caption: cap || null }).eq('id', _editBizPostId).eq('user_id', session.user.id);
+      if (error) { toast('Could not save', 'err'); btn.disabled = false; btn.textContent = 'Save Changes ✅'; return; }
+    }
+  }
+  const capEl = document.getElementById('biz-post-cap-' + _editBizPostId);
+  if (capEl) capEl.textContent = cap || '';
+  if (_bizPostMap[_editBizPostId]) _bizPostMap[_editBizPostId].cap = cap;
+  btn.disabled = false; btn.textContent = 'Save Changes ✅';
+  closeSheet('edit-post-sheet');
+  toast('Post updated ✅', 'ok');
+}
+
+async function deletePost(id, isSupa, btn) {
+  if (!btn || btn.dataset.confirm !== '1') {
+    if (btn) {
+      const orig = btn.textContent;
+      btn.dataset.confirm = '1'; btn.textContent = 'Sure?'; btn.style.color = '#FF2D78'; btn.classList.remove('btn-danger'); btn.classList.add('btn-sec');
+      const no = document.createElement('button'); no.className = 'btn-sec'; no.style.cssText = 'margin-left:5px'; no.textContent = 'No';
+      no.onclick = () => { btn.dataset.confirm=''; btn.textContent=orig; btn.style.color=''; btn.classList.add('btn-danger'); btn.classList.remove('btn-sec'); no.remove(); };
+      btn.after(no);
+      setTimeout(() => { if(btn.dataset.confirm==='1'){btn.dataset.confirm='';btn.textContent=orig;btn.style.color='';btn.classList.add('btn-danger');btn.classList.remove('btn-sec');no.remove();} }, 5000);
+    }
+    return;
+  }
+  btn.textContent = '…';
   if (isSupa) {
     const sb = getSB();
     if (sb) await sb.from('posts').delete().eq('id', id).catch(() => {});
@@ -1650,7 +1713,7 @@ async function renderEvents() {
           <span class="ev-price">${ev.is_free || !ev.price_min ? 'FREE' : 'R' + ev.price_min}</span>
           <div style="display:flex;gap:5px">
             <button class="btn-ghost" onclick="editEvent('${ev.id}')">Edit</button>
-            <button class="btn-danger" onclick="deleteEvent('${ev.id}')">🗑</button>
+            <button class="btn-danger" onclick="deleteEvent('${ev.id}',this)">🗑</button>
           </div>
         </div>
       </div>`;
@@ -1793,8 +1856,19 @@ function resetEventForm() {
   ['name','date','time','venue','city','genre','price','hype','desc','img','lineup'].forEach(f => { const el = document.getElementById('ev-' + f); if (el) el.value = ''; });
 }
 
-async function deleteEvent(id) {
-  if (!confirm('Delete this event?')) return;
+async function deleteEvent(id, btn) {
+  if (!btn || btn.dataset.confirm !== '1') {
+    if (btn) {
+      const orig = btn.textContent;
+      btn.dataset.confirm = '1'; btn.textContent = 'Sure?'; btn.style.opacity = '1';
+      const no = document.createElement('button'); no.className = 'btn-ghost'; no.style.cssText = 'margin-left:4px;font-size:.72rem'; no.textContent = 'No';
+      no.onclick = () => { btn.dataset.confirm=''; btn.textContent=orig; no.remove(); };
+      btn.after(no);
+      setTimeout(() => { if(btn.dataset.confirm==='1'){btn.dataset.confirm='';btn.textContent=orig;no.remove();} }, 5000);
+    }
+    return;
+  }
+  btn.textContent = '…';
   const sb2 = getSB(); if (!sb2) { toast('Not connected', 'err'); return; }
   const { data: { session } } = await sb2.auth.getSession();
   if (!session) { toast('Session expired', 'err'); return; }
@@ -1854,7 +1928,7 @@ async function renderMenu() {
         </div>
         <div class="mi-actions">
           <button class="btn-ghost" onclick="editMenuItem('${item.id}')">Edit</button>
-          <button class="btn-danger" onclick="deleteMenuItem('${item.id}')">🗑</button>
+          <button class="btn-danger" onclick="deleteMenuItem('${item.id}',this)">🗑</button>
         </div>
       </div>`).join('')
   ).join('');
@@ -1960,8 +2034,19 @@ function resetMenuForm() {
   if (grid) grid.innerHTML = '';
 }
 
-async function deleteMenuItem(id) {
-  if (!confirm('Remove this item?')) return;
+async function deleteMenuItem(id, btn) {
+  if (!btn || btn.dataset.confirm !== '1') {
+    if (btn) {
+      const orig = btn.textContent;
+      btn.dataset.confirm = '1'; btn.textContent = 'Sure?'; btn.style.color = '#FF2D78';
+      const no = document.createElement('button'); no.className = 'btn-ghost'; no.style.cssText = 'margin-left:4px;font-size:.72rem'; no.textContent = 'No';
+      no.onclick = () => { btn.dataset.confirm=''; btn.textContent=orig; btn.style.color=''; no.remove(); };
+      btn.after(no);
+      setTimeout(() => { if(btn.dataset.confirm==='1'){btn.dataset.confirm='';btn.textContent=orig;btn.style.color='';no.remove();} }, 5000);
+    }
+    return;
+  }
+  btn.textContent = '…';
   const sb = getSB(); if (!sb) return;
   const { error } = await sb.from('menu_items').delete().eq('id', id).eq('business_id', getBizId());
   if (error) { toast('Failed to remove: ' + error.message, 'err'); return; }
