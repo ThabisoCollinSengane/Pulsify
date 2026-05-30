@@ -15,12 +15,12 @@
 <script src="https://js.paystack.co/v1/inline.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--te:#00D4AA;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0;--th:58px;--bh:68px}
+:root{--bg:#F7F6FC;--bg2:#EEEBf8;--surf:#FFFFFF;--surf2:#F3F1FB;--border:rgba(0,0,0,.08);--border2:rgba(0,0,0,.14);--or:#FF5C00;--li:#2E8B00;--pk:#C8124A;--cy:#0090CC;--pu:#8B1CC8;--te:#00896A;--tx:#0E0C1B;--mu:#64617A;--mu2:#928FA8;--th:58px;--bh:68px}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
 ::-webkit-scrollbar{width:2px}::-webkit-scrollbar-thumb{background:var(--or);border-radius:2px}
 
 /* ── TOP BAR ── */
-.tb{position:fixed;top:0;left:0;right:0;height:var(--th);z-index:900;display:flex;align-items:center;padding:0 16px;gap:12px;background:rgba(5,8,15,.97);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
+.tb{position:fixed;top:0;left:0;right:0;height:var(--th);z-index:900;display:flex;align-items:center;padding:0 16px;gap:12px;background:rgba(247,246,252,.97);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
 .logo{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.06em;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--tx)}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--or);box-shadow:0 0 10px var(--or);animation:p 2s ease-in-out infinite;flex-shrink:0}
 @keyframes p{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}
@@ -33,7 +33,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .nd.show{display:block}
 
 /* ── BOTTOM NAV ── */
-.bn{position:fixed;bottom:0;left:0;right:0;height:auto;min-height:var(--bh);padding-bottom:env(safe-area-inset-bottom, 0px);z-index:900;background:rgba(5,8,15,.97);backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;align-items:stretch}
+.bn{position:fixed;bottom:0;left:0;right:0;height:auto;min-height:var(--bh);padding-bottom:env(safe-area-inset-bottom, 0px);z-index:900;background:rgba(247,246,252,.97);backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;align-items:stretch}
 .bb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:transparent;border:none;cursor:pointer;padding:8px 2px;position:relative;-webkit-tap-highlight-color:transparent;transition:all .2s}
 .bb-ico{font-size:1.25rem;line-height:1;transition:transform .2s}
 .bb.active .bb-ico{transform:scale(1.15)}
@@ -70,7 +70,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 /* ── OVERLAY / SHEET ── */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);z-index:2000;display:none;align-items:flex-end;justify-content:center}
 .overlay.open{display:flex}
-.sheet{width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;animation:su .26s ease;max-height:92vh;display:flex;flex-direction:column}
+.sheet{width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid var(--border);border-bottom:none;animation:su .26s ease;max-height:92vh;display:flex;flex-direction:column}
 @keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .sheet-handle{width:40px;height:4px;border-radius:2px;background:var(--border2);margin:12px auto 0;flex-shrink:0}
 .sheet-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
@@ -148,7 +148,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 .s-completed{background:rgba(198,255,74,.08);color:var(--li);border:1px solid rgba(198,255,74,.2)}
 .s-cancelled{background:rgba(255,45,120,.08);color:var(--pk);border:1px solid rgba(255,45,120,.2)}
 .status-sel{background:var(--surf);border:1px solid var(--border);border-radius:8px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;padding:4px 8px;cursor:pointer;outline:none}
-.status-sel option{background:#0D1424}
+.status-sel option{background:#FFFFFF}
 
 /* ── PICKUP HOURS ── */
 .hour-row{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border)}
