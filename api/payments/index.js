@@ -223,7 +223,7 @@ module.exports = async (req, res) => {
         entity_id: entity_id || null, status: 'pending', metadata: { email },
       });
       if (dbErr) return res.status(400).json({ error: dbErr.message });
-      return res.status(200).json({ reference, authorization_url });
+      return res.status(200).json({ reference, authorization_url, access_code: psData.data.access_code });
     }
 
     /* ─── GET /payments/verify ────────────────────────────── */

@@ -666,6 +666,30 @@ select.inp option{background:#0D1424}
   </div>
 </div>
 
+<!-- UPGRADE SHEET -->
+<div class="sn-overlay" id="org-upgrade-sheet" onclick="if(event.target===this)closeOrgSheet('org-upgrade-sheet')">
+  <div class="sn-sheet">
+    <div class="sn-handle"></div>
+    <div class="sn-head"><div class="sn-title">💎 Upgrade to Premium</div><button class="sn-close" onclick="closeOrgSheet('org-upgrade-sheet')">✕</button></div>
+    <div class="sn-body" style="padding-bottom:40px">
+      <div style="text-align:center;padding:20px 0 16px;background:linear-gradient(135deg,rgba(176,38,255,.15),rgba(255,92,0,.1));border-radius:16px;margin-bottom:18px;border:1px solid rgba(176,38,255,.2)">
+        <div style="font-size:2rem;margin-bottom:4px">💎</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.06em">ORGANIZER PREMIUM</div>
+        <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--or)">R299<span style="font-size:.8rem;font-weight:400;color:var(--mu)">/month</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:22px">
+        <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Instant event publishing</div><div style="font-size:.71rem;color:var(--mu)">Events go live immediately — no admin approval wait</div></div></div>
+        <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Unlimited posts</div><div style="font-size:.71rem;color:var(--mu)">Free plan: 5 posts/month</div></div></div>
+        <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Featured on map &amp; discovery</div><div style="font-size:.71rem;color:var(--mu)">Your events rank higher in search and map results</div></div></div>
+        <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Analytics dashboard</div><div style="font-size:.71rem;color:var(--mu)">Views, saves, ticket sales by day</div></div></div>
+        <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Priority support</div><div style="font-size:.71rem;color:var(--mu)">Faster response from the Pulsefy team</div></div></div>
+      </div>
+      <button class="btn-primary" style="width:100%;padding:15px;font-size:.92rem" id="org-pay-btn" onclick="startOrgPayment()">Pay R299/month · Activate Premium 🚀</button>
+      <div id="org-pay-msg" style="text-align:center;font-size:.68rem;color:var(--mu);margin-top:10px">🔒 Secured by Paystack · Cancel anytime · Monthly billing</div>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT POST SHEET -->
 <div class="sn-overlay" id="org-edit-post-sheet" onclick="if(event.target===this)closeOrgSheet('org-edit-post-sheet')">
   <div class="sn-sheet">
@@ -784,30 +808,55 @@ function showOrgMsg(id, text, type) { const el = document.getElementById(id); if
 let _paystackPK = '';
 fetch('/api/config').then(r => r.json()).then(d => { _paystackPK = d.paystackPublicKey || ''; }).catch(() => {});
 
-async function upgradeOrgToPremium() {
+function upgradeOrgToPremium() {
+  openOrgSheet('org-upgrade-sheet');
+}
+
+async function startOrgPayment() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { toast('Please sign in first', 'err'); return; }
-  const handler = PaystackPop.setup({
-    key:      _paystackPK,
-    email:    session.user.email,
-    amount:   29900, // R299 in cents
-    currency: 'ZAR',
-    ref:      'ORG_SUB_' + Date.now(),
-    metadata: { user_id: session.user.id, type: 'subscription_organizer', display_name: currentProfile?.display_name || '' },
-    label:    'Organizer Premium Plan',
-    callback: async function(res) {
-      const btn = document.getElementById('org-sub-btn');
-      if (btn) { btn.textContent = 'Verifying…'; btn.disabled = true; }
-      try {
-        const r = await fetch(`/api/payments/verify?ref=${res.reference}`, { headers: { Authorization: 'Bearer ' + session.access_token } });
-        const d = await r.json();
-        if (d.success) { toast('🎉 Premium activated!', 'ok'); loadOrgSettingsStatus(); }
-        else { toast('Payment verification failed — contact support', 'err'); }
-      } catch(e) { toast('Verification error — contact support', 'err'); }
-    },
-    onClose: function() { toast('Payment cancelled'); },
-  });
-  handler.openIframe();
+  const btn = document.getElementById('org-pay-btn');
+  const msg = document.getElementById('org-pay-msg');
+  if (btn) { btn.disabled = true; btn.textContent = 'Preparing checkout…'; }
+  if (msg) msg.textContent = '';
+  try {
+    const r = await fetch('/api/payments/initiate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ type: 'subscription_organizer', amount: 29900, email: session.user.email })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Could not start payment');
+    if (btn) { btn.disabled = false; btn.textContent = 'Pay R299/month · Activate Premium 🚀'; }
+    PaystackPop.resumeTransaction(d.access_code, {
+      onSuccess: async function() {
+        closeOrgSheet('org-upgrade-sheet');
+        if (btn) { btn.disabled = true; btn.textContent = 'Verifying…'; }
+        try {
+          const vr = await fetch(`/api/payments/verify?ref=${d.reference}`, { headers: { Authorization: 'Bearer ' + session.access_token } });
+          const vd = await vr.json();
+          if (vd.success) {
+            if (currentProfile) currentProfile.subscription_type = 'premium';
+            toast('🎉 Welcome to Premium!', 'ok');
+            loadOrgSettingsStatus();
+            showOrgSubBanner(currentProfile);
+          } else {
+            toast('Payment received — upgrade will activate shortly', 'ok');
+          }
+        } catch(e) { toast('Payment received — contact support if Premium isn\'t active', 'err'); }
+        finally { if (btn) { btn.disabled = false; btn.textContent = 'Pay R299/month · Activate Premium 🚀'; } }
+      },
+      onCancel: function() {
+        toast('Payment cancelled');
+        if (btn) { btn.disabled = false; btn.textContent = 'Pay R299/month · Activate Premium 🚀'; }
+        if (msg) msg.textContent = '🔒 Secured by Paystack · Cancel anytime · Monthly billing';
+      }
+    });
+  } catch(e) {
+    toast('Error: ' + e.message, 'err');
+    if (btn) { btn.disabled = false; btn.textContent = 'Pay R299/month · Activate Premium 🚀'; }
+    if (msg) msg.textContent = '🔒 Secured by Paystack · Cancel anytime · Monthly billing';
+  }
 }
 
 async function loadOrgSettingsStatus() {
