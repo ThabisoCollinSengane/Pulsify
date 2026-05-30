@@ -1630,11 +1630,17 @@ async function submitPost() {
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Publishing…';
 
   try {
+    // Always get a fresh token — _token can expire after 1h on long PWA sessions
+    const { data: { session: freshSess } } = await sb.auth.getSession();
+    if (!freshSess) throw new Error('Session expired — please sign in again');
+    const token = freshSess.access_token;
+
     let imageUrl = null;
     if (_imgFiles.length) {
+      btn.innerHTML = '<span class="spinner"></span>Uploading photo…';
       const urls = [];
       for (const file of _imgFiles) {
-        const ext  = file.name.split('.').pop() || 'jpg';
+        const ext  = (file.name || 'image.jpg').split('.').pop() || 'jpg';
         const path = currentUser.id + '/' + Date.now() + '_' + Math.random().toString(36).slice(2,7) + '.' + ext;
         const { error: upErr } = await sb.storage.from('post-images').upload(path, file, { upsert: false });
         if (!upErr) {
@@ -1643,11 +1649,12 @@ async function submitPost() {
         }
       }
       imageUrl = urls.length === 1 ? urls[0] : urls.length > 1 ? JSON.stringify(urls) : null;
+      btn.innerHTML = '<span class="spinner"></span>Publishing…';
     }
 
     const res = await fetch('/api/posts', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({ caption, image_url: imageUrl, event_name: evTag || null, post_type: 'organizer' })
     });
     const _txt = await res.text();
@@ -1655,7 +1662,6 @@ async function submitPost() {
     if (!res.ok) {
       if (res.status === 403 && data.error === 'POST_LIMIT_REACHED') {
         showPostLimitPrompt(data.message);
-        btn.disabled = false; btn.textContent = 'Publish 🚀';
         return;
       }
       throw new Error(data.error || 'Post failed');
@@ -1672,11 +1678,13 @@ async function submitPost() {
     const orgHint = document.getElementById('org-img-hint');
     if (orgHint) orgHint.textContent = 'Tap to add up to 5 photos';
     _imgFiles = [];
-    document.getElementById('stat-posts').textContent = parseInt(document.getElementById('stat-posts').textContent||0)+1;
+    const statPosts = document.getElementById('stat-posts');
+    if (statPosts) statPosts.textContent = parseInt(statPosts.textContent || 0) + 1;
   } catch(e) {
-    toast('Error: ' + e.message, 'err');
+    toast(e.message || 'Failed to publish', 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Publish 🚀';
   }
-  btn.disabled = false; btn.textContent = 'Publish 🚀';
 }
 
 function showPostLimitPrompt(msg) {

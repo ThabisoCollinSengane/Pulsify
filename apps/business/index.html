@@ -232,7 +232,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
   <div style="padding:4px 14px 10px">
     <div class="section-label">Quick Actions</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <button class="btn-primary" onclick="openSheet('post-sheet')">+ New Post</button>
+      <button class="btn-primary" onclick="openPostSheet()">+ New Post</button>
       <button class="btn-primary" onclick="openSheet('event-sheet')">+ New Event</button>
       <button class="btn-sec" onclick="tryAddMenuItem()">+ Menu Item</button>
       <button class="btn-sec" onclick="showTab('orders')">View Orders</button>
@@ -256,7 +256,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <div class="panel" id="tab-posts">
   <div class="sec-head">
     <div><div class="sec-title">Posts</div><div class="sec-sub">Content shared to the Pulsefy feed</div></div>
-    <button class="btn-primary" onclick="openSheet('post-sheet')">+ Post</button>
+    <button class="btn-primary" onclick="openPostSheet()">+ Post</button>
   </div>
   <div id="posts-list"></div>
 </div>
@@ -591,9 +591,10 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
       <div id="biz-img-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px"></div>
       <label class="ff-label">Caption *</label>
       <textarea class="ff" id="post-cap" placeholder="What's happening? Share with your followers…" rows="4"></textarea>
+      <div id="biz-post-usage" style="font-size:.72rem;color:var(--mu);margin-bottom:4px;text-align:right;min-height:18px"></div>
       <div style="display:flex;gap:8px">
         <button class="btn-sec" style="flex:1" onclick="previewPost()">👁 Preview</button>
-        <button class="btn-primary" style="flex:2" onclick="submitPost()">Publish 🚀</button>
+        <button class="btn-primary" style="flex:2" id="biz-post-btn" onclick="submitPost()">Publish 🚀</button>
       </div>
     </div>
   </div>
@@ -635,7 +636,19 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
       </div>
       <input type="file" id="ev-img-file" accept="image/*" style="display:none" onchange="previewEvImg(this)"/>
       <input type="hidden" id="ev-img"/>
-      <button class="btn-primary" style="width:100%" onclick="submitEvent()">Save Event 🎟</button>
+      <label class="ff-label" style="margin-top:6px">Venue Coordinates (optional)</label>
+      <div class="ff-row">
+        <div><label class="ff-label" style="font-size:.62rem">Latitude</label><input class="ff" type="number" id="ev-lat" placeholder="-29.8587" step="any"/></div>
+        <div><label class="ff-label" style="font-size:.62rem">Longitude</label><input class="ff" type="number" id="ev-lon" placeholder="31.0218" step="any"/></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+        <button type="button" class="btn-sec" style="flex:1;padding:9px;font-size:.75rem" onclick="useBizEvGPS()">📍 Use My Location</button>
+        <span id="ev-loc-msg" style="font-size:.68rem;color:var(--mu);flex:2"></span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-sec" style="flex:1" onclick="previewBizEvent()">👁 Preview</button>
+        <button class="btn-primary" style="flex:2" onclick="submitEvent()">Save Event 🎟</button>
+      </div>
     </div>
   </div>
 </div>
@@ -798,8 +811,34 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
         </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:14px">
-        <button class="btn-sec" style="flex:1" onclick="closeSheet('preview-sheet');openSheet('post-sheet')">← Edit</button>
+        <button class="btn-sec" style="flex:1" onclick="closeSheet('preview-sheet');openPostSheet()">← Edit</button>
         <button class="btn-primary" style="flex:2" id="biz-preview-publish-btn" onclick="closeSheet('preview-sheet');submitPost()">Publish 🚀</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EVENT PREVIEW SHEET -->
+<div class="overlay" id="biz-ev-preview-sheet" onclick="if(event.target===this)closeSheet('biz-ev-preview-sheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div class="sheet-title">Preview Event</div><button class="sheet-close" onclick="closeSheet('biz-ev-preview-sheet')">✕</button></div>
+    <div class="sheet-body">
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">How it'll look on the Discover feed</div>
+      <div style="background:var(--surf2);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+        <div id="biz-ev-preview-banner" style="display:none;height:130px;background:#111"><img id="biz-ev-preview-banner-img" style="width:100%;height:100%;object-fit:cover"/></div>
+        <div style="padding:14px">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:.03em;line-height:1.1;margin-bottom:6px" id="biz-ev-preview-name"></div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+            <span style="background:rgba(176,38,255,.15);border:1px solid rgba(176,38,255,.3);border-radius:50px;padding:3px 10px;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;color:var(--pu)" id="biz-ev-preview-genre"></span>
+            <span style="background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.25);border-radius:50px;padding:3px 10px;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;color:var(--or)" id="biz-ev-preview-price"></span>
+          </div>
+          <div style="font-size:.75rem;color:var(--mu2);line-height:1.6" id="biz-ev-preview-meta"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn-sec" style="flex:1" onclick="closeSheet('biz-ev-preview-sheet')">← Edit</button>
+        <button class="btn-primary" style="flex:2" onclick="closeSheet('biz-ev-preview-sheet');submitEvent()">Save Event 🎟</button>
       </div>
     </div>
   </div>
@@ -1097,6 +1136,75 @@ function previewPost() {
 
   closeSheet('post-sheet');
   openSheet('preview-sheet');
+}
+
+// ── Post usage counter ────────────────────────────────────────
+async function loadBizPostUsage() {
+  const el = document.getElementById('biz-post-usage'); if (!el) return;
+  const sb2 = getSB(); if (!sb2) return;
+  try {
+    const { data: { session } } = await sb2.auth.getSession(); if (!session) return;
+    const { data: prof } = await sb2.from('profiles').select('subscription_type').eq('id', session.user.id).single();
+    if (prof?.subscription_type === 'premium') { el.textContent = ''; return; }
+    const start = new Date(); start.setDate(1); start.setHours(0,0,0,0);
+    const { count } = await sb2.from('posts').select('id', { count: 'exact', head: true })
+      .eq('user_id', session.user.id).gte('created_at', start.toISOString());
+    const used = count || 0;
+    if (used >= 5) {
+      el.innerHTML = '<span style="color:var(--pk)">📮 0 posts left this month — <a href="#" onclick="openSheet(\'biz-upgrade-sheet\');return false" style="color:var(--or)">Upgrade</a></span>';
+    } else {
+      el.textContent = `${used} / 5 posts used this month`;
+    }
+  } catch(_) { el.textContent = ''; }
+}
+
+function openPostSheet() { loadBizPostUsage(); openSheet('post-sheet'); }
+
+// ── Event preview ─────────────────────────────────────────────
+function previewBizEvent() {
+  const name = document.getElementById('ev-name').value.trim();
+  if (!name) { toast('Add an event name first', 'err'); return; }
+  const date   = document.getElementById('ev-date').value;
+  const time   = document.getElementById('ev-time').value;
+  const venue  = document.getElementById('ev-venue').value.trim();
+  const city   = document.getElementById('ev-city').value.trim();
+  const genre  = document.getElementById('ev-genre').value.trim();
+  const price  = parseFloat(document.getElementById('ev-price').value) || 0;
+  const thumb  = document.getElementById('ev-img-thumb');
+  const banner = document.getElementById('biz-ev-preview-banner');
+  const bannerImg = document.getElementById('biz-ev-preview-banner-img');
+  if (thumb?.src && !thumb.src.endsWith('/') && document.getElementById('ev-img-preview').style.display !== 'none') {
+    bannerImg.src = thumb.src; banner.style.display = 'block';
+  } else { banner.style.display = 'none'; }
+  document.getElementById('biz-ev-preview-name').textContent = name;
+  document.getElementById('biz-ev-preview-genre').textContent = genre || 'Event';
+  document.getElementById('biz-ev-preview-price').textContent = price === 0 ? 'FREE' : 'R' + price;
+  const parts = [];
+  if (date) parts.push('📅 ' + new Date(date).toLocaleDateString('en-ZA', { weekday:'short', day:'numeric', month:'short', year:'numeric' }));
+  if (time) parts.push('🕐 ' + time.slice(0,5));
+  if (venue) parts.push('📍 ' + venue + (city ? ', ' + city : ''));
+  document.getElementById('biz-ev-preview-meta').innerHTML = parts.join('<br>');
+  openSheet('biz-ev-preview-sheet');
+}
+
+// ── Event GPS location ────────────────────────────────────────
+function useBizEvGPS() {
+  const msg = document.getElementById('ev-loc-msg');
+  if (!navigator.geolocation) { if (msg) msg.textContent = 'Geolocation not supported'; return; }
+  if (msg) msg.textContent = '📡 Getting location…';
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = pos.coords.latitude.toFixed(6);
+    const lon = pos.coords.longitude.toFixed(6);
+    if (lat < -35 || lat > -22 || lon < 16 || lon > 33) {
+      if (msg) msg.textContent = '⚠️ Must be within South Africa';
+      return;
+    }
+    document.getElementById('ev-lat').value = lat;
+    document.getElementById('ev-lon').value = lon;
+    if (msg) msg.textContent = `✅ ${lat}, ${lon}`;
+  }, err => {
+    if (msg) msg.textContent = err.code === 1 ? '❌ Location denied' : '❌ Could not get location';
+  }, { enableHighAccuracy: true, timeout: 12000 });
 }
 
 // ── Boot ─────────────────────────────────────────────────────
@@ -1720,54 +1828,46 @@ async function submitPost() {
   const cap = document.getElementById('post-cap').value.trim();
   if (!cap && !_bizImgFiles.length) { toast('Add a caption or photo', 'err'); return; }
 
-  const btn = document.querySelector('#post-sheet .btn-primary');
+  const btn = document.getElementById('biz-post-btn') || document.querySelector('#post-sheet .btn-primary');
   if (btn) { btn.disabled = true; btn.textContent = 'Publishing…'; }
 
-  const sb = getSB();
+  const sb2 = getSB();
   let imageUrl = null;
 
   try {
-    if (_bizImgFiles.length && sb) {
-      const { data: { session } } = await sb.auth.getSession();
-      if (session) {
-        const urls = [];
-        for (const file of _bizImgFiles) {
-          const ext  = file.name.split('.').pop() || 'jpg';
-          const path = `${session.user.id}/${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
-          const { error: upErr } = await sb.storage.from('post-images').upload(path, file);
-          if (!upErr) {
-            const { data: { publicUrl } } = sb.storage.from('post-images').getPublicUrl(path);
-            urls.push(publicUrl);
-          }
+    const { data: { session } } = await sb2.auth.getSession();
+    if (!session) throw new Error('Session expired — please log in again');
+
+    if (_bizImgFiles.length) {
+      if (btn) btn.textContent = 'Uploading photo…';
+      const urls = [];
+      for (const file of _bizImgFiles) {
+        const ext  = (file.name || 'image.jpg').split('.').pop() || 'jpg';
+        const path = `${session.user.id}/${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
+        const { error: upErr } = await sb2.storage.from('post-images').upload(path, file);
+        if (!upErr) {
+          const { data: { publicUrl } } = sb2.storage.from('post-images').getPublicUrl(path);
+          urls.push(publicUrl);
         }
-        imageUrl = urls.length === 1 ? urls[0] : urls.length > 1 ? JSON.stringify(urls) : null;
       }
+      imageUrl = urls.length === 1 ? urls[0] : urls.length > 1 ? JSON.stringify(urls) : null;
+      if (btn) btn.textContent = 'Publishing…';
     }
 
-    // Post via API (triggers follower notifications)
-    if (sb) {
-      const { data: { session } } = await sb.auth.getSession();
-      if (session) {
-        const res = await fetch('/api/posts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-          body: JSON.stringify({ caption: cap, image_url: imageUrl, post_type: 'business_update' }),
-        });
-        const _txt = await res.text();
-        let data = {}; try { data = JSON.parse(_txt); } catch(e) {}
-        if (!res.ok) throw new Error(data.error || 'Post failed');
-        if (data.post) {
-          const posts = load('posts', []);
-          posts.push({ id: data.post.id, img: imageUrl, cap, created: data.post.created_at });
-          save('posts', posts);
-        }
-      } else {
-        throw new Error('Not signed in to Supabase');
+    const res = await fetch('/api/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify({ caption: cap, image_url: imageUrl, post_type: 'business_update' }),
+    });
+    const _txt = await res.text();
+    let data = {}; try { data = JSON.parse(_txt); } catch(e) {}
+    if (!res.ok) {
+      if (res.status === 403 && data.error === 'POST_LIMIT_REACHED') {
+        closeSheet('post-sheet'); openSheet('biz-upgrade-sheet');
+        toast("You've used all 5 free posts this month", 'err');
+        return;
       }
-    } else {
-      // Offline fallback
-      const post = { id: 'p_'+Date.now(), img: imageUrl, cap, created: new Date().toISOString() };
-      const posts = load('posts', []); posts.push(post); save('posts', posts);
+      throw new Error(data.error || 'Post failed');
     }
 
     closeSheet('post-sheet');
@@ -1778,11 +1878,12 @@ async function submitPost() {
     const hint = document.getElementById('biz-img-hint');
     if (hint) hint.textContent = 'Tap to add up to 5 photos';
     toast('Post published! ✅', 'ok');
-    renderPosts(); renderStats();
+    renderPosts(); renderStats(); loadBizPostUsage();
   } catch(e) {
     toast('Failed: ' + e.message, 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Publish 🚀'; }
   }
-  if (btn) { btn.disabled = false; btn.textContent = 'Publish Post 🚀'; }
 }
 
 let _bizPostMap = {};
@@ -1911,6 +2012,11 @@ async function submitEvent() {
   const desc  = document.getElementById('ev-desc').value.trim();
   let imgUrl = document.getElementById('ev-img').value.trim();
   const evImgFile = document.getElementById('ev-img-file')?.files[0];
+  const evLat = parseFloat(document.getElementById('ev-lat')?.value) || null;
+  const evLon = parseFloat(document.getElementById('ev-lon')?.value) || null;
+  if ((evLat !== null || evLon !== null) && (evLat < -35 || evLat > -22 || evLon < 16 || evLon > 33)) {
+    toast('Coordinates must be within South Africa', 'err'); return;
+  }
 
   const btn = document.querySelector('#event-sheet .btn-primary[onclick="submitEvent()"]') || { disabled: false, textContent: '' };
   btn.disabled = true; btn.textContent = id ? 'Saving…' : 'Publishing…';
@@ -1936,6 +2042,7 @@ async function submitEvent() {
         description: desc || null, price_min: price, price_max: price,
         is_free: price === 0, image_url: imgUrl || null,
         lineup: lineup.length ? lineup : null,
+        ...(evLat !== null && evLon !== null ? { venue_lat: evLat, venue_lon: evLon } : {}),
       }).eq('id', id).eq('organiser_id', session.user.id);
       if (upErr) throw new Error(upErr.message);
     } else {
@@ -1950,6 +2057,7 @@ async function submitEvent() {
         organiser_id: session.user.id,
         is_active: true, source: 'business',
         lineup: lineup.length ? lineup : null,
+        ...(evLat !== null && evLon !== null ? { venue_lat: evLat, venue_lon: evLon } : {}),
       });
       if (insErr) throw new Error(insErr.message);
 
@@ -2008,7 +2116,8 @@ async function editEvent(id) {
 function resetEventForm() {
   document.getElementById('ev-edit-id').value = '';
   document.getElementById('ev-sheet-title').textContent = 'New Event';
-  ['name','date','time','venue','city','genre','price','hype','desc','img','lineup'].forEach(f => { const el = document.getElementById('ev-' + f); if (el) el.value = ''; });
+  ['name','date','time','venue','city','genre','price','hype','desc','img','lineup','lat','lon'].forEach(f => { const el = document.getElementById('ev-' + f); if (el) el.value = ''; });
+  const locMsg = document.getElementById('ev-loc-msg'); if (locMsg) locMsg.textContent = '';
 }
 
 async function deleteEvent(id, btn) {
