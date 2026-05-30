@@ -666,6 +666,68 @@ select.inp option{background:#0D1424}
   </div>
 </div>
 
+<!-- EDIT POST SHEET -->
+<div class="sn-overlay" id="org-edit-post-sheet" onclick="if(event.target===this)closeOrgSheet('org-edit-post-sheet')">
+  <div class="sn-sheet">
+    <div class="sn-handle"></div>
+    <div class="sn-head"><div class="sn-title">✏️ Edit Post</div><button class="sn-close" onclick="closeOrgSheet('org-edit-post-sheet')">✕</button></div>
+    <div class="sn-body" style="padding-bottom:32px">
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Caption</div>
+      <textarea class="inp" id="edit-post-caption" placeholder="Write your update…" maxlength="1000" style="min-height:100px;resize:none"></textarea>
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Event Tag (optional)</div>
+      <input class="inp" id="edit-post-event-tag" placeholder="Tag an event name"/>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="btn-sec" style="flex:1" onclick="closeOrgSheet('org-edit-post-sheet')">Cancel</button>
+        <button class="btn-primary" style="flex:2" id="save-post-edit-btn" onclick="savePostEdit()">Save Changes ✅</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT EVENT SHEET -->
+<div class="sn-overlay" id="org-edit-event-sheet" onclick="if(event.target===this)closeOrgSheet('org-edit-event-sheet')">
+  <div class="sn-sheet" style="max-height:92vh">
+    <div class="sn-handle"></div>
+    <div class="sn-head"><div class="sn-title">✏️ Edit Event</div><button class="sn-close" onclick="closeOrgSheet('org-edit-event-sheet')">✕</button></div>
+    <div class="sn-body" style="padding-bottom:32px;overflow-y:auto">
+      <input class="inp" id="edit-ev-name" placeholder="Event name *"/>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:5px">Date *</div>
+          <input class="inp" id="edit-ev-date" type="date" style="color-scheme:dark;margin-bottom:0;width:100%"/>
+        </div>
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:5px">Time</div>
+          <input class="inp" id="edit-ev-time" type="time" style="color-scheme:dark;margin-bottom:0;width:100%"/>
+        </div>
+      </div>
+      <div style="height:10px"></div>
+      <input class="inp" id="edit-ev-venue" placeholder="Venue name *"/>
+      <input class="inp" id="edit-ev-city" placeholder="City / suburb *"/>
+      <select class="inp" id="edit-ev-genre">
+        <option value="">Select genre…</option>
+        <option value="amapiano">Amapiano</option>
+        <option value="gqom">Gqom</option>
+        <option value="hiphop">Hip Hop</option>
+        <option value="house">House</option>
+        <option value="afrobeats">Afrobeats</option>
+        <option value="rock">Rock</option>
+        <option value="gospel">Gospel</option>
+        <option value="jazz">Jazz</option>
+        <option value="sport">Sport</option>
+        <option value="comedy">Comedy</option>
+        <option value="maskandi">Maskandi</option>
+        <option value="other">Other</option>
+      </select>
+      <textarea class="inp" id="edit-ev-desc" placeholder="Description (optional)" maxlength="500" style="min-height:80px;resize:none"></textarea>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="btn-sec" style="flex:1" onclick="closeOrgSheet('org-edit-event-sheet')">Cancel</button>
+        <button class="btn-primary" style="flex:2" id="save-ev-edit-btn" onclick="saveEventEdit()">Save Event ✅</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1538,22 +1600,28 @@ async function submitEvent() {
   btn.disabled = false; btn.textContent = 'Create Event 🎉';
 }
 
+const _evMap = {};
 async function loadMyEvents() {
   const el = document.getElementById('my-events-list');
   if (!el || !currentUser) return;
   try {
-    const { data: evs } = await sb.from('events').select('id,name,date_local,venue_city,approved,is_active').eq('organiser_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
+    const { data: evs } = await sb.from('events').select('id,name,date_local,time_local,venue_name,venue_city,genre,description,image_url,approved,is_active').eq('organiser_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
     if (!evs?.length) { el.innerHTML = '<div class="empty">No events yet. Create your first above!</div>'; return; }
+    evs.forEach(e => { _evMap[e.id] = e; });
     el.innerHTML = evs.map(e => {
       const badge = e.approved
         ? `<span style="background:rgba(0,229,100,.12);color:#00e564;border:1px solid rgba(0,229,100,.3);border-radius:20px;padding:2px 8px;font-size:.65rem;font-weight:700">✅ Live</span>`
-        : `<span style="background:rgba(255,180,0,.1);color:#FFB400;border:1px solid rgba(255,180,0,.25);border-radius:20px;padding:2px 8px;font-size:.65rem;font-weight:700">⏳ Pending Approval</span>`;
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border)">
+        : `<span style="background:rgba(255,180,0,.1);color:#FFB400;border:1px solid rgba(255,180,0,.25);border-radius:20px;padding:2px 8px;font-size:.65rem;font-weight:700">⏳ Pending</span>`;
+      return `<div class="ev-item" id="ev-item-${x(e.id)}" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border)">
         <div style="flex:1;min-width:0">
           <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x(e.name)}</div>
           <div style="font-size:.7rem;color:var(--mu)">${x(e.date_local||'')} · ${x(e.venue_city||'')}</div>
+          <div style="margin-top:4px">${badge}</div>
         </div>
-        <div style="margin-left:10px;flex-shrink:0">${badge}</div>
+        <div style="display:flex;gap:6px;flex-shrink:0;margin-left:10px">
+          <button class="del-btn" style="color:var(--or)" onclick="openEditEventSheet('${x(e.id)}')">Edit</button>
+          <button class="del-btn" onclick="deleteEvent('${x(e.id)}',this)">Delete</button>
+        </div>
       </div>`;
     }).join('');
   } catch(e) { el.innerHTML = '<div class="empty">Could not load events</div>'; }
@@ -1563,19 +1631,20 @@ async function loadMyPosts() {
   const card = document.getElementById('my-posts-card');
   card.innerHTML = '<div class="empty">Loading…</div>';
   try {
-    const { data: posts, error } = await sb.from('posts').select('id,caption,image_url,created_at,post_type').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(30);
+    const { data: posts, error } = await sb.from('posts').select('id,caption,image_url,created_at,post_type,event_name').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(30);
     if (error) throw error;
     if (!posts?.length) { card.innerHTML = '<div class="empty">No posts yet. Share your first update above!</div>'; return; }
     card.innerHTML = posts.map(p => {
-      const esc = (s) => String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
       return `<div class="post-item" id="post-item-${x(p.id)}"><div class="post-row">${p.image_url?`<img class="post-img-thumb" src="${x(p.image_url)}" loading="lazy" onerror="this.style.display='none'"/>`:''}
         <div style="flex:1;min-width:0"><div class="post-cap" id="post-cap-${x(p.id)}">${x(p.caption||'(no caption)')}</div>
         <div class="post-meta">${new Date(p.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})} · ${p.post_type||'post'}</div></div>
         <div style="display:flex;gap:6px;flex-shrink:0">
-          <button class="del-btn" style="color:var(--or)" onclick="editPost('${x(p.id)}','${esc(p.caption||'')}')">Edit</button>
+          <button class="del-btn" style="color:var(--or)" onclick="openEditPostSheet('${x(p.id)}')">Edit</button>
           <button class="del-btn" onclick="deletePost('${x(p.id)}',this)">Delete</button>
         </div></div></div>`;
     }).join('');
+    _postDataMap = {};
+    posts.forEach(p => { _postDataMap[p.id] = p; });
     return;
   } catch(e) {
     card.innerHTML = '<div class="empty">Could not load posts</div>';
@@ -1583,7 +1652,15 @@ async function loadMyPosts() {
 }
 
 async function deletePost(postId, btn) {
-  if (!confirm('Delete this post?')) return;
+  if (btn.dataset.confirm !== '1') {
+    const orig = btn.textContent;
+    btn.dataset.confirm = '1'; btn.textContent = 'Sure?'; btn.style.color = '#FF2D78';
+    const no = document.createElement('button'); no.className = 'del-btn'; no.textContent = 'No';
+    no.onclick = () => { btn.dataset.confirm=''; btn.textContent=orig; btn.style.color=''; no.remove(); };
+    btn.after(no);
+    setTimeout(() => { if(btn.dataset.confirm==='1'){btn.dataset.confirm='';btn.textContent=orig;btn.style.color='';no.remove();} }, 5000);
+    return;
+  }
   btn.textContent = '…';
   const { error } = await sb.from('posts').delete().eq('id', postId).eq('user_id', currentUser.id);
   if (error) { toast('Delete failed', 'err'); btn.textContent = 'Delete'; return; }
@@ -1593,14 +1670,88 @@ async function deletePost(postId, btn) {
   toast('Post deleted', 'ok');
 }
 
-async function editPost(postId, currentCaption) {
-  const newCaption = prompt('Edit caption:', currentCaption);
-  if (newCaption === null) return;
-  const { error } = await sb.from('posts').update({ caption: newCaption.trim(), updated_at: new Date().toISOString() }).eq('id', postId).eq('user_id', currentUser.id);
-  if (error) { toast('Could not save edit', 'err'); return; }
-  const el = document.getElementById('post-cap-' + postId);
-  if (el) el.textContent = newCaption.trim() || '(no caption)';
+let _editPostId = null, _editEvId = null;
+let _postDataMap = {};
+
+function openEditPostSheet(postId) {
+  _editPostId = postId;
+  const p = _postDataMap[postId] || {};
+  document.getElementById('edit-post-caption').value = p.caption || '';
+  document.getElementById('edit-post-event-tag').value = p.event_name || '';
+  openOrgSheet('org-edit-post-sheet');
+}
+
+async function savePostEdit() {
+  if (!_editPostId) return;
+  const caption = document.getElementById('edit-post-caption').value.trim();
+  const evTag   = document.getElementById('edit-post-event-tag').value.trim();
+  const btn = document.getElementById('save-post-edit-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const { error } = await sb.from('posts').update({ caption: caption || null, event_name: evTag || null }).eq('id', _editPostId).eq('user_id', currentUser.id);
+  btn.disabled = false; btn.textContent = 'Save Changes ✅';
+  if (error) { toast('Could not save', 'err'); return; }
+  const capEl = document.getElementById('post-cap-' + _editPostId);
+  if (capEl) capEl.textContent = caption || '(no caption)';
+  if (_postDataMap[_editPostId]) { _postDataMap[_editPostId].caption = caption; _postDataMap[_editPostId].event_name = evTag; }
+  closeOrgSheet('org-edit-post-sheet');
   toast('Post updated ✅', 'ok');
+}
+
+function openEditEventSheet(evId) {
+  const e = _evMap[evId]; if (!e) return;
+  _editEvId = evId;
+  document.getElementById('edit-ev-name').value  = e.name || '';
+  document.getElementById('edit-ev-date').value  = e.date_local || '';
+  document.getElementById('edit-ev-time').value  = e.time_local || '';
+  document.getElementById('edit-ev-venue').value = e.venue_name || '';
+  document.getElementById('edit-ev-city').value  = e.venue_city || '';
+  document.getElementById('edit-ev-genre').value = e.genre || '';
+  document.getElementById('edit-ev-desc').value  = e.description || '';
+  openOrgSheet('org-edit-event-sheet');
+}
+
+async function saveEventEdit() {
+  if (!_editEvId) return;
+  const name  = document.getElementById('edit-ev-name').value.trim();
+  const date  = document.getElementById('edit-ev-date').value;
+  const time  = document.getElementById('edit-ev-time').value;
+  const venue = document.getElementById('edit-ev-venue').value.trim();
+  const city  = document.getElementById('edit-ev-city').value.trim();
+  const genre = document.getElementById('edit-ev-genre').value;
+  const desc  = document.getElementById('edit-ev-desc').value.trim();
+  if (!name)  return toast('Enter an event name', 'err');
+  if (!date)  return toast('Select a date', 'err');
+  if (!venue) return toast('Enter a venue', 'err');
+  if (!city)  return toast('Enter a city', 'err');
+  const btn = document.getElementById('save-ev-edit-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const { error } = await sb.from('events').update({ name, date_local: date, time_local: time||null, venue_name: venue, venue_city: city, genre: genre||null, description: desc||null }).eq('id', _editEvId).eq('organiser_id', currentUser.id);
+  btn.disabled = false; btn.textContent = 'Save Event ✅';
+  if (error) { toast('Could not save event: ' + error.message, 'err'); return; }
+  if (_evMap[_editEvId]) Object.assign(_evMap[_editEvId], { name, date_local: date, time_local: time||null, venue_name: venue, venue_city: city, genre: genre||null, description: desc||null });
+  closeOrgSheet('org-edit-event-sheet');
+  toast('Event updated ✅', 'ok');
+  loadMyEvents();
+}
+
+async function deleteEvent(evId, btn) {
+  if (btn.dataset.confirm !== '1') {
+    const orig = btn.textContent;
+    btn.dataset.confirm = '1'; btn.textContent = 'Sure?'; btn.style.color = '#FF2D78';
+    const no = document.createElement('button'); no.className = 'del-btn'; no.textContent = 'No';
+    no.onclick = () => { btn.dataset.confirm=''; btn.textContent=orig; btn.style.color=''; no.remove(); };
+    btn.after(no);
+    setTimeout(() => { if(btn.dataset.confirm==='1'){btn.dataset.confirm='';btn.textContent=orig;btn.style.color='';no.remove();} }, 5000);
+    return;
+  }
+  btn.textContent = '…';
+  const { error } = await sb.from('events').delete().eq('id', evId).eq('organiser_id', currentUser.id);
+  if (error) { toast('Delete failed', 'err'); btn.textContent = 'Delete'; return; }
+  document.getElementById('ev-item-' + evId)?.remove();
+  delete _evMap[evId];
+  const n = parseInt(document.getElementById('stat-events').textContent||0)-1;
+  document.getElementById('stat-events').textContent = Math.max(0,n);
+  toast('Event deleted', 'ok');
 }
 
 // ── SOCIAL NOTIFICATIONS ─────────────────────────────────────
