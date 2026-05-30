@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#05080F"/>
+<title>Partner & Affiliate Programme — Pulsefy</title>
+<meta name="description" content="Pulsefy lists events from major ticket distributors at set prices and routes users directly to partner platforms to complete purchases."/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--pu:#B026FF;--li:#C6FF4A;--te:#00D4AA;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0}
+html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+
+/* ── NAV ── */
+.tb{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:rgba(5,8,15,.97);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);z-index:100;gap:12px}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.06em;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--tx)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--or);box-shadow:0 0 10px var(--or);flex-shrink:0}
+.back{background:none;border:none;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;cursor:pointer;padding:0;white-space:nowrap}
+.try-btn{background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;border-radius:50px;padding:9px 18px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center}
+
+/* ── CONTENT ── */
+.hero{padding:48px 20px 40px;text-align:center;border-bottom:1px solid var(--border);background:linear-gradient(180deg,rgba(176,38,255,.06) 0%,transparent 100%)}
+.hero-kicker{font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--or);margin-bottom:14px}
+.hero h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.2rem,7vw,3.4rem);letter-spacing:.04em;line-height:1.05;margin-bottom:14px}
+.hero h1 span{color:var(--or)}
+.hero-sub{font-size:.9rem;color:var(--mu2);line-height:1.7;max-width:560px;margin:0 auto 28px}
+.hero-ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn-pri{background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;border-radius:50px;padding:13px 24px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn-sec{background:transparent;border:1px solid var(--border2);color:var(--tx);border-radius:50px;padding:12px 22px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+
+.content{max-width:720px;margin:0 auto;padding:0 20px 80px}
+
+/* ── SECTIONS ── */
+.sec{padding:44px 0 8px}
+.sec-label{font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--or);margin-bottom:10px}
+.sec h2{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.04em;margin-bottom:10px;line-height:1.1}
+.sec-sub{font-size:.85rem;color:var(--mu2);line-height:1.75;margin-bottom:20px}
+
+/* ── CALLOUT BOXES ── */
+.callout{border-radius:16px;padding:20px;margin-bottom:18px}
+.callout-or{background:rgba(255,92,0,.07);border:1px solid rgba(255,92,0,.22)}
+.callout-pu{background:rgba(176,38,255,.07);border:1px solid rgba(176,38,255,.22)}
+.callout-te{background:rgba(0,212,170,.07);border:1px solid rgba(0,212,170,.22)}
+.callout-li{background:rgba(198,255,74,.07);border:1px solid rgba(198,255,74,.22)}
+.callout-label{font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px}
+.callout p{font-size:.84rem;line-height:1.7;color:var(--tx)}
+.callout strong{color:var(--or)}
+
+/* ── FLOW STEPS ── */
+.steps{list-style:none;margin-bottom:20px}
+.steps li{display:flex;gap:14px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--border)}
+.steps li:last-child{border-bottom:none}
+.step-n{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:800;flex-shrink:0;margin-top:1px}
+.step-body{flex:1}
+.step-body strong{font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;display:block;margin-bottom:3px}
+.step-body span{font-size:.78rem;color:var(--mu2);line-height:1.6}
+
+/* ── BUTTON MOCKUP ── */
+.btn-mock{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border-radius:50px;padding:13px 22px;font-family:'Syne',sans-serif;font-size:.86rem;font-weight:700;margin:8px 0;pointer-events:none;box-shadow:0 0 24px rgba(176,38,255,.4),0 4px 16px rgba(0,0,0,.5)}
+.badge-mock{display:inline-flex;align-items:center;gap:6px;background:rgba(0,212,170,.12);border:1px solid rgba(0,212,170,.3);border-radius:50px;padding:4px 12px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;color:var(--te);margin-bottom:8px}
+
+/* ── TWO-COL SPLIT ── */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+@media(max-width:520px){.split{grid-template-columns:1fr}}
+.split-card{background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:18px}
+.split-card h3{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px}
+.split-card.hi h3{color:var(--or)}
+.split-card.lo h3{color:var(--mu2)}
+.split-card ul{list-style:none}
+.split-card ul li{font-size:.78rem;color:var(--mu2);line-height:1.65;padding-left:14px;position:relative;margin-bottom:5px}
+.split-card ul li::before{content:'›';position:absolute;left:0;color:var(--or)}
+.split-card.lo ul li::before{color:var(--mu)}
+
+/* ── STAT PILLS ── */
+.stats-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}
+.stat-pill{background:var(--surf);border:1px solid var(--border2);border-radius:50px;padding:10px 18px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700}
+.stat-pill span{color:var(--or);margin-right:4px}
+
+/* ── PARTNER LOGOS ROW ── */
+.partner-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.partner-chip{background:var(--surf2);border:1px solid var(--border2);border-radius:10px;padding:10px 16px;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;color:var(--mu2);display:flex;align-items:center;gap:8px}
+.partner-chip span{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.partner-chip.tm span{background:#026CDF}
+.partner-chip.eb span{background:#F05537}
+.partner-chip.qk span{background:#00C89C}
+
+/* ── CONTACT ── */
+.contact-card{background:linear-gradient(135deg,rgba(176,38,255,.1),rgba(255,92,0,.08));border:1px solid rgba(176,38,255,.25);border-radius:18px;padding:28px;text-align:center;margin-top:16px}
+.contact-card h3{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.04em;margin-bottom:8px}
+.contact-card p{font-size:.83rem;color:var(--mu2);line-height:1.65;margin-bottom:20px}
+
+/* ── DIVIDER ── */
+hr{border:none;border-top:1px solid var(--border);margin:8px 0}
+
+.notice{background:rgba(0,212,170,.07);border:1px solid rgba(0,212,170,.25);border-radius:12px;padding:14px 16px;font-size:.78rem;color:var(--te);line-height:1.6;margin-bottom:20px}
+.notice strong{font-weight:700}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="tb">
+  <button class="back" onclick="history.back()">← Back</button>
+  <a href="/" class="logo"><span class="dot"></span>PULSEFY</a>
+  <a href="/" class="try-btn">Try the App →</a>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-kicker">Affiliate & Partner Programme</div>
+  <h1>HOW PULSEFY WORKS<br/>WITH <span>TICKET PARTNERS</span></h1>
+  <p class="hero-sub">Pulsefy is South Africa's live event discovery platform. We surface events from major ticket distributors on our map and feed — at distributor-set prices — and route users directly to your platform to complete their purchase.</p>
+  <div class="hero-ctas">
+    <a href="/" class="btn-pri">🎟 Explore the Live App →</a>
+    <a href="mailto:hello@pulsefy.co.za?subject=Partnership%20Enquiry%20%E2%80%94%20Pulsefy" class="btn-sec">✉️ Contact Us</a>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- ── SECTION 1: USER FLOW ── -->
+  <div class="sec">
+    <div class="sec-label">User Flow</div>
+    <h2>How Users Find & Buy Tickets</h2>
+    <p class="sec-sub">The complete journey from discovery to purchase — designed to direct users to your platform, not compete with it.</p>
+
+    <ul class="steps">
+      <li>
+        <div class="step-n">1</div>
+        <div class="step-body">
+          <strong>Browse events on the home feed or live map</strong>
+          <span>Users open Pulsefy and see upcoming events in their city, filtered by genre (Gqom, Amapiano, Hip-Hop, Jazz), venue type, or area. Events from affiliate partners appear alongside locally-listed events, clearly labelled by source.</span>
+        </div>
+      </li>
+      <li>
+        <div class="step-n">2</div>
+        <div class="step-body">
+          <strong>Tap an event to open the full detail panel</strong>
+          <span>The detail panel shows the event name, date, time, venue, lineup, description, and a "Listed on [Partner]" badge with the price from the distributor's data.</span>
+        </div>
+      </li>
+      <li>
+        <div class="step-n">3</div>
+        <div class="step-body">
+          <strong>Tap "Buy on [Partner] →" to purchase</strong>
+          <span>A single prominent button opens the partner's ticketing page in a new browser tab. Pulsefy plays no role in the checkout — no cart, no payment form, no data collection. The user lands directly on the distributor's event page.</span>
+        </div>
+      </li>
+      <li>
+        <div class="step-n">4</div>
+        <div class="step-body">
+          <strong>Purchase completed on partner's platform</strong>
+          <span>The entire transaction — payment, booking confirmation, ticket delivery — happens on the partner's platform. Pulsefy does not handle, proxy, or compete with the checkout in any way.</span>
+        </div>
+      </li>
+    </ul>
+
+    <!-- Button mockup -->
+    <div class="callout callout-te" style="text-align:center;padding:24px">
+      <div class="sec-label" style="text-align:center;margin-bottom:16px">What users see in the app</div>
+      <div style="background:var(--surf2);border:1px solid var(--border);border-radius:14px;padding:18px;display:inline-block;text-align:left;min-width:240px;max-width:320px">
+        <div class="badge-mock">🎟 Listed on Ticketmaster</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--or);margin-bottom:14px">FROM R350</div>
+        <div class="btn-mock">🎟 Buy on Ticketmaster →</div>
+        <div style="font-size:.62rem;color:var(--mu);margin-top:8px;text-align:center">Opens Ticketmaster in a new tab &nbsp;↗</div>
+      </div>
+    </div>
+
+    <div class="notice">
+      <strong>No embedded or native checkout for affiliate events.</strong> Users are routed directly to the partner's own website to complete the purchase. Pulsefy does not collect payment details, process transactions, or earn a commission on ticket sales for affiliate-listed events.
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- ── SECTION 2: PARTNERSHIP MODEL ── -->
+  <div class="sec">
+    <div class="sec-label">Partnership Model</div>
+    <h2>Affiliate Events vs. Organizer Accounts</h2>
+    <p class="sec-sub">Pulsefy has two distinct types of events on the platform. It's important to understand the line between them.</p>
+
+    <div class="callout callout-or" style="margin-bottom:22px">
+      <div class="callout-label" style="color:var(--or)">📊 Key Stat</div>
+      <p><strong>90% of tickets listed on Pulsefy come from our trusted affiliate ticket partners.</strong> The platform is built around surfacing partner-sourced events — our own in-app checkout exists only for independent organisers who don't have an existing ticketing platform.</p>
+    </div>
+
+    <div class="split">
+      <div class="split-card hi">
+        <h3>🔗 Affiliate Events</h3>
+        <ul>
+          <li>Sourced from Ticketmaster, Eventbrite, Quicket</li>
+          <li>Listed at the distributor's <strong>set price</strong> — zero markup</li>
+          <li>"Buy on [Partner]" button — opens partner site in new tab</li>
+          <li>No Pulsefy checkout involved</li>
+          <li>Source is clearly shown on every card and detail panel</li>
+          <li>90% of all events on the platform</li>
+        </ul>
+      </div>
+      <div class="split-card lo">
+        <h3>🎤 Organizer / Business Accounts</h3>
+        <ul>
+          <li>Independent SA organisers and venues with no existing ticketing platform</li>
+          <li>Organisers set their own prices</li>
+          <li>In-app Paystack checkout (SA's payment gateway) for their own events</li>
+          <li>8% Pulsefy platform fee applies</li>
+          <li>Clearly labelled as "Pulsefy Tickets"</li>
+          <li>~10% of events — small independents only</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout callout-pu">
+      <div class="callout-label" style="color:#B026FF">💎 Pricing Policy</div>
+      <p>Pulsefy lists all affiliate events at <strong>exactly the price set by the distributor</strong>. We do not add surcharges, create competing checkout flows, or obscure the ticketing source. Our interest is in discovery and referral — driving qualified, purchase-intent traffic to our partners' platforms.</p>
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- ── SECTION 3: PLATFORM ── -->
+  <div class="sec">
+    <div class="sec-label">Platform Overview</div>
+    <h2>Who We Are & Where We Operate</h2>
+    <p class="sec-sub">Pulsefy is built specifically for South Africa's live entertainment market, with a focus on the three largest metro areas.</p>
+
+    <div class="stats-row">
+      <div class="stat-pill"><span>🇿🇦</span>South Africa — Primary Market</div>
+      <div class="stat-pill"><span>📍</span>KwaZulu-Natal · Gauteng · Western Cape</div>
+      <div class="stat-pill"><span>📱</span>Mobile-first PWA</div>
+      <div class="stat-pill"><span>🗺️</span>Live event map</div>
+      <div class="stat-pill"><span>🎵</span>Gqom · Amapiano · Hip-Hop · Jazz & more</div>
+    </div>
+
+    <p class="sec-sub">The platform is a Progressive Web App — users install it directly from the browser (no app store required) for an app-like experience on Android and iOS. The live event map lets users discover what's on near them in real time.</p>
+
+    <div class="callout callout-li">
+      <div class="callout-label" style="color:var(--li)">🎯 Target Audience</div>
+      <p style="color:var(--tx)">South Africans aged 18–35 actively looking for live events, nightlife, concerts, shisanyamas, restaurants, and experiences. High purchase intent — users open the app specifically to find something to do and buy tickets.</p>
+    </div>
+  </div>
+
+  <hr/>
+
+  <!-- ── SECTION 4: EXISTING PARTNERS ── -->
+  <div class="sec">
+    <div class="sec-label">Existing Integrations</div>
+    <h2>Current Affiliate Partners</h2>
+    <p class="sec-sub">Pulsefy already integrates with the following ticket platforms using the same affiliate model — link-out routing at set prices, clearly sourced.</p>
+
+    <div class="partner-row">
+      <div class="partner-chip tm"><span></span>Ticketmaster</div>
+      <div class="partner-chip eb"><span></span>Eventbrite</div>
+      <div class="partner-chip qk"><span></span>Quicket</div>
+    </div>
+
+    <p class="sec-sub" style="margin-top:12px">All three use identical treatment: source badge on the event card, "Listed on [Partner]" in the detail panel, external link button that opens the partner's page in a new tab. No checkout, no payment data, no competition.</p>
+  </div>
+
+  <hr/>
+
+  <!-- ── SECTION 5: CONTACT ── -->
+  <div class="sec">
+    <div class="sec-label">Get in Touch</div>
+    <div class="contact-card">
+      <h3>Start a Partnership Conversation</h3>
+      <p>Interested in a formal affiliate arrangement or want to review the live product in more detail? Reach out directly — we're happy to share traction data, walk through the user flow, and discuss integration specifics.</p>
+      <a href="mailto:hello@pulsefy.co.za?subject=Partnership%20Enquiry%20%E2%80%94%20Pulsefy" class="btn-pri" style="margin-bottom:14px">✉️ hello@pulsefy.co.za</a>
+      <div style="font-size:.74rem;color:var(--mu);margin-top:10px">Or explore the live product first:</div>
+      <a href="/" class="btn-sec" style="margin-top:10px">🎟 Open the Live App →</a>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

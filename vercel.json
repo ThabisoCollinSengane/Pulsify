@@ -50,6 +50,7 @@
     { "source": "/user-profile",         "destination": "/apps/landing-page/user-profile.html" },
     { "source": "/feeds",                "destination": "/apps/landing-page/feeds.html" },
     { "source": "/terms",                "destination": "/apps/landing-page/terms.html" },
+    { "source": "/partners",             "destination": "/apps/landing-page/partners.html" },
     { "source": "/business-menu",        "destination": "/apps/landing-page/business-menu.html" },
     { "source": "/diagnose",             "destination": "/apps/landing-page/diagnose.html" },
     { "source": "/",                     "destination": "/apps/landing-page/index.html" },
