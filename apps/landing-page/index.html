@@ -3251,7 +3251,8 @@ async function renderBookings() {
   const bl = document.getElementById('bookings-list');
   if (!bl) { renderSaved(); return; }
 
-  const token = localStorage.getItem('p_token');
+  let token = '';
+  try { const _sb = getSB(); const { data: { session } } = await _sb.auth.getSession(); token = session?.access_token || localStorage.getItem('p_token') || ''; } catch(_) { token = localStorage.getItem('p_token') || ''; }
   if (!token || !currentUser) {
     bl.innerHTML = `<div class="no-results"><div class="no-results-ico">🎟</div><div class="no-results-title">Sign in to see your tickets</div><button class="no-results-btn" onclick="window.location.href='/signin'">Sign In</button></div>`;
     renderSaved(); return;
@@ -4662,6 +4663,19 @@ async function initSupabaseSession() {
         localStorage.setItem('p_sev', JSON.stringify(savedEv));
         localStorage.setItem('p_sbiz', JSON.stringify(savedBz));
       }
+    } catch(_) {}
+    // Load live profile stats (tickets + posts) from DB
+    try {
+      const [{ count: ticketCount }, { count: postCount }] = await Promise.all([
+        sb.from('bookings').select('id', { count: 'exact', head: true }).eq('user_id', session.user.id).eq('status', 'confirmed'),
+        sb.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', session.user.id),
+      ]);
+      const s1 = document.getElementById('ps-saved');
+      const s2 = document.getElementById('ps-tickets');
+      const s3 = document.getElementById('ps-posts');
+      if (s1) s1.textContent = savedEv.length;
+      if (s2) s2.textContent = ticketCount || 0;
+      if (s3) s3.textContent = postCount || 0;
     } catch(_) {}
     renderProfile();
     setTimeout(startOnboarding, 600);

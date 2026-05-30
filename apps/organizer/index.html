@@ -239,7 +239,10 @@ select.inp option{background:#0D1424}
           </div>
           <input type="file" id="ev-img-file" accept="image/*" style="display:none" onchange="previewEvImg(this)"/>
         </div>
-        <button class="btn-primary" id="ev-btn" onclick="submitEvent()">Create Event 🎉</button>
+        <div style="display:flex;gap:8px;padding-bottom:8px">
+          <button class="btn-sec" style="flex:1" onclick="previewEventForm()">👁 Preview</button>
+          <button class="btn-primary" id="ev-btn" style="flex:2" onclick="submitEvent()">Create Event 🎉</button>
+        </div>
       </div>
     </div>
     <div class="section-label" style="margin-top:16px">My Events</div>
@@ -642,6 +645,34 @@ select.inp option{background:#0D1424}
       <div style="display:flex;gap:10px;margin-top:14px">
         <button class="btn-sec" style="flex:1" onclick="closeOrgSheet('org-preview-sheet')">← Edit</button>
         <button class="btn-primary" style="flex:2" onclick="closeOrgSheet('org-preview-sheet');submitPost()">Publish 🚀</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ORG EVENT PREVIEW SHEET -->
+<div class="sn-overlay" id="org-ev-preview-sheet" onclick="if(event.target===this)closeOrgSheet('org-ev-preview-sheet')">
+  <div class="sn-sheet">
+    <div class="sn-handle"></div>
+    <div class="sn-head"><div class="sn-title">Preview Event</div><button class="sn-close" onclick="closeOrgSheet('org-ev-preview-sheet')">✕</button></div>
+    <div class="sn-body" style="padding-bottom:32px">
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">How it'll appear on the platform</div>
+      <div style="background:var(--surf2);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+        <div id="ev-preview-banner" style="display:none;height:140px;background:#111"><img id="ev-preview-banner-img" style="width:100%;height:100%;object-fit:cover"/></div>
+        <div style="padding:14px">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;line-height:1.1;margin-bottom:4px" id="ev-preview-name"></div>
+          <div style="font-size:.72rem;color:var(--mu2);margin-bottom:6px" id="ev-preview-meta"></div>
+          <div id="ev-preview-tiers" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+          <div style="font-size:.78rem;line-height:1.5;color:var(--tx);white-space:pre-wrap" id="ev-preview-desc"></div>
+          <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+            <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);display:flex;align-items:center;justify-content:center;font-size:.7rem;flex-shrink:0">🎪</div>
+            <div style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700" id="ev-preview-organizer"></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn-sec" style="flex:1" onclick="closeOrgSheet('org-ev-preview-sheet')">← Edit</button>
+        <button class="btn-primary" style="flex:2" onclick="closeOrgSheet('org-ev-preview-sheet');submitEvent()">Create Event 🎉</button>
       </div>
     </div>
   </div>
@@ -1076,6 +1107,64 @@ function previewOrgPost() {
   const capEl = document.getElementById('org-preview-caption');
   if (capEl) capEl.textContent = cap;
   openOrgSheet('org-preview-sheet');
+}
+
+function previewEventForm() {
+  const name  = document.getElementById('ev-name').value.trim();
+  const venue = document.getElementById('ev-venue').value.trim();
+  const city  = document.getElementById('ev-city').value.trim();
+  const date  = document.getElementById('ev-date').value;
+  if (!name)  { toast('Enter an event name first', 'err'); return; }
+  if (!venue) { toast('Enter a venue name first', 'err'); return; }
+  if (!city)  { toast('Enter a city first', 'err'); return; }
+  if (!date)  { toast('Pick a date first', 'err'); return; }
+
+  // Banner image
+  const thumb = document.getElementById('ev-img-thumb');
+  const banner = document.getElementById('ev-preview-banner');
+  const bannerImg = document.getElementById('ev-preview-banner-img');
+  if (thumb?.src && !thumb.src.endsWith(window.location.href)) {
+    bannerImg.src = thumb.src;
+    banner.style.display = 'block';
+  } else { banner.style.display = 'none'; }
+
+  // Name
+  document.getElementById('ev-preview-name').textContent = name;
+
+  // Meta line
+  const time  = document.getElementById('ev-time').value;
+  const genre = document.getElementById('ev-genre').value;
+  const dateLabel = new Date(date + 'T12:00:00').toLocaleDateString('en-ZA', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+  const parts = ['📅 ' + dateLabel];
+  if (time) parts.push('🕐 ' + time);
+  parts.push('📍 ' + venue + ', ' + city);
+  if (genre) parts.push('🎵 ' + genre.charAt(0).toUpperCase() + genre.slice(1));
+  document.getElementById('ev-preview-meta').textContent = parts.join(' · ');
+
+  // Ticket tiers
+  const tiersEl = document.getElementById('ev-preview-tiers');
+  const tierRows = document.querySelectorAll('.ev-tier-row');
+  tiersEl.innerHTML = '';
+  tierRows.forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const tName = inputs[0]?.value.trim();
+    const tPrice = parseFloat(inputs[1]?.value) || 0;
+    if (!tName) return;
+    const label = tPrice === 0 ? 'FREE' : 'R' + tPrice;
+    const chip = document.createElement('span');
+    chip.style.cssText = 'padding:3px 10px;border-radius:50px;font-family:\'Syne\',sans-serif;font-size:.68rem;font-weight:700;background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.3);color:var(--or)';
+    chip.textContent = tName + ' · ' + label;
+    tiersEl.appendChild(chip);
+  });
+
+  // Description
+  const desc = document.getElementById('ev-desc').value.trim();
+  document.getElementById('ev-preview-desc').textContent = desc;
+
+  // Organizer name
+  document.getElementById('ev-preview-organizer').textContent = currentProfile?.display_name || 'Organizer';
+
+  openOrgSheet('org-ev-preview-sheet');
 }
 
 function x(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
