@@ -18,7 +18,7 @@
 - `time_local` = just the time string (e.g. `20:00`)
 
 ## Post limits (free accounts — to be implemented)
-- Maximum **1 post per month** (calendar month).
+- Maximum **5 posts per month** (calendar month, beta limit).
 - Check in `api/index.js` before inserting post. Return 403 if limit exceeded.
 
 ## Admin approval (to be implemented)

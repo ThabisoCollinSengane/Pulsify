@@ -3573,7 +3573,22 @@ async function toggleLike(btn, entityId, entityType = 'event') {
     showToast('Error saving like', 'err');
   }
 }
-function toggleSave(type, id, btn) { if (type === 'ev') { const i = savedEv.indexOf(id); if (i > -1) { savedEv.splice(i,1); showToast('Removed'); } else { savedEv.push(id); showToast('🔖 Saved!'); } localStorage.setItem('p_sev', JSON.stringify(savedEv)); } else { const i = savedBz.indexOf(id); if (i > -1) { savedBz.splice(i,1); showToast('Removed'); } else { savedBz.push(id); showToast('🔖 Saved!'); } localStorage.setItem('p_sbiz', JSON.stringify(savedBz)); } if (btn) btn.querySelector('.ri,.ai').textContent = (type === 'ev' ? savedEv : savedBz).includes(id) ? '🔖' : '🏷'; }
+async function toggleSave(type, id, btn) {
+  const arr = type === 'ev' ? savedEv : savedBz;
+  const lsKey = type === 'ev' ? 'p_sev' : 'p_sbiz';
+  const i = arr.indexOf(id);
+  const adding = i === -1;
+  if (adding) { arr.push(id); showToast('🔖 Saved!'); } else { arr.splice(i, 1); showToast('Removed'); }
+  localStorage.setItem(lsKey, JSON.stringify(arr));
+  if (btn) btn.querySelector('.ri,.ai').textContent = arr.includes(id) ? '🔖' : '🏷';
+  const sb = getSB(); if (!sb) return;
+  const { data: { session } } = await sb.auth.getSession(); if (!session) return;
+  if (adding) {
+    await sb.from('saved_items').upsert({ user_id: session.user.id, entity_type: type, entity_id: id }, { onConflict: 'user_id,entity_type,entity_id' });
+  } else {
+    await sb.from('saved_items').delete().eq('user_id', session.user.id).eq('entity_type', type).eq('entity_id', id);
+  }
+}
 function shareIt(name) { if (navigator.share) navigator.share({ title: name, text: 'Check out ' + name + ' on Pulsefy!', url: location.href }); else { navigator.clipboard?.writeText(location.href); showToast('🔗 Link copied!'); } }
 
 
@@ -4638,6 +4653,16 @@ async function initSupabaseSession() {
     const btn = document.getElementById('auth-btn');
     if (btn) { btn.textContent='Feed'; btn.onclick=()=>window.location.href='/feeds'; }
     currentUser = session.user;
+    // Sync saved items from DB so they survive across devices/sessions
+    try {
+      const { data: savedRows } = await sb.from('saved_items').select('entity_type,entity_id').eq('user_id', session.user.id);
+      if (savedRows?.length) {
+        savedEv = savedRows.filter(r => r.entity_type === 'ev').map(r => r.entity_id);
+        savedBz = savedRows.filter(r => r.entity_type === 'biz').map(r => r.entity_id);
+        localStorage.setItem('p_sev', JSON.stringify(savedEv));
+        localStorage.setItem('p_sbiz', JSON.stringify(savedBz));
+      }
+    } catch(_) {}
     renderProfile();
     setTimeout(startOnboarding, 600);
   } catch(e) { console.warn('initSupabaseSession:', e.message); }
