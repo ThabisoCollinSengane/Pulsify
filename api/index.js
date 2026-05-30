@@ -2976,6 +2976,61 @@ module.exports = async (req, res) => {
       return res.status(200).json({ claim: data });
     }
 
+    /* ─── POST /location-request ─────────────────────────── */
+    if (url === '/location-request' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      const { entity_type, entity_id, entity_name, lat, lon } = req.body || {};
+      if (!entity_type || !entity_id || lat == null || lon == null)
+        return res.status(400).json({ error: 'entity_type, entity_id, lat, lon required' });
+      const latN = parseFloat(lat), lonN = parseFloat(lon);
+      if (latN < -35 || latN > -22 || lonN < 16 || lonN > 33)
+        return res.status(400).json({ error: 'Coordinates must be within South Africa (lat −35 to −22, lon 16 to 33)' });
+      // Cancel any existing pending request for this entity so there's only one at a time
+      await sb().from('location_requests')
+        .update({ status: 'rejected', notes: 'Superseded by new request' })
+        .eq('entity_id', entity_id).eq('entity_type', entity_type).eq('status', 'pending');
+      const { data, error } = await sb().from('location_requests')
+        .insert({ entity_type, entity_id, entity_name: entity_name || null, user_id: auth.user.id, lat: latN, lon: lonN })
+        .select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ request: data });
+    }
+
+    /* ─── GET /admin/location-requests ───────────────────── */
+    if (url.startsWith('/admin/location-requests') && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const qs = url.includes('?') ? url.split('?')[1] : '';
+      const status = new URLSearchParams(qs).get('status') || 'pending';
+      let q = sb().from('location_requests').select('*').order('created_at', { ascending: false }).limit(100);
+      if (status !== 'all') q = q.eq('status', status);
+      const { data, error } = await q;
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ requests: data || [] });
+    }
+
+    /* ─── PATCH /admin/location-requests/:id ─────────────── */
+    const locReqMatch = url.match(/^\/admin\/location-requests\/([^/]+)$/);
+    if (locReqMatch && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const { status, notes } = req.body || {};
+      if (!['approved','rejected'].includes(status)) return res.status(400).json({ error: 'status must be approved or rejected' });
+      const { data: lr } = await sb().from('location_requests').select('*').eq('id', locReqMatch[1]).single();
+      if (!lr) return res.status(404).json({ error: 'Not found' });
+      await sb().from('location_requests')
+        .update({ status, notes: notes || null, reviewed_at: new Date().toISOString() })
+        .eq('id', locReqMatch[1]);
+      if (status === 'approved') {
+        if (lr.entity_type === 'business')
+          await sb().from('businesses').update({ lat: lr.lat, lon: lr.lon }).eq('id', lr.entity_id);
+        else if (lr.entity_type === 'event')
+          await sb().from('events').update({ venue_lat: lr.lat, venue_lon: lr.lon }).eq('id', lr.entity_id);
+      }
+      return res.status(200).json({ success: true });
+    }
+
     return res.status(404).json({ error: `Route not found: ${req.method} ${url}` });
 
   } catch (err) {

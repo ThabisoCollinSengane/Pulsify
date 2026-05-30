@@ -240,6 +240,15 @@ select.inp option{background:#0D1424}
           </div>
           <input type="file" id="ev-img-file" accept="image/*" style="display:none" onchange="previewEvImg(this)"/>
         </div>
+        <div style="margin-bottom:10px">
+          <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:5px">Event GPS Location (optional)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">
+            <input class="inp" id="ev-lat" type="number" step="any" placeholder="Latitude e.g. −29.85" style="margin-bottom:0"/>
+            <input class="inp" id="ev-lon" type="number" step="any" placeholder="Longitude e.g. 31.02" style="margin-bottom:0"/>
+          </div>
+          <button type="button" class="btn-sec" style="padding:8px 14px;font-size:.78rem" onclick="useGPSForEvent('ev-lat','ev-lon','ev-loc-msg')">📍 Use My Current Location</button>
+          <div id="ev-loc-msg" style="font-size:.7rem;color:var(--mu2);margin-top:4px;min-height:14px"></div>
+        </div>
         <div style="display:flex;gap:8px;padding-bottom:8px">
           <button class="btn-sec" style="flex:1" onclick="previewEventForm()">👁 Preview</button>
           <button class="btn-primary" id="ev-btn" style="flex:2" onclick="submitEvent()">Create Event 🎉</button>
@@ -776,7 +785,21 @@ select.inp option{background:#0D1424}
         <option value="other">Other</option>
       </select>
       <textarea class="inp" id="edit-ev-desc" placeholder="Description (optional)" maxlength="500" style="min-height:80px;resize:none"></textarea>
-      <div style="display:flex;gap:10px;margin-top:4px">
+      <!-- Location update -->
+      <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px">
+        <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Update Event Location</div>
+        <div id="edit-ev-loc-current" style="font-size:.7rem;color:var(--mu2);margin-bottom:8px"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">
+          <input class="inp" id="edit-ev-lat" type="number" step="any" placeholder="Latitude" style="margin-bottom:0"/>
+          <input class="inp" id="edit-ev-lon" type="number" step="any" placeholder="Longitude" style="margin-bottom:0"/>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:6px">
+          <button type="button" class="btn-sec" style="flex:1;padding:8px;font-size:.76rem" onclick="useGPSForEvent('edit-ev-lat','edit-ev-lon','edit-ev-loc-msg')">📍 My Location</button>
+          <button type="button" class="btn-sec" style="flex:1;padding:8px;font-size:.76rem" id="req-loc-btn" onclick="submitEventLocationRequest()">Submit Location ✓</button>
+        </div>
+        <div id="edit-ev-loc-msg" style="font-size:.7rem;color:var(--mu2);min-height:14px"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:10px">
         <button class="btn-sec" style="flex:1" onclick="closeOrgSheet('org-edit-event-sheet')">Cancel</button>
         <button class="btn-primary" style="flex:2" id="save-ev-edit-btn" onclick="saveEventEdit()">Save Event ✅</button>
       </div>
@@ -1108,6 +1131,46 @@ function previewOrgPost() {
   const capEl = document.getElementById('org-preview-caption');
   if (capEl) capEl.textContent = cap;
   openOrgSheet('org-preview-sheet');
+}
+
+function useGPSForEvent(latId, lonId, msgId) {
+  const msgEl = document.getElementById(msgId);
+  if (!navigator.geolocation) { if (msgEl) msgEl.textContent = 'GPS not available'; return; }
+  if (msgEl) msgEl.textContent = '📡 Getting your location…';
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      document.getElementById(latId).value = pos.coords.latitude.toFixed(6);
+      document.getElementById(lonId).value = pos.coords.longitude.toFixed(6);
+      if (msgEl) msgEl.textContent = `✅ ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+    },
+    () => { if (msgEl) msgEl.textContent = '⚠️ Could not get location — close floating app overlays (Messenger bubbles etc.) and retry, or enter manually.'; },
+    { enableHighAccuracy: true, timeout: 12000 }
+  );
+}
+
+async function submitEventLocationRequest() {
+  const lat = parseFloat(document.getElementById('edit-ev-lat').value);
+  const lon = parseFloat(document.getElementById('edit-ev-lon').value);
+  const msgEl = document.getElementById('edit-ev-loc-msg');
+  const setMsg = (m, ok) => { if (msgEl) { msgEl.textContent = m; msgEl.style.color = ok ? 'var(--li)' : 'var(--pk)'; } };
+  if (isNaN(lat) || isNaN(lon)) { setMsg('Enter both latitude and longitude', false); return; }
+  if (lat < -35 || lat > -22 || lon < 16 || lon > 33) { setMsg('Coordinates must be in South Africa', false); return; }
+  const { data: { session } } = await sb.auth.getSession(); if (!session) return;
+  const ev = _evMap[_editEvId]; if (!ev) return;
+  setMsg('Submitting…', true);
+  const btn = document.getElementById('req-loc-btn');
+  if (btn) btn.disabled = true;
+  try {
+    const r = await fetch('/api/location-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+      body: JSON.stringify({ entity_type: 'event', entity_id: _editEvId, entity_name: ev.name || '', lat, lon })
+    });
+    const d = await r.json();
+    if (!r.ok) { setMsg(d.error || 'Failed', false); return; }
+    setMsg('✅ Submitted! Admin will review and apply shortly.', true);
+  } catch(e) { setMsg('Error: ' + e.message, false); }
+  finally { if (btn) btn.disabled = false; }
 }
 
 function previewEventForm() {
@@ -1662,6 +1725,10 @@ async function submitEvent() {
   const genre = document.getElementById('ev-genre').value;
   const desc  = document.getElementById('ev-desc').value.trim();
   const evImgFile = document.getElementById('ev-img-file')?.files[0];
+  const evLatRaw = parseFloat(document.getElementById('ev-lat')?.value);
+  const evLonRaw = parseFloat(document.getElementById('ev-lon')?.value);
+  const evLat = (!isNaN(evLatRaw) && evLatRaw >= -35 && evLatRaw <= -22) ? evLatRaw : null;
+  const evLon = (!isNaN(evLonRaw) && evLonRaw >= 16 && evLonRaw <= 33) ? evLonRaw : null;
 
   // collect tiers from UI
   const tierRows = document.querySelectorAll('.ev-tier-row');
@@ -1716,6 +1783,8 @@ async function submitEvent() {
       organiser_id: currentUser.id,
       is_active: true,
       source: 'organizer',
+      venue_lat: evLat,
+      venue_lon: evLon,
       approved: currentProfile?.subscription_type === 'premium' || currentProfile?.subscription_type === 'trial',
     });
     if (error) throw new Error(error.message);
@@ -1765,7 +1834,7 @@ async function loadMyEvents() {
   const el = document.getElementById('my-events-list');
   if (!el || !currentUser) return;
   try {
-    const { data: evs } = await sb.from('events').select('id,name,date_local,time_local,venue_name,venue_city,genre,description,image_url,approved,is_active').eq('organiser_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
+    const { data: evs } = await sb.from('events').select('id,name,date_local,time_local,venue_name,venue_city,genre,description,image_url,approved,is_active,venue_lat,venue_lon').eq('organiser_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
     if (!evs?.length) { el.innerHTML = '<div class="empty">No events yet. Create your first above!</div>'; return; }
     evs.forEach(e => { _evMap[e.id] = e; });
     el.innerHTML = evs.map(e => {
@@ -1867,6 +1936,12 @@ function openEditEventSheet(evId) {
   document.getElementById('edit-ev-city').value  = e.venue_city || '';
   document.getElementById('edit-ev-genre').value = e.genre || '';
   document.getElementById('edit-ev-desc').value  = e.description || '';
+  document.getElementById('edit-ev-lat').value  = e.venue_lat  || '';
+  document.getElementById('edit-ev-lon').value  = e.venue_lon  || '';
+  const locEl = document.getElementById('edit-ev-loc-current');
+  if (locEl) locEl.textContent = e.venue_lat && e.venue_lon ? `Current: ${parseFloat(e.venue_lat).toFixed(5)}, ${parseFloat(e.venue_lon).toFixed(5)}` : 'No location set';
+  const msgEl = document.getElementById('edit-ev-loc-msg');
+  if (msgEl) msgEl.textContent = '';
   openOrgSheet('org-edit-event-sheet');
 }
 

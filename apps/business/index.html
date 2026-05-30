@@ -524,6 +524,21 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
       <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">⭐ Featured on map · Unlimited menu items · Analytics dashboard · Priority support</div>
     </div>
 
+    <!-- Location -->
+    <div class="setting-card">
+      <div class="setting-card-row">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="setting-card-icon" style="background:linear-gradient(135deg,rgba(0,229,255,.15),rgba(198,255,74,.1));border:1px solid rgba(0,229,255,.2)">📍</div>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Business Location</div>
+            <div id="biz-loc-status" style="font-size:.68rem;color:var(--mu)">Loading…</div>
+          </div>
+        </div>
+        <button class="btn-sec" style="padding:6px 12px;font-size:.72rem" onclick="openSheet('biz-location-sheet')">Set →</button>
+      </div>
+      <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Your pin on the map. Admin approves changes before they go live.</div>
+    </div>
+
     <!-- Payment Method -->
     <div class="setting-card">
       <div class="setting-card-row">
@@ -816,6 +831,27 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 </div>
 
 <!-- EDIT POST SHEET -->
+<!-- LOCATION SHEET -->
+<div class="overlay" id="biz-location-sheet" onclick="if(event.target===this)closeSheet('biz-location-sheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div class="sheet-title">📍 Set Business Location</div><button class="sheet-close" onclick="closeSheet('biz-location-sheet')">✕</button></div>
+    <div class="sheet-body" style="padding-bottom:32px">
+      <div style="font-size:.78rem;color:var(--mu2);margin-bottom:12px;line-height:1.5">Pin your business exactly where customers find you on the map. Admin reviews and approves the change before it goes live.</div>
+      <div id="biz-loc-current-coords" style="font-size:.72rem;color:var(--mu);background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:12px"></div>
+      <button class="btn-sec" style="width:100%;margin-bottom:10px" onclick="useBizGPS()">📍 Use My Current Location</button>
+      <div id="biz-gps-status" style="font-size:.72rem;color:var(--mu2);margin-bottom:10px;min-height:16px"></div>
+      <div style="font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Or enter coordinates manually</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+        <div><label class="ff-label" style="font-size:.62rem">Latitude (−35 to −22)</label><input class="ff" id="biz-loc-lat" type="number" step="any" placeholder="-29.8587"/></div>
+        <div><label class="ff-label" style="font-size:.62rem">Longitude (16 to 33)</label><input class="ff" id="biz-loc-lon" type="number" step="any" placeholder="31.0218"/></div>
+      </div>
+      <div id="biz-loc-sheet-msg" style="font-size:.78rem;margin-bottom:10px;min-height:18px"></div>
+      <button class="btn-primary" style="width:100%" onclick="submitBizLocation()">Submit for Approval ✓</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="edit-post-sheet" onclick="if(event.target===this)closeSheet('edit-post-sheet')">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -1142,6 +1178,7 @@ function showTab(name, _noPush) {
   if (name === 'sqpromos')  loadMyBizSquadPromos();
   if (name === 'profile')   renderBizFAQ();
   if (name === 'profile')   loadBizSocialLinks();
+  if (name === 'profile')   loadBizLocationStatus();
 }
 
 // ═══════════ DISCOVER (public events catalog) ═══════════
@@ -1308,6 +1345,70 @@ async function startBizPayment() {
 // ════════════════════════════════════════════════════════════
 //  STATS
 // ════════════════════════════════════════════════════════════
+async function loadBizLocationStatus() {
+  const sb = getSB(); if (!sb) return;
+  const bizId = getBizId(); if (!bizId) return;
+  const statusEl = document.getElementById('biz-loc-status');
+  const coordsEl = document.getElementById('biz-loc-current-coords');
+  // Show current coords
+  if (BIZ?.lat && BIZ?.lon) {
+    const txt = `Current: ${parseFloat(BIZ.lat).toFixed(5)}, ${parseFloat(BIZ.lon).toFixed(5)}`;
+    if (statusEl) statusEl.textContent = txt;
+    if (coordsEl) coordsEl.textContent = txt + ' · View on map: maps.google.com/?q=' + BIZ.lat + ',' + BIZ.lon;
+  } else {
+    if (statusEl) statusEl.textContent = 'No location set';
+    if (coordsEl) coordsEl.textContent = 'No location set yet';
+  }
+  // Check for pending request
+  const { data } = await sb.from('location_requests').select('lat,lon,status,created_at').eq('entity_id', bizId).eq('entity_type', 'business').order('created_at', { ascending: false }).limit(1).maybeSingle();
+  if (data?.status === 'pending' && statusEl) {
+    statusEl.innerHTML = `⏳ Pending approval · ${parseFloat(data.lat).toFixed(5)}, ${parseFloat(data.lon).toFixed(5)}`;
+  }
+}
+
+function useBizGPS() {
+  const statusEl = document.getElementById('biz-gps-status');
+  if (!navigator.geolocation) { if (statusEl) statusEl.textContent = 'GPS not available on this device'; return; }
+  if (statusEl) statusEl.textContent = '📡 Getting your location…';
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const lat = pos.coords.latitude, lon = pos.coords.longitude;
+      document.getElementById('biz-loc-lat').value = lat.toFixed(6);
+      document.getElementById('biz-loc-lon').value = lon.toFixed(6);
+      if (statusEl) statusEl.textContent = `✅ Got location: ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+    },
+    err => {
+      if (statusEl) statusEl.textContent = '⚠️ Could not get location — try closing floating app overlays (Messenger bubbles etc.) then retry, or enter coordinates manually.';
+    },
+    { enableHighAccuracy: true, timeout: 12000 }
+  );
+}
+
+async function submitBizLocation() {
+  const lat = parseFloat(document.getElementById('biz-loc-lat').value);
+  const lon = parseFloat(document.getElementById('biz-loc-lon').value);
+  const msgEl = document.getElementById('biz-loc-sheet-msg');
+  const setMsg = (m, ok) => { if (msgEl) { msgEl.textContent = m; msgEl.style.color = ok ? 'var(--li)' : 'var(--pk)'; } };
+  if (isNaN(lat) || isNaN(lon)) { setMsg('Enter both latitude and longitude', false); return; }
+  if (lat < -35 || lat > -22 || lon < 16 || lon > 33) { setMsg('Coordinates must be in South Africa (lat −35 to −22, lon 16 to 33)', false); return; }
+  const sb = getSB(); if (!sb) return;
+  const { data: { session } } = await sb.auth.getSession(); if (!session) return;
+  const bizId = getBizId(); if (!bizId) { setMsg('Business not loaded', false); return; }
+  setMsg('Submitting…', true);
+  try {
+    const r = await fetch('/api/location-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+      body: JSON.stringify({ entity_type: 'business', entity_id: bizId, entity_name: BIZ?.name || '', lat, lon })
+    });
+    const d = await r.json();
+    if (!r.ok) { setMsg(d.error || 'Failed', false); return; }
+    setMsg('✅ Submitted! Admin will review shortly.', true);
+    loadBizLocationStatus();
+    setTimeout(() => closeSheet('biz-location-sheet'), 1800);
+  } catch(e) { setMsg('Error: ' + e.message, false); }
+}
+
 async function checkSubscriptionBanner() {
   const sb = getSB(); if (!sb) return;
   const { data: { session } } = await sb.auth.getSession(); if (!session) return;

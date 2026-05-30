@@ -166,6 +166,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="tab-btn" onclick="switchTab('promotions',this)">🚀 Promos</div>
     <div class="tab-btn" onclick="switchTab('squad-promos',this)">🎁 Deals</div>
     <div class="tab-btn" onclick="switchTab('claims',this)">📋 Claims</div>
+    <div class="tab-btn" onclick="switchTab('locations',this)">📍 Locations <span id="loc-pending-badge" style="display:none;background:var(--pk);color:#fff;border-radius:50px;padding:1px 7px;font-size:.65rem;margin-left:4px"></span></div>
     <div class="tab-btn" onclick="switchTab('system',this)">⚙️ System</div>
   </div>
 
@@ -742,6 +743,27 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div id="claims-list"><div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div></div>
   </div>
 
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: LOCATIONS -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <div id="tab-locations" class="tab-content">
+    <div style="margin-bottom:20px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Location Requests</div>
+      <div style="font-size:.82rem;color:var(--mu2)">Review and approve map pin updates from businesses and organizers</div>
+    </div>
+    <div class="search-row">
+      <select class="inp" id="loc-filter" onchange="loadLocationRequests()" style="max-width:180px">
+        <option value="pending">⏳ Pending</option>
+        <option value="approved">✅ Approved</option>
+        <option value="rejected">❌ Rejected</option>
+        <option value="all">All</option>
+      </select>
+      <button class="btn btn-surf" onclick="loadLocationRequests()">↺ Refresh</button>
+    </div>
+    <div id="msg-locations" class="msg"></div>
+    <div id="locations-list"><div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div></div>
+  </div>
+
   <div id="tab-system" class="tab-content">
     <div style="margin-bottom:20px">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">System Settings</div>
@@ -886,7 +908,7 @@ function showAdminUI() {
   document.getElementById('logout-btn').style.display  = 'block';
   loadUsers();
   loadBusinesses();
-  setTimeout(() => { loadNotifHistory(); loadActivityLog(); loadPendingEventsCount(); }, 1500);
+  setTimeout(() => { loadNotifHistory(); loadActivityLog(); loadPendingEventsCount(); loadLocationCount(); }, 1500);
 }
 
 /* ── Tab switching ── */
@@ -908,6 +930,7 @@ function switchTab(tab, btn) {
   else if (tab === 'promotions') loadAdminPromos();
   else if (tab === 'squad-promos') loadAdminSquadPromos();
   else if (tab === 'claims') loadAdminClaims();
+  else if (tab === 'locations') loadLocationRequests();
   else if (tab === 'system') { loadSystemStats(); loadAdminSocialLinks(); }
 }
 
@@ -2513,6 +2536,84 @@ const ADM_DEAL_ICONS = { food:'🍔', nightlife:'🎶', event:'🎟', chill:'☕
 /* ══════════════════════════════════════════════════════════════════════════════════ */
 /* PROFILE CLAIMS                                                                   */
 /* ══════════════════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+/* LOCATION REQUESTS */
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+async function loadLocationCount() {
+  try {
+    const { count } = await sb.from('location_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending');
+    const badge = document.getElementById('loc-pending-badge');
+    if (!badge) return;
+    if (count > 0) { badge.textContent = count; badge.style.display = 'inline'; }
+    else badge.style.display = 'none';
+  } catch(_) {}
+}
+
+async function loadLocationRequests() {
+  const el = document.getElementById('locations-list');
+  el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div>';
+  const filter = document.getElementById('loc-filter')?.value || 'pending';
+  try {
+    const r = await fetch(`/api/admin/location-requests?status=${filter}`, { headers: { Authorization: 'Bearer ' + adminToken } });
+    const json = await safeJson(r);
+    if (!r.ok) { el.innerHTML = `<div style="padding:24px;color:var(--pk)">${esc(json.error||'Failed')}</div>`; return; }
+    const reqs = json.requests || [];
+    if (!reqs.length) { el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">No requests to show.</div>'; return; }
+    el.innerHTML = reqs.map(req => {
+      const typeLabel = req.entity_type === 'business' ? '🏢 Business' : '🎟 Event';
+      const mapsUrl = `https://www.google.com/maps?q=${req.lat},${req.lon}`;
+      const statusBadge = req.status === 'approved'
+        ? '<span class="status-badge s-ok">✅ Approved</span>'
+        : req.status === 'rejected'
+        ? '<span class="status-badge s-bad">❌ Rejected</span>'
+        : '<span class="status-badge s-warn">⏳ Pending</span>';
+      const date = new Date(req.created_at).toLocaleDateString('en-ZA', { day:'numeric', month:'short', year:'numeric' });
+      return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-bottom:12px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <span style="font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu)">${typeLabel}</span>
+              ${statusBadge}
+            </div>
+            <div style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800;margin-bottom:4px">${esc(req.entity_name || req.entity_id)}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--cy);margin-bottom:4px">📍 ${req.lat}, ${req.lon}</div>
+            <a href="${mapsUrl}" target="_blank" style="font-size:.68rem;color:var(--or);text-decoration:none">View on Google Maps →</a>
+            ${req.notes ? `<div style="font-size:.7rem;color:var(--mu);margin-top:4px">Note: ${esc(req.notes)}</div>` : ''}
+            <div style="font-size:.65rem;color:var(--mu);margin-top:4px">${date}</div>
+          </div>
+        </div>
+        ${req.status === 'pending' ? `<div style="display:flex;gap:8px">
+          <button class="btn btn-li" onclick="reviewLocationRequest('${req.id}','approved',this)" style="flex:1">✅ Approve</button>
+          <button class="btn btn-pk" onclick="reviewLocationRequest('${req.id}','rejected',this)" style="flex:1">❌ Reject</button>
+        </div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = `<div style="padding:24px;color:var(--pk)">Error: ${esc(e.message)}</div>`; }
+}
+
+async function reviewLocationRequest(id, status, btn) {
+  if (!btn.dataset.confirm) {
+    btn.dataset.confirm = '1';
+    const orig = btn.textContent;
+    btn.textContent = status === 'approved' ? 'Sure? ✅' : 'Sure? ❌';
+    setTimeout(() => { if (btn.dataset.confirm) { delete btn.dataset.confirm; btn.textContent = orig; } }, 5000);
+    return;
+  }
+  delete btn.dataset.confirm;
+  btn.disabled = true;
+  try {
+    const r = await fetch(`/api/admin/location-requests/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ status }),
+    });
+    const json = await safeJson(r);
+    if (!r.ok) { alert(json.error || 'Failed'); btn.disabled = false; return; }
+    loadLocationRequests();
+    loadLocationCount();
+  } catch(e) { alert('Error: ' + e.message); btn.disabled = false; }
+}
+
 async function loadAdminClaims() {
   const el = document.getElementById('claims-list');
   el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div>';
