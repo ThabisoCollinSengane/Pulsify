@@ -180,6 +180,7 @@ select.inp option{background:#0D1424}
         <div id="org-img-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:8px"></div>
         <textarea class="inp" id="post-caption" placeholder="Write your update, promo or announcement…" maxlength="1000"></textarea>
         <input class="inp" id="post-event-tag" placeholder="Tag an event name (optional)"/>
+        <div id="post-usage-bar" style="font-size:.72rem;color:var(--mu);margin-bottom:6px;text-align:right;min-height:18px"></div>
         <div style="display:flex;gap:8px;padding-bottom:8px">
           <button class="btn-sec" style="flex:1" onclick="previewOrgPost()">👁 Preview</button>
           <button class="btn-primary" id="post-btn" style="flex:2" onclick="submitPost()">Publish 🚀</button>
@@ -1408,6 +1409,7 @@ function switchTab(btn, paneId, _noPush) {
   btn.classList.add('active');
   document.getElementById(paneId).classList.add('active');
   if (!_noPush) history.pushState({ pane: paneId }, '');
+  if (paneId === 'pane-post') loadPostUsage();
   if (paneId === 'pane-myposts') loadMyPosts();
   if (paneId === 'pane-event') loadMyEvents();
   if (paneId === 'pane-promote') { loadOrgPromoEvents(); loadMyOrgPromos(); }
@@ -1418,6 +1420,25 @@ function switchTab(btn, paneId, _noPush) {
     const sel = document.getElementById('scan-event-sel');
     if (sel.options.length <= 1) loadScanEvents(); else loadScanStats();
   }
+}
+
+async function loadPostUsage() {
+  const el = document.getElementById('post-usage-bar');
+  if (!el || !currentUser) return;
+  if (currentProfile?.subscription_type === 'premium') { el.textContent = ''; return; }
+  try {
+    const start = new Date(); start.setDate(1); start.setHours(0,0,0,0);
+    const { count } = await sb.from('posts').select('id', { count: 'exact', head: true })
+      .eq('user_id', currentUser.id).gte('created_at', start.toISOString());
+    const used = count || 0;
+    const limit = 5;
+    const remaining = limit - used;
+    if (remaining <= 0) {
+      el.innerHTML = '<span style="color:var(--pk)">📮 0 posts left this month — <a href="#" onclick="upgradeOrgToPremium();return false" style="color:var(--or)">Upgrade</a></span>';
+    } else {
+      el.textContent = `${used} / ${limit} posts used this month`;
+    }
+  } catch(_) { el.textContent = ''; }
 }
 
 // ═══════════ DISCOVER (public events catalog) ═══════════
@@ -1580,6 +1601,7 @@ async function submitPost() {
     const limitBanner = document.getElementById('post-limit-prompt');
     if (limitBanner) limitBanner.remove();
     toast('🔥 Published to feed!', 'ok');
+    loadPostUsage();
     document.getElementById('post-caption').value = '';
     document.getElementById('post-event-tag').value = '';
     const orgGrid = document.getElementById('org-img-grid');

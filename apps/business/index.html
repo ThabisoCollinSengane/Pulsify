@@ -1397,26 +1397,32 @@ async function renderAnalytics() {
 
   el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading analytics…</div>';
 
-  // Fetch all data in parallel
+  // Fetch all data in parallel (including fresh orders — don't rely on ORDERS cache)
   const uid = session.user.id;
+  const bizId = getBizId();
+  const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7); sevenDaysAgo.setHours(0,0,0,0);
   const [
     { count: followerCount },
     { data: posts },
     { data: events },
+    { data: recentOrders },
+    { data: allOrders },
   ] = await Promise.all([
     sb.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', uid),
     sb.from('posts').select('id,caption,image_url,like_count,comment_count,created_at').eq('user_id', uid).order('created_at', { ascending: false }).limit(20),
     sb.from('events').select('id,name,date_local,capacity,tickets_sold,attendance_count').eq('organiser_id', uid).order('date_local', { ascending: false }).limit(10),
+    sb.from('pickup_orders').select('id,total,status,created_at').eq('business_id', bizId).gte('created_at', sevenDaysAgo.toISOString()).order('created_at', { ascending: false }),
+    sb.from('pickup_orders').select('id,status').eq('business_id', bizId),
   ]);
 
-  // Order stats from cached ORDERS
+  // Order stats from fresh DB data
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(); d.setDate(d.getDate() - (6 - i)); d.setHours(0,0,0,0);
     return d.toISOString().split('T')[0];
   });
   const revenue = {}, ordCount = {};
   days.forEach(d => { revenue[d] = 0; ordCount[d] = 0; });
-  ORDERS.forEach(o => {
+  (recentOrders || []).forEach(o => {
     const day = (o.created_at || '').slice(0, 10);
     if (revenue[day] !== undefined && o.status !== 'cancelled') {
       revenue[day] += parseFloat(o.total || 0);
@@ -1428,7 +1434,7 @@ async function renderAnalytics() {
   const totalOrders = days.reduce((s, d) => s + ordCount[d], 0);
   const avgOrder = totalOrders ? (totalRev / totalOrders) : 0;
   const statusCounts = { pending: 0, ready: 0, completed: 0, cancelled: 0 };
-  ORDERS.forEach(o => { if (statusCounts[o.status] !== undefined) statusCounts[o.status]++; });
+  (allOrders || []).forEach(o => { if (statusCounts[o.status] !== undefined) statusCounts[o.status]++; });
 
   // Post engagement totals
   const postList = posts || [];
