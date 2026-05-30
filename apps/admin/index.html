@@ -157,7 +157,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div style="display:flex;gap:0;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none">
     <div class="tab-btn active" onclick="switchTab('users',this)">👥 Users</div>
     <div class="tab-btn" onclick="switchTab('businesses',this)">🏢 Biz</div>
-    <div class="tab-btn" onclick="switchTab('events',this)">🎉 Events</div>
+    <div class="tab-btn" onclick="switchTab('events',this)">🎉 Events <span id="ev-pending-badge" style="display:none;background:var(--pk);color:#fff;border-radius:50px;padding:1px 7px;font-size:.65rem;margin-left:4px"></span></div>
     <div class="tab-btn" onclick="switchTab('leads',this)">📊 Leads</div>
     <div class="tab-btn" onclick="switchTab('verifications',this)">🏆 Verify</div>
     <div class="tab-btn" onclick="switchTab('banners',this)">🖼 Banners</div>
@@ -886,8 +886,7 @@ function showAdminUI() {
   document.getElementById('logout-btn').style.display  = 'block';
   loadUsers();
   loadBusinesses();
-  // Pre-load activity log so it's ready when admin opens Notifications tab
-  setTimeout(() => { loadNotifHistory(); loadActivityLog(); }, 1500);
+  setTimeout(() => { loadNotifHistory(); loadActivityLog(); loadPendingEventsCount(); }, 1500);
 }
 
 /* ── Tab switching ── */
@@ -1829,6 +1828,16 @@ async function submitLeadEvent() {
 /* ══════════════════════════════════════════════════════════════════════════════════ */
 let ALL_EVENTS = [];
 
+async function loadPendingEventsCount() {
+  try {
+    const { count } = await sb.from('events').select('id', { count: 'exact', head: true }).eq('approved', false);
+    const badge = document.getElementById('ev-pending-badge');
+    if (!badge) return;
+    if (count > 0) { badge.textContent = count; badge.style.display = 'inline'; }
+    else badge.style.display = 'none';
+  } catch(_) {}
+}
+
 async function loadPendingEvents() {
   document.getElementById('events-list').innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div>';
   const filter = document.getElementById('evt-filter')?.value || 'pending';
@@ -1861,15 +1870,22 @@ function renderEventsList() {
         ${approvedBadge}
       </div>
       ${!ev.approved ? `<div style="display:flex;gap:8px;margin-top:10px">
-        <button class="btn btn-li" onclick="reviewEvent('${ev.id}',true)" style="flex:1">✅ Approve</button>
-        <button class="btn btn-pk" onclick="reviewEvent('${ev.id}',false)" style="flex:1">❌ Reject</button>
+        <button class="btn btn-li" onclick="reviewEvent('${ev.id}',true,this)" style="flex:1">✅ Approve</button>
+        <button class="btn btn-pk" onclick="reviewEvent('${ev.id}',false,this)" style="flex:1">❌ Reject</button>
       </div>` : ''}
     </div>`;
   }).join('');
 }
 
-async function reviewEvent(eventId, approve) {
-  if (!confirm(`${approve ? 'Approve' : 'Reject and delete'} this event?`)) return;
+async function reviewEvent(eventId, approve, btn) {
+  if (btn && !btn.dataset.confirm) {
+    btn.dataset.confirm = '1';
+    const orig = btn.textContent;
+    btn.textContent = approve ? 'Sure? ✅' : 'Sure? ❌';
+    setTimeout(() => { if (btn && btn.dataset.confirm) { delete btn.dataset.confirm; btn.textContent = orig; } }, 5000);
+    return;
+  }
+  if (btn) delete btn.dataset.confirm;
   try {
     const r = await fetch(`/api/admin/events/${eventId}`, {
       method: 'PATCH',
@@ -1880,6 +1896,7 @@ async function reviewEvent(eventId, approve) {
     if (!r.ok) { showEvtMsg(json.error || 'Failed', 'err'); return; }
     showEvtMsg(`✅ Event ${approve ? 'approved' : 'rejected'} successfully.`, 'ok');
     loadPendingEvents();
+    loadPendingEventsCount();
   } catch(e) { showEvtMsg('Error: ' + e.message, 'err'); }
 }
 
