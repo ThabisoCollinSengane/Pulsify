@@ -203,6 +203,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
   <div class="tb-right">
     <div class="notif-badge" onclick="openSNPanel()" title="Notifications">🔔<span class="nd" id="sn-dot"></span></div>
     <div class="notif-badge" onclick="showTab('orders')" title="Orders">📦<span class="nd" id="notif-dot"></span></div>
+    <div class="notif-badge" onclick="showTab('profile')" title="Settings">⚙️</div>
     <button class="logout-btn" onclick="doLogout()">Sign Out</button>
   </div>
 </header>
@@ -2977,10 +2978,12 @@ async function loadMyBizSquadPromos() {
           </div>
           ${badge}
         </div>
+        ${p.description?`<div style="font-size:.72rem;color:var(--mu2);line-height:1.5;margin-bottom:6px">${_esc(p.description)}</div>`:''}
         <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:.7rem;color:var(--mu2)">
           <span>👥 ${p.squad_min}–${p.squad_max} people</span>
           ${p.total_price?`<span>💰 R${p.total_price}</span>`:''}
           ${p.valid_days?`<span>📅 ${_esc(p.valid_days)}</span>`:''}
+          ${(p.valid_from||p.valid_to)?`<span>🗓 ${_esc(p.valid_from||'')}${p.valid_to?' → '+_esc(p.valid_to):''}</span>`:''}
         </div>
         ${p.reject_reason?`<div style="margin-top:5px;font-size:.7rem;color:#FF2D78">Reason: ${_esc(p.reject_reason)}</div>`:''}
       </div>`;
