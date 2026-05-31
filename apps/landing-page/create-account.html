@@ -433,8 +433,8 @@ async function doCreate() {
       if (em_.includes('already registered') || em_.includes('already been registered')) {
         return showErr('An account with this email already exists. <a href="/signin" style="color:var(--or)">Sign in instead →</a>');
       }
-      if (error.status === 500 || em_.includes('sending') || em_.includes('email') || em_.includes('smtp') || !error.message) {
-        return showErr('We couldn\'t send your confirmation email right now. Please try again in a few minutes, or <a href="/signin" style="color:var(--or)">sign in with Google</a> instead.');
+      if (error.status === 500 || em_.includes('sending') || em_.includes('email') || em_.includes('smtp') || !error.message || /^\s*[{[]/.test(error.message)) {
+        return showErr('Signup failed — our email server isn\'t responding. Please try again in a few minutes, or <a href="/signin" style="color:var(--or)">sign in with Google</a> instead.');
       }
       return showErr(error.message || 'Sign-up failed. Please try again.');
     }
@@ -478,7 +478,7 @@ async function doCreate() {
     } else {
       btn.innerHTML='Create My Account 🔥'; btn.disabled=false;
       localStorage.setItem('p_pending_profile', JSON.stringify(profileData));
-      showOk('<div style="font-size:1.4rem;margin-bottom:8px">📧</div><strong>Check your inbox!</strong><br/>We sent a confirmation link to <strong>' + em + '</strong>.<br/>Click the link in that email to activate your account. You\'ll be redirected to your dashboard after verification.<br/><span style="font-size:.74rem;color:var(--mu)">Didn\'t get it? Check spam or <a id="resend-link" href="#" onclick="resendEmail(\'' + em + '\')" style="color:var(--li)">resend →</a></span>');
+      showOk('<div style="font-size:1.4rem;margin-bottom:8px">📧</div><strong>Confirmation email sent!</strong><br/>Check your inbox <em>and spam/junk folder</em> for an email from Hello@pulsefy.co.za sent to <strong>' + em + '</strong>.<br/>Click the link in that email to activate your account.<br/><span style="font-size:.74rem;color:var(--mu)">Didn\'t get it? <a id="resend-link" href="#" onclick="resendEmail(\'' + em + '\');return false;" style="color:var(--li)">Resend email →</a></span>');
     }
   } catch(e) {
     btn.innerHTML='Create My Account 🔥'; btn.disabled=false;
