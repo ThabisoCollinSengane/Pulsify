@@ -4040,7 +4040,7 @@ async function openProfile(userId) {
     const sb = getSB();
     if (!sb) throw new Error('Supabase not loaded');
     const [{ data: profile, error: pErr }, { count: postsCnt }, { count: followersCnt }, { count: followingCnt }, { data: recent }] = await Promise.all([
-      sb.from('profiles').select('id,username,display_name,avatar_url,role,bio,city,genres,social_links,is_verified').eq('id', userId).maybeSingle(),
+      sb.from('profiles').select('id,username,display_name,avatar_url,cover_url,role,bio,city,genres,social_links,is_verified').eq('id', userId).maybeSingle(),
       sb.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', userId),
       sb.from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', userId),
       sb.from('follows').select('following_id', { count: 'exact', head: true }).eq('follower_id', userId),
@@ -4083,8 +4083,11 @@ async function openProfile(userId) {
       ? `<div style="margin-bottom:14px"><div style="font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Vibe</div><div style="display:flex;flex-wrap:wrap;gap:6px">${profile.genres.map(g => `<span style="padding:4px 10px;border-radius:50px;background:rgba(176,38,255,.12);border:1px solid rgba(176,38,255,.25);color:var(--tx);font-size:.68rem">${x(g)}</span>`).join('')}</div></div>`
       : '';
 
+    const heroCss = profile.cover_url
+      ? `background:url("${x(profile.cover_url)}") center/cover no-repeat`
+      : `background:${heroGrad}`;
     body.innerHTML = `
-      <div style="height:96px;background:${heroGrad};border-radius:14px;margin-bottom:-40px"></div>
+      <div style="height:96px;${heroCss};border-radius:14px;margin-bottom:-40px"></div>
       <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:10px;padding:0 2px">
         <div style="width:84px;height:84px;border-radius:50%;background:${avGrad};display:flex;align-items:center;justify-content:center;font-size:2rem;border:3px solid var(--bg2);overflow:hidden;flex-shrink:0;font-family:'Bebas Neue',sans-serif">
           ${profile.avatar_url ? `<img src="${x(profile.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>` : init}

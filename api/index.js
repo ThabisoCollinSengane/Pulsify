@@ -2247,7 +2247,8 @@ module.exports = async (req, res) => {
       const { reason, detail } = body;
       const validReasons = ['fake_event','stolen_content','i_am_owner','doesnt_exist','inappropriate','other'];
       if (!targetId || !validReasons.includes(reason)) return res.status(400).json({ error: `${cfg.idCol} and valid reason required` });
-      const { error } = await sb().from(cfg.table).insert({
+      const client = token ? sbAs(token) : sb();
+      const { error } = await client.from(cfg.table).insert({
         [cfg.idCol]: targetId,
         [cfg.nameCol]: targetName || null,
         reporter_id: user?.id || null,
