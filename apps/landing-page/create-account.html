@@ -217,7 +217,7 @@ select.inp option{background:#0D1424}
     <div class="sec-div">Terms</div>
     <div class="terms-row" id="trow" onclick="togTerms()">
       <div class="chkbox" id="tchk"></div>
-      <div class="terms-txt">I agree to the Pulsefy <a href="/terms" target="_blank" onclick="event.stopPropagation()">Terms of Service</a> and <a href="/terms" target="_blank" onclick="event.stopPropagation()">Privacy Policy</a>. I confirm I am at least 13 years old.</div>
+      <div class="terms-txt">I agree to the Pulsefy <a href="/terms" target="_blank" onclick="event.stopPropagation()">Terms of Service</a> and <a href="/terms" target="_blank" onclick="event.stopPropagation()">Privacy Policy</a>. I confirm I am at least 18 years or older.</div>
     </div>
 
     <button class="btn-back" onclick="goStep1()">← Back</button>
@@ -336,7 +336,7 @@ function goStep2() {
   if(pw!==pw2)                        return showErr('Passwords do not match.');
 
   var dob=document.getElementById('dob').value;
-  if(dob){ var age=Math.floor((Date.now()-new Date(dob))/31557600000); if(age<13) return showErr('You must be at least 13 years old to join.'); }
+  if(dob){ var age=Math.floor((Date.now()-new Date(dob))/31557600000); if(age<18) return showErr('You must be at least 18 years old to join.'); }
 
   document.getElementById('p1').style.display='none';
   document.getElementById('p2').style.display='block';
