@@ -688,21 +688,27 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   <!-- Signed-in state -->
   <div id="prof-in" style="display:none">
 
-    <!-- Cover banner (uploadable) + genre overlay + avatar -->
-    <div id="profile-cover" onclick="window.location.href='/profile-settings'" style="height:132px;background:linear-gradient(135deg,rgba(176,38,255,.4),rgba(255,92,0,.26));background-size:cover;background-position:center;position:relative;overflow:hidden;cursor:pointer">
-      <div style="position:absolute;inset:0;background:linear-gradient(transparent 35%,rgba(22,12,50,.82) 100%)"></div>
-      <div id="profile-genres" style="position:absolute;right:12px;bottom:10px;z-index:1;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px;max-width:62%"></div>
+    <!-- Cover photo (uploadable) — taps to settings -->
+    <div id="profile-cover" onclick="window.location.href='/profile-settings'" style="height:110px;background:linear-gradient(135deg,rgba(176,38,255,.45),rgba(255,92,0,.3));background-size:cover;background-position:center;position:relative;overflow:hidden;cursor:pointer">
+      <div style="position:absolute;inset:0;background:linear-gradient(transparent 20%,rgba(22,12,50,.7) 100%)"></div>
+      <div id="profile-genres" style="position:absolute;right:10px;bottom:8px;z-index:1;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px;max-width:65%"></div>
+      <div style="position:absolute;bottom:7px;left:10px;z-index:1;font-size:.55rem;font-family:'Syne',sans-serif;font-weight:700;color:rgba(255,255,255,.45);letter-spacing:.06em">TAP TO EDIT</div>
     </div>
-    <div style="padding:0 16px;margin-top:-42px;margin-bottom:10px;display:flex;align-items:flex-end;justify-content:space-between">
-      <div id="profile-av" style="width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:2.1rem;border:3px solid var(--bg);overflow:hidden;flex-shrink:0">😊</div>
-      <button onclick="window.location.href='/profile-settings'" style="background:var(--surf);border:1px solid var(--border2);border-radius:50px;padding:8px 16px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu2);cursor:pointer;margin-bottom:4px">⚙️ Settings</button>
+
+    <!-- Avatar + name + settings — fully below the cover, no overlap -->
+    <div style="padding:12px 16px 4px;display:flex;align-items:center;gap:12px">
+      <div id="profile-av" style="width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:1.8rem;border:2px solid var(--border2);overflow:hidden;flex-shrink:0">😊</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="profile-name">Your Name</div>
+        <div style="font-size:.73rem;color:var(--mu)" id="profile-sub">@handle</div>
+      </div>
+      <button onclick="window.location.href='/profile-settings'" style="background:var(--surf);border:1px solid var(--border2);border-radius:50px;padding:8px 14px;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;color:var(--mu2);cursor:pointer;flex-shrink:0">⚙️ Settings</button>
     </div>
-    <div style="padding:0 16px 2px">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;line-height:1;margin-bottom:3px" id="profile-name">Your Name</div>
-      <div style="font-size:.76rem;color:var(--mu)" id="profile-sub">@handle</div>
-      <div id="profile-bio" style="font-size:.8rem;color:var(--mu2);line-height:1.5;margin-top:8px;display:none"></div>
-    </div>
-    <div class="vsr" style="margin:10px 0 4px">
+
+    <!-- Bio (shown when set) -->
+    <div id="profile-bio" style="font-size:.8rem;color:var(--mu2);line-height:1.5;padding:0 16px 4px;display:none"></div>
+
+    <div class="vsr" style="margin:8px 0 4px">
       <div class="vs"><div class="vn" id="ps-saved">0</div><div class="vl">Saved</div></div>
       <div class="vs"><div class="vn" id="ps-tickets">0</div><div class="vl">Tickets</div></div>
       <div class="vs"><div class="vn" id="ps-posts">0</div><div class="vl">Posts</div></div>
