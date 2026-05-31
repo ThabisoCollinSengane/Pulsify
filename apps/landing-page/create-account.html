@@ -429,8 +429,12 @@ async function doCreate() {
 
     if (error) {
       btn.innerHTML='Create My Account 🔥'; btn.disabled=false;
-      if ((error.message||'').toLowerCase().includes('already registered') || (error.message||'').toLowerCase().includes('already been registered')) {
+      var em_ = (error.message||'').toLowerCase();
+      if (em_.includes('already registered') || em_.includes('already been registered')) {
         return showErr('An account with this email already exists. <a href="/signin" style="color:var(--or)">Sign in instead →</a>');
+      }
+      if (error.status === 500 || em_.includes('sending') || em_.includes('email') || em_.includes('smtp') || !error.message) {
+        return showErr('We couldn\'t send your confirmation email right now. Please try again in a few minutes, or <a href="/signin" style="color:var(--or)">sign in with Google</a> instead.');
       }
       return showErr(error.message || 'Sign-up failed. Please try again.');
     }
@@ -478,7 +482,7 @@ async function doCreate() {
     }
   } catch(e) {
     btn.innerHTML='Create My Account 🔥'; btn.disabled=false;
-    showErr('Something went wrong: ' + (e.message || 'please try again.'));
+    showErr('Something went wrong: ' + ((e && e.message) ? e.message : 'please try again in a few minutes.'));
   }
 }
 
