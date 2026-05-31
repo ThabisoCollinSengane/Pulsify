@@ -419,10 +419,16 @@ async function doCreate() {
     var role    = accType;
     var phone   = ph ? '+27'+ph.replace(/^0/,'').replace(/\s/g,'') : null;
 
+    // Carry all signup preferences in user_metadata so they survive the
+    // email-confirmation round-trip even when the link opens in a different
+    // storage context (e.g. PWA → Chrome), where localStorage isn't shared.
     var { data, error } = await sb.auth.signUp({
       email: em, password: pw,
       options: {
-        data: { full_name: fn, username: un },
+        data: {
+          full_name: fn, username: un, role, is_page: isOrg,
+          dob, phone, province: prov, city, genres
+        },
         emailRedirectTo: window.location.origin + '/'
       }
     });

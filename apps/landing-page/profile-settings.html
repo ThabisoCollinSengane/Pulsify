@@ -16,7 +16,9 @@ body{padding-bottom:40px}
 .back{display:flex;align-items:center;gap:5px;background:transparent;border:none;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;cursor:pointer;padding:0}
 .tb-title{font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .content{padding:70px 16px 24px}
-.av-wrap{display:flex;flex-direction:column;align-items:center;padding:20px 0 22px;border-bottom:1px solid var(--border);margin-bottom:20px}
+.av-wrap{display:flex;flex-direction:column;align-items:center;padding:0 0 22px;border-bottom:1px solid var(--border);margin-bottom:20px}
+.cov{position:relative;width:100%;height:120px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,rgba(176,38,255,.4),rgba(255,92,0,.26));background-size:cover;background-position:center;cursor:pointer;margin-bottom:-40px}
+.cov-ov{position:absolute;right:10px;bottom:10px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.25);border-radius:50px;padding:6px 12px;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:5px}
 .av{width:82px;height:82px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:2rem;border:3px solid rgba(255,255,255,.12);position:relative;cursor:pointer;overflow:hidden}
 .av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .av-ov{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#fff;border-radius:50%;opacity:0;transition:opacity .2s}
@@ -90,7 +92,11 @@ textarea.inp{resize:none;height:78px;line-height:1.5}
 
 <div class="content">
   <div class="av-wrap">
-    <div class="av" id="av-el" onclick="document.getElementById('av-file').click()">
+    <div class="cov" id="cov-el" onclick="document.getElementById('cov-file').click()">
+      <div class="cov-ov">📷 Cover photo</div>
+    </div>
+    <input type="file" id="cov-file" accept="image/*" style="display:none" onchange="handleCover(this)"/>
+    <div class="av" id="av-el" onclick="document.getElementById('av-file').click()" style="z-index:1;border:3px solid var(--bg)">
       <span id="av-emoji">😊</span>
       <div class="av-ov">Change Photo</div>
     </div>
@@ -223,6 +229,10 @@ async function loadData() {
     document.getElementById('av-emoji').style.display = 'none';
   }
 
+  if (currentProfile.cover_url) {
+    document.getElementById('cov-el').style.backgroundImage = 'url("' + currentProfile.cover_url + '")';
+  }
+
   const userGenres = currentProfile.genres || [];
   userGenres.forEach(g => selectedGenres.add(g));
   document.querySelectorAll('.gc').forEach(el => {
@@ -268,6 +278,25 @@ function handleAvatar(input) {
       await sb.from('profiles').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
     }
     showToast('Photo updated ✓', 'ok');
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleCover(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    document.getElementById('cov-el').style.backgroundImage = 'url("' + e.target.result + '")';
+    const fileName = `cover_${currentUser.id}_${Date.now()}.jpg`;
+    const { error } = await sb.storage.from('avatars').upload(fileName, file);
+    if (!error) {
+      const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(fileName);
+      await sb.from('profiles').update({ cover_url: publicUrl }).eq('id', currentUser.id);
+      try { const p = JSON.parse(localStorage.getItem('p_profile') || '{}'); p.cover_url = publicUrl; localStorage.setItem('p_profile', JSON.stringify(p)); } catch(_) {}
+      showToast('Cover updated ✓', 'ok');
+    } else {
+      showToast('Cover upload failed', 'err');
+    }
   };
   reader.readAsDataURL(file);
 }
