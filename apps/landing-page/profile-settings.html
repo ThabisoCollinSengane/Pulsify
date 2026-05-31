@@ -288,15 +288,13 @@ function handleCover(input) {
   reader.onload = async (e) => {
     document.getElementById('cov-el').style.backgroundImage = 'url("' + e.target.result + '")';
     const fileName = `cover_${currentUser.id}_${Date.now()}.jpg`;
-    const { error } = await sb.storage.from('avatars').upload(fileName, file);
-    if (!error) {
-      const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(fileName);
-      await sb.from('profiles').update({ cover_url: publicUrl }).eq('id', currentUser.id);
-      try { const p = JSON.parse(localStorage.getItem('p_profile') || '{}'); p.cover_url = publicUrl; localStorage.setItem('p_profile', JSON.stringify(p)); } catch(_) {}
-      showToast('Cover updated ✓', 'ok');
-    } else {
-      showToast('Cover upload failed', 'err');
-    }
+    const { error: storErr } = await sb.storage.from('avatars').upload(fileName, file, { upsert: true });
+    if (storErr) { showToast('Cover upload failed — try again', 'err'); return; }
+    const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(fileName);
+    const { error: dbErr } = await sb.from('profiles').update({ cover_url: publicUrl }).eq('id', currentUser.id);
+    if (dbErr) { showToast('Cover saved locally — try saving again', 'err'); return; }
+    try { const p = JSON.parse(localStorage.getItem('p_profile') || '{}'); p.cover_url = publicUrl; localStorage.setItem('p_profile', JSON.stringify(p)); } catch(_) {}
+    showToast('Cover updated ✓', 'ok');
   };
   reader.readAsDataURL(file);
 }

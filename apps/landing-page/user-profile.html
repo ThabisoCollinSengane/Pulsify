@@ -108,7 +108,7 @@ body{padding-bottom:32px}
   <div id="settings-btn-wrapper"></div>
 </div>
 <div class="hero">
-  <div class="hero-bg"><div class="hero-bg-blur">🎶</div></div>
+  <div class="hero-bg" id="hero-bg-el"><div class="hero-bg-blur">🎶</div></div>
   <div class="hero-body">
     <div class="hero-row">
       <div class="avatar" id="avatar-el">
@@ -238,7 +238,7 @@ async function loadUserData() {
     return;
   }
 
-  const { data: profile, error } = await sb.from('profiles').select('id,display_name,username,bio,avatar_url,genres,social_links,role,is_verified').eq('id', profileId).single();
+  const { data: profile, error } = await sb.from('profiles').select('id,display_name,username,bio,avatar_url,cover_url,genres,social_links,role,is_verified').eq('id', profileId).single();
   if (error || !profile) {
     showToast('User profile not found.', 'error');
     document.getElementById('pname').textContent = "User not found";
@@ -283,6 +283,17 @@ async function loadUserData() {
     profile.twitter   && `<a href="${(profile.twitter||'').startsWith('http')?profile.twitter:'https://x.com/'+profile.twitter.replace('@','')}" target="_blank" style="width:38px;height:38px;border-radius:50%;background:#000;display:flex;align-items:center;justify-content:center;text-decoration:none;flex-shrink:0" title="X / Twitter"><svg viewBox="0 0 24 24" fill="#fff" width="18" height="18"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>`,
   ].filter(Boolean);
   if (socialLinks.length) { socialRow.innerHTML = socialLinks.join(''); socialRow.style.display = 'flex'; }
+
+  if (profile.cover_url) {
+    const heroBg = document.getElementById('hero-bg-el');
+    if (heroBg) {
+      heroBg.style.backgroundImage = `url("${profile.cover_url}")`;
+      heroBg.style.backgroundSize = 'cover';
+      heroBg.style.backgroundPosition = 'center';
+      const blur = heroBg.querySelector('.hero-bg-blur');
+      if (blur) blur.style.display = 'none';
+    }
+  }
 
   if (profile.avatar_url) {
     const avatarEl = document.getElementById('avatar-el');
