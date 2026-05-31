@@ -435,6 +435,14 @@ async function doCreate() {
       return showErr(error.message || 'Sign-up failed. Please try again.');
     }
 
+    // Supabase returns a "fake" user with an empty identities array (and no error)
+    // when the email is already registered — this prevents email enumeration but
+    // means we must detect it ourselves and tell the user to sign in instead.
+    if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      btn.innerHTML='Create My Account 🔥'; btn.disabled=false;
+      return showErr('An account with this email already exists. <a href="/signin" style="color:var(--or)">Sign in instead →</a>');
+    }
+
     var session = data.session;
     var user    = data.user;
 
