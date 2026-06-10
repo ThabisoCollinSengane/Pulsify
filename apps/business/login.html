@@ -163,7 +163,7 @@ const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
         await saveConfirmedProfile(session, profile);
         redirectByRole();
       }
-    } catch (e) { /* ignore — user stays on login page */ }
+    } catch (e) { console.warn('Session sync failed:', e.message); }
   }
 })();
 

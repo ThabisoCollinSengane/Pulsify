@@ -2198,7 +2198,7 @@ async function openBiz(bizId) {
     const sb = getSB();
     const [{ data: b, error: bizErr }, { count: bizLikeCount }, bizLikedRes] = await Promise.all([
       sb.from('businesses').select('*').eq('id', bizId).single(),
-      sb.from('reactions').select('id', { count: 'exact', head: true }).eq('entity_id', bizId).eq('entity_type', 'businesses'),
+      sb.from('reactions').select('user_id', { count: 'exact', head: true }).eq('entity_id', bizId).eq('entity_type', 'businesses'),
       currentUser ? sb.from('reactions').select('user_id').eq('entity_id', bizId).eq('entity_type', 'businesses').eq('user_id', currentUser.id).maybeSingle() : Promise.resolve({ data: null }),
     ]);
     if (bizErr || !b) throw new Error('Not found');

@@ -34,6 +34,7 @@
     { "source": "/api/(.*)",               "destination": "/api" },
     { "source": "/sw.js",                  "destination": "/sw.js" },
     { "source": "/business",              "destination": "/apps/business/index.html" },
+    { "source": "/business/login",        "destination": "/apps/business/login.html" },
     { "source": "/business/(.*)",         "destination": "/apps/business/$1" },
     { "source": "/organizer",             "destination": "/apps/organizer/index.html" },
     { "source": "/organizer/(.*)",        "destination": "/apps/organizer/$1" },

@@ -205,6 +205,7 @@ function redirectByRole() {
   try { role = JSON.parse(localStorage.getItem('p_user') || '{}').role || 'user'; } catch(e) { window.location.href = '/'; return; }
   if (role === 'organizer') { window.location.href = '/organizer'; }
   else if (role === 'business') { window.location.href = '/business'; }
+  else if (role === 'admin') { window.location.href = '/admin'; }
   else { window.location.href = '/'; }
 }
 
@@ -214,9 +215,10 @@ async function saveSession(session) {
   let profile = {};
   const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
   if (error) {
-    // Permission denied — save minimal info and redirect to home; admin/organizer won't be redirected correctly until Supabase grants are applied
     console.warn('profiles query failed:', error.message);
-    localStorage.setItem('p_user', JSON.stringify({ id: user.id, email: user.email, display_name: user.user_metadata?.full_name || user.email?.split('@')[0], role: 'user', last_login: new Date().toISOString() }));
+    // Preserve any previously stored role rather than overwriting with 'user'
+    const prevRole = (() => { try { return JSON.parse(localStorage.getItem('p_user') || '{}').role; } catch(e) { return null; } })();
+    localStorage.setItem('p_user', JSON.stringify({ id: user.id, email: user.email, display_name: user.user_metadata?.full_name || user.email?.split('@')[0], role: prevRole || user.user_metadata?.role || 'user', last_login: new Date().toISOString() }));
     return {};
   }
   profile = data || {};
