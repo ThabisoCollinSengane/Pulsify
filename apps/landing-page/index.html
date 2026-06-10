@@ -517,7 +517,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     <div class="sw"><span class="sic">🔍</span>
       <input class="si" type="search" id="search-inp" placeholder="Search events, venues, artists…" autocomplete="off" oninput="handleSearch(this.value)"/>
     </div>
-    <div class="lb" style="display:none">
+    <div class="lb">
       <select class="ls" id="sel-province" onchange="onProvChange(this.value)">
         <option value="">🗺 Province</option>
         <option value="KZN">KwaZulu-Natal</option>
@@ -530,14 +530,16 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
         <option value="FS">Free State</option>
         <option value="NC">Northern Cape</option>
       </select>
-      <select class="ls" id="sel-city" disabled onchange="onCityChange(this.value)"><option value="">🏙 City</option></select>
+      <select class="ls" id="sel-city" onchange="onCityChange(this.value)">
+        <option value="">🏙 All Cities</option>
+        <option value="Durban">🏖 Durban</option>
+        <option value="Cape Town">🌊 Cape Town</option>
+        <option value="Johannesburg">🏙 Johannesburg</option>
+        <option value="Pretoria">Pretoria</option>
+        <option value="Gqeberha">Gqeberha</option>
+        <option value="East London">East London</option>
+      </select>
       <select class="ls" id="sel-area" disabled><option value="">📍 Area</option></select>
-    </div>
-    <div class="cr" id="city-chip-row">
-      <button class="chip active" onclick="setFeedCity(this,'all')">🌍 All Cities</button>
-      <button class="chip" onclick="setFeedCity(this,'Durban')">🏖 Durban</button>
-      <button class="chip" onclick="setFeedCity(this,'Cape Town')">🌊 Cape Town</button>
-      <button class="chip" onclick="setFeedCity(this,'Johannesburg')">🏙 Johannesburg</button>
     </div>
     <div class="cr" id="genre-chip-row">
       <button class="chip active" onclick="setGenre(this,'all')">✦ All</button>
