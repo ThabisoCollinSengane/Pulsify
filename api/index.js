@@ -958,6 +958,32 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true, user_id: uid, paystack_subaccount_code: subCode });
     }
 
+    /* ─── POST /events/:id/request-map ──────────────────── */
+    const reqMapMatch = url.match(/^\/events\/([^/]+)\/request-map$/);
+    if (reqMapMatch && req.method === 'POST') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const eventId = reqMapMatch[1];
+      const { data: ev } = await sb().from('events').select('id,name,venue_city,organiser_id').eq('id', eventId).single();
+      if (!ev || ev.organiser_id !== user.id) return res.status(403).json({ error: 'Forbidden' });
+
+      const { data: admins } = await sb().from('profiles').select('id').eq('role', 'admin');
+      if (admins?.length) {
+        await sb().from('notifications').insert(admins.map(a => ({
+          user_id: a.id,
+          type: 'map_request',
+          title: '📍 Map Pin Request',
+          body: `${ev.name}${ev.venue_city ? ' in ' + ev.venue_city : ''} is requesting a map pin.`,
+          message: `${ev.name}${ev.venue_city ? ' in ' + ev.venue_city : ''} is requesting a map pin.`,
+          data: { event_id: eventId, url: '/admin' },
+          from_display_name: 'Business Request',
+        })));
+      }
+      return res.status(200).json({ ok: true });
+    }
+
     /* ─── GET /health ─────────────────────────────────────── */
     if (url === '/health' && req.method === 'GET') {
       return res.status(200).json({ status: 'ok', ts: new Date().toISOString() });

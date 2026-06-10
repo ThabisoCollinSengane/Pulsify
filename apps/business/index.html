@@ -646,6 +646,13 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
         <button type="button" class="btn-sec" style="flex:1;padding:9px;font-size:.75rem" onclick="useBizEvGPS()">📍 Use My Location</button>
         <span id="ev-loc-msg" style="font-size:.68rem;color:var(--mu);flex:2"></span>
       </div>
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:12px;cursor:pointer">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">📍 Request Map Pin</div>
+          <div style="font-size:.66rem;color:var(--mu);margin-top:2px">Submit for admin review — usually approved within 24h</div>
+        </div>
+        <input type="checkbox" id="ev-show-on-map" style="width:20px;height:20px;accent-color:var(--or);cursor:pointer;flex-shrink:0"/>
+      </label>
       <div style="display:flex;gap:8px">
         <button class="btn-sec" style="flex:1" onclick="previewBizEvent()">👁 Preview</button>
         <button class="btn-primary" style="flex:2" onclick="submitEvent()">Save Event 🎟</button>
@@ -2065,6 +2072,7 @@ async function submitEvent() {
 
     const eventId = id || 'biz_' + session.user.id.slice(0,8) + '_' + Date.now();
     const lineup  = lineupRaw ? lineupRaw.split(',').map(s => s.trim()) : [];
+    const showOnMap = !id && (document.getElementById('ev-show-on-map')?.checked || false);
 
     if (id) {
       const { error: upErr } = await sb2.from('events').update({
@@ -2083,10 +2091,10 @@ async function submitEvent() {
         venue_name: venue, venue_city: city,
         genre: genre || 'other', description: desc || null,
         price_min: price, price_max: price, is_free: price === 0,
-        currency: 'ZAR', image_url: imgUrl || null,
+        image_url: imgUrl || null,
         organiser_name: BIZ?.name || session.user.email?.split('@')[0],
         organiser_id: session.user.id,
-        is_active: true, source: 'business',
+        is_active: true, approved: false, source: 'business',
         lineup: lineup.length ? lineup : null,
         ...(evLat !== null && evLon !== null ? { venue_lat: evLat, venue_lon: evLon } : {}),
       });
@@ -2106,11 +2114,18 @@ async function submitEvent() {
           event_id: eventId, event_name: name, post_type: 'business_event',
         }),
       }).catch(() => {});
+
+      if (showOnMap) {
+        await fetch('/api/events/' + eventId + '/request-map', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + session.access_token },
+        }).catch(() => {});
+      }
     }
 
     closeSheet('event-sheet');
     resetEventForm();
-    toast(id ? 'Event updated ✅' : 'Event published to feed! ✅', 'ok');
+    toast(showOnMap ? '🎉 Event live! Map pin submitted for admin approval.' : (id ? 'Event updated ✅' : '🎉 Event published to feed!'), 'ok');
     renderEvents(); renderStats();
   } catch(e) {
     toast('Error: ' + e.message, 'err');
@@ -2149,6 +2164,7 @@ function resetEventForm() {
   document.getElementById('ev-sheet-title').textContent = 'New Event';
   ['name','date','time','venue','city','genre','price','hype','desc','img','lineup','lat','lon'].forEach(f => { const el = document.getElementById('ev-' + f); if (el) el.value = ''; });
   const locMsg = document.getElementById('ev-loc-msg'); if (locMsg) locMsg.textContent = '';
+  const mapToggle = document.getElementById('ev-show-on-map'); if (mapToggle) mapToggle.checked = false;
 }
 
 async function deleteEvent(id, btn) {
