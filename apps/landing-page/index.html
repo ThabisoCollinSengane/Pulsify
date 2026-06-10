@@ -4284,7 +4284,7 @@ async function loadCommunityPosts() {
       const name = x(a.display_name || a.username || 'Pulsefy');
       const badge = p.post_type === 'business_update' ? '🏪' : '🎪';
       return `
-      <div onclick="openPost('${x(p.id)}')" style="width:170px;flex-shrink:0;border-radius:16px;overflow:hidden;background:var(--surf);border:1px solid var(--border);cursor:pointer">
+      <div onclick="window.location.href='/feeds?pid=${x(p.id)}'" style="width:170px;flex-shrink:0;border-radius:16px;overflow:hidden;background:var(--surf);border:1px solid var(--border);cursor:pointer">
         <div style="height:110px;background:var(--surf2)">${img ? `<img src="${x(img)}" style="width:100%;height:100%;object-fit:cover;display:block" loading="lazy"/>` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:1.6rem">${badge}</div>`}</div>
         <div style="padding:8px 10px">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
