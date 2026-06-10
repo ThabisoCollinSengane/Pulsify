@@ -23,6 +23,25 @@
         <p style="margin:0 0 20px;font-size:15px;color:#a0a0a0;line-height:1.7">
           Thanks for signing up for Pulsefy! Click the button below to confirm your email address and activate your account.
         </p>
+
+        <!-- ROLE-AWARE WELCOME (driven by the account type chosen at signup) -->
+        {{ if eq .Data.role "organizer" }}
+        <div style="background:rgba(255,92,0,.08);border:1px solid rgba(255,92,0,.3);border-radius:12px;padding:16px 18px;margin:0 0 20px">
+          <p style="margin:0;font-size:14px;color:#FF5C00;font-weight:700;line-height:1.6">🎪 Organizer account</p>
+          <p style="margin:6px 0 0;font-size:13px;color:#a0a0a0;line-height:1.7">Once you confirm, your organizer dashboard is ready — create events, sell tickets, and track your sales in real time.</p>
+        </div>
+        {{ else if eq .Data.role "business" }}
+        <div style="background:rgba(176,38,255,.08);border:1px solid rgba(176,38,255,.3);border-radius:12px;padding:16px 18px;margin:0 0 20px">
+          <p style="margin:0;font-size:14px;color:#B026FF;font-weight:700;line-height:1.6">🏪 Business account</p>
+          <p style="margin:6px 0 0;font-size:13px;color:#a0a0a0;line-height:1.7">Once you confirm, you can list your venue on the live map, post your menu, and take pickup orders from customers.</p>
+        </div>
+        {{ else }}
+        <div style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.25);border-radius:12px;padding:16px 18px;margin:0 0 20px">
+          <p style="margin:0;font-size:14px;color:#00E5FF;font-weight:700;line-height:1.6">🎟 You're all set</p>
+          <p style="margin:6px 0 0;font-size:13px;color:#a0a0a0;line-height:1.7">Once you confirm, discover concerts, festivals, shisanyamas and nightlife near you — book tickets in seconds and roll with your squad.</p>
+        </div>
+        {{ end }}
+
         <table cellpadding="0" cellspacing="0" border="0" style="margin-top:20px">
           <tr><td style="background:#B026FF;border-radius:50px;padding:0">
             <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:50px;font-family:Arial,Helvetica,sans-serif">Confirm Email →</a>
@@ -38,9 +57,15 @@
         </p>
       </td></tr>
 
-      <!-- FOOTER -->
-      <tr><td style="padding-top:28px;text-align:center;font-size:12px;color:#4a4a4a;line-height:1.8">
-        <p style="margin:0">© Pulsefy · South Africa</p>
+      <!-- FOOTER + SIGNATURE -->
+      <tr><td style="padding-top:32px;text-align:center">
+        <img src="https://pulsefy.co.za/logo.png" alt="Pulsefy — Feel the Vibe" width="130" style="display:inline-block;width:130px;max-width:130px;height:auto;border:0;outline:none;text-decoration:none"/>
+        <p style="margin:14px 0 0;font-size:12px;color:#4a4a4a;line-height:1.8">© Pulsefy · South Africa 🇿🇦</p>
+        <p style="margin:4px 0 0;font-size:12px;color:#4a4a4a">
+          <a href="https://pulsefy.co.za" style="color:#B026FF;text-decoration:none">pulsefy.co.za</a>
+          &nbsp;·&nbsp;
+          <a href="mailto:hello@pulsefy.co.za" style="color:#666;text-decoration:none">hello@pulsefy.co.za</a>
+        </p>
       </td></tr>
 
     </table>

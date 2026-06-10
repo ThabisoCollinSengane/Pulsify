@@ -31,7 +31,38 @@ Email templates have to be pasted into the Supabase Dashboard — they cannot be
 - `{{ .TokenHash }}` — hashed token
 - `{{ .Email }}` — current account email
 - `{{ .NewEmail }}` — new email being switched to (`change-email.html` only)
+- `{{ .Data }}` — the user's `user_metadata` (e.g. `{{ .Data.role }}`)
 - `{{ .SiteURL }}` — your site URL
+
+## PNG signature image
+
+Every template ends with a footer signature that embeds the Pulsefy logo:
+
+```html
+<img src="https://pulsefy.co.za/logo.png" alt="Pulsefy — Feel the Vibe" width="130" .../>
+```
+
+The image is referenced by **absolute URL** — emails can't use local file paths.
+It resolves to `apps/landing-page/logo.png`, which deploys to
+`https://pulsefy.co.za/logo.png`. If you ever move or rename that file, update
+the `src` in all six templates. The text wordmark at the top still renders even
+when a mail client blocks images, so the email is always readable.
+
+## Role-aware signup confirmation
+
+`confirm-signup.html` adapts its welcome block to the account type chosen on the
+signup page. The signup flow (`apps/landing-page/create-account.html`) stores the
+chosen `role` in `user_metadata`, which GoTrue exposes as `{{ .Data.role }}`:
+
+| `role` value | Welcome shown |
+|--------------|---------------|
+| `organizer`  | 🎪 Organizer — create events, sell tickets, track sales |
+| `business`   | 🏪 Business — list your venue, post your menu, take orders |
+| anything else (`user`) | 🎟 Discover events, book tickets, roll with your squad |
+
+This is a single Supabase template — Supabase has only one "Confirm signup" slot,
+so the per-type copy is handled with the `{{ if eq .Data.role ... }}` conditional
+inside the one file. Paste it as-is; the branching happens server-side at send time.
 
 ## SMTP troubleshooting — "Request rate limit reached"
 
