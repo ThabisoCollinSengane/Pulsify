@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Pulsify — Get Your Venue on the Map</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#111;line-height:1.7;font-size:15px}
+
+  /* COVER */
+  .cover{background:#0d0d0d;color:#fff;padding:60px 36px;text-align:center}
+  .cover .logo{font-size:3.2rem;font-weight:900;letter-spacing:-.03em}
+  .cover .logo span{color:#FF5C00}
+  .cover .sub{font-size:1.15rem;color:#aaa;margin:6px 0 28px}
+  .cover h2{font-size:1.55rem;font-weight:700;color:#fff;max-width:580px;margin:0 auto;line-height:1.4}
+  .cover h2 em{color:#FF5C00;font-style:normal}
+  .cover .pill{display:inline-block;background:#FF5C00;color:#fff;border-radius:50px;padding:6px 20px;font-size:.82rem;font-weight:700;letter-spacing:.08em;margin-top:28px}
+
+  /* BODY */
+  .wrap{max-width:820px;margin:0 auto;padding:44px 32px}
+  h2{font-size:1.45rem;font-weight:900;margin:44px 0 12px;color:#0d0d0d}
+  h2::before{content:'';display:block;width:36px;height:4px;background:#FF5C00;margin-bottom:10px;border-radius:2px}
+  h3{font-size:1rem;font-weight:700;margin:24px 0 6px;color:#222}
+  p{margin-bottom:12px;color:#333}
+  ul{margin:8px 0 14px 20px}
+  li{margin-bottom:7px;color:#333}
+  strong{color:#111}
+  a{color:#FF5C00;text-decoration:none}
+
+  /* BENEFIT CARDS */
+  .cards{display:flex;flex-wrap:wrap;gap:14px;margin:20px 0}
+  .card{flex:1;min-width:210px;background:#0d0d0d;color:#fff;border-radius:14px;padding:20px 18px}
+  .card .icon{font-size:1.8rem;margin-bottom:8px}
+  .card h4{font-size:.95rem;font-weight:800;color:#FF5C00;margin-bottom:4px}
+  .card p{font-size:.85rem;color:#bbb;margin:0}
+
+  /* STEPS */
+  .steps{counter-reset:step;margin:20px 0}
+  .step{display:flex;gap:16px;align-items:flex-start;margin-bottom:20px}
+  .step-num{width:40px;height:40px;border-radius:50%;background:#FF5C00;color:#fff;font-weight:900;font-size:1.1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .step-body h4{font-weight:700;color:#111;margin-bottom:3px}
+  .step-body p{color:#555;font-size:.9rem;margin:0}
+
+  /* CATEGORIES */
+  .cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:18px 0}
+  .cat{background:#f8f8f8;border:1px solid #eee;border-radius:10px;padding:14px 16px}
+  .cat .emoji{font-size:1.5rem;margin-bottom:4px}
+  .cat h4{font-size:.9rem;font-weight:700;color:#111;margin-bottom:2px}
+  .cat p{font-size:.78rem;color:#777;margin:0}
+
+  /* PRICING */
+  .pricing{display:flex;gap:14px;flex-wrap:wrap;margin:20px 0}
+  .plan{flex:1;min-width:200px;border:2px solid #eee;border-radius:14px;padding:22px 18px;text-align:center}
+  .plan.free{border-color:#2d8a4e}
+  .plan.pro{border-color:#FF5C00;background:#fff8f0}
+  .plan .plan-name{font-size:.8rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+  .plan.free .plan-name{color:#2d8a4e}
+  .plan.pro .plan-name{color:#FF5C00}
+  .plan .price{font-size:2rem;font-weight:900;color:#111;line-height:1;margin-bottom:4px}
+  .plan .price-label{font-size:.75rem;color:#888;margin-bottom:14px}
+  .plan-feature{font-size:.82rem;padding:4px 0;border-bottom:1px solid #f0f0f0;color:#333;text-align:left}
+  .plan-feature:last-child{border:none}
+  .plan-feature::before{content:'✓ ';color:#FF5C00;font-weight:700}
+  .plan.free .plan-feature::before{color:#2d8a4e}
+
+  /* VENUES CALLOUT */
+  .venues-box{background:#0d0d0d;color:#fff;border-radius:14px;padding:24px 28px;margin:28px 0}
+  .venues-box h3{color:#FF5C00;font-size:1.05rem;margin-bottom:10px}
+  .venue-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .venue-tag{background:rgba(255,92,0,.15);border:1px solid rgba(255,92,0,.3);color:#FF5C00;padding:4px 12px;border-radius:50px;font-size:.78rem;font-weight:700}
+
+  /* CTA */
+  .cta-box{background:#FF5C00;color:#fff;border-radius:14px;padding:32px 28px;text-align:center;margin:36px 0}
+  .cta-box h2{color:#fff;margin:0 0 10px;font-size:1.6rem}
+  .cta-box h2::before{display:none}
+  .cta-box p{color:rgba(255,255,255,.85);margin-bottom:20px}
+  .cta-btn{display:inline-block;background:#fff;color:#FF5C00;padding:12px 28px;border-radius:50px;font-weight:800;font-size:.95rem;margin:4px;text-decoration:none}
+
+  footer{background:#0d0d0d;color:#555;padding:18px 36px;font-size:.75rem;text-align:center}
+
+  @media(max-width:600px){
+    .cards,.pricing{flex-direction:column}
+    .cover .logo{font-size:2.4rem}
+  }
+  @media print{
+    .cover{page-break-after:always}
+    .card,.plan{page-break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== COVER ===================== -->
+<div class="cover">
+  <div class="logo">PULS<span>E</span>FY</div>
+  <div class="sub">South Africa's Live Event Discovery Platform</div>
+  <h2>Get your venue in front of thousands of <em>local people</em> looking for exactly what you offer — every weekend.</h2>
+  <div class="pill">FREE TO LIST · NO WEBSITE NEEDED · DURBAN · JOBURG · CAPE TOWN</div>
+</div>
+
+<div class="wrap">
+
+  <!-- ===================== INTRO ===================== -->
+  <h2>What is Pulsify?</h2>
+  <p>Pulsify is a South African platform that helps people aged 18–35 discover where to go — shisanyamas, clubs, restaurants, live music, events, and places to stay overnight. We have users across KwaZulu-Natal, Gauteng, and Western Cape, all actively looking for the next great experience.</p>
+  <p>We built Pulsify because places like <strong>Eyadini, Joe Cools, KwaMaxs, and Egagasini</strong> are packed on weekends — but thousands of potential customers nearby still don't know they exist, or don't know what's happening there this weekend. We fix that.</p>
+  <p>No website? No problem. Your Pulsify listing <em>is</em> your online presence.</p>
+
+  <!-- ===================== THE PROBLEM ===================== -->
+  <h2>The Problem We're Solving For You</h2>
+  <ul>
+    <li>You post on Instagram or WhatsApp, but only your existing followers see it</li>
+    <li>People nearby have no easy way to discover you</li>
+    <li>You don't have a website, or maintaining one is expensive and time-consuming</li>
+    <li>Competitors with more social media budget get found first on Google</li>
+    <li>You lose customers to places that are "easier to find online"</li>
+  </ul>
+  <p>Pulsify puts you on a live map and in a discovery feed — exactly where people are already searching.</p>
+
+  <!-- ===================== HOW IT WORKS ===================== -->
+  <h2>How It Works</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>Your venue appears on the Pulsify live map</h4>
+        <p>Users open the map on their phone and see your pin near them. One tap opens your full profile: photos, description, menu/vibe, events this weekend, contact details, and a location link.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>You post your specials, events, and updates</h4>
+        <p>Through your free business dashboard, you can post what's happening — a Friday night special, a live DJ, a weekend buffet, a public holiday event — in minutes. It goes live on the feed and map immediately.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Pulsify users discover and share you</h4>
+        <p>Users follow your venue, share your events with friends, form squads to come through, and check in when they arrive. Every share is free advertising for you.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h4>Customers walk through your door</h4>
+        <p>More people know about you. More people come. Simple.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== BENEFITS ===================== -->
+  <h2>What You Get</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="icon">📍</div>
+      <h4>Live Map Listing</h4>
+      <p>Your pin on the Pulsify map — visible to everyone browsing your area.</p>
+    </div>
+    <div class="card">
+      <div class="icon">📢</div>
+      <h4>Event &amp; Special Posts</h4>
+      <p>Post your Friday night lineup, a special menu, or a public holiday event. Goes live instantly.</p>
+    </div>
+    <div class="card">
+      <div class="icon">📸</div>
+      <h4>Business Profile Page</h4>
+      <p>Photos, description, hours, contact details, vibe tags — your venue's digital home.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🌟</div>
+      <h4>Reviews &amp; Ratings</h4>
+      <p>Customers leave reviews. Good reviews build trust and bring in new faces.</p>
+    </div>
+    <div class="card">
+      <div class="icon">📲</div>
+      <h4>Push Notifications</h4>
+      <p>When you post an event, your followers get notified automatically — no boosting required.</p>
+    </div>
+    <div class="card">
+      <div class="icon">📊</div>
+      <h4>Audience Insights</h4>
+      <p>See how many people viewed your profile, clicked your events, and checked in.</p>
+    </div>
+  </div>
+
+  <!-- ===================== WHO IS THIS FOR ===================== -->
+  <h2>Who We're Looking For</h2>
+  <div class="cat-grid">
+    <div class="cat">
+      <div class="emoji">🍖</div>
+      <h4>Shisanyamas</h4>
+      <p>Show off your vibe, post weekend specials, get found by meat lovers nearby.</p>
+    </div>
+    <div class="cat">
+      <div class="emoji">🎧</div>
+      <h4>Nightclubs &amp; Bars</h4>
+      <p>Post your Friday/Saturday DJ lineup. Sell more tickets. Fill your floor.</p>
+    </div>
+    <div class="cat">
+      <div class="emoji">🍽️</div>
+      <h4>Restaurants &amp; Food Spots</h4>
+      <p>Lunch specials, Sunday roasts, new menu — post it and let the area know.</p>
+    </div>
+    <div class="cat">
+      <div class="emoji">🎶</div>
+      <h4>Live Music Venues</h4>
+      <p>Jazz nights, Amapiano sets, acoustic sessions — get music lovers through the door.</p>
+    </div>
+    <div class="cat">
+      <div class="emoji">🏡</div>
+      <h4>BnBs &amp; Guesthouses</h4>
+      <p>Show your rooms, list your location, and get discovered by weekend travellers.</p>
+    </div>
+    <div class="cat">
+      <div class="emoji">🌊</div>
+      <h4>Beach &amp; Lifestyle Spots</h4>
+      <p>Poolside lounges, beach bars, rooftop spots — put your setting on the map.</p>
+    </div>
+    <div class="cat">
+      <div class="emoji">🏋️</div>
+      <h4>Wellness &amp; Activities</h4>
+      <p>Yoga sessions, fitness boot camps, spa days — reach the weekend wellness crowd.</p>
+    </div>
+    <div class="cat">
+      <div class="emoji">🛒</div>
+      <h4>Markets &amp; Pop-Ups</h4>
+      <p>Weekend markets, pop-up food stalls, craft fairs — let the area know you're there.</p>
+    </div>
+  </div>
+
+  <!-- ===================== VENUES ALREADY FEATURED ===================== -->
+  <div class="venues-box">
+    <h3>Venues already featured on Pulsify</h3>
+    <p style="color:#aaa;font-size:.88rem">These are some of the spots our users are already discovering and talking about. Is your venue here?</p>
+    <div class="venue-list">
+      <span class="venue-tag">Eyadini Lounge</span>
+      <span class="venue-tag">Joe Cools</span>
+      <span class="venue-tag">KwaMaxs Lifestyle</span>
+      <span class="venue-tag">Egagasini</span>
+      <span class="venue-tag">Braai Republic Joburg</span>
+      <span class="venue-tag">Zaba's Shisanyama</span>
+      <span class="venue-tag">The Joint Jazz Café</span>
+      <span class="venue-tag">Ogabazin Lounge</span>
+      <span class="venue-tag">Ozzy's Grill</span>
+      <span class="venue-tag">Galaxy Nightclub</span>
+      <span class="venue-tag">Eve's Lounge</span>
+    </div>
+    <p style="color:#666;font-size:.8rem;margin-top:12px">Not listed yet? Get your venue on the map today — it's free.</p>
+  </div>
+
+  <!-- ===================== PRICING ===================== -->
+  <h2>Pricing — Simple &amp; Fair</h2>
+  <p>Listing your venue is free. We only earn when you earn.</p>
+  <div class="pricing">
+    <div class="plan free">
+      <div class="plan-name">Basic Listing</div>
+      <div class="price">Free</div>
+      <div class="price-label">forever, no credit card</div>
+      <div class="plan-feature">Venue pin on the live map</div>
+      <div class="plan-feature">Business profile page (photos, description, contact)</div>
+      <div class="plan-feature">Post events and specials (up to 3/month)</div>
+      <div class="plan-feature">Customer reviews and star rating</div>
+      <div class="plan-feature">Basic audience view count</div>
+    </div>
+    <div class="plan pro">
+      <div class="plan-name">Business Account</div>
+      <div class="price">R199</div>
+      <div class="price-label">per month (or R1,799/year)</div>
+      <div class="plan-feature">Everything in Free</div>
+      <div class="plan-feature">Unlimited event and special posts</div>
+      <div class="plan-feature">Push notifications to your followers</div>
+      <div class="plan-feature">Featured placement in the discovery feed</div>
+      <div class="plan-feature">Full audience analytics dashboard</div>
+      <div class="plan-feature">Ticket sales through Pulsify (8% platform fee per ticket)</div>
+      <div class="plan-feature">Priority listing on the map (shown first in your area)</div>
+      <div class="plan-feature">Verified business badge</div>
+    </div>
+  </div>
+  <p style="font-size:.88rem;color:#777">No contracts. Cancel anytime. The 8% ticket fee only applies if you choose to sell tickets through us — if you use your own booking method (WhatsApp, door sales, external link), there's no fee.</p>
+
+  <!-- ===================== CTA ===================== -->
+  <div class="cta-box">
+    <h2>Ready to get on the map?</h2>
+    <p>Sign up for free in 5 minutes. No website needed. No technical skills required.</p>
+    <a href="https://pulsefy.co.za" class="cta-btn">Visit pulsefy.co.za →</a>
+    <a href="mailto:support@pulsefy.co.za" class="cta-btn" style="background:transparent;border:2px solid #fff;color:#fff">Email us to get listed</a>
+    <p style="margin-top:20px;font-size:.85rem;color:rgba(255,255,255,.7)">Or WhatsApp us: <strong style="color:#fff">067 977 9340</strong> — we'll set up your listing for you at no charge.</p>
+  </div>
+
+  <!-- ===================== QUESTIONS ===================== -->
+  <h2>Common Questions</h2>
+
+  <h3>Do I need a website or social media page?</h3>
+  <p>No. Your Pulsify profile replaces a website. If you already have Instagram or Facebook, we can link them — but it's not required.</p>
+
+  <h3>How long does it take to set up?</h3>
+  <p>About 5 minutes for a basic listing. We also offer a free white-glove setup — call or WhatsApp us and we'll create your listing for you.</p>
+
+  <h3>Do I need a smartphone or laptop?</h3>
+  <p>You can manage your listing from any smartphone browser. No app download required.</p>
+
+  <h3>What if I don't have event photos?</h3>
+  <p>We can use photos from your social media pages (with your permission), or list you with a placeholder image while you gather photos. Don't let missing photos stop you — get listed first.</p>
+
+  <h3>Is Pulsify only for Durban?</h3>
+  <p>Pulsify covers KwaZulu-Natal, Gauteng, and Western Cape. Durban is our home base, but we're expanding nationally.</p>
+
+  <h3>Can I list my BnB or guesthouse?</h3>
+  <p>Yes — we have a dedicated accommodation category. Travellers and weekend visitors actively use Pulsify to find places to stay near the events they're attending.</p>
+
+</div>
+
+<footer>
+  Pulsify · South Africa's Live Event Discovery Platform<br/>
+  support@pulsefy.co.za · WhatsApp: 067 977 9340 · pulsefy.co.za
+</footer>
+
+</body>
+</html>
