@@ -533,7 +533,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
       <select class="ls" id="sel-city" disabled onchange="onCityChange(this.value)"><option value="">🏙 City</option></select>
       <select class="ls" id="sel-area" disabled><option value="">📍 Area</option></select>
     </div>
-    <div class="cr">
+    <div class="cr" id="city-chip-row">
+      <button class="chip active" onclick="setFeedCity(this,'all')">🌍 All Cities</button>
+      <button class="chip" onclick="setFeedCity(this,'Durban')">🏖 Durban</button>
+      <button class="chip" onclick="setFeedCity(this,'Cape Town')">🌊 Cape Town</button>
+      <button class="chip" onclick="setFeedCity(this,'Johannesburg')">🏙 Johannesburg</button>
+    </div>
+    <div class="cr" id="genre-chip-row">
       <button class="chip active" onclick="setGenre(this,'all')">✦ All</button>
       <button class="chip" onclick="setGenre(this,'free')">✅ Free</button>
       <button class="chip" onclick="setGenre(this,'gqom')">🔊 Gqom</button>
@@ -1603,7 +1609,7 @@ async function loadFeed(resetPage = false) {
           <div class="no-results-ico">🎟</div>
           <div class="no-results-title">No events found</div>
           <div class="no-results-sub">Try a different city or genre</div>
-          <button class="no-results-btn" onclick="feedCity='all';feedGenre='all';feedPage=1;document.querySelectorAll('.cr .chip').forEach(b=>b.classList.remove('active'));document.querySelector('.cr .chip').classList.add('active');loadFeed(true)">Show All Events</button>
+          <button class="no-results-btn" onclick="feedCity='all';feedGenre='all';feedPage=1;document.querySelectorAll('#city-chip-row .chip,#genre-chip-row .chip').forEach(b=>b.classList.remove('active'));document.querySelector('#city-chip-row .chip').classList.add('active');document.querySelector('#genre-chip-row .chip').classList.add('active');loadFeed(true)">Show All Events</button>
         </div>`;
       return;
     }
@@ -1863,9 +1869,16 @@ function changePage(delta) {
   loadFeed();
 }
 function setGenre(btn, genre) {
-  document.querySelectorAll('.cr .chip').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#genre-chip-row .chip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   feedGenre = genre;
+  loadFeed(true);
+}
+function setFeedCity(btn, city) {
+  document.querySelectorAll('#city-chip-row .chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  feedCity = city === 'all' ? 'all' : city;
+  feedPage = 1;
   loadFeed(true);
 }
 function onProvChange(v) {
