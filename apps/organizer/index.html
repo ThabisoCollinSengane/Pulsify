@@ -16,21 +16,23 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#160C32;--bg2:#1C1140;--surf:#241652;--surf2:#2E1C66;--border:rgba(168,108,255,.16);--border2:rgba(168,108,255,.32);--or:#FF6B00;--li:#6EFF47;--pk:#FF2D88;--cy:#00EEFF;--pu:#CC44FF;--tx:#F4EDFF;--mu:#8575AE;--mu2:#B09CC8;--bh:70px}
-html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
-body{padding-bottom:calc(var(--bh) + env(safe-area-inset-bottom, 0px) + 32px)}
+html,body{min-height:100%;overflow-x:hidden;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+body{padding-bottom:calc(var(--bh) + env(safe-area-inset-bottom, 0px) + 32px);width:100%;max-width:100%}
 .tb{position:fixed;top:0;left:0;right:0;height:58px;z-index:800;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:rgba(22,12,50,.92);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
 .logo{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.06em;display:flex;align-items:center;gap:8px;color:var(--tx)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--or);box-shadow:0 0 12px var(--or);animation:p 2s ease-in-out infinite}
 @keyframes p{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}
 .pill{background:rgba(176,38,255,.15);border:1px solid rgba(176,38,255,.35);color:var(--pu);font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;padding:3px 10px;border-radius:50px;letter-spacing:.06em;text-transform:uppercase}
-.main{margin-top:58px;padding:16px}
-.hero{background:linear-gradient(135deg,rgba(176,38,255,.15),rgba(255,92,0,.1));border:1px solid rgba(176,38,255,.2);border-radius:20px;padding:20px;margin-bottom:16px}
-.hero-name{font-family:'Bebas Neue',sans-serif;font-size:2rem;line-height:1;margin-bottom:4px}
+.main{margin-top:58px;padding:16px;max-width:860px;margin-left:auto;margin-right:auto}
+.hero{background:linear-gradient(135deg,rgba(176,38,255,.15),rgba(255,92,0,.1));border:1px solid rgba(176,38,255,.2);border-radius:20px;padding:20px;margin-bottom:16px;overflow:hidden}
+.hero-name{font-family:'Bebas Neue',sans-serif;font-size:2rem;line-height:1;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hero-sub{font-size:.78rem;color:var(--mu2)}
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
-.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center}
-.stat-n{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--or);line-height:1}
-.stat-l{font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-top:4px}
+.stats-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:16px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:12px 6px;text-align:center;overflow:hidden;min-width:0}
+.stat-n{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--or);line-height:1}
+.stat-l{font-family:'Syne',sans-serif;font-size:.52rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mu);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Hide Paystack floating support widget */
+#paystack-customized-dialog,iframe[name^="paystack"],div[id^="paystack-"]:not([id="paystack-js"]){display:none!important}
 .section{margin-bottom:20px}
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:10px}
 .card-body{padding:14px}

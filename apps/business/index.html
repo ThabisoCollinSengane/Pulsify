@@ -16,7 +16,7 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#160C32;--bg2:#1C1140;--surf:#241652;--surf2:#2E1C66;--border:rgba(168,108,255,.16);--border2:rgba(168,108,255,.32);--or:#FF6B00;--li:#6EFF47;--pk:#FF2D88;--cy:#00EEFF;--pu:#CC44FF;--te:#00FFB8;--tx:#F4EDFF;--mu:#8575AE;--mu2:#B09CC8;--th:58px;--bh:68px}
-html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+html,body{height:100%;overflow:hidden;max-width:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
 ::-webkit-scrollbar{width:2px}::-webkit-scrollbar-thumb{background:var(--or);border-radius:2px}
 
 /* ── TOP BAR ── */
@@ -62,10 +62,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .btn-danger:active{background:rgba(255,45,120,.2)}
 
 /* ── STATS ── */
-.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:12px 14px}
-.stat-card{background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px 10px;text-align:center}
-.stat-num{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;line-height:1;color:var(--or)}
-.stat-lbl{font-family:'Syne',sans-serif;font-size:.52rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-top:2px}
+.stats-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:12px 14px}
+.stat-card{background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:10px 4px;text-align:center;overflow:hidden;min-width:0}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;line-height:1;color:var(--or)}
+.stat-lbl{font-family:'Syne',sans-serif;font-size:.48rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--mu);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* ── OVERLAY / SHEET ── */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);z-index:2000;display:none;align-items:flex-end;justify-content:center}
