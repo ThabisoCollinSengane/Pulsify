@@ -891,18 +891,38 @@ async function initFeed() {
 }
 
 async function scrollToPostAndComment(postId, commentId) {
-  // Wait one frame for buildCard DOM to settle
   await new Promise(r => requestAnimationFrame(r));
-  const post = document.getElementById('post-' + postId);
+  let post = document.getElementById('post-' + postId);
+
+  // Post not in current page — fetch it directly and show it at the top
+  if (!post) {
+    const sb = getSB();
+    if (sb) {
+      const { data: p } = await sb.from('posts')
+        .select('*').eq('id', postId).maybeSingle();
+      if (p) {
+        const { data: prof } = await sb.from('profiles')
+          .select('id,username,display_name,avatar_url,role,is_verified').eq('id', p.user_id).maybeSingle();
+        const feedEl = document.getElementById('feed');
+        const spotlight = document.createElement('div');
+        spotlight.style.cssText = 'border:2px solid var(--pu);border-radius:18px;overflow:hidden;margin-bottom:8px';
+        const mapped = mapPost({ ...p, profile: prof });
+        spotlight.appendChild(buildCard(mapped));
+        feedEl.insertBefore(spotlight, feedEl.firstChild);
+        post = document.getElementById('post-' + postId);
+        if (feedEl) feedEl.scrollTop = 0;
+      }
+    }
+  }
+
   if (!post) return;
   post.scrollIntoView({ behavior: 'smooth', block: 'start' });
   post.classList.add('cmt-target');
   setTimeout(() => post.classList.remove('cmt-target'), 2400);
-  // Open comments + load
+
   const wrap = document.getElementById('cmt-' + postId);
   if (wrap && wrap.style.display !== 'block') await toggleCmt(postId);
   if (!commentId) return;
-  // Wait for loadComments to render, then scroll to the comment
   for (let i = 0; i < 20; i++) {
     const c = document.getElementById('c-' + commentId);
     if (c) {
