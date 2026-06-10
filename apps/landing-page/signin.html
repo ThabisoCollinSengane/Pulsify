@@ -196,7 +196,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
     const profile = await saveSession(session);
     const mismatch = getRoleMismatchError(profile.role || 'user', _accType);
     if (mismatch) { await sb.auth.signOut(); _sessionHandled = false; showErr(mismatch); return; }
-    redirectByRole();
+    if (!maybeShowOnboarding(profile)) redirectByRole();
   }
 });
 
@@ -368,6 +368,118 @@ async function resendVerification() {
 }
 
 document.addEventListener('keydown', e => { if (e.key === 'Enter' && !document.getElementById('btn').disabled) doSignIn(); });
+
+/* ─── Onboarding modal ───────────────────────────────────────────────────── */
+const GENRES_LIST = ['Amapiano','Gqom','Afrobeats','House','Hip-Hop','Jazz','R&B','Reggae','Gospel','Kwaito','Dancehall','Drill','Afro-House','Deep House','Tech House'];
+
+function buildOnboardingModal() {
+  const m = document.createElement('div');
+  m.id = 'ob-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(5,8,15,.95);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
+  m.innerHTML = `
+<div style="width:100%;max-width:420px;background:#090D1A;border:1px solid rgba(255,255,255,.14);border-radius:22px;padding:26px 22px 30px">
+  <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:2px" id="ob-heading">Welcome to Pulsefy!</div>
+  <div style="font-size:.78rem;color:#5A5870;margin-bottom:20px" id="ob-sub">Let's set up your profile (you can skip any step)</div>
+  <div id="ob-step-1">
+    <label class="lbl">Display Name *</label>
+    <input class="inp" id="ob-display-name" placeholder="How should we call you?" maxlength="40"/>
+    <label class="lbl">Username (optional)</label>
+    <input class="inp" id="ob-username" placeholder="e.g. dj_sipho" maxlength="30" style="text-transform:lowercase"/>
+    <label class="lbl">Bio (optional)</label>
+    <textarea class="inp" id="ob-bio" placeholder="Tell people a bit about yourself…" rows="2" style="resize:none"></textarea>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn" onclick="obNext(2)" style="flex:2">Continue →</button>
+      <button class="btn" onclick="obSkipAll()" style="flex:1;background:transparent;border:1.5px solid rgba(255,255,255,.14);color:#9997B0">Skip All</button>
+    </div>
+  </div>
+  <div id="ob-step-2" style="display:none">
+    <label class="lbl">Your City</label>
+    <select class="inp" id="ob-city">
+      <option value="">Select city…</option>
+      <option>Durban</option><option>Cape Town</option><option>Johannesburg</option>
+      <option>Pretoria</option><option>Gqeberha</option><option>East London</option><option>Bloemfontein</option>
+    </select>
+    <div style="margin-top:4px;display:flex;gap:8px">
+      <button class="btn" onclick="obBack(1)" style="flex:1;background:transparent;border:1.5px solid rgba(255,255,255,.14);color:#9997B0">← Back</button>
+      <button class="btn" onclick="obNext(3)" style="flex:2">Continue →</button>
+      <button class="btn" onclick="obSkipAll()" style="flex:1;background:transparent;border:1.5px solid rgba(255,255,255,.14);color:#9997B0">Skip</button>
+    </div>
+  </div>
+  <div id="ob-step-3" style="display:none">
+    <label class="lbl">Favourite Genres</label>
+    <div id="ob-genre-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">${GENRES_LIST.map(g=>`<button class="chip" style="padding:6px 12px;border-radius:50px;border:1.5px solid rgba(255,255,255,.14);background:rgba(255,255,255,.03);color:#9997B0;cursor:pointer;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700" onclick="obToggleGenre(this,'${g}')">${g}</button>`).join('')}</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="obBack(2)" style="flex:1;background:transparent;border:1.5px solid rgba(255,255,255,.14);color:#9997B0">← Back</button>
+      <button class="btn" onclick="obSave()" style="flex:2" id="ob-save-btn">Save Profile</button>
+    </div>
+  </div>
+  <div id="ob-err" style="display:none;margin-top:10px;background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.3);border-radius:10px;padding:8px 12px;font-size:.75rem;color:#FF2D78"></div>
+</div>`;
+  document.body.appendChild(m);
+}
+
+function obShowStep(n) {
+  [1,2,3].forEach(i => {
+    const el = document.getElementById('ob-step-'+i);
+    if (el) el.style.display = i === n ? '' : 'none';
+  });
+}
+function obNext(n) {
+  if (n === 2) {
+    const name = (document.getElementById('ob-display-name').value || '').trim();
+    if (!name) { obErr('Please enter a display name.'); return; }
+    obErr('');
+  }
+  obShowStep(n);
+}
+function obBack(n) { obErr(''); obShowStep(n); }
+function obErr(m) { const el = document.getElementById('ob-err'); el.textContent = m; el.style.display = m ? '' : 'none'; }
+function obToggleGenre(btn, genre) {
+  const active = btn.dataset.sel === '1';
+  btn.dataset.sel = active ? '' : '1';
+  btn.style.borderColor  = active ? 'rgba(255,255,255,.14)' : '#FF5C00';
+  btn.style.background   = active ? 'rgba(255,255,255,.03)' : 'rgba(255,92,0,.12)';
+  btn.style.color        = active ? '#9997B0' : '#FF5C00';
+}
+async function obSkipAll() {
+  document.getElementById('ob-modal').remove();
+  redirectByRole();
+}
+async function obSave() {
+  const btn = document.getElementById('ob-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const display_name = (document.getElementById('ob-display-name').value || '').trim();
+  const username     = (document.getElementById('ob-username').value || '').trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
+  const bio          = (document.getElementById('ob-bio').value || '').trim();
+  const city         = document.getElementById('ob-city').value;
+  const genres       = Array.from(document.querySelectorAll('#ob-genre-chips button[data-sel="1"]')).map(b => b.textContent);
+  const token = localStorage.getItem('p_token');
+  const body = {};
+  if (display_name) body.display_name = display_name;
+  if (username)     body.username     = username;
+  if (bio)          body.bio          = bio;
+  if (city)         body.city         = city;
+  if (genres.length) body.genres      = genres;
+  if (Object.keys(body).length) {
+    try {
+      const r = await fetch('/api/auth/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify(body) });
+      if (!r.ok) { const j = await r.json().catch(()=>({})); obErr(j.error || 'Save failed. Try again.'); btn.disabled = false; btn.textContent = 'Save Profile'; return; }
+    } catch(e) { obErr('Network error. Try again.'); btn.disabled = false; btn.textContent = 'Save Profile'; return; }
+    // Update localStorage
+    try { const pu = JSON.parse(localStorage.getItem('p_user') || '{}'); if (display_name) pu.display_name = display_name; localStorage.setItem('p_user', JSON.stringify(pu)); } catch(e) {}
+  }
+  document.getElementById('ob-modal').remove();
+  redirectByRole();
+}
+
+function maybeShowOnboarding(profile) {
+  if (!profile || profile.display_name) return false;
+  buildOnboardingModal();
+  const nameHint = profile.email?.split('@')[0] || '';
+  const el = document.getElementById('ob-display-name');
+  if (el && nameHint) el.placeholder = nameHint;
+  return true;
+}
 </script>
 </body>
 </html>

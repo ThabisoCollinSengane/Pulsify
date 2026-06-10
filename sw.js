@@ -1,5 +1,6 @@
 self.addEventListener('push', event => {
-  const data = event.data?.json().catch?.(() => ({})) ?? event.data?.json() ?? {};
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch(e) {}
   event.waitUntil(
     self.registration.showNotification(data.title || 'Pulsify', {
       body:  data.body  || '',

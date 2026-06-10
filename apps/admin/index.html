@@ -703,6 +703,19 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div style="font-size:.82rem;color:var(--mu2)">Broadcast in-app and push notifications to users</div>
     </div>
 
+    <!-- Quick Templates -->
+    <div style="margin-bottom:16px">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Quick Templates</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <button class="btn btn-surf" style="padding:6px 14px;font-size:.75rem;border-radius:50px" onclick="fillNotifTemplate('🔥 New Event Near You!','Check out the latest events happening this weekend in your city. Tap to explore the full lineup!','/','city')">🔥 New Events</button>
+        <button class="btn btn-surf" style="padding:6px 14px;font-size:.75rem;border-radius:50px" onclick="fillNotifTemplate('🎶 Amapiano Night This Weekend','Your favourite Amapiano events are dropping this weekend — find them on Pulsify.','/?genre=amapiano','genre')">🎶 Amapiano</button>
+        <button class="btn btn-surf" style="padding:6px 14px;font-size:.75rem;border-radius:50px" onclick="fillNotifTemplate('🎉 Gqom Events Live','Gqom sessions are popping this weekend near you. See what\'s on!','/?genre=gqom','genre')">🎉 Gqom</button>
+        <button class="btn btn-surf" style="padding:6px 14px;font-size:.75rem;border-radius:50px" onclick="fillNotifTemplate('🍖 Shisanyama Weekend Vibes','Find the best shisanyamas and braai spots open this weekend near you.','/map','all')">🍖 Shisanyama</button>
+        <button class="btn btn-surf" style="padding:6px 14px;font-size:.75rem;border-radius:50px" onclick="fillNotifTemplate('🎟 Free Events This Weekend','Free entry events happening near you — no ticket needed. Check the map!','/map','all')">🎟 Free Events</button>
+        <button class="btn btn-surf" style="padding:6px 14px;font-size:.75rem;border-radius:50px" onclick="fillNotifTemplate('📍 Something Happening Near You','There are events happening close to your location right now. Open the map to see!','/map','all')">📍 Near You</button>
+      </div>
+    </div>
+
     <!-- Compose -->
     <div style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:20px;margin-bottom:24px">
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:14px">Compose</div>
@@ -2264,6 +2277,14 @@ function showBanMsg(m, t) { const el=document.getElementById('msg-banners'); if(
 /* ══════════════════════════════════════════════════════════════════════════════════ */
 /* NOTIFICATIONS */
 /* ══════════════════════════════════════════════════════════════════════════════════ */
+
+function fillNotifTemplate(title, body, url, target) {
+  document.getElementById('notif-title').value  = title;
+  document.getElementById('notif-body').value   = body;
+  document.getElementById('notif-url').value    = url;
+  const sel = document.getElementById('notif-target');
+  if (sel) { sel.value = target; toggleNotifTargetInput(); }
+}
 
 function toggleNotifTargetInput() {
   const t     = document.getElementById('notif-target').value;

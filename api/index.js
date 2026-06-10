@@ -865,6 +865,14 @@ module.exports = async (req, res) => {
 
       const b = req.body || {};
       const updates = {};
+      if (b.display_name)    updates.display_name            = b.display_name;
+      if (b.username)        updates.username                = b.username;
+      if (b.bio)             updates.bio                     = b.bio;
+      if (b.city)            updates.city                    = b.city;
+      if (b.province)        updates.province                = b.province;
+      if (b.avatar_url)      updates.avatar_url              = b.avatar_url;
+      if (b.genres)          updates.genres                  = b.genres;
+      if (b.role)            updates.role                    = b.role;
       if (b.bank_name)       updates.paystack_bank_name      = b.bank_name;
       if (b.account_number)  updates.paystack_account_number = String(b.account_number);
       if (b.business_name)   updates.paystack_business_name  = b.business_name;
@@ -887,6 +895,67 @@ module.exports = async (req, res) => {
       }
 
       return res.status(200).json({ ok: true, paystack_subaccount_code: subCode || null });
+    }
+
+    /* ─── POST /auth/register-business ───────────────────── */
+    if (url === '/auth/register-business' && req.method === 'POST') {
+      const b = req.body || {};
+      const email    = (b.email || '').trim().toLowerCase();
+      const password = b.password || '';
+      const name     = (b.business_name || b.display_name || '').trim();
+      const role     = b.role === 'organizer' ? 'organizer' : 'business';
+
+      if (!email || !password || !name)
+        return res.status(400).json({ error: 'email, password and business_name are required' });
+
+      // Create auth user via admin API
+      const adminSb = createClient(SUPA_URL, SUPA_SVC);
+      const { data: newUser, error: signUpErr } = await adminSb.auth.admin.createUser({
+        email, password, email_confirm: true,
+        user_metadata: { full_name: name, role }
+      });
+      if (signUpErr) {
+        if ((signUpErr.message || '').toLowerCase().includes('already registered'))
+          return res.status(409).json({ error: 'An account with that email already exists.' });
+        return res.status(400).json({ error: signUpErr.message });
+      }
+      const uid = newUser.user.id;
+
+      // Upsert profile
+      const username = (b.username || name).replace(/[^a-zA-Z0-9_]/g,'').slice(0,30) || `biz_${uid.slice(0,8)}`;
+      await sb().from('profiles').upsert({
+        id: uid, email, username,
+        display_name: name,
+        role,
+        city:     b.city     || null,
+        province: b.province || null,
+        bio:      b.bio      ? String(b.bio).slice(0,300) : null,
+        paystack_bank_name:      b.bank_name      || null,
+        paystack_account_number: b.account_number ? String(b.account_number) : null,
+        paystack_business_name:  name,
+      });
+
+      // Upsert into businesses table
+      await sb().from('businesses').upsert({
+        owner_id:     uid,
+        name:         name,
+        category:     b.category || null,
+        city:         b.city     || null,
+        province:     b.province || null,
+        contact_email: email,
+        contact_phone: b.phone   || null,
+        is_verified:  false,
+      }); // fire-and-forget
+
+      // Auto-create Paystack subaccount if bank details provided
+      let subCode = null;
+      if (b.bank_name && b.account_number) {
+        subCode = await createPaystackSubaccount(name, b.bank_name, String(b.account_number), email);
+        if (subCode) await sb().from('profiles').update({ paystack_subaccount_code: subCode }).eq('id', uid);
+      }
+
+      sendWelcomeEmail(email, name).catch(() => {});
+      return res.status(200).json({ ok: true, user_id: uid, paystack_subaccount_code: subCode });
     }
 
     /* ─── GET /health ─────────────────────────────────────── */
