@@ -42,9 +42,10 @@ function layout(body) {
 
       ${body}
 
-      <!-- FOOTER -->
-      <tr><td style="padding-top:28px;text-align:center;font-size:12px;color:#4a4a4a;line-height:1.8">
-        <p style="margin:0">© ${YEAR} Pulsefy · South Africa</p>
+      <!-- FOOTER + SIGNATURE -->
+      <tr><td style="padding-top:32px;text-align:center;font-size:12px;color:#4a4a4a;line-height:1.8">
+        <img src="https://pulsefy.co.za/logo.png" alt="Pulsefy — Feel the Vibe" width="130" style="display:inline-block;width:130px;max-width:130px;height:auto;border:0;outline:none;text-decoration:none"/>
+        <p style="margin:14px 0 0">© ${YEAR} Pulsefy · South Africa 🇿🇦</p>
         <p style="margin:4px 0 0">This email was sent because you have a Pulsefy account.
         <a href="${APP_URL}" style="color:#4a4a4a;text-decoration:underline">Visit Pulsefy</a></p>
       </td></tr>

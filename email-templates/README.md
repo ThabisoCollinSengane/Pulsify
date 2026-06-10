@@ -64,59 +64,62 @@ This is a single Supabase template — Supabase has only one "Confirm signup" sl
 so the per-type copy is handled with the `{{ if eq .Data.role ... }}` conditional
 inside the one file. Paste it as-is; the branching happens server-side at send time.
 
-## SMTP troubleshooting — "Request rate limit reached"
+## Email delivery — Resend (this project's provider)
 
-By default Supabase uses its built-in email sender, which is **strictly rate-limited**:
+Pulsefy sends email through **[Resend](https://resend.com)** via its SMTP relay.
+There are **two independent email systems**, and both point at Resend:
 
-| Endpoint | Default limit | After custom SMTP |
-|----------|--------------|-------------------|
-| `auth/v1/recover` (forgot password) | 4 per hour per IP | Configurable (default 30/hr) |
-| `auth/v1/signup` / verification | 4 per hour per IP | Configurable (default 30/hr) |
+| System | What it sends | Where it's configured |
+|--------|---------------|-----------------------|
+| **Supabase Auth** | The 6 templates in this folder (signup, reset, magic link, etc.) | Supabase Dashboard → SMTP Settings |
+| **App transactional** (`api/email.js`) | Welcome, ticket, payment confirm, verification result | Vercel env vars (nodemailer SMTP) |
 
-If you're hitting "Request rate limit reached" even after configuring cPanel SMTP, work through the checklist below in order:
+### Resend SMTP credentials (same for both systems)
 
-### 1. Verify custom SMTP is actually saved
+| Field | Value |
+|-------|-------|
+| Host | `smtp.resend.com` |
+| Port | `465` (SSL) or `587` (TLS) |
+| Username | `resend` (literally the word `resend`) |
+| Password | your Resend API key (`re_...`) |
+| Sender | `hello@pulsefy.co.za` (must be a **verified domain** in Resend) |
+| Sender name | `Pulsefy` |
+
+Before anything sends, verify the `pulsefy.co.za` domain in Resend
+(**Resend Dashboard → Domains → Add Domain**) and add the DKIM/SPF DNS records
+it gives you. Until the domain shows **Verified**, Resend rejects the sends.
+
+### 1. Supabase Auth emails
 
 Dashboard → **Project Settings → Auth → SMTP Settings**
 
-- **Enable Custom SMTP** toggle must be **ON** (it sometimes silently flips off after saving).
-- Host: your cPanel mail host (usually `mail.pulsefy.co.za` or `pulsefy.co.za`).
-- Port: `465` (SSL) or `587` (TLS). cPanel usually wants 465.
-- Username: full email address (e.g. `noreply@pulsefy.co.za`), not just `noreply`.
-- Password: the mailbox password (NOT your cPanel login password — the one for that specific mailbox).
-- Sender email: same as username.
-- Sender name: `Pulsefy`.
+- Turn **Enable Custom SMTP** ON (it sometimes silently flips off after saving).
+- Fill in the Resend credentials from the table above.
+- Click **Send test email**. If it fails, the same error hits `forgot password`
+  and `signup` — fix SMTP before debugging anything else.
 
-After saving, click **Send test email** at the bottom of the page. If the test email fails, SMTP is misconfigured and the same error will happen for `forgot password`.
+Then under **Auth → Rate Limits**, raise the email send limit (Supabase's
+built-in sender defaults to ~4/hr; with Resend you can safely go to 30/hr+).
 
-### 2. Bump the rate limits
+### 2. App transactional emails (`api/email.js`)
 
-Dashboard → **Project Settings → Auth → Rate Limits**
+`api/email.js` uses `nodemailer` and reads these **Vercel environment variables**
+(Project → Settings → Environment Variables):
 
-After custom SMTP is verified, you can raise the limits:
+| Env var | Value |
+|---------|-------|
+| `SMTP_HOST` | `smtp.resend.com` |
+| `SMTP_PORT` | `465` |
+| `SMTP_USER` | `resend` |
+| `SMTP_PASS` | your Resend API key (`re_...`) |
+| `APP_URL`   | `https://pulsefy.co.za` |
 
-- Token verifications: 30/hr → 150/hr
-- Email sends: 4/hr → 30/hr (or higher)
+If `SMTP_HOST` / `SMTP_PASS` are unset, `api/email.js` silently skips sending
+(it logs `[email] SMTP not configured — skipping`) — so missing env vars look
+like "emails just don't arrive" with no error. Set them and redeploy.
 
-These limits apply per IP, so each user still gets their own bucket — bumping them mainly helps the same user retry after a typo.
-
-### 3. cPanel-side checks
-
-If the test email in step 1 fails:
-
-- In cPanel → **Email Accounts**, confirm the mailbox exists and the password works (try logging in to webmail with the same credentials).
-- In cPanel → **Email Deliverability**, make sure SPF, DKIM and DMARC are green for `pulsefy.co.za`.
-- Ask the cPanel admin to check if outbound SMTP is blocked at the firewall (some shared hosts block port 25/465/587 for non-cPanel apps).
-
-### 4. Last resort: switch to a transactional provider
-
-If cPanel SMTP can't be made reliable, swap to a dedicated transactional email provider — they're free up to ~3k emails/month and have much higher rate limits:
-
-- **Resend** — easiest, modern dev UX, [resend.com](https://resend.com)
-- **Postmark** — best deliverability, [postmarkapp.com](https://postmarkapp.com)
-- **SendGrid** — most ubiquitous, [sendgrid.com](https://sendgrid.com)
-
-The Supabase SMTP fields are the same for all of them — only the host/port/credentials change.
+> The same Resend API key works as both the SMTP password here **and** the
+> Supabase SMTP password — one key covers both systems.
 
 ## Local preview
 
