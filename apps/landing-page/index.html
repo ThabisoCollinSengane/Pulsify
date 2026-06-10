@@ -88,6 +88,7 @@ function openAvatarLightbox() {
 }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script src="https://js.paystack.co/v1/inline.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -785,6 +786,17 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
           <div style="display:flex;align-items:center;gap:12px"><span style="font-size:1.3rem">❓</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">Help &amp; FAQ</div><div style="font-size:.67rem;color:var(--mu)">Get help and answers</div></div></div>
           <span style="color:var(--or);font-size:.8rem">→</span>
         </button>
+      </div>
+    </div>
+
+    <!-- ── INVITE QR section ── -->
+    <div style="padding:18px 16px 4px">
+      <div style="font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Invite a Friend</div>
+      <div style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:18px 16px;text-align:center">
+        <div style="font-size:.78rem;color:var(--mu2);margin-bottom:12px">Share your QR code — they scan it and land straight on the Pulsefy signup page.</div>
+        <canvas id="invite-qr" style="border-radius:10px;display:block;margin:0 auto"></canvas>
+        <div style="margin-top:10px;font-size:.62rem;color:var(--mu)" id="invite-qr-link"></div>
+        <button onclick="shareInviteLink()" style="margin-top:12px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;padding:10px 28px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:#fff;cursor:pointer">📤 Share Invite Link</button>
       </div>
     </div>
 
@@ -3277,6 +3289,18 @@ function renderProfile() {
     if (s2) s2.textContent = myPosts.length;
   } catch(e) {}
 
+  // Invite QR code
+  const qrCanvas = document.getElementById('invite-qr');
+  const qrLinkEl = document.getElementById('invite-qr-link');
+  if (qrCanvas) {
+    const username = prof?.username || sess?.email?.split('@')[0] || sess?.id?.slice(0,8) || 'friend';
+    const inviteUrl = 'https://pulsefy.co.za/create-account?ref=' + encodeURIComponent(username);
+    if (qrLinkEl) qrLinkEl.textContent = inviteUrl;
+    if (typeof QRCode !== 'undefined') {
+      QRCode.toCanvas(qrCanvas, inviteUrl, { width: 180, margin: 2, color: { dark: '#ffffff', light: '#1a1a1a' } }, () => {});
+    }
+  }
+
   // Sign out
   const soBtn = document.getElementById('signout-btn');
   if (soBtn) soBtn.onclick = async () => {
@@ -3313,6 +3337,20 @@ function renderProfile() {
     } else if (existing) {
       existing.remove();
     }
+  }
+}
+
+function shareInviteLink() {
+  let sess = null, prof = null;
+  try { sess = JSON.parse(localStorage.getItem('p_user')); } catch(e) {}
+  try { prof = JSON.parse(localStorage.getItem('p_profile')); } catch(e) {}
+  const username = prof?.username || sess?.email?.split('@')[0] || sess?.id?.slice(0,8) || 'friend';
+  const url = 'https://pulsefy.co.za/create-account?ref=' + encodeURIComponent(username);
+  const name = prof?.display_name || sess?.display_name || 'a friend';
+  if (navigator.share) {
+    navigator.share({ title: 'Join me on Pulsefy', text: name + ' is inviting you to Pulsefy — SA\'s live event discovery app. Create your account:', url }).catch(() => {});
+  } else {
+    navigator.clipboard?.writeText(url).then(() => toast('Invite link copied!', 'ok')).catch(() => { window.prompt('Copy your invite link:', url); });
   }
 }
 
