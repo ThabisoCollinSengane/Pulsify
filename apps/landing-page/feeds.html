@@ -156,7 +156,7 @@ textarea.ff-c{resize:none;height:80px;line-height:1.55}
   <button class="chip active" onclick="setFilter(this,'all')">✦ All</button>
   <button class="chip" onclick="setFilter(this,'following')">👥 Following</button>
   <button class="chip" onclick="setFilter(this,'organizers')">📢 Organizers</button>
-  <button class="chip" onclick="setFilter(this,'community')">👤 Community</button>
+  <button class="chip" onclick="setFilter(this,'community')">👤 Community Posts</button>
 </div>
 
 <div class="feed" id="feed"></div>
@@ -199,14 +199,16 @@ textarea.ff-c{resize:none;height:80px;line-height:1.55}
       </div>
       <input type="file" id="post-img-file" accept="image/*" style="display:none" onchange="handleImg(this)"/>
 
-      <textarea class="ff-c" id="post-caption" placeholder="Add a caption…" maxlength="500"></textarea>
+      <!-- Caption field — shown for all users -->
+      <textarea class="ff-c" id="post-caption" placeholder="What's the vibe? Share an event check-in, photo caption, or anything on your mind…" maxlength="500" style="height:96px"></textarea>
 
       <div id="user-posting-note" style="display:none;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:10px 13px;font-size:.74rem;color:var(--mu2);line-height:1.5;margin-bottom:10px">
-        📸 Upload a photo from an event you attended. Caption is optional.
+        Share a vibe, photo, event check-in or anything on your mind. Your post shows up in the Community feed for all Pulsefy users to see.
       </div>
 
+      <!-- Organizer/business-only: dedicated text-only section -->
       <div id="organizer-text-section" style="display:none">
-        <div style="font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--or);margin-bottom:6px">Or post text only</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--or);margin-bottom:6px">Or post an announcement</div>
         <textarea class="ff-c" id="post-text-only" placeholder="Write an update, promo or announcement…" maxlength="1000" style="height:96px"></textarea>
       </div>
 
@@ -807,9 +809,8 @@ async function submitPost() {
   const evName   = document.getElementById('post-event-name').value.trim();
   const finalCap = caption || textOnly;
 
-  if (!isOrg && !_cImg) return showToast('Upload a photo from the event 📸', 'err');
-  if (isOrg && !_cImg && !finalCap) return showToast('Add a photo or write something');
-  if (!isOrg && !finalCap) return showToast('Add a caption to your photo');
+  if (!_cImg && !finalCap) return showToast('Add a photo or write something first', 'err');
+  if (isOrg && !_cImg && !finalCap) return showToast('Add a photo or write something', 'err');
 
   const btn = document.getElementById('post-submit');
   btn.disabled = true; btn.textContent = 'Sharing…';
@@ -878,11 +879,15 @@ async function initFeed() {
     }
   }
   await render();
-  // Deep-link: notification routed to /feeds?pid={postId}[&cid={commentId}]
-  // Scroll to the post, open its comment section, and (if cid) highlight comment.
+  // Deep-links
   const qp = new URLSearchParams(location.search);
   const pid = qp.get('pid'), cid = qp.get('cid');
   if (pid) scrollToPostAndComment(pid, cid);
+  // ?compose=1 — auto-open compose sheet (from the Me tab "Create a Post" button)
+  if (qp.get('compose') === '1') {
+    history.replaceState(null, '', '/feeds');
+    setTimeout(openCompose, 300);
+  }
 }
 
 async function scrollToPostAndComment(postId, commentId) {
