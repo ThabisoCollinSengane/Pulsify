@@ -1763,6 +1763,74 @@ module.exports = async (req, res) => {
       return res.status(200).json({ success: true, event: data });
     }
 
+    /* ─── POST /admin/events ── admin manually adds an event to the map ── */
+    if (url === '/admin/events' && req.method === 'POST') {
+      const token = tokenFrom(req);
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const b = req.body || {};
+      if (!b.name || !b.date_local || !b.venue_name || !b.venue_city) return res.status(400).json({ error: 'name, date_local, venue_name and venue_city are required' });
+      const lat = Number(b.venue_lat), lon = Number(b.venue_lon);
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return res.status(400).json({ error: 'venue_lat and venue_lon are required so the event shows on the map' });
+      if (lat < -35 || lat > -22 || lon < 16 || lon > 33) return res.status(400).json({ error: 'Coordinates outside South Africa (lat -35 to -22, lon 16 to 33)' });
+      const id = 'adm_' + Date.now();
+      // Use the admin's own JWT — events RLS requires organiser_id = auth.uid()
+      // and the server falls back to the anon key when no service key is set.
+      const { data, error } = await sbAs(token).from('events').insert({
+        id,
+        organiser_id: auth.user.id,
+        name: b.name,
+        date_local: b.date_local,
+        time_local: b.time_local || null,
+        venue_name: b.venue_name,
+        venue_city: b.venue_city,
+        venue_lat: lat,
+        venue_lon: lon,
+        genre: b.genre || 'other',
+        description: b.description || null,
+        image_url: b.image_url || null,
+        price_min: b.price_min != null && b.price_min !== '' ? Number(b.price_min) : null,
+        is_free: !!b.is_free,
+        organiser_name: b.organiser_name || 'Pulsefy',
+        source: 'admin',
+        is_active: true,
+        approved: true,
+      }).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      await logAdminAction(auth.user.id, auth.profile.display_name || auth.user.email || 'Admin', 'event_add', id, b.name, {});
+      return res.status(200).json({ success: true, event: data });
+    }
+
+    /* ─── POST /admin/businesses ── admin manually adds a place to the map ── */
+    if (url === '/admin/businesses' && req.method === 'POST') {
+      const token = tokenFrom(req);
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const b = req.body || {};
+      if (!b.name || !b.category || !b.city) return res.status(400).json({ error: 'name, category and city are required' });
+      const lat = Number(b.lat), lon = Number(b.lon);
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return res.status(400).json({ error: 'lat and lon are required so the place shows on the map' });
+      if (lat < -35 || lat > -22 || lon < 16 || lon > 33) return res.status(400).json({ error: 'Coordinates outside South Africa (lat -35 to -22, lon 16 to 33)' });
+      const { data, error } = await sbAs(token).from('businesses').insert({
+        name: b.name,
+        category: b.category,
+        subcategory: b.subcategory || null,
+        tagline: b.tagline || null,
+        description: b.description || null,
+        city: b.city,
+        suburb: b.suburb || null,
+        address: b.address || null,
+        lat, lon,
+        phone: b.phone || null,
+        whatsapp: b.whatsapp || null,
+        cover_image_url: b.cover_image_url || null,
+        is_active: true,
+      }).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      await logAdminAction(auth.user.id, auth.profile.display_name || auth.user.email || 'Admin', 'business_add', data.id, b.name, {});
+      return res.status(200).json({ success: true, business: data });
+    }
+
     /* ─── PATCH /admin/verifications/:id ───────────────────── */
     const verifMatch = url.match(/^\/admin\/verifications\/([^/]+)$/);
     if (verifMatch && req.method === 'PATCH') {

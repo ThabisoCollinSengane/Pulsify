@@ -286,6 +286,71 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <input class="inp" id="search-inp" placeholder="Search by business name or city…" oninput="filterTable()"/>
     <button class="btn btn-or" onclick="runBulkGeocode()">⚡ Fix All Invalid</button>
     <button class="btn btn-surf" onclick="loadBusinesses()">↺ Refresh</button>
+    <button class="btn btn-or" onclick="document.getElementById('add-biz-panel').classList.toggle('open')">➕ Add Place to Map</button>
+  </div>
+
+  <!-- Admin: manually add a business/place to the map -->
+  <div class="edit-panel" id="add-biz-panel">
+    <h3>
+      <span>➕ Add Place to Map</span>
+      <button class="btn btn-surf" style="padding:5px 12px;font-size:.68rem" onclick="document.getElementById('add-biz-panel').classList.remove('open')">✕ Close</button>
+    </h3>
+    <div class="msg" id="add-biz-msg"></div>
+    <div class="edit-grid">
+      <div class="field-full" style="grid-column:1/-1">
+        <label class="field-lbl">Place name *</label>
+        <input class="inp" id="ab-name" placeholder="e.g. Eyadini Lounge" style="width:100%"/>
+      </div>
+      <div>
+        <label class="field-lbl">Category *</label>
+        <select class="inp" id="ab-category" style="width:100%;-webkit-appearance:none">
+          <option value="shisanyama">🔥 Shisanyama</option>
+          <option value="restaurant">🍴 Restaurant</option>
+          <option value="bar">🍹 Bar / Lounge</option>
+          <option value="club">🌙 Club</option>
+          <option value="hotel">🏨 Hotel</option>
+          <option value="bnb">🛏 B&amp;B</option>
+          <option value="venue">🎪 Venue</option>
+          <option value="other">✦ Other</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-lbl">City *</label>
+        <input class="inp" id="ab-city" placeholder="Durban" style="width:100%"/>
+      </div>
+      <div>
+        <label class="field-lbl">Suburb</label>
+        <input class="inp" id="ab-suburb" placeholder="Umlazi" style="width:100%"/>
+      </div>
+      <div>
+        <label class="field-lbl">Phone / WhatsApp</label>
+        <input class="inp" id="ab-phone" placeholder="+27…" style="width:100%"/>
+      </div>
+      <div class="field-full" style="grid-column:1/-1">
+        <label class="field-lbl">Address (street / suburb)</label>
+        <input class="inp" id="ab-address" placeholder="e.g. 14 Stanger Street, Umlazi" style="width:100%"/>
+      </div>
+      <div>
+        <label class="field-lbl">Latitude *</label>
+        <input class="inp" id="ab-lat" type="number" step="0.0001" placeholder="-29.8587" style="width:100%;font-family:'JetBrains Mono',monospace"/>
+      </div>
+      <div>
+        <label class="field-lbl">Longitude *</label>
+        <input class="inp" id="ab-lon" type="number" step="0.0001" placeholder="31.0218" style="width:100%;font-family:'JetBrains Mono',monospace"/>
+      </div>
+      <div class="field-full" style="grid-column:1/-1">
+        <label class="field-lbl">Cover image URL</label>
+        <input class="inp" id="ab-img" placeholder="https://…" style="width:100%"/>
+      </div>
+      <div class="field-full" style="grid-column:1/-1">
+        <label class="field-lbl">Tagline / short description</label>
+        <input class="inp" id="ab-desc" placeholder="Umlazi's #1 Shisanyama…" style="width:100%"/>
+      </div>
+    </div>
+    <div class="act-row">
+      <button class="btn btn-cy" onclick="geocodeAddBiz()">🔍 Auto-Geocode Address</button>
+      <button class="btn btn-li" onclick="submitAdminBusiness(this)">💾 Add Place</button>
+    </div>
   </div>
 
   <div class="filter-row">
@@ -332,7 +397,69 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <option value="pending">⏳ Pending Approval</option>
       </select>
       <button class="btn btn-surf" onclick="loadPendingEvents()">↺ Refresh</button>
+      <button class="btn btn-or" onclick="document.getElementById('add-event-panel').classList.toggle('open')">➕ Add Event to Map</button>
     </div>
+
+    <!-- Admin: manually add an event to the map -->
+    <div class="edit-panel" id="add-event-panel">
+      <h3>
+        <span>➕ Add Event to Map</span>
+        <button class="btn btn-surf" style="padding:5px 12px;font-size:.68rem" onclick="document.getElementById('add-event-panel').classList.remove('open')">✕ Close</button>
+      </h3>
+      <div class="msg" id="add-event-msg"></div>
+      <div class="edit-grid">
+        <div class="field-full" style="grid-column:1/-1">
+          <label class="field-lbl">Event name *</label>
+          <input class="inp" id="ae-name" placeholder="e.g. Gqom Takeover" style="width:100%"/>
+        </div>
+        <div>
+          <label class="field-lbl">Date *</label>
+          <input class="inp" id="ae-date" type="date" style="width:100%"/>
+        </div>
+        <div>
+          <label class="field-lbl">Time</label>
+          <input class="inp" id="ae-time" type="time" style="width:100%"/>
+        </div>
+        <div>
+          <label class="field-lbl">Venue *</label>
+          <input class="inp" id="ae-venue" placeholder="e.g. Eyadini Lounge" style="width:100%"/>
+        </div>
+        <div>
+          <label class="field-lbl">City *</label>
+          <input class="inp" id="ae-city" placeholder="Durban" style="width:100%"/>
+        </div>
+        <div>
+          <label class="field-lbl">Genre</label>
+          <input class="inp" id="ae-genre" placeholder="gqom / amapiano / festival…" style="width:100%"/>
+        </div>
+        <div>
+          <label class="field-lbl">Price (R, blank = unknown)</label>
+          <input class="inp" id="ae-price" type="number" min="0" placeholder="150" style="width:100%"/>
+        </div>
+        <div>
+          <label class="field-lbl">Latitude *</label>
+          <input class="inp" id="ae-lat" type="number" step="0.0001" placeholder="-29.8587" style="width:100%;font-family:'JetBrains Mono',monospace"/>
+        </div>
+        <div>
+          <label class="field-lbl">Longitude *</label>
+          <input class="inp" id="ae-lon" type="number" step="0.0001" placeholder="31.0218" style="width:100%;font-family:'JetBrains Mono',monospace"/>
+        </div>
+        <div class="field-full" style="grid-column:1/-1">
+          <label class="field-lbl">Image URL</label>
+          <input class="inp" id="ae-img" placeholder="https://…" style="width:100%"/>
+        </div>
+        <div class="field-full" style="grid-column:1/-1">
+          <label class="field-lbl">Description</label>
+          <input class="inp" id="ae-desc" placeholder="Short description…" style="width:100%"/>
+        </div>
+      </div>
+      <div class="act-row">
+        <label style="display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--mu2)"><input type="checkbox" id="ae-free"/> Free event</label>
+        <button class="btn btn-cy" onclick="geocodeAddEvent()">🔍 Auto-Geocode Venue</button>
+        <button class="btn btn-li" onclick="submitAdminEvent(this)">💾 Add Event</button>
+      </div>
+    </div>
+
     <div id="msg-events" class="msg"></div>
     <div id="events-list"><div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div></div>
   </div>
@@ -1928,6 +2055,109 @@ async function reviewEvent(eventId, approve, btn) {
 }
 
 function showEvtMsg(m, t) { const el=document.getElementById('msg-events'); if(!el) return; el.textContent=m; el.className='msg show msg-'+(t==='err'?'err':'ok'); }
+
+/* ── Admin: manually add events & places to the map ── */
+function showPanelMsg(id, m, t) { const el=document.getElementById(id); if(!el) return; el.textContent=m; el.className='msg show msg-'+(t==='err'?'err':'ok'); }
+
+async function _geocodeZA(query) {
+  const r = await fetch('https://nominatim.openstreetmap.org/search?' + new URLSearchParams({ q: query, format: 'json', limit: 1, countrycodes: 'za' }));
+  const arr = await r.json();
+  return arr && arr[0] ? { lat: parseFloat(arr[0].lat), lon: parseFloat(arr[0].lon) } : null;
+}
+
+async function geocodeAddEvent() {
+  const venue = document.getElementById('ae-venue').value.trim();
+  const city  = document.getElementById('ae-city').value.trim();
+  if (!venue && !city) return showPanelMsg('add-event-msg', 'Enter a venue and city first', 'err');
+  showPanelMsg('add-event-msg', '🔍 Geocoding…', 'ok');
+  try {
+    const hit = await _geocodeZA([venue, city, 'South Africa'].filter(Boolean).join(', '));
+    if (!hit) return showPanelMsg('add-event-msg', 'No match found — enter coordinates manually', 'err');
+    document.getElementById('ae-lat').value = hit.lat.toFixed(5);
+    document.getElementById('ae-lon').value = hit.lon.toFixed(5);
+    showPanelMsg('add-event-msg', `✅ Found: ${hit.lat.toFixed(5)}, ${hit.lon.toFixed(5)}`, 'ok');
+  } catch(e) { showPanelMsg('add-event-msg', 'Geocode error: ' + e.message, 'err'); }
+}
+
+async function submitAdminEvent(btn) {
+  const body = {
+    name:       document.getElementById('ae-name').value.trim(),
+    date_local: document.getElementById('ae-date').value,
+    time_local: document.getElementById('ae-time').value || null,
+    venue_name: document.getElementById('ae-venue').value.trim(),
+    venue_city: document.getElementById('ae-city').value.trim(),
+    genre:      document.getElementById('ae-genre').value.trim() || null,
+    venue_lat:  document.getElementById('ae-lat').value,
+    venue_lon:  document.getElementById('ae-lon').value,
+    price_min:  document.getElementById('ae-price').value,
+    is_free:    document.getElementById('ae-free').checked,
+    image_url:  document.getElementById('ae-img').value.trim() || null,
+    description:document.getElementById('ae-desc').value.trim() || null,
+  };
+  if (!body.name || !body.date_local || !body.venue_name || !body.venue_city) return showPanelMsg('add-event-msg', 'Name, date, venue and city are required', 'err');
+  if (btn) { btn.disabled = true; btn.textContent = 'Adding…'; }
+  try {
+    const r = await fetch('/api/admin/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify(body),
+    });
+    const json = await safeJson(r);
+    if (!r.ok) { showPanelMsg('add-event-msg', json.error || 'Failed to add event', 'err'); return; }
+    showPanelMsg('add-event-msg', '✅ Event added — it is live on the map and feed now.', 'ok');
+    ['ae-name','ae-date','ae-time','ae-venue','ae-city','ae-genre','ae-lat','ae-lon','ae-price','ae-img','ae-desc'].forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('ae-free').checked = false;
+    loadPendingEvents();
+  } catch(e) { showPanelMsg('add-event-msg', 'Error: ' + e.message, 'err'); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = '💾 Add Event'; } }
+}
+
+async function geocodeAddBiz() {
+  const addr = document.getElementById('ab-address').value.trim();
+  const name = document.getElementById('ab-name').value.trim();
+  const city = document.getElementById('ab-city').value.trim();
+  if (!addr && !name) return showPanelMsg('add-biz-msg', 'Enter a name or address first', 'err');
+  showPanelMsg('add-biz-msg', '🔍 Geocoding…', 'ok');
+  try {
+    const hit = await _geocodeZA([addr || name, city, 'South Africa'].filter(Boolean).join(', '));
+    if (!hit) return showPanelMsg('add-biz-msg', 'No match found — enter coordinates manually', 'err');
+    document.getElementById('ab-lat').value = hit.lat.toFixed(5);
+    document.getElementById('ab-lon').value = hit.lon.toFixed(5);
+    showPanelMsg('add-biz-msg', `✅ Found: ${hit.lat.toFixed(5)}, ${hit.lon.toFixed(5)}`, 'ok');
+  } catch(e) { showPanelMsg('add-biz-msg', 'Geocode error: ' + e.message, 'err'); }
+}
+
+async function submitAdminBusiness(btn) {
+  const phone = document.getElementById('ab-phone').value.trim();
+  const body = {
+    name:     document.getElementById('ab-name').value.trim(),
+    category: document.getElementById('ab-category').value,
+    city:     document.getElementById('ab-city').value.trim(),
+    suburb:   document.getElementById('ab-suburb').value.trim() || null,
+    address:  document.getElementById('ab-address').value.trim() || null,
+    lat:      document.getElementById('ab-lat').value,
+    lon:      document.getElementById('ab-lon').value,
+    phone:    phone || null,
+    whatsapp: phone || null,
+    cover_image_url: document.getElementById('ab-img').value.trim() || null,
+    tagline:  document.getElementById('ab-desc').value.trim() || null,
+  };
+  if (!body.name || !body.city) return showPanelMsg('add-biz-msg', 'Name and city are required', 'err');
+  if (btn) { btn.disabled = true; btn.textContent = 'Adding…'; }
+  try {
+    const r = await fetch('/api/admin/businesses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify(body),
+    });
+    const json = await safeJson(r);
+    if (!r.ok) { showPanelMsg('add-biz-msg', json.error || 'Failed to add place', 'err'); return; }
+    showPanelMsg('add-biz-msg', '✅ Place added — it is live on the map now.', 'ok');
+    ['ab-name','ab-city','ab-suburb','ab-phone','ab-address','ab-lat','ab-lon','ab-img','ab-desc'].forEach(id => { document.getElementById(id).value = ''; });
+    loadBusinesses();
+  } catch(e) { showPanelMsg('add-biz-msg', 'Error: ' + e.message, 'err'); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = '💾 Add Place'; } }
+}
 
 /* ══════════════════════════════════════════════════════════════════════════════════ */
 /* BANNERS */
