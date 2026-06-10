@@ -1909,12 +1909,16 @@ async function loadMyPosts() {
 
 async function deletePost(postId, btn) {
   if (btn.dataset.confirm !== '1') {
-    const orig = btn.textContent;
-    btn.dataset.confirm = '1'; btn.textContent = 'Sure?'; btn.style.color = '#FF2D78';
-    const no = document.createElement('button'); no.className = 'del-btn'; no.textContent = 'No';
-    no.onclick = () => { btn.dataset.confirm=''; btn.textContent=orig; btn.style.color=''; no.remove(); };
-    btn.after(no);
-    setTimeout(() => { if(btn.dataset.confirm==='1'){btn.dataset.confirm='';btn.textContent=orig;btn.style.color='';no.remove();} }, 5000);
+    btn.dataset.confirm = '1';
+    btn.textContent = '🗑 Delete?';
+    btn.style.cssText = 'background:#FF2D78;color:#fff;border:none;border-radius:8px;padding:4px 10px;font-size:.72rem;font-weight:700;cursor:pointer';
+    setTimeout(() => {
+      if (btn.dataset.confirm === '1') {
+        btn.dataset.confirm = '';
+        btn.textContent = 'Delete';
+        btn.style.cssText = '';
+      }
+    }, 4000);
     return;
   }
   btn.textContent = '…';
@@ -1998,12 +2002,16 @@ async function saveEventEdit() {
 
 async function deleteEvent(evId, btn) {
   if (btn.dataset.confirm !== '1') {
-    const orig = btn.textContent;
-    btn.dataset.confirm = '1'; btn.textContent = 'Sure?'; btn.style.color = '#FF2D78';
-    const no = document.createElement('button'); no.className = 'del-btn'; no.textContent = 'No';
-    no.onclick = () => { btn.dataset.confirm=''; btn.textContent=orig; btn.style.color=''; no.remove(); };
-    btn.after(no);
-    setTimeout(() => { if(btn.dataset.confirm==='1'){btn.dataset.confirm='';btn.textContent=orig;btn.style.color='';no.remove();} }, 5000);
+    btn.dataset.confirm = '1';
+    btn.textContent = '🗑 Delete?';
+    btn.style.cssText = 'background:#FF2D78;color:#fff;border:none;border-radius:8px;padding:4px 10px;font-size:.72rem;font-weight:700;cursor:pointer';
+    setTimeout(() => {
+      if (btn.dataset.confirm === '1') {
+        btn.dataset.confirm = '';
+        btn.textContent = 'Delete';
+        btn.style.cssText = '';
+      }
+    }, 4000);
     return;
   }
   btn.textContent = '…';
