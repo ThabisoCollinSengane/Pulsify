@@ -252,6 +252,10 @@ select.inp option{background:#1C1140}
           <button type="button" class="btn-sec" style="padding:8px 14px;font-size:.78rem" onclick="useGPSForEvent('ev-lat','ev-lon','ev-loc-msg')">📍 Use My Current Location</button>
           <div id="ev-loc-msg" style="font-size:.7rem;color:var(--mu2);margin-top:4px;min-height:14px"></div>
         </div>
+        <label style="display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer">
+          <input type="checkbox" id="ev-show-on-map" style="width:18px;height:18px;accent-color:var(--or);cursor:pointer"/>
+          <span style="font-size:.8rem;color:var(--mu2)">📍 Request Map Pin — submit to admin for map visibility</span>
+        </label>
         <div style="display:flex;gap:8px;padding-bottom:8px">
           <button class="btn-sec" style="flex:1" onclick="previewEventForm()">👁 Preview</button>
           <button class="btn-primary" id="ev-btn" style="flex:2" onclick="submitEvent()">Create Event 🎉</button>
@@ -1779,10 +1783,17 @@ async function submitEvent() {
   if (!venue) return toast('Enter a venue', 'err');
   if (!city)  return toast('Enter a city', 'err');
 
+  const showOnMap = document.getElementById('ev-show-on-map')?.checked || false;
+
   const btn = document.getElementById('ev-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Creating…';
 
   try {
+    // Always get a fresh token before insert
+    const { data: { session: freshSess } } = await sb.auth.getSession();
+    if (!freshSess) throw new Error('Session expired — please sign in again');
+    const freshToken = freshSess.access_token;
+
     let imgUrl = null;
     if (evImgFile) {
       const ext  = evImgFile.name.split('.').pop() || 'jpg';
@@ -1823,10 +1834,17 @@ async function submitEvent() {
       await sb.from('ticket_tiers').insert(tiers.map(t => ({ event_id: eventId, ...t }))).catch(() => {});
     }
 
+    if (showOnMap) {
+      await fetch('/api/events/' + eventId + '/request-map', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + freshToken },
+      }).catch(() => {});
+    }
+
     const priceLabel = allFree ? 'FREE' : (minPrice === maxPrice ? 'R' + minPrice : 'From R' + minPrice);
     await fetch('/api/posts', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + freshToken },
       body: JSON.stringify({
         caption: '🎟 ' + name + ' — ' + venue + ', ' + city + ' · ' + date + ' · ' + priceLabel + (desc ? '\n'+desc : ''),
         event_id: eventId,
@@ -1836,7 +1854,7 @@ async function submitEvent() {
     }).catch(() => {});
 
     const isPremium = currentProfile?.subscription_type === 'premium' || currentProfile?.subscription_type === 'trial';
-    toast(isPremium ? '🎉 Event created and posted to feed!' : '🎉 Event submitted — pending admin approval before it goes live.', 'ok');
+    toast(showOnMap ? '🎉 Event submitted! Map pin request sent to admin.' : (isPremium ? '🎉 Event created and posted to feed!' : '🎉 Event submitted — pending admin approval before it goes live.'), 'ok');
     document.getElementById('ev-name').value = '';
     document.getElementById('ev-date').value = '';
     document.getElementById('ev-time').value = '';
@@ -1847,6 +1865,7 @@ async function submitEvent() {
     document.getElementById('ev-img-file').value = '';
     document.getElementById('ev-img-preview').style.display = 'none';
     document.getElementById('ev-img-name').textContent = 'No file chosen';
+    const mapChk = document.getElementById('ev-show-on-map'); if (mapChk) mapChk.checked = false;
     // Reset tiers to single default row
     document.getElementById('ev-tiers-list').innerHTML = `<div class="ev-tier-row" style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center"><input class="inp" style="margin-bottom:0" placeholder="Tier name" value="General Admission"/><input class="inp" style="margin-bottom:0" type="number" placeholder="Price (R, 0=free)" min="0"/><div style="width:30px"></div></div>`;
     document.getElementById('stat-events').textContent = parseInt(document.getElementById('stat-events').textContent||0)+1;
