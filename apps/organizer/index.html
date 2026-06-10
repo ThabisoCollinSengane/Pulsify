@@ -1911,24 +1911,21 @@ async function loadMyPosts() {
 
 async function deletePost(postId, btn) {
   if (btn.dataset.confirm !== '1') {
-    btn.dataset.confirm = '1';
-    btn.textContent = '🗑 Delete?';
-    btn.style.cssText = 'background:#FF2D78;color:#fff;border:none;border-radius:8px;padding:4px 10px;font-size:.72rem;font-weight:700;cursor:pointer';
-    setTimeout(() => {
-      if (btn.dataset.confirm === '1') {
-        btn.dataset.confirm = '';
-        btn.textContent = 'Delete';
-        btn.style.cssText = '';
-      }
-    }, 4000);
+    const orig = btn.textContent;
+    btn.dataset.confirm = '1'; btn.textContent = 'Sure?'; btn.style.color = '#FF2D78';
+    const no = document.createElement('button');
+    no.className = 'del-btn'; no.style.cssText = 'margin-left:6px;color:var(--mu2)'; no.textContent = 'No';
+    no.onclick = () => { btn.dataset.confirm = ''; btn.textContent = orig; btn.style.color = ''; no.remove(); };
+    btn.after(no);
+    setTimeout(() => { if (btn.dataset.confirm === '1') { btn.dataset.confirm = ''; btn.textContent = orig; btn.style.color = ''; no.remove(); } }, 5000);
     return;
   }
-  btn.textContent = '…';
+  btn.disabled = true; btn.textContent = '…';
   const { error } = await sb.from('posts').delete().eq('id', postId).eq('user_id', currentUser.id);
-  if (error) { toast('Delete failed', 'err'); btn.textContent = 'Delete'; return; }
+  if (error) { toast('Delete failed', 'err'); btn.disabled = false; btn.textContent = 'Delete'; btn.dataset.confirm = ''; return; }
   btn.closest('.post-item').remove();
-  const n = parseInt(document.getElementById('stat-posts').textContent||0)-1;
-  document.getElementById('stat-posts').textContent = Math.max(0,n);
+  const n = parseInt(document.getElementById('stat-posts').textContent || 0) - 1;
+  document.getElementById('stat-posts').textContent = Math.max(0, n);
   toast('Post deleted', 'ok');
 }
 

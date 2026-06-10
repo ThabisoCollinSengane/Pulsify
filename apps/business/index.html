@@ -1948,13 +1948,23 @@ async function deletePost(id, isSupa, btn) {
     }
     return;
   }
-  btn.textContent = '…';
+  btn.disabled = true; btn.textContent = '…';
   if (isSupa) {
-    const sb = getSB();
-    if (sb) await sb.from('posts').delete().eq('id', id).catch(() => {});
+    const sb2 = getSB();
+    if (sb2) {
+      const { data: { session } } = await sb2.auth.getSession();
+      if (session) {
+        const { error } = await sb2.from('posts').delete().eq('id', id).eq('user_id', session.user.id);
+        if (error) { toast('Delete failed — try again', 'err'); btn.disabled = false; btn.textContent = '🗑 Delete'; btn.dataset.confirm = ''; return; }
+      }
+    }
+  } else {
+    const posts = load('posts', []).filter(p => p.id !== id); save('posts', posts);
   }
-  const posts = load('posts', []).filter(p => p.id !== id); save('posts', posts);
-  renderPosts(); renderStats(); toast('Post deleted');
+  const card = document.getElementById('biz-post-' + id);
+  if (card) card.remove();
+  renderStats();
+  toast('Post deleted');
 }
 
 // ════════════════════════════════════════════════════════════
