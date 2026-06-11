@@ -203,12 +203,17 @@ select.inp option{background:#1C1140}
           </div>
           <div>
             <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:5px">Time</div>
-            <input class="inp" id="ev-time" type="time" style="color-scheme:dark;margin-bottom:0;width:100%"/>
+            <div style="display:flex;gap:4px">
+              <select class="inp" id="ev-time-h" style="margin-bottom:0;flex:1;padding-right:18px"></select>
+              <select class="inp" id="ev-time-m" style="margin-bottom:0;flex:1;padding-right:18px"></select>
+              <select class="inp" id="ev-time-ap" style="margin-bottom:0;flex:1;padding-right:18px"><option value="AM">AM</option><option value="PM">PM</option></select>
+            </div>
           </div>
         </div>
         <div style="height:10px"></div>
         <input class="inp" id="ev-venue" placeholder="Venue name *"/>
-        <input class="inp" id="ev-city" placeholder="City / suburb *"/>
+        <input class="inp" id="ev-city" list="sa-cities" placeholder="City *  (pick a major city for region filtering)"/>
+        <datalist id="sa-cities"></datalist>
         <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Ticket Types</div>
         <div id="ev-tiers-list">
           <div class="ev-tier-row" style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center">
@@ -218,21 +223,8 @@ select.inp option{background:#1C1140}
           </div>
         </div>
         <button type="button" class="btn-sec" style="width:100%;padding:8px;font-size:.76rem;margin-bottom:10px" onclick="addEvTierRow()">+ Add Ticket Type (VIP / Early Bird)</button>
-        <select class="inp" id="ev-genre">
-          <option value="">Select genre…</option>
-          <option value="amapiano">Amapiano</option>
-          <option value="gqom">Gqom</option>
-          <option value="hiphop">Hip Hop</option>
-          <option value="house">House</option>
-          <option value="afrobeats">Afrobeats</option>
-          <option value="rock">Rock</option>
-          <option value="gospel">Gospel</option>
-          <option value="jazz">Jazz</option>
-          <option value="sport">Sport</option>
-          <option value="comedy">Comedy</option>
-          <option value="maskandi">Maskandi</option>
-          <option value="other">Other</option>
-        </select>
+        <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Genres <span style="text-transform:none;letter-spacing:0;color:var(--mu2);font-weight:400">— tap all that apply</span></div>
+        <div id="ev-genre-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
         <textarea class="inp" id="ev-desc" placeholder="Event description (optional)" maxlength="500"></textarea>
         <div style="margin-bottom:8px">
           <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:5px">Banner Image (optional)</div>
@@ -1205,13 +1197,13 @@ function previewEventForm() {
   document.getElementById('ev-preview-name').textContent = name;
 
   // Meta line
-  const time  = document.getElementById('ev-time').value;
-  const genre = document.getElementById('ev-genre').value;
+  const time  = readOrgEvTime();
+  const genre = readEvGenres();
   const dateLabel = new Date(date + 'T12:00:00').toLocaleDateString('en-ZA', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
   const parts = ['📅 ' + dateLabel];
   if (time) parts.push('🕐 ' + time);
   parts.push('📍 ' + venue + ', ' + city);
-  if (genre) parts.push('🎵 ' + genre.charAt(0).toUpperCase() + genre.slice(1));
+  if (genre) parts.push('🎵 ' + genre.split(',').map(g => g.charAt(0).toUpperCase() + g.slice(1)).join(', '));
   document.getElementById('ev-preview-meta').textContent = parts.join(' · ');
 
   // Ticket tiers
@@ -1752,10 +1744,10 @@ async function submitEvent() {
   if (!currentUser) { toast('Please sign in first', 'err'); return; }
   const name  = document.getElementById('ev-name').value.trim();
   const date  = document.getElementById('ev-date').value;
-  const time  = document.getElementById('ev-time').value;
+  const time  = readOrgEvTime();
   const venue = document.getElementById('ev-venue').value.trim();
   const city  = document.getElementById('ev-city').value.trim();
-  const genre = document.getElementById('ev-genre').value;
+  const genre = readEvGenres();
   const desc  = document.getElementById('ev-desc').value.trim();
   const evImgFile = document.getElementById('ev-img-file')?.files[0];
   const evLatRaw = parseFloat(document.getElementById('ev-lat')?.value);
@@ -1812,7 +1804,7 @@ async function submitEvent() {
       time_local: time || null,
       venue_name: venue,
       venue_city: city,
-      venue_province: currentProfile.province || null,
+      venue_province: cityToProvince(city) || currentProfile.province || null,
       image_url: imgUrl || null,
       genre: genre || 'other',
       description: desc || null,
@@ -1857,10 +1849,10 @@ async function submitEvent() {
     toast(showOnMap ? '🎉 Event submitted! Map pin request sent to admin.' : (isPremium ? '🎉 Event created and posted to feed!' : '🎉 Event submitted — pending admin approval before it goes live.'), 'ok');
     document.getElementById('ev-name').value = '';
     document.getElementById('ev-date').value = '';
-    document.getElementById('ev-time').value = '';
     document.getElementById('ev-venue').value = '';
     document.getElementById('ev-city').value = '';
-    document.getElementById('ev-genre').value = '';
+    resetEvGenres();
+    resetOrgEvTime();
     document.getElementById('ev-desc').value = '';
     document.getElementById('ev-img-file').value = '';
     document.getElementById('ev-img-preview').style.display = 'none';
@@ -2457,6 +2449,78 @@ async function saveOrgSocialLinks() {
     else { const d=await r.json(); if (st) st.textContent='❌ '+(d.error||'Save failed'); }
   } catch(e) { if (st) st.textContent='❌ Error'; }
 }
+
+// ── City → Province map (keeps region filtering working without GPS) ──
+const PROV_CITY = {
+  KZN: ['Durban','South Coast','Pietermaritzburg','Richards Bay','Ballito','Ladysmith'],
+  GP:  ['Johannesburg','Pretoria','Ekurhuleni','Soweto','Midrand','Sandton'],
+  WC:  ['Cape Town','Stellenbosch','Paarl','George','Knysna'],
+  EC:  ['Gqeberha','East London','Mthatha','Grahamstown'],
+  MP:  ['Mbombela','Witbank','Middelburg'],
+  LP:  ['Polokwane','Tzaneen','Louis Trichardt'],
+  NW:  ['Rustenburg','Mafikeng','Klerksdorp'],
+  FS:  ['Bloemfontein','Welkom','Bethlehem'],
+  NC:  ['Kimberley','Upington','Springbok'],
+};
+function cityToProvince(city) {
+  if (!city) return null;
+  const c = city.toLowerCase().trim();
+  for (const [prov, cities] of Object.entries(PROV_CITY)) {
+    if (cities.some(name => c.includes(name.toLowerCase()))) return prov;
+  }
+  return null;
+}
+const SA_CITIES = [...new Set(Object.values(PROV_CITY).flat())].sort();
+function fillCityDatalist() {
+  const dl = document.getElementById('sa-cities');
+  if (dl && !dl.children.length) dl.innerHTML = SA_CITIES.map(c => `<option value="${c}"></option>`).join('');
+}
+
+// ── Multi-genre chips + AM/PM time picker (event create form) ──
+const ORG_GENRES = [['amapiano','Amapiano'],['gqom','Gqom'],['hiphop','Hip Hop'],['house','House'],['afrobeats','Afrobeats'],['rock','Rock'],['gospel','Gospel'],['jazz','Jazz'],['sport','Sport'],['comedy','Comedy'],['maskandi','Maskandi'],['other','Other']];
+const _evGenres = new Set();
+function renderEvGenreChips() {
+  const el = document.getElementById('ev-genre-chips');
+  if (!el) return;
+  el.innerHTML = ORG_GENRES.map(([v, label]) => {
+    const on = _evGenres.has(v);
+    return `<button type="button" onclick="toggleEvGenre('${v}',this)" style="border-radius:50px;padding:5px 12px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer;border:1px solid ${on?'var(--or)':'var(--border)'};background:${on?'rgba(255,92,0,.15)':'transparent'};color:${on?'var(--or)':'var(--tx)'}">${label}</button>`;
+  }).join('');
+}
+function toggleEvGenre(v, btn) {
+  if (_evGenres.has(v)) _evGenres.delete(v); else _evGenres.add(v);
+  const on = _evGenres.has(v);
+  btn.style.borderColor = on ? 'var(--or)' : 'var(--border)';
+  btn.style.background  = on ? 'rgba(255,92,0,.15)' : 'transparent';
+  btn.style.color       = on ? 'var(--or)' : 'var(--tx)';
+}
+function readEvGenres() { return Array.from(_evGenres).join(','); }
+function resetEvGenres() { _evGenres.clear(); renderEvGenreChips(); }
+
+function populateOrgTimePickers() {
+  const h = document.getElementById('ev-time-h');
+  const m = document.getElementById('ev-time-m');
+  if (h && !h.options.length) { h.add(new Option('Hr','')); for (let i = 1; i <= 12; i++) h.add(new Option(String(i), String(i))); }
+  if (m && !m.options.length) { m.add(new Option('Min','')); for (let i = 0; i < 60; i++) { const s = String(i).padStart(2,'0'); m.add(new Option(s, s)); } }
+}
+function readOrgEvTime() {
+  const h = document.getElementById('ev-time-h')?.value;
+  const m = document.getElementById('ev-time-m')?.value;
+  const ap = document.getElementById('ev-time-ap')?.value;
+  if (!h || !m) return '';
+  let hr = parseInt(h, 10);
+  if (ap === 'PM' && hr !== 12) hr += 12;
+  if (ap === 'AM' && hr === 12) hr = 0;
+  return String(hr).padStart(2,'0') + ':' + m;
+}
+function resetOrgEvTime() {
+  const h = document.getElementById('ev-time-h'); if (h) h.selectedIndex = 0;
+  const m = document.getElementById('ev-time-m'); if (m) m.selectedIndex = 0;
+  const ap = document.getElementById('ev-time-ap'); if (ap) ap.selectedIndex = 0;
+}
+populateOrgTimePickers();
+renderEvGenreChips();
+fillCityDatalist();
 
 renderOrgFAQ();
 loadOrgSettingsStatus();

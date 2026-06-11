@@ -127,8 +127,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .si{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 16px 10px 40px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.86rem;outline:none;transition:border-color .2s}
 .si:focus{border-color:var(--or)}.si::placeholder{color:var(--mu)}
 .sic{position:absolute;left:26px;top:50%;transform:translateY(-50%);font-size:.95rem;color:var(--mu);pointer-events:none}
-.lb{display:flex;gap:6px;padding:4px 14px 6px;flex-wrap:wrap}
-.ls{background:transparent;border:1px solid var(--border);border-radius:50px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;padding:5px 24px 5px 10px;outline:none;cursor:pointer;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235A5870' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;transition:border-color .2s}
+.lb{display:flex;gap:6px;padding:4px 14px 6px;overflow-x:auto;scrollbar-width:none}
+.lb::-webkit-scrollbar{display:none}
+.ls{flex-shrink:0;white-space:nowrap;background:transparent;border:1px solid var(--border);border-radius:50px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;padding:5px 24px 5px 10px;outline:none;cursor:pointer;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235A5870' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;transition:border-color .2s}
 .ls option{background:#1C1140}
 .cr{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:8px 14px 6px}
 .cr::-webkit-scrollbar{display:none}
@@ -3237,11 +3238,22 @@ async function handleAuth() {
   const sb = getSB(); if (!sb) return;
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
   if (error) return showToast(error.message, 'err');
-  const { data: chkProf } = await sb.from('profiles').select('suspended').eq('id', data.user.id).single();
-  if (chkProf?.suspended) {
+  const { data: profile } = await sb.from('profiles')
+    .select('id,username,display_name,bio,avatar_url,cover_url,genres,city,province,role,is_verified,suspended')
+    .eq('id', data.user.id).single();
+  if (profile?.suspended) {
     await sb.auth.signOut();
     return showToast('Your account has been suspended. Contact support.', 'err');
   }
+  // Overwrite cached identity with THIS user — prevents showing a previously
+  // signed-in account's profile (stale p_user/p_profile mismatch).
+  localStorage.setItem('p_user', JSON.stringify({
+    id: data.user.id, email: data.user.email,
+    display_name: profile?.display_name || data.user.email?.split('@')[0],
+    role: profile?.role || 'user',
+  }));
+  localStorage.setItem('p_profile', JSON.stringify(profile || {}));
+  localStorage.setItem('p_token', data.session.access_token);
   currentUser = data.user;
   document.getElementById('auth-modal')?.classList.remove('open');
   showToast('✅ Signed in!', 'ok');

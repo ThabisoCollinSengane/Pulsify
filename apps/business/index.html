@@ -613,12 +613,12 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
       <input class="ff" type="text" id="ev-name" placeholder="e.g. Gqom Friday Night"/>
       <div class="ff-row">
         <div><label class="ff-label">Date *</label><input class="ff" type="date" id="ev-date"/></div>
-        <div><label class="ff-label">Time</label><input class="ff" type="time" id="ev-time"/></div>
+        <div><label class="ff-label">Time</label><div style="display:flex;gap:4px"><select class="ff" id="ev-time-h" style="flex:1;padding-right:14px"></select><select class="ff" id="ev-time-m" style="flex:1;padding-right:14px"></select><select class="ff" id="ev-time-ap" style="flex:1;padding-right:14px"><option value="AM">AM</option><option value="PM">PM</option></select></div></div>
       </div>
       <label class="ff-label">Venue / Location</label>
       <input class="ff" type="text" id="ev-venue" placeholder="e.g. 123 Main Rd, Durban"/>
       <div class="ff-row">
-        <div><label class="ff-label">City</label><input class="ff" type="text" id="ev-city" placeholder="e.g. Durban"/></div>
+        <div><label class="ff-label">City</label><input class="ff" type="text" id="ev-city" list="sa-cities" placeholder="e.g. Durban"/><datalist id="sa-cities"></datalist></div>
         <div><label class="ff-label">Genre</label><input class="ff" type="text" id="ev-genre" placeholder="e.g. Gqom, Amapiano"/></div>
       </div>
       <div class="ff-row">
@@ -1174,7 +1174,7 @@ function previewBizEvent() {
   const name = document.getElementById('ev-name').value.trim();
   if (!name) { toast('Add an event name first', 'err'); return; }
   const date   = document.getElementById('ev-date').value;
-  const time   = document.getElementById('ev-time').value;
+  const time   = readBizEvTime();
   const venue  = document.getElementById('ev-venue').value.trim();
   const city   = document.getElementById('ev-city').value.trim();
   const genre  = document.getElementById('ev-genre').value.trim();
@@ -2046,7 +2046,7 @@ async function submitEvent() {
   const price = parseFloat(document.getElementById('ev-price').value) || 0;
   const lineupRaw = document.getElementById('ev-lineup').value.trim();
   const date  = document.getElementById('ev-date').value;
-  const time  = document.getElementById('ev-time').value;
+  const time  = readBizEvTime();
   const venue = document.getElementById('ev-venue').value.trim();
   const city  = document.getElementById('ev-city').value.trim();
   const genre = document.getElementById('ev-genre').value.trim();
@@ -2092,6 +2092,7 @@ async function submitEvent() {
         id: eventId, name,
         date_local: date || null, time_local: time || null,
         venue_name: venue, venue_city: city,
+        venue_province: cityToProvince(city),
         genre: genre || 'other', description: desc || null,
         price_min: price, price_max: price, is_free: price === 0,
         image_url: imgUrl || null,
@@ -2146,7 +2147,7 @@ async function editEvent(id) {
   document.getElementById('ev-sheet-title').textContent = 'Edit Event';
   document.getElementById('ev-name').value  = ev.name || '';
   document.getElementById('ev-date').value  = ev.date_local || '';
-  document.getElementById('ev-time').value  = ev.time_local || '';
+  setBizEvTime(ev.time_local || '');
   document.getElementById('ev-venue').value = ev.venue_name || '';
   document.getElementById('ev-city').value  = ev.venue_city || '';
   document.getElementById('ev-genre').value = ev.genre || '';
@@ -2162,10 +2163,69 @@ async function editEvent(id) {
   openSheet('event-sheet');
 }
 
+// ── City → Province map (region filtering without GPS) ──
+const PROV_CITY = {
+  KZN: ['Durban','South Coast','Pietermaritzburg','Richards Bay','Ballito','Ladysmith'],
+  GP:  ['Johannesburg','Pretoria','Ekurhuleni','Soweto','Midrand','Sandton'],
+  WC:  ['Cape Town','Stellenbosch','Paarl','George','Knysna'],
+  EC:  ['Gqeberha','East London','Mthatha','Grahamstown'],
+  MP:  ['Mbombela','Witbank','Middelburg'],
+  LP:  ['Polokwane','Tzaneen','Louis Trichardt'],
+  NW:  ['Rustenburg','Mafikeng','Klerksdorp'],
+  FS:  ['Bloemfontein','Welkom','Bethlehem'],
+  NC:  ['Kimberley','Upington','Springbok'],
+};
+function cityToProvince(city) {
+  if (!city) return null;
+  const c = city.toLowerCase().trim();
+  for (const [prov, cities] of Object.entries(PROV_CITY)) {
+    if (cities.some(name => c.includes(name.toLowerCase()))) return prov;
+  }
+  return null;
+}
+const SA_CITIES = [...new Set(Object.values(PROV_CITY).flat())].sort();
+(function fillBizCityDatalist() {
+  const dl = document.getElementById('sa-cities');
+  if (dl && !dl.children.length) dl.innerHTML = SA_CITIES.map(c => `<option value="${c}"></option>`).join('');
+})();
+
+// ── AM/PM time picker (business event form) ──
+function populateBizTimePickers() {
+  const h = document.getElementById('ev-time-h');
+  const m = document.getElementById('ev-time-m');
+  if (h && !h.options.length) { h.add(new Option('Hr','')); for (let i = 1; i <= 12; i++) h.add(new Option(String(i), String(i))); }
+  if (m && !m.options.length) { m.add(new Option('Min','')); for (let i = 0; i < 60; i++) { const s = String(i).padStart(2,'0'); m.add(new Option(s, s)); } }
+}
+function readBizEvTime() {
+  const h = document.getElementById('ev-time-h')?.value;
+  const m = document.getElementById('ev-time-m')?.value;
+  const ap = document.getElementById('ev-time-ap')?.value;
+  if (!h || !m) return '';
+  let hr = parseInt(h, 10);
+  if (ap === 'PM' && hr !== 12) hr += 12;
+  if (ap === 'AM' && hr === 12) hr = 0;
+  return String(hr).padStart(2,'0') + ':' + m;
+}
+function setBizEvTime(hhmm) {
+  const h = document.getElementById('ev-time-h');
+  const m = document.getElementById('ev-time-m');
+  const ap = document.getElementById('ev-time-ap');
+  if (!h || !m || !ap) return;
+  if (!hhmm) { h.selectedIndex = 0; m.selectedIndex = 0; ap.selectedIndex = 0; return; }
+  let [H, M] = hhmm.split(':').map(n => parseInt(n, 10));
+  const period = H >= 12 ? 'PM' : 'AM';
+  let hr12 = H % 12; if (hr12 === 0) hr12 = 12;
+  h.value = String(hr12);
+  m.value = String(M).padStart(2,'0');
+  ap.value = period;
+}
+populateBizTimePickers();
+
 function resetEventForm() {
   document.getElementById('ev-edit-id').value = '';
   document.getElementById('ev-sheet-title').textContent = 'New Event';
-  ['name','date','time','venue','city','genre','price','hype','desc','img','lineup','lat','lon'].forEach(f => { const el = document.getElementById('ev-' + f); if (el) el.value = ''; });
+  ['name','date','venue','city','genre','price','hype','desc','img','lineup','lat','lon'].forEach(f => { const el = document.getElementById('ev-' + f); if (el) el.value = ''; });
+  setBizEvTime('');
   const locMsg = document.getElementById('ev-loc-msg'); if (locMsg) locMsg.textContent = '';
   const mapToggle = document.getElementById('ev-show-on-map'); if (mapToggle) mapToggle.checked = false;
 }
