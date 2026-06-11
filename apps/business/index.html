@@ -737,7 +737,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
       <label class="ff-label">Business Description *</label>
       <textarea class="ff" id="vf-desc" rows="3" placeholder="What does your business do?"></textarea>
       <label class="ff-label">Face Scan (Selfie) *</label>
-      <div style="margin-bottom:12px">
+      <div style="margin-bottom:12px;position:relative">
         <div style="position:relative;border-radius:14px;overflow:hidden;background:#000;margin-bottom:8px;min-height:150px;display:flex;align-items:center;justify-content:center">
           <video id="vf-video" autoplay playsinline muted style="width:100%;border-radius:14px;display:none"></video>
           <canvas id="vf-canvas" style="display:none"></canvas>
@@ -749,13 +749,14 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
           <button type="button" id="vf-capture-btn" class="btn-primary" style="flex:1;padding:9px;font-size:.74rem;display:none" onclick="captureVfFace()">✔ Capture</button>
           <button type="button" id="vf-retake-btn" class="btn-sec" style="flex:1;padding:9px;font-size:.74rem;display:none" onclick="retakeVfFace()">🔄 Retake</button>
         </div>
+        <input type="file" id="vf-face-file" accept="image/*" capture="user" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none" onchange="onVfFaceFile(event)"/>
       </div>
       <label class="ff-label">SA ID Document (photo or scan) *</label>
-      <div style="margin-bottom:14px">
-        <label style="display:block;border:2px dashed var(--border);border-radius:12px;padding:14px;text-align:center;cursor:pointer;font-size:.76rem;color:var(--mu)">
+      <div style="margin-bottom:14px;position:relative">
+        <div onclick="document.getElementById('vf-id-doc').click()" style="display:block;border:2px dashed var(--border);border-radius:12px;padding:14px;text-align:center;cursor:pointer;font-size:.76rem;color:var(--mu)">
           <span id="vf-id-doc-label">📄 Tap to upload ID document (JPG, PNG or PDF)</span>
-          <input type="file" id="vf-id-doc" accept="image/*,application/pdf" style="display:none" onchange="previewVfIdDoc(event)"/>
-        </label>
+        </div>
+        <input type="file" id="vf-id-doc" accept="image/*,application/pdf" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none" onchange="previewVfIdDoc(event)"/>
         <img id="vf-id-doc-preview" style="display:none;width:100%;border-radius:10px;margin-top:8px;max-height:140px;object-fit:contain"/>
       </div>
       <button class="btn-primary" style="width:100%;margin-top:6px" onclick="submitVerification()">Submit for Verification 🏆</button>
@@ -1003,6 +1004,9 @@ let _vfIdDocFile    = null;
 let _vfStream       = null;
 
 async function startVfCam() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    document.getElementById('vf-face-file').click(); return;
+  }
   try {
     _vfStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
     const vid = document.getElementById('vf-video');
@@ -1011,7 +1015,22 @@ async function startVfCam() {
     document.getElementById('vf-preview').style.display = 'none';
     document.getElementById('vf-capture-btn').style.display = 'block';
     document.getElementById('vf-retake-btn').style.display = 'none';
-  } catch(e) { showMsg('verif-msg', 'Camera not available: ' + e.message, 'err'); }
+  } catch(e) {
+    document.getElementById('vf-face-file').click();
+  }
+}
+function onVfFaceFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const prev = document.getElementById('vf-preview');
+    prev.src = ev.target.result; prev.style.display = 'block';
+    document.getElementById('vf-cam-placeholder').style.display = 'none';
+    document.getElementById('vf-retake-btn').style.display = 'block';
+    document.getElementById('vf-capture-btn').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+  file.arrayBuffer().then(buf => { _vfFaceScanBlob = new Blob([buf], { type: file.type }); });
 }
 function captureVfFace() {
   const vid = document.getElementById('vf-video');
