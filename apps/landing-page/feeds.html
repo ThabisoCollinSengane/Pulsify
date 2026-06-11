@@ -137,7 +137,7 @@ textarea.ff-c{resize:none;height:80px;line-height:1.55}
     <span style="font-size:1.4rem">Feed</span>
   </a>
   <div style="display:flex;align-items:center;gap:8px">
-    <div id="notif-btn" onclick="openNotifPanel()" style="position:relative;width:36px;height:36px;border-radius:50%;background:var(--surf);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.95rem">🔔<span id="notif-dot" style="position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--or);border:1.5px solid var(--bg);display:none"></span></div>
+    <div id="notif-btn" onclick="openNotifPanel()" style="position:relative;width:36px;height:36px;border-radius:50%;background:var(--surf);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.95rem">🔔<span id="notif-dot" style="position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--or);border:1.5px solid var(--bg);display:none;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:.56rem;font-weight:800;color:#fff;line-height:1;box-shadow:0 0 8px rgba(255,92,0,.6)"></span></div>
     <button class="tb2-btn" onclick="openCompose()">+ Post</button>
   </div>
 </header>
@@ -1079,33 +1079,69 @@ async function scrollToPostAndComment(postId, commentId) {
 }
 
 /* ── Notification bell ── */
+const NOTIF_ICO = {follow:'👤',like:'❤️',comment:'💬',reply:'↩️',repost:'🔁',ticket:'🎟',business_post:'📢',event_approved:'✅',event_rejected:'🚫',verification:'🏆',account:'⚙️',order:'📦',payment:'💳',squad_invite:'👥',squad_plan:'📅',system:'🔔',broadcast:'📣'};
+const NOTIF_CLR = {follow:'#B026FF',like:'#FF2D78',comment:'#00E5FF',reply:'#00E5FF',ticket:'#FF5C00',repost:'#C6FF4A',event_approved:'#C6FF4A',event_rejected:'#FF2D78',verification:'#FF5C00',order:'#00D4AA',payment:'#FF5C00',squad_invite:'#B026FF',squad_plan:'#B026FF',broadcast:'#FF5C00'};
+let _notifMap = {};
+let _notifUnread = 0;
+let _notifPage = 0;
+const NOTIF_PAGE = 20;
+
 function openNotifPanel()  { document.getElementById('notif-overlay').style.display = 'block'; loadNotifList(); }
 function closeNotifPanel() { document.getElementById('notif-overlay').style.display = 'none'; }
+
+function _setNotifBadge(n) {
+  _notifUnread = Math.max(0, n | 0);
+  const dot = document.getElementById('notif-dot');
+  if (!dot) return;
+  if (_notifUnread > 0) { dot.textContent = _notifUnread > 99 ? '99+' : _notifUnread; dot.style.display = 'flex'; }
+  else { dot.textContent = ''; dot.style.display = 'none'; }
+}
+
+// Collapse consecutive like/comment/repost notifications on the same entity into one row.
+function _groupNotifs(notifs) {
+  const out = [];
+  for (const n of notifs) {
+    const key = n.entity_id ? `${n.type}|${n.entity_type}|${n.entity_id}` : null;
+    const last = out[out.length - 1];
+    const groupable = ['like','comment','repost','reply'].includes(n.type);
+    if (groupable && key && last && last._key === key) {
+      last._group.push(n);
+      if (!n.read) last.read = false;
+    } else {
+      out.push({ ...n, _key: key, _group: [n] });
+    }
+  }
+  return out;
+}
 
 async function initNotifBell(uid, sb) {
   const token = localStorage.getItem('p_token') || '';
   try {
     const r = await fetch('/api/notifications/count', { headers: { 'Authorization': `Bearer ${token}` } });
     const { count } = await r.json();
-    const dot = document.getElementById('notif-dot');
-    if (dot) dot.style.display = count > 0 ? 'block' : 'none';
+    _setNotifBadge(count || 0);
   } catch(e) {}
   sb.channel(`notifs_${uid}`)
     .on('postgres_changes', { event:'INSERT', schema:'public', table:'notifications', filter:`user_id=eq.${uid}` }, () => {
-      const dot = document.getElementById('notif-dot');
-      if (dot) dot.style.display = 'block';
+      _setNotifBadge(_notifUnread + 1);
     }).subscribe();
 }
 
-async function loadNotifList() {
+async function loadNotifList(append) {
   const el = document.getElementById('notif-list');
   if (!el) return;
-  el.innerHTML = '<div style="padding:16px;font-size:.75rem;color:var(--mu)">Loading…</div>';
+  if (!append) { _notifPage = 0; _notifMap = {}; el.innerHTML = '<div style="padding:16px;font-size:.75rem;color:var(--mu)">Loading…</div>'; }
+  const oldBtn = document.getElementById('notif-load-more'); if (oldBtn) oldBtn.remove();
   const token = localStorage.getItem('p_token') || '';
   try {
-    const r = await fetch('/api/notifications?limit=30', { headers: { 'Authorization': `Bearer ${token}` } });
-    const { notifications: notifs } = await r.json();
-    if (!notifs?.length) { el.innerHTML = '<div style="padding:30px;text-align:center;font-size:.78rem;color:var(--mu)">No notifications yet 🔔</div>'; return; }
+    const r = await fetch(`/api/notifications?page=${_notifPage+1}&limit=${NOTIF_PAGE}`, { headers: { 'Authorization': `Bearer ${token}` } });
+    const { notifications: notifs = [], total = 0 } = await r.json();
+    notifs.forEach(n => { _notifMap[n.id] = n; });
+    if (!append) {
+      _setNotifBadge(Object.values(_notifMap).filter(n => !n.read).length);
+      if (!notifs.length) { el.innerHTML = '<div style="padding:30px;text-align:center;font-size:.78rem;color:var(--mu)">No notifications yet 🔔</div>'; return; }
+      el.innerHTML = '';
+    }
     const sb = getSB();
     const fromIds = [...new Set(notifs.map(n => n.from_user_id).filter(Boolean))];
     let avMap = {};
@@ -1114,36 +1150,79 @@ async function loadNotifList() {
       (profs||[]).forEach(p => { avMap[p.id] = p.avatar_url; });
     }
     const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const ico = {follow:'👤',like:'❤️',comment:'💬',repost:'🔁',business_post:'📢'};
     const tAgo = iso => { if(!iso) return ''; const d=Math.floor((Date.now()-new Date(iso))/1000); if(d<60) return 'just now'; if(d<3600) return Math.floor(d/60)+'m ago'; if(d<86400) return Math.floor(d/3600)+'h ago'; return Math.floor(d/86400)+'d ago'; };
-    el.innerHTML = notifs.map(n => {
+    const groups = _groupNotifs(notifs);
+    const rows = groups.map(n => {
+      const others = n._group.length - 1;
       const av = n.from_user_id ? avMap[n.from_user_id] : null;
+      const icoChar = NOTIF_ICO[n.type] || '🔔';
+      const bColor  = NOTIF_CLR[n.type] || '#B026FF';
       const avEl = av ? `<img src="${esc(av)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid var(--border2)">`
-        : `<div style="width:40px;height:40px;border-radius:50%;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">${ico[n.type]||'🔔'}</div>`;
+        : `<div style="width:40px;height:40px;border-radius:50%;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">${icoChar}</div>`;
       const name = n.from_display_name || '';
       const msg  = esc(n.message || '');
-      const boldMsg = name ? msg.replace(esc(name), `<b style="color:var(--tx)">${esc(name)}</b>`) : msg;
-      return `<div onclick="markNRead('${n.id}')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);background:${n.read?'transparent':'rgba(176,38,255,.07)'};cursor:pointer">
-        <div style="position:relative;flex-shrink:0">${avEl}<div style="position:absolute;bottom:-1px;right:-1px;width:18px;height:18px;border-radius:50%;background:var(--surf);display:flex;align-items:center;justify-content:center;font-size:.7rem;border:1.5px solid var(--bg2)">${ico[n.type]||'🔔'}</div></div>
-        <div style="flex:1;min-width:0"><div style="font-size:.79rem;color:var(--mu2);line-height:1.45">${boldMsg}</div><div style="font-size:.63rem;color:var(--mu);margin-top:3px">${tAgo(n.created_at)}</div></div>
-        ${!n.read?'<div style="width:8px;height:8px;border-radius:50%;background:var(--or)"></div>':''}
+      let bodyMsg;
+      if (others > 0 && name) {
+        const verb = msg.startsWith(esc(name)) ? msg.slice(esc(name).length).trimStart() : msg;
+        bodyMsg = `<b style="color:var(--tx)">${esc(name)}</b> and ${others} other${others>1?'s':''} ${verb}`;
+      } else {
+        bodyMsg = name ? msg.replace(esc(name), `<b style="color:var(--tx)">${esc(name)}</b>`) : msg;
+      }
+      return `<div onclick="handleNotifClick('${n.id}')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);border-left:3px solid ${n.read?'transparent':bColor};background:${n.read?'transparent':'rgba(176,38,255,.07)'};cursor:pointer">
+        <div style="position:relative;flex-shrink:0">${avEl}<div style="position:absolute;bottom:-1px;right:-1px;width:18px;height:18px;border-radius:50%;background:${bColor};display:flex;align-items:center;justify-content:center;font-size:.65rem;border:1.5px solid var(--bg2)">${icoChar}</div></div>
+        <div style="flex:1;min-width:0"><div style="font-size:.79rem;color:var(--mu2);line-height:1.45">${bodyMsg}</div><div style="font-size:.63rem;color:${n.read?'var(--mu)':bColor};margin-top:3px">${tAgo(n.created_at)}</div></div>
+        ${!n.read?`<div style="width:8px;height:8px;border-radius:50%;background:${bColor}"></div>`:''}
       </div>`;
     }).join('');
-    const unread = notifs.filter(n=>!n.read).length;
-    const dot = document.getElementById('notif-dot');
-    if (dot) dot.style.display = unread ? 'block' : 'none';
-  } catch(e) { el.innerHTML = '<div style="padding:16px;font-size:.75rem;color:var(--mu)">Could not load</div>'; }
+    el.insertAdjacentHTML('beforeend', rows);
+    if ((_notifPage * NOTIF_PAGE + notifs.length) < total) {
+      const more = document.createElement('button');
+      more.id = 'notif-load-more';
+      more.textContent = 'Load older';
+      more.style.cssText = 'display:block;width:calc(100% - 28px);margin:10px 14px;padding:9px;background:var(--surf);border:1px solid var(--border);border-radius:50px;color:var(--mu2);font-family:\'Syne\',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer';
+      more.onclick = () => { _notifPage++; loadNotifList(true); };
+      el.appendChild(more);
+    }
+  } catch(e) { if (!append) el.innerHTML = '<div style="padding:16px;font-size:.75rem;color:var(--mu)">Could not load</div>'; }
 }
 
-async function markNRead(id) {
+// Click a notification → mark read (incl. grouped siblings), close panel, deep-link.
+function handleNotifClick(id) {
+  const n = _notifMap[id]; if (!n) return;
+  const ids = (n._group && n._group.length) ? n._group.map(g => g.id) : [id];
+  const unreadInGroup = (n._group || [n]).filter(g => !g.read).length;
+  if (unreadInGroup) _setNotifBadge(_notifUnread - unreadInGroup);
   const token = localStorage.getItem('p_token') || '';
-  await fetch(`/api/notifications/${id}/read`, { method:'PATCH', headers:{'Authorization':`Bearer ${token}`} }).catch(()=>{});
+  ids.forEach(i => fetch(`/api/notifications/${i}/read`, { method:'PATCH', headers:{'Authorization':`Bearer ${token}`} }).catch(()=>{}));
+  closeNotifPanel();
+  const data = n.data || {};
+  const actor = n.from_user_id || data.actor_id;
+  if (n.type === 'follow') {
+    if (actor) window.location.href = `/user-profile?id=${encodeURIComponent(actor)}`;
+    return;
+  }
+  if (n.entity_type === 'event' && n.entity_id) {
+    window.location.href = `/?eid=${encodeURIComponent(n.entity_id)}`;
+    return;
+  }
+  if (n.entity_type === 'post' && n.entity_id) {
+    const cid = data.comment_id;
+    scrollToPostAndComment(n.entity_id, cid || null);
+    return;
+  }
+  if ((n.type === 'squad_invite' || n.type === 'squad_plan') && (data.squad_id || n.entity_id)) {
+    window.location.href = `/?squad=${encodeURIComponent(data.squad_id || n.entity_id)}`;
+    return;
+  }
+  if (n.entity_type === 'profile' && actor) {
+    window.location.href = `/user-profile?id=${encodeURIComponent(actor)}`;
+  }
 }
+
 async function markAllNotifsRead() {
   const token = localStorage.getItem('p_token') || '';
   await fetch('/api/notifications/mark-all-read', { method:'POST', headers:{'Authorization':`Bearer ${token}`} }).catch(()=>{});
-  const dot = document.getElementById('notif-dot');
-  if (dot) dot.style.display = 'none';
+  _setNotifBadge(0);
   loadNotifList();
 }
 

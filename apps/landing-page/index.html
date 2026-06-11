@@ -102,7 +102,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .back{display:none;align-items:center;gap:6px;background:transparent;border:none;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;padding:6px 10px 6px 0}
 .back.show{display:flex}
 .ib{width:36px;height:36px;border-radius:50%;background:var(--surf);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer;position:relative}
-.nd{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--or);border:1.5px solid var(--bg);display:none}
+.nd{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--or);border:1.5px solid var(--bg);display:none;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:.56rem;font-weight:800;color:#fff;line-height:1;box-shadow:0 0 8px rgba(255,92,0,.6)}
 .sb{background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:8px 18px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer}
 .tkr{position:fixed;top:var(--th);left:0;right:0;height:var(--tk);z-index:700;background:linear-gradient(90deg,#B026FF,#FF5C00,#FF2D78);overflow:hidden;display:flex;align-items:center}
 .tkt{display:flex;white-space:nowrap;animation:sc 75s linear infinite}
@@ -616,6 +616,18 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   <div class="sl"><span id="disc-biz-hdr">📍 Places near you</span><a href="/map">View map →</a></div>
   <div class="hs" id="disc-biz-row"></div>
   <div class="sl"><span>🎉 Events</span><a onclick="openFAQ()" style="cursor:pointer">❓ Help & FAQ</a></div>
+  <div class="cr" id="disc-genre-row">
+    <button class="chip active" onclick="setDiscGenre(this,'all')">✦ All</button>
+    <button class="chip" onclick="setDiscGenre(this,'amapiano')">🎶 Amapiano</button>
+    <button class="chip" onclick="setDiscGenre(this,'gqom')">🔊 Gqom</button>
+    <button class="chip" onclick="setDiscGenre(this,'afrobeats')">🌍 Afrobeats</button>
+    <button class="chip" onclick="setDiscGenre(this,'house')">🏠 House</button>
+    <button class="chip" onclick="setDiscGenre(this,'hip')">🎤 Hip-Hop</button>
+    <button class="chip" onclick="setDiscGenre(this,'jazz')">🎷 Jazz</button>
+    <button class="chip" onclick="setDiscGenre(this,'festival')">🎉 Festival</button>
+    <button class="chip" onclick="setDiscGenre(this,'sport')">⚽ Sport</button>
+    <button class="chip" onclick="setDiscGenre(this,'comedy')">😂 Comedy</button>
+  </div>
   <div class="dg2" id="disc-events"></div>
   <div style="margin:20px 14px 8px;padding:12px 14px;border-top:1px solid var(--border);font-size:.62rem;color:var(--mu);line-height:1.7;text-align:center">
     Third-party event listings (Ticketmaster, Quicket, Eventbrite, etc.) are owned and managed by those companies — for ticket issues, refunds, or cancellations, contact them directly. Only events marked as a <strong style="color:var(--tx)">Pulsefy event</strong> are our responsibility.<br/>
@@ -1272,6 +1284,9 @@ let feedGenre      = 'all';
 let feedCity       = 'all';
 let feedProvince   = 'all';
 let discCat        = 'all';
+let discGenre      = 'all';
+let discQuery      = '';
+let _discTimer     = null;
 let nearMeActive   = false;
 let nearMeRadius   = 5;
 let userLat        = null;
@@ -2509,6 +2524,7 @@ function setNearMeRadius(km, btn) {
 
 async function loadDiscover(cat) {
   if (!cat) cat = discCat;
+  const q = (discQuery || '').trim();
   try {
     const sb = getSB();
     const today = new Date().toISOString().split('T')[0];
@@ -2518,10 +2534,15 @@ async function loadDiscover(cat) {
       .order('rating', { ascending: false, nullsFirst: false }).limit(nearMeActive ? 200 : 20);
     if (cat && cat !== 'all') bq = bq.eq('category', cat);
     if (!nearMeActive && feedCity && feedCity !== 'all') bq = bq.ilike('city', `%${feedCity}%`);
+    if (q) bq = bq.or(`name.ilike.%${q}%,suburb.ilike.%${q}%,city.ilike.%${q}%,tagline.ilike.%${q}%`);
+
     let eq = sb.from('events')
       .select('id,name,date_local,image_url,genre,is_free,price_min,hype_score,venue_city,venue_lat,venue_lon')
       .gte('date_local', today)
       .order('hype_score', { ascending: false, nullsFirst: false }).limit(nearMeActive ? 200 : 20);
+    if (discGenre && discGenre !== 'all') eq = eq.ilike('genre', `%${discGenre}%`);
+    if (q) eq = eq.or(`name.ilike.%${q}%,venue_city.ilike.%${q}%,genre.ilike.%${q}%`);
+
     const [{ data: rawBiz }, { data: rawEv }] = await Promise.all([bq, eq]);
 
     let bizList = rawBiz || [];
@@ -2531,29 +2552,38 @@ async function loadDiscover(cat) {
       bizList = bizList
         .filter(b => b.lat && b.lon && _haversineKm(userLat, userLon, b.lat, b.lon) <= nearMeRadius)
         .sort((a, b) => _haversineKm(userLat, userLon, a.lat, a.lon) - _haversineKm(userLat, userLon, b.lat, b.lon));
-      evList = evList.filter(ev => {
-        if (!ev.venue_lat || !ev.venue_lon) return false;
-        return _haversineKm(userLat, userLon, ev.venue_lat, ev.venue_lon) <= nearMeRadius;
-      });
+      evList = evList
+        .filter(ev => ev.venue_lat && ev.venue_lon && _haversineKm(userLat, userLon, ev.venue_lat, ev.venue_lon) <= nearMeRadius)
+        .sort((a, b) => _haversineKm(userLat, userLon, a.venue_lat, a.venue_lon) - _haversineKm(userLat, userLon, b.venue_lat, b.venue_lon));
       const hdr = document.getElementById('disc-biz-hdr');
       if (hdr) hdr.textContent = `📍 Within ${nearMeRadius}km`;
     } else {
       const hdr = document.getElementById('disc-biz-hdr');
-      if (hdr) hdr.textContent = '📍 Places near you';
+      if (hdr) hdr.textContent = q ? `🔍 Results for "${x(q)}"` : '📍 Places near you';
     }
 
     const dr = document.getElementById('disc-biz-row');
     if (dr) dr.innerHTML = bizList.length
       ? bizList.map(b => buildBizCard(b)).join('')
-      : (nearMeActive ? '<p style="padding:16px;color:var(--mu);font-size:.8rem">No places found within ' + nearMeRadius + 'km.</p>' : '');
+      : `<p style="padding:16px;color:var(--mu);font-size:.8rem">${
+          q ? 'No places match "' + x(q) + '".'
+            : nearMeActive ? 'No places found within ' + nearMeRadius + 'km.'
+            : 'No places listed' + (feedCity && feedCity !== 'all' ? ' in ' + x(feedCity) : '') + ' yet.'}</p>`;
+
     const de = document.getElementById('disc-events');
-    if (de) de.innerHTML = evList.map(ev => `
-      <div class="de" onclick="openEv('${ev.id}')">
-        <div class="det" style="background:${gg(ev.genre)}">${ev.image_url ? `<img src="${ev.image_url}" loading="lazy" onerror="this.style.display='none'"/>` : ge(ev.genre)}<span class="ddb">${fdate(ev.date_local)}</span></div>
-        <div class="deb"><div class="den">${x(ev.name)}</div><div class="dec">${x(ev.venue_city)}</div>
-          <div class="def"><span class="dep ${ev.is_free ? 'fr' : ''}">${ev.is_free ? 'FREE' : ev.price_min ? 'R' + ev.price_min : 'TBA'}</span><span class="deh">🔥${ev.hype_score}%</span></div>
-        </div>
-      </div>`).join('');
+    if (de) de.innerHTML = evList.length
+      ? evList.map(ev => `
+        <div class="de" onclick="openEv('${ev.id}')">
+          <div class="det" style="background:${gg(ev.genre)}">${ev.image_url ? `<img src="${ev.image_url}" loading="lazy" onerror="this.style.display='none'"/>` : ge(ev.genre)}<span class="ddb">${fdate(ev.date_local)}</span></div>
+          <div class="deb"><div class="den">${x(ev.name)}</div><div class="dec">${x(ev.venue_city)}</div>
+            <div class="def"><span class="dep ${ev.is_free ? 'fr' : ''}">${ev.is_free ? 'FREE' : ev.price_min ? 'R' + ev.price_min : 'TBA'}</span><span class="deh">🔥${ev.hype_score}%</span></div>
+          </div>
+        </div>`).join('')
+      : `<p style="grid-column:1/-1;padding:16px;color:var(--mu);font-size:.8rem;text-align:center">${
+          q ? 'No events match "' + x(q) + '".'
+            : discGenre !== 'all' ? 'No ' + x(discGenre) + ' events coming up.'
+            : nearMeActive ? 'No events within ' + nearMeRadius + 'km.'
+            : 'No upcoming events yet.'}</p>`;
   } catch(e) {}
 }
 function setDiscCat(btn, cat) {
@@ -2562,7 +2592,18 @@ function setDiscCat(btn, cat) {
   discCat = cat;
   loadDiscover(cat);
 }
-function handleDiscSearch(val) { /* future: search businesses */ }
+function setDiscGenre(btn, genre) {
+  btn.closest('.cr').querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  discGenre = genre;
+  loadDiscover();
+}
+// Live search across discover businesses + events (debounced)
+function handleDiscSearch(val) {
+  discQuery = val || '';
+  clearTimeout(_discTimer);
+  _discTimer = setTimeout(() => loadDiscover(), 300);
+}
 
 /* ══════════════════════════════════════════════════
    MAP
@@ -4009,41 +4050,73 @@ async function openNotifPanel() {
 function closeNotifPanel() { document.getElementById('notif-overlay').style.display = 'none'; }
 
 let _notifMap = {};
-async function loadNotifications() {
+let _notifUnread = 0;
+let _notifPage = 0;            // pages loaded so far (each page = 20)
+const NOTIF_PAGE = 20;
+function _setNotifBadge(n) {
+  _notifUnread = Math.max(0, n | 0);
+  const dot = document.getElementById('notif-dot');
+  if (!dot) return;
+  if (_notifUnread > 0) { dot.textContent = _notifUnread > 99 ? '99+' : _notifUnread; dot.style.display = 'flex'; }
+  else { dot.textContent = ''; dot.style.display = 'none'; }
+}
+// Collapse consecutive notifications sharing type + entity into one grouped row.
+// e.g. 5 likes on one post → "Sipho and 4 others liked your post"
+function _groupNotifs(notifs) {
+  const out = [];
+  for (const n of notifs) {
+    const key = n.entity_id ? `${n.type}|${n.entity_type}|${n.entity_id}` : null;
+    const last = out[out.length - 1];
+    // Only group like/comment/repost (social pile-ups); keep follows/squad/payment separate
+    const groupable = ['like','comment','repost','reply'].includes(n.type);
+    if (groupable && key && last && last._key === key) {
+      last._group.push(n);
+      if (!n.read) last.read = false;
+    } else {
+      out.push({ ...n, _key: key, _group: [n] });
+    }
+  }
+  return out;
+}
+const NOTIF_ICO = {follow:'👤',like:'❤️',repost:'🔁',comment:'💬',reply:'↩️',ticket:'🎟',business_post:'📢',event_approved:'✅',event_rejected:'🚫',verification:'🏆',account:'⚙️',order:'📦',payment:'💳',squad_invite:'👥',squad_plan:'📅',system:'🔔',broadcast:'📣'};
+const NOTIF_CLR = {follow:'#B026FF',like:'#FF2D78',comment:'#00E5FF',reply:'#00E5FF',ticket:'#FF5C00',repost:'#C6FF4A',event_approved:'#C6FF4A',event_rejected:'#FF2D78',verification:'#FF5C00',order:'#00D4AA',payment:'#FF5C00',squad_invite:'#B026FF',squad_plan:'#B026FF',broadcast:'#FF5C00'};
+
+async function loadNotifications(append) {
   const sb = getSB(); const el = document.getElementById('notif-list');
   if (!el) return;
   if (!currentUser || !sb) {
     el.innerHTML = '<div style="padding:20px;text-align:center;font-size:.78rem;color:var(--mu)">Sign in to see notifications</div>';
     return;
   }
-  el.innerHTML = '<div style="padding:16px;font-size:.75rem;color:var(--mu)">Loading…</div>';
+  if (!append) { _notifPage = 0; _notifMap = {}; el.innerHTML = '<div style="padding:16px;font-size:.75rem;color:var(--mu)">Loading…</div>'; }
+  const oldBtn = document.getElementById('notif-load-more'); if (oldBtn) oldBtn.remove();
   try {
-    const { data, error } = await sb.from('notifications')
-      .select('*').eq('user_id', currentUser.id)
-      .order('created_at', { ascending: false }).limit(30);
+    const offset = _notifPage * NOTIF_PAGE;
+    const { data, error, count } = await sb.from('notifications')
+      .select('*', { count: 'exact' }).eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false }).range(offset, offset + NOTIF_PAGE - 1);
     if (error) throw error;
     const notifs = data || [];
-    _notifMap = Object.fromEntries(notifs.map(n => [n.id, n]));
-    const unread = notifs.filter(n => !n.read).length;
-    const dot = document.getElementById('notif-dot');
-    if (dot) dot.style.display = unread ? 'block' : 'none';
-    if (!notifs.length) {
-      el.innerHTML = '<div style="padding:30px;text-align:center"><div style="font-size:2rem;margin-bottom:8px">✓</div><div style="font-size:.78rem;color:var(--mu)">You\'re all caught up!</div></div>';
-      return;
+    notifs.forEach(n => { _notifMap[n.id] = n; });
+    if (!append) {
+      const unread = Object.values(_notifMap).filter(n => !n.read).length;
+      _setNotifBadge(unread);
+      if (!notifs.length) {
+        el.innerHTML = '<div style="padding:30px;text-align:center"><div style="font-size:2rem;margin-bottom:8px">✓</div><div style="font-size:.78rem;color:var(--mu)">You\'re all caught up!</div></div>';
+        return;
+      }
+      el.innerHTML = '';
     }
 
-    // Batch-fetch avatars + display names for everyone who triggered a notification
+    const groups = _groupNotifs(notifs);
+
+    // Batch-fetch avatars + display names + entity thumbnails for this page
     const fromIds = [...new Set(notifs.map(n => n.from_user_id).filter(Boolean))];
     let avatarMap = {}, nameMap = {};
     if (fromIds.length) {
       const { data: profs } = await sb.from('profiles').select('id,avatar_url,display_name').in('id', fromIds);
       (profs || []).forEach(p => { avatarMap[p.id] = p.avatar_url; nameMap[p.id] = p.display_name; });
     }
-
-    const ico = {follow:'👤',like:'❤️',repost:'🔁',comment:'💬',ticket:'🎟',business_post:'📢',account:'⚙️',order:'📦',payment:'💳',squad_invite:'👥',squad_plan:'📅'};
-    const tclr = {follow:'#B026FF',like:'#FF2D78',comment:'#00E5FF',ticket:'#FF5C00',repost:'#C6FF4A',order:'#00D4AA',payment:'#FF5C00',squad_invite:'#B026FF',squad_plan:'#B026FF'};
-
-    // Batch-fetch entity thumbnails for richer cards
     const evIds   = [...new Set(notifs.filter(n=>n.entity_type==='events'&&n.entity_id).map(n=>n.entity_id))];
     const postIds = [...new Set(notifs.filter(n=>n.entity_type==='post'&&n.entity_id).map(n=>n.entity_id))];
     let entityThumbMap = {};
@@ -4052,10 +4125,11 @@ async function loadNotifications() {
       postIds.length ? sb.from('posts').select('id,image_url').in('id',postIds).then(({data})=>(data||[]).forEach(p=>{entityThumbMap[p.id]=firstImg(p.image_url)})) : null,
     ].filter(Boolean));
 
-    el.innerHTML = notifs.map(n => {
+    const rowsHtml = groups.map(n => {
+      const others  = n._group.length - 1;
       const avatar  = n.from_user_id ? avatarMap[n.from_user_id] : null;
-      const icoChar = ico[n.type] || '🔔';
-      const bColor  = tclr[n.type] || '#B026FF';
+      const icoChar = NOTIF_ICO[n.type] || '🔔';
+      const bColor  = NOTIF_CLR[n.type] || '#B026FF';
 
       const avatarEl = avatar
         ? `<img src="${x(avatar)}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0">`
@@ -4064,7 +4138,11 @@ async function loadNotifications() {
       const actorName = n.from_display_name || nameMap[n.from_user_id] || '';
       const rawMsg    = n.message || '';
       let msgHtml;
-      if (actorName && rawMsg.startsWith(actorName)) {
+      if (others > 0 && actorName) {
+        // Grouped: "Sipho and N others …"
+        const verb = rawMsg.startsWith(actorName) ? rawMsg.slice(actorName.length).trimStart() : rawMsg;
+        msgHtml = `<span style="font-weight:700;color:var(--tx)">${x(actorName)}</span><span style="color:var(--mu2)"> and ${others} other${others>1?'s':''} ${x(verb)}</span>`;
+      } else if (actorName && rawMsg.startsWith(actorName)) {
         msgHtml = `<span style="font-weight:700;color:var(--tx)">${x(actorName)}</span><span style="color:var(--mu2)"> ${x(rawMsg.slice(actorName.length).trimStart())}</span>`;
       } else {
         msgHtml = `<span style="color:var(--mu2)">${x(rawMsg)}</span>`;
@@ -4087,15 +4165,21 @@ async function loadNotifications() {
           ${!n.read?`<div style="width:9px;height:9px;border-radius:50%;background:${bColor};flex-shrink:0;box-shadow:0 0 6px ${bColor}"></div>`:''}
         </div>`;
     }).join('');
-  } catch(e) {
-    el.innerHTML = '<div style="padding:16px;font-size:.75rem;color:var(--mu)">Could not load notifications</div>';
-  }
-}
+    el.insertAdjacentHTML('beforeend', rowsHtml);
 
-async function markNotifRead(id) {
-  const sb = getSB();
-  if (!sb || !id) return;
-  await sb.from('notifications').update({ read: true }).eq('id', id).eq('user_id', currentUser.id);
+    // "Load more" button when a full page came back (more may exist)
+    const total = count || 0;
+    if ((offset + notifs.length) < total) {
+      const more = document.createElement('button');
+      more.id = 'notif-load-more';
+      more.textContent = 'Load older';
+      more.style.cssText = 'display:block;width:calc(100% - 28px);margin:10px 14px;padding:9px;background:var(--surf);border:1px solid var(--border);border-radius:50px;color:var(--mu2);font-family:\'Syne\',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer';
+      more.onclick = () => { _notifPage++; loadNotifications(true); };
+      el.appendChild(more);
+    }
+  } catch(e) {
+    if (!append) el.innerHTML = '<div style="padding:16px;font-size:.75rem;color:var(--mu)">Could not load notifications</div>';
+  }
 }
 
 // Click on a notification → mark read, close panel, route to the right thing.
@@ -4105,7 +4189,12 @@ async function markNotifRead(id) {
 // - reply                  → same as post/event but adds ?cid={comment_id}
 function handleNotifClick(id) {
   const n = _notifMap[id]; if (!n) return;
-  markNotifRead(id);
+  // Mark this (and any grouped siblings) read, decrement the badge
+  const ids = (n._group && n._group.length) ? n._group.map(g => g.id) : [id];
+  const unreadInGroup = (n._group || [n]).filter(g => !g.read).length;
+  if (unreadInGroup) _setNotifBadge(_notifUnread - unreadInGroup);
+  const sb = getSB();
+  if (sb && currentUser) sb.from('notifications').update({ read: true }).in('id', ids).eq('user_id', currentUser.id);
   closeNotifPanel();
   const data = n.data || {};
   const actor = n.from_user_id || data.actor_id;
@@ -4133,8 +4222,7 @@ async function markAllNotifsRead() {
   const sb = getSB();
   if (!sb || !currentUser) return;
   await sb.from('notifications').update({ read: true }).eq('user_id', currentUser.id).eq('read', false);
-  const dot = document.getElementById('notif-dot');
-  if (dot) dot.style.display = 'none';
+  _setNotifBadge(0);
   loadNotifications();
 }
 
@@ -5235,10 +5323,15 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Deep-link from /map: ?eid=xxx or ?bid=xxx
   const _qp = new URLSearchParams(location.search);
-  const _eid = _qp.get('eid'), _bid = _qp.get('bid'), _sqid = _qp.get('squad');
+  const _eid = _qp.get('eid'), _bid = _qp.get('bid'), _sqid = _qp.get('squad'), _q = _qp.get('q');
   if (_eid) setTimeout(() => openEv(_eid), 400);
   else if (_bid) setTimeout(() => openBiz(_bid), 400);
   else if (_sqid) setTimeout(() => handleSquadInviteLink(_sqid), 700);
+  else if (_q) setTimeout(() => {
+    showTab('discover');
+    const si = document.querySelector('#tab-discover .si');
+    if (si) { si.value = _q; handleDiscSearch(_q); }
+  }, 400);
 
   // Check auth state + notification dot
   const sb = getSB();
@@ -5246,19 +5339,17 @@ window.addEventListener('DOMContentLoaded', () => {
     sb.auth.getUser().then(async ({ data: { user } }) => {
       if (user) {
         currentUser = user; renderProfile();
-        // Show notification dot if unread notifications exist
+        // Show notification count badge if unread notifications exist
         const { count } = await sb.from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('read', false);
-        const dot = document.getElementById('notif-dot');
-        if (dot) dot.style.display = count > 0 ? 'block' : 'none';
+        _setNotifBadge(count || 0);
 
-        // Realtime: light up bell when a new notification arrives
+        // Realtime: bump bell count when a new notification arrives
         sb.channel(`notifs_${user.id}`)
           .on('postgres_changes', {
             event: 'INSERT', schema: 'public', table: 'notifications',
             filter: `user_id=eq.${user.id}`,
           }, () => {
-            const d = document.getElementById('notif-dot');
-            if (d) d.style.display = 'block';
+            _setNotifBadge(_notifUnread + 1);
           })
           .subscribe();
 
