@@ -4199,6 +4199,14 @@ async function openProfile(userId) {
     const heroCss = profile.cover_url
       ? `background:url("${x(profile.cover_url)}") center/cover no-repeat`
       : `background:${heroGrad}`;
+    const seeAllBtn = posts_count > 6 ? `<button onclick="openAllPhotos('${x(userId)}')" style="background:none;border:none;color:var(--or);font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;cursor:pointer">See all ${posts_count} →</button>` : '';
+    const bottomHtml = isOrg
+      ? ['<div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:0" id="prof-tabs">',
+          `<button id="ptab-posts" onclick="switchProfTab('posts','${x(userId)}')" style="flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid var(--or);color:var(--tx);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer;transition:color .15s">📝 Posts</button>`,
+          `<button id="ptab-events" onclick="switchProfTab('events','${x(userId)}')" style="flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid transparent;color:var(--mu);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer;transition:color .15s">🎟 Events</button>`,
+          `<button id="ptab-menu" onclick="switchProfTab('menu','${x(userId)}')" style="flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid transparent;color:var(--mu);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer;transition:color .15s">🍽 Menu</button>`,
+          '</div><div id="prof-tab-body" style="padding-top:14px"><div style="padding:24px;text-align:center;color:var(--mu);font-size:.78rem">Loading…</div></div>'].join('')
+      : `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div style="font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu)">📷 Photos</div>${seeAllBtn}</div>${postsHtml}`;
     body.innerHTML = `
       <div style="height:96px;${heroCss};border-radius:14px;margin-bottom:-40px"></div>
       <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:10px;padding:0 2px">
@@ -4224,11 +4232,8 @@ async function openProfile(userId) {
         <div onclick="openFollowList('${x(userId)}','following')" style="flex:1;text-align:center;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:10px 4px;cursor:pointer"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--or);line-height:1">${following_count}</div><div style="font-size:.58rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-top:3px">Following</div></div>
       </div>
       ${prefsHtml}
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div style="font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu)">📷 Photos</div>
-        ${posts_count > 6 ? `<button onclick="openAllPhotos('${userId}')" style="background:none;border:none;color:var(--or);font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;cursor:pointer">See all ${posts_count} →</button>` : ''}
-      </div>
-      ${postsHtml}`;
+      ${bottomHtml}`;
+    if (isOrg) switchProfTab('posts', userId);
   } catch(e) {
     body.innerHTML = `<div style="padding:40px;text-align:center;color:var(--mu)">${x(e.message)}</div>`;
   }
@@ -4399,6 +4404,129 @@ async function openAllPhotos(userId) {
 }
 
 function closeProfOverlay() { document.getElementById('prof-overlay').style.display = 'none'; }
+
+async function switchProfTab(tab, userId) {
+  ['posts','events','menu'].forEach(t => {
+    const btn = document.getElementById('ptab-' + t);
+    if (!btn) return;
+    const on = t === tab;
+    btn.style.borderBottom = on ? '2px solid var(--or)' : '2px solid transparent';
+    btn.style.color = on ? 'var(--tx)' : 'var(--mu)';
+  });
+  const body = document.getElementById('prof-tab-body');
+  if (!body) return;
+  body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--mu);font-size:.78rem">Loading…</div>';
+  if (tab === 'posts') await _renderProfPosts(userId, body);
+  else if (tab === 'events') await _renderProfEvents(userId, body);
+  else if (tab === 'menu') await _renderProfMenu(userId, body);
+}
+
+async function _renderProfPosts(userId, el) {
+  try {
+    const sb = getSB();
+    const { data: posts } = await sb.from('posts')
+      .select('id,image_url,caption,created_at,like_count,comment_count')
+      .eq('user_id', userId).order('created_at', { ascending: false }).limit(18);
+    if (!posts || !posts.length) {
+      el.innerHTML = '<div style="padding:28px;text-align:center;font-size:.78rem;color:var(--mu);border:1px dashed var(--border);border-radius:12px">No posts yet</div>';
+      return;
+    }
+    const withImg = posts.filter(p => firstImg(p.image_url));
+    const textOnly = posts.filter(p => !firstImg(p.image_url));
+    let html = '';
+    if (withImg.length) {
+      html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px;border-radius:10px;overflow:hidden;margin-bottom:10px">';
+      html += withImg.slice(0,9).map(p => {
+        const likes = (p.like_count||0) > 0 ? `<span style="font-size:.56rem;color:#fff">❤️ ${fn(p.like_count)}</span>` : '';
+        const cmts  = (p.comment_count||0) > 0 ? `<span style="font-size:.56rem;color:#fff">💬 ${fn(p.comment_count)}</span>` : '';
+        return `<div onclick="openPost('${x(p.id)}')" style="aspect-ratio:1;background:var(--surf2);overflow:hidden;cursor:pointer;position:relative"><img src="${x(firstImg(p.image_url))}" loading="lazy" style="width:100%;height:100%;object-fit:cover"/><div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0,rgba(0,0,0,.7),transparent);padding:4px 5px;display:flex;gap:6px;align-items:center">${likes}${cmts}</div></div>`;
+      }).join('');
+      html += '</div>';
+    }
+    textOnly.slice(0,5).forEach(p => {
+      const ago = p.created_at ? new Date(p.created_at).toLocaleDateString('en-ZA', { day:'numeric', month:'short' }) : '';
+      html += `<div onclick="openPost('${x(p.id)}')" style="padding:12px 14px;background:var(--surf);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;cursor:pointer"><div style="font-size:.82rem;color:var(--tx);line-height:1.5;margin-bottom:6px">${x((p.caption||'').slice(0,120))}${(p.caption||'').length>120?'…':''}</div><div style="font-size:.66rem;color:var(--mu)">${ago}${(p.like_count||0)>0?' · ❤️ '+fn(p.like_count):''}</div></div>`;
+    });
+    el.innerHTML = html || '<div style="padding:28px;text-align:center;font-size:.78rem;color:var(--mu)">No posts yet</div>';
+  } catch(e) { el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--mu);font-size:.78rem">${x(e.message)}</div>`; }
+}
+
+async function _renderProfEvents(userId, el) {
+  try {
+    const sb = getSB();
+    const today = new Date().toISOString().split('T')[0];
+    const { data: evs } = await sb.from('events')
+      .select('id,name,date_local,time_local,venue_name,venue_city,price_min,is_free,genre,image_url,is_active')
+      .eq('organiser_id', userId).order('date_local', { ascending: false }).limit(30);
+    if (!evs || !evs.length) {
+      el.innerHTML = '<div style="padding:28px;text-align:center;font-size:.78rem;color:var(--mu);border:1px dashed var(--border);border-radius:12px">No events posted yet</div>';
+      return;
+    }
+    const upcoming = evs.filter(e => e.date_local >= today);
+    const past     = evs.filter(e => e.date_local < today);
+    let html = '';
+    const renderCard = (e, isPast) => {
+      const img = firstImg(e.image_url);
+      const pr  = e.is_free ? 'Free' : (e.price_min ? 'R' + e.price_min : '');
+      const dt  = e.date_local ? new Date(e.date_local + 'T00:00:00').toLocaleDateString('en-ZA', { weekday:'short', day:'numeric', month:'short', year:'numeric' }) : '';
+      return `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);opacity:${isPast?'.5':'1'}">
+        ${img ? `<div style="width:56px;height:56px;border-radius:8px;overflow:hidden;flex-shrink:0"><img src="${x(img)}" style="width:100%;height:100%;object-fit:cover"/></div>` : `<div style="width:56px;height:56px;border-radius:8px;background:var(--surf2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem">🎟</div>`}
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(e.name)}</div>
+          <div style="font-size:.7rem;color:var(--mu);margin-top:2px">📅 ${dt}</div>
+          <div style="font-size:.7rem;color:var(--mu)">📍 ${x(e.venue_city || e.venue_name || '')}</div>
+        </div>
+        ${pr ? `<div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--or);flex-shrink:0;align-self:center">${x(pr)}</div>` : ''}
+      </div>`;
+    };
+    if (upcoming.length) {
+      html += `<div style="font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Upcoming (${upcoming.length})</div>`;
+      html += upcoming.map(e => renderCard(e, false)).join('');
+    }
+    if (past.length) {
+      html += `<div style="font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin:${upcoming.length?'16px 0 6px':'0 0 6px'}">Past Events (${past.length})</div>`;
+      html += past.map(e => renderCard(e, true)).join('');
+    }
+    el.innerHTML = html;
+  } catch(e) { el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--mu);font-size:.78rem">${x(e.message)}</div>`; }
+}
+
+async function _renderProfMenu(userId, el) {
+  try {
+    const sb = getSB();
+    const { data: biz } = await sb.from('businesses').select('id,name').eq('owner_id', userId).maybeSingle();
+    if (!biz) {
+      el.innerHTML = '<div style="padding:28px;text-align:center;font-size:.78rem;color:var(--mu);border:1px dashed var(--border);border-radius:12px">No menu or pricelist added yet</div>';
+      return;
+    }
+    const { data: items } = await sb.from('menu_items')
+      .select('id,name,description,price,category,image_url,is_available')
+      .eq('business_id', biz.id).eq('is_available', true)
+      .order('category').order('sort_order');
+    if (!items || !items.length) {
+      el.innerHTML = '<div style="padding:28px;text-align:center;font-size:.78rem;color:var(--mu);border:1px dashed var(--border);border-radius:12px">No items listed yet</div>';
+      return;
+    }
+    const byCategory = {};
+    items.forEach(it => { const c = it.category || 'General'; if (!byCategory[c]) byCategory[c] = []; byCategory[c].push(it); });
+    let html = '';
+    Object.entries(byCategory).forEach(([cat, list]) => {
+      html += `<div style="font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px;margin-top:${html?'16px':'0'}">${x(cat)}</div>`;
+      list.forEach(it => {
+        const img = firstImg(it.image_url);
+        html += `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+          ${img ? `<div style="width:52px;height:52px;border-radius:8px;overflow:hidden;flex-shrink:0"><img src="${x(img)}" style="width:100%;height:100%;object-fit:cover"/></div>` : ''}
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">${x(it.name)}</div>
+            ${it.description ? `<div style="font-size:.72rem;color:var(--mu);margin-top:2px;line-height:1.4">${x(it.description)}</div>` : ''}
+          </div>
+          ${it.price != null ? `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.05rem;color:var(--or);flex-shrink:0;align-self:center">R${Number(it.price).toFixed(0)}</div>` : ''}
+        </div>`;
+      });
+    });
+    el.innerHTML = html;
+  } catch(e) { el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--mu);font-size:.78rem">${x(e.message)}</div>`; }
+}
 
 async function toggleFollowOverlay(targetId) {
   if (!currentUser) { showToast('Sign in to follow'); return; }
