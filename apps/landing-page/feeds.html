@@ -43,7 +43,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .chip.active{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.09)}
 .feed{position:fixed;top:calc(var(--th) + 42px);left:0;right:0;bottom:var(--bh);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .feed::-webkit-scrollbar{display:none}
-.fc{margin:0 0 2px;border-bottom:1px solid var(--border);background:var(--surf);cursor:default;-webkit-tap-highlight-color:transparent}
+@keyframes fc-in{from{opacity:0}to{opacity:1}}
+.fc{margin:0 0 2px;border-bottom:1px solid var(--border);background:var(--surf);cursor:default;-webkit-tap-highlight-color:transparent;animation:fc-in .3s ease both}
 .fh{display:flex;align-items:center;gap:10px;padding:12px 14px 8px}
 .fa{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;border:1.5px solid var(--border);overflow:hidden;background:linear-gradient(135deg,#B026FF,#FF5C00)}
 .fa img{width:100%;height:100%;object-fit:cover}
@@ -440,8 +441,12 @@ async function _loadMore() {
     _totalPages = Math.max(1, Math.ceil((data.total || 0) / 12));
     _hasMore = _page < _totalPages;
     _posts = [..._posts, ...fetched];
+    // Build all cards into a fragment first — single DOM mutation instead of N sequential
+    // appends. This eliminates the layout-recalculation churn that caused the black flash.
+    const frag = document.createDocumentFragment();
+    fetched.forEach(post => frag.appendChild(buildCard(post)));
     spinner.remove();
-    fetched.forEach(post => feedEl.appendChild(buildCard(post)));
+    feedEl.appendChild(frag);
     _attachSentinel(feedEl);
   } catch(e) {
     spinner.textContent = 'Could not load more.';
