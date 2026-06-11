@@ -2088,7 +2088,7 @@ async function loadFrontline() {
 function buildBizCard(b) {
   return `<div class="bc ${b.is_frontline ? 'ft' : ''}" onclick="openBiz('${x(b.id)}')">
     <div class="bt" style="background:transparent">
-      ${b.cover_image_url ? `<img src="${x(b.cover_image_url)}" loading="lazy" onerror="this.style.display='none'"/>` : '<span>' + ce(b.category) + '</span>'}
+      ${b.cover_image_url ? `<img src="${x(iU(b.cover_image_url, 600))}" loading="lazy" onerror="this.style.display='none'"/>` : '<span>' + ce(b.category) + '</span>'}
       <div class="btg"></div>
       <span class="bb2">${x(b.category)}</span>
       ${b.is_frontline && b.frontline_rank ? `<span class="brk">⭐#${b.frontline_rank}</span>` : ''}
@@ -2360,7 +2360,7 @@ async function openBiz(bizId) {
     const gallery = typeof b.gallery_urls === 'string' ? JSON.parse(b.gallery_urls || '[]') : (b.gallery_urls || []);
 
     document.getElementById('biz-detail').innerHTML = `
-      <div class="bzh"><img src="${x(b.cover_image_url || '')}" alt="${x(b.name)}" onerror="this.style.display='none'"/>
+      <div class="bzh"><img src="${x(iU(b.cover_image_url, 1200, 80))}" alt="${x(b.name)}" onerror="this.style.display='none'"/>
         <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:5rem;opacity:.25">${emo}</div>
         <div class="bzg"></div>
         <div class="bzhb">
@@ -3757,7 +3757,7 @@ async function renderSaved() {
           bl.innerHTML = data.map(b => `
             <div style="display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer" onclick="openBiz('${x(b.id)}')">
               <div style="width:52px;height:52px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--surf2)">
-                ${b.cover_image_url ? `<img src="${x(b.cover_image_url)}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'"/>` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.2rem">${ce(b.category)}</div>`}
+                ${b.cover_image_url ? `<img src="${x(iU(b.cover_image_url, 400))}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'"/>` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.2rem">${ce(b.category)}</div>`}
               </div>
               <div style="flex:1;min-width:0">
                 <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(b.name)}</div>
@@ -5486,7 +5486,7 @@ function _renderBizPage() {
   grid.innerHTML = list.map(b => `
     <div class="bp-card" onclick="closeBizPage();openBiz('${x(b.id)}')">
       <div class="bp-img" style="background:${cg(b.category)}">
-        ${b.cover_image_url ? `<img src="${x(b.cover_image_url)}" loading="lazy" onerror="this.style.display='none'"/>` : `<span>${ce(b.category)}</span>`}
+        ${b.cover_image_url ? `<img src="${x(iU(b.cover_image_url, 600))}" loading="lazy" onerror="this.style.display='none'"/>` : `<span>${ce(b.category)}</span>`}
         <span class="bp-cat-badge">${x(b.category)}</span>
         ${b.is_frontline ? `<span class="bp-featured">⭐ #${b.frontline_rank}</span>` : ''}
       </div>
