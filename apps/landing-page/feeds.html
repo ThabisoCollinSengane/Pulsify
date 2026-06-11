@@ -107,10 +107,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 textarea.ff-c{resize:none;height:80px;line-height:1.55}
 .post-btn{width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:opacity .2s}
 .post-btn:disabled{opacity:.45;cursor:not-allowed}
-.pg{display:flex;gap:10px;padding:16px 14px 24px;justify-content:center;align-items:center}
-.pb{background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 22px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;color:var(--tx);cursor:pointer;transition:all .2s}
-.pb:active{border-color:var(--or);color:var(--or)}.pb:disabled{opacity:.3;cursor:default}
-.pi{font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu)}
+@keyframes skel-shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+.skel-av{width:38px;height:38px;border-radius:50%;background:linear-gradient(90deg,var(--surf) 25%,var(--surf2) 50%,var(--surf) 75%);background-size:800px 100%;animation:skel-shimmer 1.4s infinite linear;flex-shrink:0}
+.skel-line{height:10px;border-radius:6px;background:linear-gradient(90deg,var(--surf) 25%,var(--surf2) 50%,var(--surf) 75%);background-size:800px 100%;animation:skel-shimmer 1.4s infinite linear}
+.skel-img{width:100%;height:200px;background:linear-gradient(90deg,var(--surf) 25%,var(--surf2) 50%,var(--surf) 75%);background-size:800px 100%;animation:skel-shimmer 1.4s infinite linear}
 .es{padding:60px 24px;text-align:center}
 .ei{font-size:3rem;margin-bottom:14px}
 .et{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:8px}
@@ -155,8 +155,14 @@ textarea.ff-c{resize:none;height:80px;line-height:1.55}
 <div class="cr">
   <button class="chip active" onclick="setFilter(this,'all')">✦ All</button>
   <button class="chip" onclick="setFilter(this,'following')">👥 Following</button>
-  <button class="chip" onclick="setFilter(this,'organizers')">📢 Organizers</button>
-  <button class="chip" onclick="setFilter(this,'community')">👤 Community Posts</button>
+  <button class="chip" onclick="setFilter(this,'trending')">🔥 Trending</button>
+  <button class="chip" onclick="setFilter(this,'organizers')">📢 Organisers</button>
+  <button class="chip" onclick="setFilter(this,'fans')">👤 Fan Posts</button>
+  <button class="chip" onclick="setFilter(this,'gqom')">🎵 Gqom</button>
+  <button class="chip" onclick="setFilter(this,'amapiano')">🎹 Amapiano</button>
+  <button class="chip" onclick="setFilter(this,'afrobeats')">🌍 Afrobeats</button>
+  <button class="chip" onclick="setFilter(this,'festival')">🎪 Festivals</button>
+  <button class="chip" onclick="setFilter(this,'sport')">🏆 Sport</button>
 </div>
 
 <div class="feed" id="feed"></div>
@@ -263,30 +269,42 @@ let _filter     = 'all';
 let _page       = 1;
 let _totalPages = 1;
 let _loading    = false;
+let _hasMore    = true;
+let _newCount   = 0;   // unseen posts since last render (realtime)
+
+const _GENRE_FILTERS = ['gqom','amapiano','afrobeats','festival','sport','kwaito','hip-hop'];
 
 async function fetchPosts() {
   const sb = getSB();
   if (!sb) throw new Error('Supabase not loaded');
-  const limit = 10, offset = (_page - 1) * limit;
+  const limit = 12, offset = (_page - 1) * limit;
+  const isTrending = _filter === 'trending';
   let q = sb.from('posts')
     .select('id,user_id,post_type,image_url,caption,event_name,like_count,comment_count,created_at,profiles:user_id(username,display_name,avatar_url,role,is_verified)', { count: 'exact' })
-    .order('created_at', { ascending: false })
+    .order(isTrending ? 'like_count' : 'created_at', { ascending: false })
     .range(offset, offset + limit - 1);
+
   if (_filter === 'following' && _uid) {
     const { data: followsRows } = await sb.from('follows').select('following_id').eq('follower_id', _uid);
     const ids = (followsRows || []).map(r => r.following_id);
     if (!ids.length) return { posts: [], total: 0 };
     q = q.in('user_id', ids);
   } else if (_filter === 'organizers') {
-    const { data: orgRows } = await sb.from('profiles').select('id').eq('role', 'organizer');
+    const { data: orgRows } = await sb.from('profiles').select('id').in('role', ['organizer','business']);
     const orgIds = (orgRows || []).map(r => r.id);
     if (!orgIds.length) return { posts: [], total: 0 };
     q = q.in('user_id', orgIds);
-  } else if (_filter === 'businesses') {
-    const { data: bizRows } = await sb.from('profiles').select('id').eq('role', 'business');
-    const bizIds = (bizRows || []).map(r => r.id);
-    if (!bizIds.length) return { posts: [], total: 0 };
-    q = q.in('user_id', bizIds);
+  } else if (_filter === 'fans') {
+    // Fan posts only — exclude organizer/business roles
+    const { data: orgRows } = await sb.from('profiles').select('id').in('role', ['organizer','business']);
+    const orgIds = (orgRows || []).map(r => r.id);
+    if (orgIds.length) q = q.not('user_id', 'in', `(${orgIds.map(id=>`"${id}"`).join(',')})`);
+  } else if (_filter === 'trending') {
+    // Last 30 days, sorted by like_count DESC — already ordered above
+    const since = new Date(Date.now() - 30*24*60*60*1000).toISOString();
+    q = q.gte('created_at', since);
+  } else if (_GENRE_FILTERS.includes(_filter)) {
+    q = q.or(`caption.ilike.%${_filter}%,event_name.ilike.%${_filter}%`);
   }
   const { data, error, count } = await q;
   if (error) throw new Error(error.message);
@@ -343,45 +361,113 @@ function showToast(msg, type='') {
 function setFilter(btn, filter) {
   document.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  _filter = filter; _page = 1;
+  _filter = filter; _page = 1; _hasMore = true; _posts = [];
+  hideNewPostsBanner();
   render();
+}
+
+// Skeleton placeholder — shown while posts load on first page
+function buildSkeleton() {
+  return `<div class="fc" style="pointer-events:none">
+    <div class="fh">
+      <div class="skel-av"></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+        <div class="skel-line" style="width:45%"></div>
+        <div class="skel-line" style="width:28%"></div>
+      </div>
+    </div>
+    <div class="skel-img"></div>
+    <div style="padding:10px 14px 12px;display:flex;flex-direction:column;gap:6px">
+      <div class="skel-line" style="width:92%"></div>
+      <div class="skel-line" style="width:72%"></div>
+    </div>
+  </div>`;
 }
 
 async function render() {
   if (_loading) return;
   _loading = true;
   const feedEl = document.getElementById('feed');
-  feedEl.innerHTML = '<div style="padding:60px 24px;text-align:center;color:var(--mu)">Loading posts…</div>';
+  // Page 1 — full replace with skeletons while loading
+  feedEl.innerHTML = [1,2,3].map(()=>buildSkeleton()).join('');
   feedEl.scrollTop = 0;
+  _newCount = 0; hideNewPostsBanner();
 
   try {
     const data = await fetchPosts();
-    _posts = (data.posts || []).map(mapPost);
-    _totalPages = Math.max(1, Math.ceil((data.total || _posts.length) / 10));
+    const fetched = (data.posts || []).map(mapPost);
+    _totalPages = Math.max(1, Math.ceil((data.total || fetched.length) / 12));
+    _hasMore = _page < _totalPages;
+    _posts = fetched;
 
     feedEl.innerHTML = '';
     if (!_posts.length) {
-      const msg = _filter === 'following'
-        ? 'Follow organizers and friends to see their posts here.'
-        : 'No posts yet. Be the first to share something!';
-      feedEl.innerHTML = '<div class="es"><div class="ei">📰</div><div class="et">Nothing here yet</div><div class="em">'+msg+'</div></div>';
+      const msgs = {
+        following: 'Follow organizers and friends to see their posts here.',
+        trending: 'No trending posts in the last 30 days yet.',
+        fans: 'No fan posts yet — be the first to share!',
+      };
+      const msg = msgs[_filter] || 'No posts yet. Be the first to share something!';
+      feedEl.innerHTML = `<div class="es"><div class="ei">📰</div><div class="et">Nothing here yet</div><div class="em">${msg}</div></div>`;
     } else {
       _posts.forEach(post => feedEl.appendChild(buildCard(post)));
-      if (_totalPages > 1) {
-        const pg = document.createElement('div');
-        pg.className = 'pg';
-        pg.innerHTML = '<button class="pb" onclick="changePage(-1)" '+(_page===1?'disabled':'')+'>← Prev</button><span class="pi">'+_page+' / '+_totalPages+'</span><button class="pb" onclick="changePage(1)" '+(_page>=_totalPages?'disabled':'')+'>Next →</button>';
-        feedEl.appendChild(pg);
-      }
+      _attachSentinel(feedEl);
     }
   } catch(e) {
-    feedEl.innerHTML = '<div class="es"><div class="ei">📡</div><div class="et">Could not load posts</div><div class="em">'+x(e.message || 'Unknown error')+'</div></div>';
+    feedEl.innerHTML = `<div class="es"><div class="ei">📡</div><div class="et">Could not load posts</div><div class="em">${x(e.message||'Unknown error')}</div></div>`;
     console.error('Feed load error:', e);
   }
   _loading = false;
 }
 
-function changePage(delta) { _page += delta; render(); }
+// Load next page and APPEND (infinite scroll)
+async function _loadMore() {
+  if (_loading || !_hasMore) return;
+  _loading = true;
+  _page++;
+
+  // Show a small spinner at the bottom while loading
+  const feedEl = document.getElementById('feed');
+  const spinner = document.createElement('div');
+  spinner.id = 'feed-load-more-spinner';
+  spinner.style.cssText = 'padding:18px;text-align:center;color:var(--mu);font-size:.76rem;font-family:\'Syne\',sans-serif';
+  spinner.textContent = 'Loading more…';
+  feedEl.appendChild(spinner);
+
+  try {
+    const data = await fetchPosts();
+    const fetched = (data.posts || []).map(mapPost);
+    _totalPages = Math.max(1, Math.ceil((data.total || 0) / 12));
+    _hasMore = _page < _totalPages;
+    _posts = [..._posts, ...fetched];
+    spinner.remove();
+    fetched.forEach(post => feedEl.appendChild(buildCard(post)));
+    _attachSentinel(feedEl);
+  } catch(e) {
+    spinner.textContent = 'Could not load more.';
+    setTimeout(() => spinner.remove(), 2000);
+    _page--;
+  }
+  _loading = false;
+}
+
+// IntersectionObserver sentinel — triggers _loadMore when scrolled near the bottom
+let _sentinel = null;
+let _sentinelObs = null;
+function _attachSentinel(feedEl) {
+  if (_sentinel) { _sentinel.remove(); _sentinel = null; }
+  if (!_hasMore) return;
+  _sentinel = document.createElement('div');
+  _sentinel.style.cssText = 'height:1px;margin-bottom:20px';
+  feedEl.appendChild(_sentinel);
+  if (!_sentinelObs) {
+    _sentinelObs = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) _loadMore();
+    }, { root: feedEl, rootMargin: '200px' });
+  }
+  _sentinelObs.disconnect();
+  _sentinelObs.observe(_sentinel);
+}
 
 function buildCard(post) {
   const likes    = getLikes(post);
@@ -413,7 +499,7 @@ function buildCard(post) {
       '</div>' +
       '<div style="flex:1;min-width:0;cursor:pointer" onclick="openProfile(\u0027'+x(post.user_id)+'\u0027)">' +
         '<div class="fo">' + x(post.display_name || post.username) + (post.is_verified ? '<span class="verified-pill" title="Verified by Pulsefy"><span class="puls-badge"></span><span class="verified-txt">Verified</span></span>' : '') + (isOrg ? '<span class="org-pill">📢 Page</span>' : '') + '</div>' +
-        (post.event_name ? '<div style="font-size:.64rem;color:var(--or);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;letter-spacing:.04em">🎟 '+x(post.event_name)+'</div>' : '') +
+        (post.event_name ? '<div style="font-size:.64rem;color:var(--or);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;letter-spacing:.04em;cursor:pointer" onclick="window.location.href=\u0027/?q=\u0027+encodeURIComponent(post.event_name||\u0027\u0027)" title="Find this event">🎟 '+x(post.event_name)+' ↗</div>' : '') +
         '<div class="fl">@'+x(post.username)+' · '+timeAgo(post.ts || post.created_at)+'</div>' +
       '</div>' +
       (!isOwn ? '<button class="follow-btn '+(isFollowing?'on':'')+'" id="fbtn-'+x(post.id)+'" onclick="doFollow(\u0027'+x(post.user_id)+'\u0027,\u0027'+x(post.id)+'\u0027)">'+(isFollowing?'✓ Following':'+ Follow')+'</button>' : '') +
@@ -876,18 +962,75 @@ async function initFeed() {
       const { data: _fws } = await sb.from('follows').select('following_id').eq('follower_id', _uid);
       localStorage.setItem('p_following', JSON.stringify((_fws || []).map(f => f.following_id)));
       initNotifBell(_uid, sb);
+      // Sync profile for compose display
+      sb.from('profiles').select('display_name,username,avatar_url,role').eq('id', _uid).maybeSingle()
+        .then(({ data }) => { if (data) { _profile = data; localStorage.setItem('p_profile', JSON.stringify(data)); } });
+      // Realtime — show "X new posts" banner when others post
+      sb.channel('feed_new_posts')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
+          if (payload.new?.user_id === _uid) return; // own post — don't count
+          _newCount++;
+          _showNewPostsBanner();
+        }).subscribe();
     }
   }
   await render();
-  // Deep-links
+  _initPullToRefresh();
   const qp = new URLSearchParams(location.search);
   const pid = qp.get('pid'), cid = qp.get('cid');
   if (pid) scrollToPostAndComment(pid, cid);
-  // ?compose=1 — auto-open compose sheet (from the Me tab "Create a Post" button)
   if (qp.get('compose') === '1') {
     history.replaceState(null, '', '/feeds');
     setTimeout(openCompose, 300);
   }
+}
+
+// ── "X new posts" realtime banner ──────────────────────────
+function _showNewPostsBanner() {
+  let b = document.getElementById('new-posts-banner');
+  if (!b) {
+    b = document.createElement('div');
+    b.id = 'new-posts-banner';
+    b.style.cssText = 'position:fixed;top:calc(var(--th) + 50px);left:50%;transform:translateX(-50%);z-index:150;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;font-family:\'Syne\',sans-serif;font-size:.74rem;font-weight:700;padding:7px 18px;border-radius:50px;cursor:pointer;box-shadow:0 4px 18px rgba(176,38,255,.45);white-space:nowrap;animation:su .2s ease';
+    b.onclick = () => { _page=1; _hasMore=true; _posts=[]; render(); };
+    document.body.appendChild(b);
+  }
+  b.textContent = `↑ ${_newCount} new post${_newCount===1?'':'s'} — tap to see`;
+}
+function hideNewPostsBanner() {
+  const b = document.getElementById('new-posts-banner');
+  if (b) b.remove();
+  _newCount = 0;
+}
+
+// ── Pull-to-refresh ─────────────────────────────────────────
+function _initPullToRefresh() {
+  const feedEl = document.getElementById('feed');
+  if (!feedEl) return;
+  let _ty0 = 0, _ptr = null;
+  feedEl.addEventListener('touchstart', e => {
+    if (feedEl.scrollTop === 0) _ty0 = e.touches[0].clientY;
+    else _ty0 = 0;
+  }, { passive: true });
+  feedEl.addEventListener('touchmove', e => {
+    if (!_ty0) return;
+    const dy = e.touches[0].clientY - _ty0;
+    if (dy > 8) {
+      if (!_ptr) {
+        _ptr = document.createElement('div');
+        _ptr.style.cssText = 'text-align:center;padding:10px;font-size:.78rem;color:var(--mu);font-family:\'Syne\',sans-serif;font-weight:700;transition:color .2s';
+        feedEl.insertBefore(_ptr, feedEl.firstChild);
+      }
+      _ptr.textContent = dy > 70 ? '↑ Release to refresh' : '↓ Pull to refresh';
+      _ptr.style.color = dy > 70 ? 'var(--or)' : 'var(--mu)';
+    }
+  }, { passive: true });
+  feedEl.addEventListener('touchend', e => {
+    const dy = (e.changedTouches[0]?.clientY || 0) - _ty0;
+    if (_ptr) { _ptr.remove(); _ptr = null; }
+    _ty0 = 0;
+    if (dy > 70) { _page=1; _hasMore=true; _posts=[]; render(); showToast('Refreshing…'); }
+  }, { passive: true });
 }
 
 async function scrollToPostAndComment(postId, commentId) {
