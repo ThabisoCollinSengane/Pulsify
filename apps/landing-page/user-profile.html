@@ -326,9 +326,99 @@ async function loadUserData() {
   document.getElementById('followers-count').textContent = followersCount || 0;
   document.getElementById('following-count').textContent = followingCount || 0;
 
+  const isOrg = ['organizer','business','admin'].includes(profile.role);
   renderPosts(profile.id);
-  renderAttended(profile.id, isOwnProfile);
-  renderActivity(profile.id);
+  if (isOrg) {
+    document.getElementById('events-tab').textContent = isOwnProfile ? '🎟 My Events' : '🎟 Events';
+    document.getElementById('activity-tab').textContent = '🍽 Menu';
+    renderPostedEvents(profile.id);
+    renderMenu(profile.id);
+  } else {
+    renderAttended(profile.id, isOwnProfile);
+    renderActivity(profile.id);
+  }
+}
+
+async function renderPostedEvents(userId) {
+  const el = document.getElementById('events-list');
+  el.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Loading…</div></div>';
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const { data: evs, count } = await sb.from('events')
+      .select('id,name,venue_name,venue_city,date_local,time_local,price_min,is_free,image_url', { count: 'exact' })
+      .eq('organiser_id', userId).order('date_local', { ascending: false }).limit(40);
+    document.getElementById('stat-events').textContent = count || 0;
+    if (!evs?.length) {
+      el.innerHTML = '<div class="empty"><div class="empty-ico">🎟</div><div class="empty-title">No events posted yet</div></div>';
+      return;
+    }
+    const upcoming = evs.filter(e => e.date_local >= today);
+    const past     = evs.filter(e => e.date_local < today);
+    const card = (ev, isPast) => {
+      const img = _firstImageUrl(ev.image_url);
+      const pr  = ev.is_free ? 'Free' : (ev.price_min ? 'R' + ev.price_min : '');
+      const dt  = ev.date_local ? new Date(ev.date_local + 'T00:00:00').toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short',year:'numeric'}) : '';
+      return `<div class="ev-card" style="${isPast?'opacity:.55':''}" onclick="window.location.href='/?eid=${escHtml(ev.id)}'">
+        <div class="ev-thumb">${img ? `<img src="${escHtml(img)}" loading="lazy"/>` : '🎶'}</div>
+        <div class="ev-info">
+          <div class="ev-name">${escHtml(ev.name || 'Event')}</div>
+          <div class="ev-meta">📅 ${dt}</div>
+          <div class="ev-meta">📍 ${escHtml(ev.venue_city || ev.venue_name || '')}${pr ? ' · ' + pr : ''}</div>
+          <span class="ev-badge">${isPast ? '✓ Past' : '🔥 Upcoming'}</span>
+        </div>
+      </div>`;
+    };
+    let html = '';
+    if (upcoming.length) html += `<div style="font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);padding:10px 12px 4px">Upcoming (${upcoming.length})</div>` + upcoming.map(e => card(e, false)).join('');
+    if (past.length)     html += `<div style="font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);padding:${upcoming.length?'14px':'10px'} 12px 4px">Past Events (${past.length})</div>` + past.map(e => card(e, true)).join('');
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div class="empty"><div class="empty-ico">🎟</div><div class="empty-title">Could not load events</div></div>';
+  }
+  try {
+    const { count: savedCount } = await sb.from('saved_items').select('*', { count: 'exact', head: true }).eq('user_id', userId);
+    document.getElementById('stat-saved').textContent = savedCount || 0;
+  } catch(e) {}
+}
+
+async function renderMenu(userId) {
+  const el = document.getElementById('activity-list');
+  el.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Loading…</div></div>';
+  try {
+    const { data: biz } = await sb.from('businesses').select('id,name').eq('owner_id', userId).maybeSingle();
+    if (!biz) {
+      el.innerHTML = '<div class="empty"><div class="empty-ico">🍽</div><div class="empty-title">No menu or pricelist yet</div><div style="font-size:.74rem;color:var(--mu);margin-top:6px">This account hasn\'t added a menu or pricelist.</div></div>';
+      return;
+    }
+    const { data: items } = await sb.from('menu_items')
+      .select('id,name,description,price,category,image_url,is_available')
+      .eq('business_id', biz.id).eq('is_available', true)
+      .order('category').order('sort_order');
+    if (!items?.length) {
+      el.innerHTML = '<div class="empty"><div class="empty-ico">🍽</div><div class="empty-title">No items listed yet</div></div>';
+      return;
+    }
+    const byCat = {};
+    items.forEach(it => { const c = it.category || 'General'; (byCat[c] = byCat[c] || []).push(it); });
+    let html = '';
+    Object.entries(byCat).forEach(([cat, list]) => {
+      html += `<div style="font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);padding:${html?'14px':'10px'} 12px 6px">${escHtml(cat)}</div>`;
+      list.forEach(it => {
+        const img = _firstImageUrl(it.image_url);
+        html += `<div class="post" style="display:flex;gap:10px;padding:12px;align-items:center">
+          ${img ? `<img src="${escHtml(img)}" style="width:54px;height:54px;border-radius:8px;object-fit:cover;flex-shrink:0"/>` : ''}
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'Syne',sans-serif;font-size:.86rem;font-weight:700;color:var(--tx)">${escHtml(it.name)}</div>
+            ${it.description ? `<div style="font-size:.74rem;color:var(--mu);margin-top:2px;line-height:1.4">${escHtml(it.description)}</div>` : ''}
+          </div>
+          ${it.price != null ? `<div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--or);flex-shrink:0">R${Number(it.price).toFixed(0)}</div>` : ''}
+        </div>`;
+      });
+    });
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div class="empty"><div class="empty-ico">🍽</div><div class="empty-title">Could not load menu</div></div>';
+  }
 }
 
 async function checkFollowing(userId) {
