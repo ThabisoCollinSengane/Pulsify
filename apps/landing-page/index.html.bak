@@ -2759,7 +2759,7 @@ function initMap() {
 }
 
 // Show/hide DOM markers around clusterMaxZoom (11).
-// Uses direct inline-style per marker — more reliable than CSS parent-class on mobile browsers.
+// Mapbox uses the custom element AS the marker (no wrapper), so style getElement() directly.
 let _markersVisible = null; // tracks last state to avoid redundant writes
 function _toggleMapMarkersForZoom() {
   if (!mapObj || !mapMarkers.length) return;
@@ -2767,11 +2767,11 @@ function _toggleMapMarkersForZoom() {
   if (_markersVisible === shouldShow) return; // no change
   _markersVisible = shouldShow;
   mapMarkers.forEach(m => {
-    const wrapper = m.getElement()?.parentElement; // .mapboxgl-marker wrapper
-    if (!wrapper) return;
-    wrapper.style.transition = 'opacity .4s ease';
-    wrapper.style.opacity    = shouldShow ? '1' : '0';
-    wrapper.style.pointerEvents = shouldShow ? '' : 'none';
+    const el = m.getElement(); // the .mp-dot element itself (Mapbox positions it directly)
+    if (!el) return;
+    el.style.transition = 'opacity .4s ease';
+    el.style.opacity    = shouldShow ? '1' : '0';
+    el.style.pointerEvents = shouldShow ? '' : 'none';
   });
 }
 
