@@ -4494,14 +4494,12 @@ async function _renderProfEvents(userId, el) {
 async function _renderProfMenu(userId, el) {
   try {
     const sb = getSB();
+    // Businesses key menu_items by businesses.id; organizers key them by their own user id.
     const { data: biz } = await sb.from('businesses').select('id,name').eq('owner_id', userId).maybeSingle();
-    if (!biz) {
-      el.innerHTML = '<div style="padding:28px;text-align:center;font-size:.78rem;color:var(--mu);border:1px dashed var(--border);border-radius:12px">No menu or pricelist added yet</div>';
-      return;
-    }
+    const menuKey = biz ? biz.id : userId;
     const { data: items } = await sb.from('menu_items')
       .select('id,name,description,price,category,image_url,is_available')
-      .eq('business_id', biz.id).eq('is_available', true)
+      .eq('business_id', menuKey).eq('is_available', true)
       .order('category').order('sort_order');
     if (!items || !items.length) {
       el.innerHTML = '<div style="padding:28px;text-align:center;font-size:.78rem;color:var(--mu);border:1px dashed var(--border);border-radius:12px">No items listed yet</div>';

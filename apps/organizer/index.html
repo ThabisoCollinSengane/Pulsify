@@ -169,6 +169,7 @@ select.inp option{background:#1C1140}
     <div class="tab" onclick="switchTab(this,'pane-scan')">📷 Scan</div>
     <div class="tab" onclick="switchTab(this,'pane-promote')">🚀 Promote</div>
     <div class="tab" onclick="switchTab(this,'pane-sqpromos')">🎁 Deals</div>
+    <div class="tab" onclick="switchTab(this,'pane-pricelist')">💲 Pricelist</div>
     <div class="tab" onclick="switchTab(this,'pane-settings')">⚙️ Settings</div>
   </div>
 
@@ -421,6 +422,34 @@ select.inp option{background:#1C1140}
 
     <div class="section-label" style="padding:16px 16px 6px">My Squad Deals</div>
     <div id="org-sqpromos-list" style="padding:0 16px 80px"></div>
+  </div>
+
+  <!-- ══ PRICELIST / MENU ══ -->
+  <div class="pane" id="pane-pricelist">
+    <div class="card">
+      <div class="card-body">
+        <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;margin-bottom:4px" id="org-menu-form-title">Add Pricelist / Menu Item</div>
+        <div style="font-size:.72rem;color:var(--mu);margin-bottom:12px;line-height:1.5">Showcase your services, packages or products. These appear under the 🍽 Menu tab on your public profile.</div>
+        <input type="hidden" id="org-mi-id"/>
+        <input class="inp" id="org-mi-name" placeholder="Item / service name *"/>
+        <input class="inp" id="org-mi-desc" placeholder="Short description (optional)"/>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <input class="inp" id="org-mi-price" type="number" min="0" placeholder="Price (R) *" style="margin-bottom:0"/>
+          <input class="inp" id="org-mi-cat" placeholder="Category" list="org-mi-cats" style="margin-bottom:0"/>
+        </div>
+        <datalist id="org-mi-cats">
+          <option value="Packages"></option><option value="Services"></option>
+          <option value="Tickets"></option><option value="Catering"></option>
+          <option value="Drinks"></option><option value="General"></option>
+        </datalist>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn-sec" style="flex:1" id="org-mi-cancel" onclick="resetOrgMenuForm()" >Clear</button>
+          <button class="btn-primary" style="flex:2" id="org-mi-save" onclick="submitOrgMenuItem()">Add Item ✅</button>
+        </div>
+      </div>
+    </div>
+    <div class="section-label" style="padding:6px 16px">My Pricelist</div>
+    <div id="org-menu-list" style="padding:0 0 80px"><div class="empty">Loading…</div></div>
   </div>
 
   <div class="pane" id="pane-settings">
@@ -1492,6 +1521,7 @@ function switchTab(btn, paneId, _noPush) {
   if (paneId === 'pane-event') loadMyEvents();
   if (paneId === 'pane-promote') { loadOrgPromoEvents(); loadMyOrgPromos(); }
   if (paneId === 'pane-sqpromos') loadMyOrgSquadPromos();
+  if (paneId === 'pane-pricelist') loadOrgMenu();
   if (paneId === 'pane-discover') loadDiscoverEvents();
   if (paneId === 'pane-feed') loadOrgFeed();
   if (paneId === 'pane-scan') {
@@ -2032,6 +2062,99 @@ async function deleteEvent(evId, btn) {
   const n = parseInt(document.getElementById('stat-events').textContent||0)-1;
   document.getElementById('stat-events').textContent = Math.max(0,n);
   toast('Event deleted', 'ok');
+}
+
+// ── PRICELIST / MENU ─────────────────────────────────────────
+// Organizers have no businesses row, so menu_items are keyed by their user id.
+let _orgMenu = [];
+async function loadOrgMenu() {
+  const el = document.getElementById('org-menu-list');
+  if (!currentUser) { el.innerHTML = '<div class="empty">Sign in to manage your pricelist.</div>'; return; }
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  const { data: items, error } = await sb.from('menu_items')
+    .select('id,name,description,price,category,is_available')
+    .eq('business_id', currentUser.id).order('sort_order').order('created_at');
+  if (error) { el.innerHTML = '<div class="empty">Could not load pricelist.</div>'; return; }
+  _orgMenu = items || [];
+  if (!_orgMenu.length) { el.innerHTML = '<div class="empty" style="padding:24px 16px">No items yet. Add your first service or package above. 💲</div>'; return; }
+  const cats = [...new Set(_orgMenu.map(i => i.category || 'General'))];
+  el.innerHTML = cats.map(cat =>
+    `<div class="section-label" style="padding:10px 16px 4px">${x(cat)}</div>` +
+    _orgMenu.filter(i => (i.category || 'General') === cat).map(it => `
+      <div class="menu-item-card" id="org-mi-row-${x(it.id)}" style="display:flex;align-items:center;gap:12px;background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin:0 14px 10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Syne',sans-serif;font-size:.86rem;font-weight:700;${!it.is_available?'opacity:.5':''}">${x(it.name)}</div>
+          ${it.description ? `<div style="font-size:.72rem;color:var(--mu);margin-top:2px;line-height:1.4">${x(it.description)}</div>` : ''}
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--or);margin-top:2px">R${Number(it.price||0).toFixed(0)}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+          <button class="btn-sec" style="padding:5px 12px;font-size:.72rem" onclick="editOrgMenuItem('${x(it.id)}')">Edit</button>
+          <button class="del-btn" style="background:none;border:1px solid var(--border2);border-radius:50px;color:var(--mu);padding:5px 12px;font-size:.72rem;font-weight:700;cursor:pointer" onclick="deleteOrgMenuItem('${x(it.id)}',this)">Delete</button>
+        </div>
+      </div>`).join('')
+  ).join('');
+}
+
+function resetOrgMenuForm() {
+  document.getElementById('org-mi-id').value = '';
+  document.getElementById('org-mi-name').value = '';
+  document.getElementById('org-mi-desc').value = '';
+  document.getElementById('org-mi-price').value = '';
+  document.getElementById('org-mi-cat').value = '';
+  document.getElementById('org-menu-form-title').textContent = 'Add Pricelist / Menu Item';
+  document.getElementById('org-mi-save').textContent = 'Add Item ✅';
+}
+
+function editOrgMenuItem(id) {
+  const it = _orgMenu.find(m => m.id === id);
+  if (!it) return;
+  document.getElementById('org-mi-id').value = it.id;
+  document.getElementById('org-mi-name').value = it.name || '';
+  document.getElementById('org-mi-desc').value = it.description || '';
+  document.getElementById('org-mi-price').value = it.price ?? '';
+  document.getElementById('org-mi-cat').value = it.category || '';
+  document.getElementById('org-menu-form-title').textContent = 'Edit Item';
+  document.getElementById('org-mi-save').textContent = 'Save Changes ✅';
+  document.getElementById('pane-pricelist').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function submitOrgMenuItem() {
+  if (!currentUser) { toast('Please sign in first', 'err'); return; }
+  const id    = document.getElementById('org-mi-id').value;
+  const name  = document.getElementById('org-mi-name').value.trim();
+  const desc  = document.getElementById('org-mi-desc').value.trim();
+  const price = parseFloat(document.getElementById('org-mi-price').value);
+  const cat   = document.getElementById('org-mi-cat').value.trim() || 'General';
+  if (!name) { toast('Enter an item name', 'err'); return; }
+  if (isNaN(price) || price < 0) { toast('Enter a valid price', 'err'); return; }
+  const btn = document.getElementById('org-mi-save');
+  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Saving…';
+  const row = { business_id: currentUser.id, name, description: desc || null, price, category: cat, is_available: true };
+  let error;
+  if (id) ({ error } = await sb.from('menu_items').update(row).eq('id', id).eq('business_id', currentUser.id));
+  else    ({ error } = await sb.from('menu_items').insert(row));
+  btn.disabled = false; btn.textContent = orig;
+  if (error) { toast('Save failed — ' + error.message, 'err'); return; }
+  toast(id ? 'Item updated' : 'Item added', 'ok');
+  resetOrgMenuForm();
+  loadOrgMenu();
+}
+
+async function deleteOrgMenuItem(id, btn) {
+  if (btn.dataset.confirm !== '1') {
+    btn.dataset.confirm = '1';
+    btn.textContent = 'Sure?';
+    btn.style.cssText = 'background:#FF2D78;color:#fff;border:none;border-radius:50px;padding:5px 12px;font-size:.72rem;font-weight:700;cursor:pointer';
+    setTimeout(() => { if (btn.dataset.confirm === '1') { btn.dataset.confirm = ''; btn.textContent = 'Delete'; btn.style.cssText = 'background:none;border:1px solid var(--border2);border-radius:50px;color:var(--mu);padding:5px 12px;font-size:.72rem;font-weight:700;cursor:pointer'; } }, 4000);
+    return;
+  }
+  btn.textContent = '…';
+  const { error } = await sb.from('menu_items').delete().eq('id', id).eq('business_id', currentUser.id);
+  if (error) { toast('Delete failed', 'err'); btn.textContent = 'Delete'; return; }
+  document.getElementById('org-mi-row-' + id)?.remove();
+  _orgMenu = _orgMenu.filter(m => m.id !== id);
+  toast('Item deleted', 'ok');
+  if (!_orgMenu.length) loadOrgMenu();
 }
 
 // ── SOCIAL NOTIFICATIONS ─────────────────────────────────────

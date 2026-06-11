@@ -385,14 +385,12 @@ async function renderMenu(userId) {
   const el = document.getElementById('activity-list');
   el.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Loading…</div></div>';
   try {
+    // Businesses key menu_items by businesses.id; organizers key them by their own user id.
     const { data: biz } = await sb.from('businesses').select('id,name').eq('owner_id', userId).maybeSingle();
-    if (!biz) {
-      el.innerHTML = '<div class="empty"><div class="empty-ico">🍽</div><div class="empty-title">No menu or pricelist yet</div><div style="font-size:.74rem;color:var(--mu);margin-top:6px">This account hasn\'t added a menu or pricelist.</div></div>';
-      return;
-    }
+    const menuKey = biz ? biz.id : userId;
     const { data: items } = await sb.from('menu_items')
       .select('id,name,description,price,category,image_url,is_available')
-      .eq('business_id', biz.id).eq('is_available', true)
+      .eq('business_id', menuKey).eq('is_available', true)
       .order('category').order('sort_order');
     if (!items?.length) {
       el.innerHTML = '<div class="empty"><div class="empty-ico">🍽</div><div class="empty-title">No items listed yet</div></div>';
