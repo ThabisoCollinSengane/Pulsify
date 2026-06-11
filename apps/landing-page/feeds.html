@@ -53,7 +53,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .org-pill{font-size:.54rem;background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.28);color:var(--or);padding:2px 7px;border-radius:50px;font-weight:700}
 .follow-btn{margin-left:auto;padding:5px 13px;border-radius:50px;border:1px solid var(--border2);background:transparent;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer;transition:all .2s;flex-shrink:0;-webkit-tap-highlight-color:transparent}
 .follow-btn.on{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.08)}
-.fb{width:100%;max-height:420px;object-fit:cover;display:block}
+.fb{width:100%;aspect-ratio:4/5;object-fit:cover;display:block;background:var(--surf2)}
 .fd{padding:10px 14px 4px}
 .cap{font-size:.84rem;line-height:1.6;color:var(--mu2)}
 .cap-ev{font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;color:var(--or);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
@@ -523,7 +523,7 @@ function buildCard(post) {
       if (!urls.length) return '';
       if (urls.length === 1) return '<img class="fb" src="' + x(urls[0]) + '" loading="lazy" onerror="this.remove()"/>';
       // Multiple photos — horizontal scroll gallery
-      return '<div style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:#000">' + urls.map(u => '<img src="' + x(u) + '" loading="lazy" onerror="this.remove()" style="width:100%;height:auto;max-height:420px;object-fit:cover;flex:0 0 100%;scroll-snap-align:start;display:block"/>').join('') + '</div>';
+      return '<div style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:#000">' + urls.map(u => '<img src="' + x(u) + '" loading="lazy" onerror="this.remove()" style="width:100%;aspect-ratio:4/5;object-fit:cover;flex:0 0 100%;scroll-snap-align:start;display:block"/>').join('') + '</div>';
     })() +
     (cap ? '<div class="fd"><div class="cap" id="cap-'+x(post.id)+'">'+x(shortCap)+(cap.length>220?' <span class="cap-more" onclick="expandCap(\u0027'+x(post.id)+'\u0027)">more</span>':'')+'</div></div>' : '') +
     '<div class="fac">' +
