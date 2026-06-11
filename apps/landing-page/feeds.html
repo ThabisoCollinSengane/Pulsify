@@ -1034,6 +1034,7 @@ async function submitReportPost() {
   const b = document.getElementById('rp-submit');
   b.disabled = true; b.textContent = 'Sending…';
   try {
+    const sb = getSB();
     const { data: { session } } = await sb.auth.getSession();
     const headers = { 'Content-Type': 'application/json' };
     if (session) headers['Authorization'] = 'Bearer ' + session.access_token;

@@ -213,8 +213,8 @@ select.inp option{background:#1C1140}
         </div>
         <div style="height:10px"></div>
         <input class="inp" id="ev-venue" placeholder="Venue name *"/>
-        <input class="inp" id="ev-city" list="sa-cities" placeholder="City * — type your town or city"/>
-        <datalist id="sa-cities"></datalist>
+        <select class="inp" id="ev-city-sel" onchange="onEvCitySel()"></select>
+        <input class="inp" id="ev-city" placeholder="Type your town / city *" style="display:none"/>
         <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Ticket Types</div>
         <div id="ev-tiers-list">
           <div class="ev-tier-row" style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center">
@@ -608,13 +608,14 @@ select.inp option{background:#1C1140}
           <button type="button" id="ovf-capture-btn" class="btn-primary" style="flex:1;padding:9px;font-size:.74rem;display:none" onclick="captureOvfFace()">✔ Capture</button>
           <button type="button" id="ovf-retake-btn" class="btn-sec" style="flex:1;padding:9px;font-size:.74rem;display:none" onclick="retakeOvfFace()">🔄 Retake</button>
         </div>
+        <input type="file" id="ovf-face-file" accept="image/*" capture="user" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none" onchange="onOvfFaceFile(event)"/>
       </div>
       <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">SA ID Document (photo or scan) *</div>
       <div style="margin-bottom:14px">
-        <label style="display:block;border:2px dashed var(--border);border-radius:12px;padding:16px;text-align:center;cursor:pointer;font-size:.76rem;color:var(--mu)">
+        <div onclick="document.getElementById('ovf-id-doc').click()" style="border:2px dashed var(--border);border-radius:12px;padding:16px;text-align:center;cursor:pointer;font-size:.76rem;color:var(--mu)">
           <span id="ovf-id-doc-label">📄 Tap to upload ID document (JPG, PNG or PDF)</span>
-          <input type="file" id="ovf-id-doc" accept="image/*,application/pdf" style="display:none" onchange="previewOvfIdDoc(event)"/>
-        </label>
+        </div>
+        <input type="file" id="ovf-id-doc" accept="image/*,application/pdf" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none" onchange="previewOvfIdDoc(event)"/>
         <img id="ovf-id-doc-preview" style="display:none;width:100%;border-radius:10px;margin-top:8px;max-height:160px;object-fit:contain"/>
       </div>
       <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">About Your Events *</div>
@@ -994,6 +995,11 @@ let _ovfIdDocFile    = null;
 let _ovfStream       = null;
 
 async function startOvfCam() {
+  // Many Android OEM browsers (Huawei/EMUI) block or lack getUserMedia — fall back to native camera capture.
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    document.getElementById('ovf-face-file').click();
+    return;
+  }
   try {
     _ovfStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
     const vid = document.getElementById('ovf-video');
@@ -1003,7 +1009,23 @@ async function startOvfCam() {
     document.getElementById('ovf-preview').style.display = 'none';
     document.getElementById('ovf-capture-btn').style.display = 'block';
     document.getElementById('ovf-retake-btn').style.display = 'none';
-  } catch(e) { toast('Camera not available: ' + e.message, 'err'); }
+  } catch(e) {
+    // Permission denied or unsupported — use the native camera picker instead.
+    document.getElementById('ovf-face-file').click();
+  }
+}
+
+function onOvfFaceFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  _ovfFaceScanBlob = file;
+  const prev = document.getElementById('ovf-preview');
+  prev.src = URL.createObjectURL(file);
+  prev.style.display = 'block';
+  document.getElementById('ovf-video').style.display = 'none';
+  document.getElementById('ovf-cam-placeholder').style.display = 'none';
+  document.getElementById('ovf-capture-btn').style.display = 'none';
+  document.getElementById('ovf-retake-btn').style.display = 'block';
 }
 
 function captureOvfFace() {
@@ -1206,7 +1228,7 @@ async function submitEventLocationRequest() {
 function previewEventForm() {
   const name  = document.getElementById('ev-name').value.trim();
   const venue = document.getElementById('ev-venue').value.trim();
-  const city  = document.getElementById('ev-city').value.trim();
+  const city  = readEvCity();
   const date  = document.getElementById('ev-date').value;
   if (!name)  { toast('Enter an event name first', 'err'); return; }
   if (!venue) { toast('Enter a venue name first', 'err'); return; }
@@ -1776,7 +1798,7 @@ async function submitEvent() {
   const date  = document.getElementById('ev-date').value;
   const time  = readOrgEvTime();
   const venue = document.getElementById('ev-venue').value.trim();
-  const city  = document.getElementById('ev-city').value.trim();
+  const city  = readEvCity();
   const genre = readEvGenres();
   const desc  = document.getElementById('ev-desc').value.trim();
   const evImgFile = document.getElementById('ev-img-file')?.files[0];
@@ -1880,7 +1902,7 @@ async function submitEvent() {
     document.getElementById('ev-name').value = '';
     document.getElementById('ev-date').value = '';
     document.getElementById('ev-venue').value = '';
-    document.getElementById('ev-city').value = '';
+    resetEvCity();
     resetEvGenres();
     resetOrgEvTime();
     document.getElementById('ev-desc').value = '';
@@ -2621,9 +2643,32 @@ function cityToProvince(city) {
   return null;
 }
 const SA_CITIES = [...new Set(Object.values(PROV_CITY).flat())].sort();
+// Native <select> city picker — reliable on all Android devices (datalist is flaky on Huawei/EMUI).
+const PROV_NAMES = { KZN:'KwaZulu-Natal', GP:'Gauteng', WC:'Western Cape', EC:'Eastern Cape', MP:'Mpumalanga', LP:'Limpopo', NW:'North West', FS:'Free State', NC:'Northern Cape' };
 function fillCityDatalist() {
-  const dl = document.getElementById('sa-cities');
-  if (dl && !dl.children.length) dl.innerHTML = SA_CITIES.map(c => `<option value="${c}"></option>`).join('');
+  const sel = document.getElementById('ev-city-sel');
+  if (!sel || sel.options.length) return;
+  let html = '<option value="">Select city / town *</option>';
+  for (const [prov, cities] of Object.entries(PROV_CITY)) {
+    html += `<optgroup label="${PROV_NAMES[prov] || prov}">` + cities.map(c => `<option value="${c}">${c}</option>`).join('') + '</optgroup>';
+  }
+  html += '<option value="__other">✏️ Other — type my own…</option>';
+  sel.innerHTML = html;
+}
+function onEvCitySel() {
+  const sel = document.getElementById('ev-city-sel');
+  const inp = document.getElementById('ev-city');
+  if (sel.value === '__other') { inp.style.display = 'block'; inp.value = ''; inp.focus(); }
+  else { inp.style.display = 'none'; inp.value = sel.value; }
+}
+function readEvCity() {
+  const sel = document.getElementById('ev-city-sel');
+  if (sel && sel.value && sel.value !== '__other') return sel.value;
+  return (document.getElementById('ev-city').value || '').trim();
+}
+function resetEvCity() {
+  const sel = document.getElementById('ev-city-sel'); if (sel) sel.selectedIndex = 0;
+  const inp = document.getElementById('ev-city'); if (inp) { inp.style.display = 'none'; inp.value = ''; }
 }
 
 // ── Multi-genre chips + AM/PM time picker (event create form) ──
