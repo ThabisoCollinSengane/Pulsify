@@ -636,10 +636,19 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.06em;color:#fff;flex:1;text-shadow:0 2px 8px rgba(0,0,0,.6)">📍 PULSEFY MAP</div>
     <div style="display:flex;align-items:center;gap:5px;background:rgba(5,8,15,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);border-radius:50px;padding:4px 12px;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:800;color:#fff;letter-spacing:.04em"><b id="map-cnt" style="color:var(--li)">0</b>&nbsp;spots</div>
     <button id="map-loc-btn" onclick="goToMyLocation()" title="My Location" style="width:36px;height:36px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(0,229,255,.4);color:var(--cy);font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">📍</button>
+    <button id="map-style-btn" onclick="toggleMapStyle()" title="Toggle map style" style="width:36px;height:36px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">🌗</button>
     <button onclick="snapMapBack()" title="Reset view" style="width:36px;height:36px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">⌂</button>
   </div>
   <!-- Filter chips — floats over map, below header -->
   <div style="position:absolute;top:calc(var(--th) + var(--tk) + 56px);left:0;right:0;z-index:49;display:flex;gap:6px;padding:8px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;background:linear-gradient(180deg,rgba(5,8,15,.5) 0%,rgba(5,8,15,0) 100%);backdrop-filter:blur(4px)">
+    <select id="map-city-jump" onchange="jumpToCity(this.value)" title="Jump to city" style="flex-shrink:0;background:rgba(5,8,15,.7);border:1px solid rgba(255,255,255,.18);border-radius:50px;padding:0 12px;height:32px;color:#fff;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;backdrop-filter:blur(8px);-webkit-appearance:none;appearance:none">
+      <option value="all">📍 All SA</option>
+      <option value="durban">Durban</option>
+      <option value="johannesburg">Joburg</option>
+      <option value="capetown">Cape Town</option>
+      <option value="pretoria">Pretoria</option>
+      <option value="gqeberha">Gqeberha</option>
+    </select>
     <button class="mcb active" onclick="setMapFilter('all',this)">✦ All</button>
     <button class="mcb" onclick="setMapFilter('event',this)">🎟 Events</button>
     <button class="mcb" onclick="setMapFilter('business',this)">🏪 Businesses</button>
@@ -1271,6 +1280,7 @@ let mapInited      = false;
 let mapObj         = null;
 let mapMarkers     = [];
 let _mapFitDone    = false; // true after first fit; reset when user explicitly opens map tab
+let _pendingCityJump = null; // city key to fly to once the map finishes its first load
 let selTier        = null;
 let selQty         = 1;
 let activeEvId     = null;
@@ -1475,15 +1485,21 @@ function showTab(name, _noPush) {
   if (name === 'tickets') renderBookings();
   if (name === 'discover') loadDiscover();
   if (name === 'map') {
-    _mapFitDone = false; // always re-fit to current markers when user opens map tab
+    // If the feed is filtered to a city/province, open the map focused there; else fit to all markers.
+    const cityKey = _cityKeyFromName(feedCity !== 'all' ? feedCity : feedProvince);
+    _mapFitDone = !!cityKey; // a city jump replaces the fit-all for this open
+    const citySel = document.getElementById('map-city-jump');
+    if (citySel) citySel.value = cityKey || 'all';
     if (!mapInited) {
       // First open — show splash, init map, ensure business pins
       showMapSplash();
+      _pendingCityJump = cityKey; // applied once the map's load event fires
       requestAnimationFrame(() => { initMap(); ensureBizForMap(); });
     } else if (mapObj) {
       setTimeout(() => mapObj.resize(), 50);
       // Refresh markers in case bizForMap loaded after first init
       if (typeof placeMapMarkers === 'function') placeMapMarkers();
+      if (cityKey) jumpToCity(cityKey);
     }
   }
 }
@@ -2602,6 +2618,74 @@ function initMap() {
     mapObj.resize();
     setTimeout(() => mapObj.resize(), 200);
 
+    _addMapSourcesAndLayers();
+
+    // Layer + map event handlers — attached once here; they persist across setStyle().
+    mapObj.on('click', 'clusters-anim', (e) => {
+      const features = mapObj.queryRenderedFeatures(e.point, { layers: ['clusters-anim'] });
+      if (!features.length) return;
+      const clusterId = features[0].properties.cluster_id;
+      const src = mapObj.getSource('pulsify-spots'); if (!src) return;
+      src.getClusterExpansionZoom(clusterId, (err, zoom) => {
+        if (err) return;
+        mapObj.easeTo({ center: features[0].geometry.coordinates, zoom });
+      });
+    });
+    mapObj.on('mouseenter', 'clusters-anim', () => { mapObj.getCanvas().style.cursor = 'pointer'; });
+    mapObj.on('mouseleave', 'clusters-anim', () => { mapObj.getCanvas().style.cursor = ''; });
+    mapObj.on('zoomend', _toggleMapMarkersForZoom);
+
+    placeMapMarkers();
+    if (_pendingCityJump) { jumpToCity(_pendingCityJump); _pendingCityJump = null; }
+    setTimeout(_toggleMapMarkersForZoom, 250);
+    hideMapSplash();
+  });
+
+  // If the map fails to load (bad token, network, domain restriction) — show error instead of infinite splash
+  mapObj.on('error', (e) => {
+    const errMsg = e.error?.message || e.error?.toString() || 'Unknown error';
+    const errStatus = e.error?.status;
+    // Ignore non-fatal layer/source manipulation errors — these come from
+    // removeLayer/addLayer calls on layers that may not exist yet.
+    if (/does not exist in the map'?s style|already.*exist|no.*layer|no.*source/i.test(errMsg)) return;
+    console.error('[Map error]', errStatus, errMsg, e);
+    let reason;
+    if (errStatus === 401 || /401|unauthorized/i.test(errMsg)) reason = 'Mapbox token is invalid or expired. Get a new one at mapbox.com/account/access-tokens';
+    else if (errStatus === 403 || /403|forbidden/i.test(errMsg)) reason = 'Mapbox token is restricted to a different domain. Add ' + location.hostname + ' at mapbox.com/account/access-tokens';
+    else if (/load.*style|style.*load/i.test(errMsg)) reason = 'Map style failed to load. The Mapbox token may be invalid.';
+    else reason = 'Map error: ' + errMsg.slice(0, 120);
+    _showMapErr(reason);
+  });
+
+  // Fallback: if load event hasn't fired within 12s, assume failure
+  const _mapTimeout = setTimeout(() => {
+    if (!mapObj.loaded()) {
+      _showMapErr('Map timed out. Could not load tiles — check your internet connection.');
+    }
+  }, 12000);
+  mapObj.once('load', () => clearTimeout(_mapTimeout));
+
+  // Close panel on map tap — but NOT if a marker was just tapped
+  let _markerJustTapped = false;
+  mapObj.on('click', () => { if (_markerJustTapped) { _markerJustTapped = false; return; } closeMapPanel(); });
+  window._mapMarkerTapped = () => { _markerJustTapped = true; };
+
+  mapObj.scrollZoom.setWheelZoomRate(1/200);
+}
+
+// Hide DOM markers below the cluster cutoff so only cluster bubbles/heatmap show at far-out zoom
+function _toggleMapMarkersForZoom() {
+  if (!mapObj) return;
+  const c = mapObj.getContainer();
+  if (mapObj.getZoom() < 11) c.classList.add('mp-low-zoom'); else c.classList.remove('mp-low-zoom');
+}
+
+// Adds fog + cluster source + heatmap + animated cluster layers.
+// Called on initial load AND after every setStyle() (which wipes sources/layers/images).
+function _addMapSourcesAndLayers() {
+    if (!mapObj) return;
+    if (mapObj.getSource('pulsify-spots')) return; // already set up for current style
+
     // Atmosphere/fog — gives the globe its glowing-edge "circle" look
     mapObj.setFog({
       color: 'rgb(12, 16, 31)',
@@ -2709,7 +2793,7 @@ function initMap() {
         return true;
       }
     };
-    mapObj.addImage('cluster-anim', _clusterImg);
+    if (!mapObj.hasImage('cluster-anim')) mapObj.addImage('cluster-anim', _clusterImg);
 
     // Layer 1: animated image (pulsing rings + box background)
     mapObj.addLayer({
@@ -2743,60 +2827,52 @@ function initMap() {
         'text-halo-width': 1,
       },
     });
-    mapObj.on('click', 'clusters-anim', (e) => {
-      const features = mapObj.queryRenderedFeatures(e.point, { layers: ['clusters-anim'] });
-      if (!features.length) return;
-      const clusterId = features[0].properties.cluster_id;
-      mapObj.getSource('pulsify-spots').getClusterExpansionZoom(clusterId, (err, zoom) => {
-        if (err) return;
-        mapObj.easeTo({ center: features[0].geometry.coordinates, zoom });
-      });
-    });
-    mapObj.on('mouseenter', 'clusters-anim', () => { mapObj.getCanvas().style.cursor = 'pointer'; });
-    mapObj.on('mouseleave', 'clusters-anim', () => { mapObj.getCanvas().style.cursor = ''; });
+}
 
-    // Hide DOM markers below the cluster cutoff so only cluster bubbles/heatmap show at far-out zoom
-    const _toggleMarkers = () => {
-      const c = mapObj.getContainer();
-      if (mapObj.getZoom() < 11) c.classList.add('mp-low-zoom'); else c.classList.remove('mp-low-zoom');
-    };
-    mapObj.on('zoomend', _toggleMarkers);
+// ── Map city quick-jump ──────────────────────────────────────
+const _MAP_CITIES = {
+  durban:       { center: [31.0218, -29.8587], zoom: 11   },
+  johannesburg: { center: [28.0473, -26.2041], zoom: 10.5 },
+  capetown:     { center: [18.4241, -33.9249], zoom: 11   },
+  pretoria:     { center: [28.1881, -25.7479], zoom: 11   },
+  gqeberha:     { center: [25.6022, -33.9608], zoom: 11   },
+};
+// Map a free-text city name OR province code (from the feed filter) to a jump key
+function _cityKeyFromName(name) {
+  const n = (name || '').toLowerCase().trim();
+  if (!n || n === 'all') return null;
+  if (/durban|kzn|kwazulu|umhlanga|umlazi|pinetown/.test(n))            return 'durban';
+  if (/pretoria|tshwane/.test(n))                                        return 'pretoria';
+  if (/johannesburg|joburg|jhb|soweto|sandton|midrand|\bgp\b|gauteng/.test(n)) return 'johannesburg';
+  if (/cape town|cpt|kaapstad|\bwc\b|western cape/.test(n))             return 'capetown';
+  if (/gqeberha|port elizabeth|\bpe\b|\bec\b|eastern cape/.test(n))     return 'gqeberha';
+  return null;
+}
+function jumpToCity(key) {
+  if (!mapObj) return;
+  if (!key || key === 'all') { _mapFitDone = false; placeMapMarkers(); return; } // re-fit to all markers
+  const c = _MAP_CITIES[key]; if (!c) return;
+  _mapFitDone = true; // a manual city jump counts as the fit for this map-open
+  mapObj.flyTo({ center: c.center, zoom: c.zoom, bearing: 0, pitch: 0, duration: 1100, essential: true });
+}
 
+// ── Map style toggle (satellite ⇄ dark vector) ───────────────
+let _mapStyleDark = false;
+function toggleMapStyle() {
+  if (!mapObj) return;
+  _mapStyleDark = !_mapStyleDark;
+  const style = _mapStyleDark
+    ? 'mapbox://styles/mapbox/dark-v11'
+    : 'mapbox://styles/mapbox/satellite-streets-v12';
+  // setStyle wipes custom sources/layers/images — re-add them once the new style loads.
+  mapObj.once('style.load', () => {
+    _addMapSourcesAndLayers();
     placeMapMarkers();
-    setTimeout(_toggleMarkers, 250);
-    hideMapSplash();
+    _toggleMapMarkersForZoom();
   });
-
-  // If the map fails to load (bad token, network, domain restriction) — show error instead of infinite splash
-  mapObj.on('error', (e) => {
-    const errMsg = e.error?.message || e.error?.toString() || 'Unknown error';
-    const errStatus = e.error?.status;
-    // Ignore non-fatal layer/source manipulation errors — these come from
-    // removeLayer/addLayer calls on layers that may not exist yet.
-    if (/does not exist in the map'?s style|already.*exist|no.*layer|no.*source/i.test(errMsg)) return;
-    console.error('[Map error]', errStatus, errMsg, e);
-    let reason;
-    if (errStatus === 401 || /401|unauthorized/i.test(errMsg)) reason = 'Mapbox token is invalid or expired. Get a new one at mapbox.com/account/access-tokens';
-    else if (errStatus === 403 || /403|forbidden/i.test(errMsg)) reason = 'Mapbox token is restricted to a different domain. Add ' + location.hostname + ' at mapbox.com/account/access-tokens';
-    else if (/load.*style|style.*load/i.test(errMsg)) reason = 'Map style failed to load. The Mapbox token may be invalid.';
-    else reason = 'Map error: ' + errMsg.slice(0, 120);
-    _showMapErr(reason);
-  });
-
-  // Fallback: if load event hasn't fired within 12s, assume failure
-  const _mapTimeout = setTimeout(() => {
-    if (!mapObj.loaded()) {
-      _showMapErr('Map timed out. Could not load tiles — check your internet connection.');
-    }
-  }, 12000);
-  mapObj.once('load', () => clearTimeout(_mapTimeout));
-
-  // Close panel on map tap — but NOT if a marker was just tapped
-  let _markerJustTapped = false;
-  mapObj.on('click', () => { if (_markerJustTapped) { _markerJustTapped = false; return; } closeMapPanel(); });
-  window._mapMarkerTapped = () => { _markerJustTapped = true; };
-
-  mapObj.scrollZoom.setWheelZoomRate(1/200);
+  mapObj.setStyle(style);
+  const btn = document.getElementById('map-style-btn');
+  if (btn) { btn.textContent = _mapStyleDark ? '🛰' : '🌗'; btn.title = _mapStyleDark ? 'Satellite view' : 'Dark view'; }
 }
 
 /* SVG icon set for map markers */
@@ -2862,9 +2938,18 @@ function placeMapMarkers() {
   else if (catF === 'business') evs = [];
   else if (catF !== 'all') { evs = []; bzs = bzs.filter(b => (b.category||'').toLowerCase().includes(catF)); }
 
+  // Pre-pass: count how many markers share each exact coordinate (e.g. 4 concerts at one stadium).
+  // Stacked markers get fanned out in a small ring so they're all individually tappable when zoomed in.
+  const _coordCounts = {}, _coordSeen = {};
   [...evs.map(e=>({item:e,type:'event'})), ...bzs.map(b=>({item:b,type:'biz'}))].forEach(({item,type}) => {
-    const lat = parseFloat(type==='event' ? item.venue_lat : item.lat);
-    const lon = parseFloat(type==='event' ? item.venue_lon : item.lon);
+    const la = parseFloat(type==='event' ? item.venue_lat : item.lat);
+    const lo = parseFloat(type==='event' ? item.venue_lon : item.lon);
+    if (!isNaN(la) && !isNaN(lo)) { const k = la.toFixed(5)+','+lo.toFixed(5); _coordCounts[k] = (_coordCounts[k]||0) + 1; }
+  });
+
+  [...evs.map(e=>({item:e,type:'event'})), ...bzs.map(b=>({item:b,type:'biz'}))].forEach(({item,type}) => {
+    let lat = parseFloat(type==='event' ? item.venue_lat : item.lat);
+    let lon = parseFloat(type==='event' ? item.venue_lon : item.lon);
     
     // Strict validation for South Africa coordinates
     if (!lat || !lon || isNaN(lat) || isNaN(lon)) { 
@@ -2972,6 +3057,16 @@ function placeMapMarkers() {
     `;
     label.textContent = (item.name||'').substring(0, 18);
     el.appendChild(label);
+
+    // Fan out markers that share an exact coordinate so each is tappable (e.g. multiple events at one stadium)
+    const _ck = lat.toFixed(5)+','+lon.toFixed(5);
+    if (_coordCounts[_ck] > 1) {
+      const n = _coordCounts[_ck];
+      const i = (_coordSeen[_ck] = (_coordSeen[_ck] || 0)); _coordSeen[_ck]++;
+      const R = 0.0004; // ~40m radius — visible once zoomed past clustering, negligible at city scale
+      lon += R * Math.cos((2 * Math.PI * i) / n);
+      lat += R * Math.sin((2 * Math.PI * i) / n);
+    }
 
     mapMarkers.push(new mapboxgl.Marker({element: el, anchor: 'center'}).setLngLat([lon, lat]).addTo(mapObj));
   });

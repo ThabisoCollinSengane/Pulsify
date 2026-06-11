@@ -163,3 +163,12 @@ Map uses `projection:'globe'` with `minZoom:1.5`, `dragRotate/pitch/touchPitch` 
 
 ### Database coordinates
 Inspected `cjzewfvtdayjgjdpdmln` — coordinates were clean (no positive lats, no zeros, 1 null). A one-time geocoding migration (`_archive/patches/geocode_migration.py`, Nominatim) and SA-bounds validation triggers exist for future bad data. SA bounds: **lat -35 to -22, lon 16 to 33** (Hard rule #5).
+
+### `ticket_tiers.is_free` / `sold_out` are GENERATED columns — never insert them
+`is_free` is `(price = 0)` and `sold_out` is `(capacity IS NOT NULL AND sold >= capacity)`, both `GENERATED ALWAYS`. Inserting an explicit value raises Postgres `428C9: cannot insert a non-DEFAULT value into column`. Both the organizer and business dashboards used to insert `is_free` into `ticket_tiers` inside a `.catch(()=>{})`, so paid events were saved with **zero tiers** and the event detail panel fell through to "Contact the organiser" instead of showing the Paystack buy flow. **Fix:** insert only `event_id, name, price, sort_order`; surface (don't swallow) the error. The buy flow in `index.html` `openEv()` keys entirely off `ticket_tiers` rows existing.
+
+### Map quick-jump, style toggle, stacked-marker fan-out
+- **City jump** (`<select id="map-city-jump">` → `jumpToCity()`): flies to Durban/Joburg/Cape Town/Pretoria/Gqeberha; "All SA" resets `_mapFitDone=false` and re-fits to all markers. A manual jump sets `_mapFitDone=true` so the auto-fit doesn't fight it.
+- **Auto-jump on feed filter:** `showTab('map')` maps `feedCity`/`feedProvince` via `_cityKeyFromName()` and focuses the map there on open. First-open uses `_pendingCityJump` (applied in the `load` handler since init is async).
+- **Style toggle** (🌗 `toggleMapStyle()`): satellite-streets ⇄ dark-v11. `setStyle()` wipes custom sources/layers/images, so the cluster source + heatmap + animated cluster layers are extracted into `_addMapSourcesAndLayers()` and re-added on `once('style.load')`. Layer/map event handlers (click/hover/zoomend) are attached **once** in the `load` handler — they persist across `setStyle`, so don't re-attach them.
+- **Stacked markers:** events at one venue (e.g. 4 concerts at FNB Stadium) share exact coords. A pre-pass counts duplicates per coordinate; duplicates are fanned out on a ~40m ring so each is individually tappable when zoomed in (negligible offset at city scale, handled by clustering below z11).

@@ -2124,10 +2124,12 @@ async function submitEvent() {
       if (insErr) throw new Error(insErr.message);
 
       if (price > 0) {
-        await sb2.from('ticket_tiers').insert({
+        // NOTE: is_free and sold_out are GENERATED columns in ticket_tiers — never insert them.
+        const { error: tierErr } = await sb2.from('ticket_tiers').insert({
           event_id: eventId, name: 'General Admission',
-          price, is_free: false, sort_order: 0,
-        }).catch(() => {});
+          price, sort_order: 0,
+        });
+        if (tierErr) toast('Event saved, but ticket setup failed: ' + tierErr.message, 'err');
       }
       await fetch('/api/posts', {
         method: 'POST',

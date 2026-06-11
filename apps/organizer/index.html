@@ -1873,9 +1873,12 @@ async function submitEvent() {
     });
     if (error) throw new Error(error.message);
 
-    // Insert all ticket tiers
-    if (tiers.some(t => !t.is_free) || tiers.length > 0) {
-      await sb.from('ticket_tiers').insert(tiers.map(t => ({ event_id: eventId, ...t }))).catch(() => {});
+    // Insert all ticket tiers.
+    // NOTE: is_free and sold_out are GENERATED columns in ticket_tiers — never insert them.
+    if (tiers.length > 0) {
+      const tierRows = tiers.map(t => ({ event_id: eventId, name: t.name, price: t.price, sort_order: t.sort_order }));
+      const { error: tierErr } = await sb.from('ticket_tiers').insert(tierRows);
+      if (tierErr) toast('Event saved, but ticket tiers failed: ' + tierErr.message, 'err');
     }
 
     if (showOnMap) {
