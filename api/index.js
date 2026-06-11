@@ -172,7 +172,8 @@ module.exports = async (req, res) => {
       const page   = Math.max(1, parseInt(q.page  || '1'));
       const limit  = Math.min(50, parseInt(q.limit || '10'));
       const offset = (page - 1) * limit;
-      const city   = q.city   || '';
+      const city     = q.city     || '';
+      const province = q.province || '';
       const genre  = q.genre  || '';
       const search = q.search || '';
       const lat    = parseFloat(q.lat)       || null;
@@ -194,7 +195,8 @@ module.exports = async (req, res) => {
         .order('date_local',     { ascending: true })
         .range(offset, offset + limit - 1);
 
-      if (city && city !== 'all')  query = query.ilike('venue_city', `%${city}%`);
+      if (city && city !== 'all')           query = query.ilike('venue_city', `%${city}%`);
+      else if (province && province !== 'all') query = query.eq('venue_province', province);
       if (genre === 'free')        query = query.eq('is_free', true);
       else if (genre && genre !== 'all') query = query.ilike('genre', `%${genre}%`);
       if (search) query = query.textSearch('id', search, { type: 'websearch', config: 'english' });

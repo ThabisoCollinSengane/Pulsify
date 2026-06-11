@@ -1261,6 +1261,7 @@ let feedPage = 1;
 let feedTotalPages = 1;
 let feedGenre      = 'all';
 let feedCity       = 'all';
+let feedProvince   = 'all';
 let discCat        = 'all';
 let nearMeActive   = false;
 let nearMeRadius   = 5;
@@ -1289,15 +1290,42 @@ let eventsForMap   = [];
 let bizForMap      = [];
 
 const PROV_CITY = {
-  KZN: ['Durban','South Coast','Pietermaritzburg','Richards Bay','Ballito','Ladysmith'],
-  GP:  ['Johannesburg','Pretoria','Ekurhuleni','Soweto','Midrand','Sandton'],
-  WC:  ['Cape Town','Stellenbosch','Paarl','George','Knysna'],
-  EC:  ['Gqeberha','East London','Mthatha','Grahamstown'],
-  MP:  ['Mbombela','Witbank','Middelburg'],
-  LP:  ['Polokwane','Tzaneen','Louis Trichardt'],
-  NW:  ['Rustenburg','Mafikeng','Klerksdorp'],
-  FS:  ['Bloemfontein','Welkom','Bethlehem'],
-  NC:  ['Kimberley','Upington','Springbok'],
+  KZN: ['Durban','Umhlanga','Ballito','Tongaat','Stanger','KwaDukuza',
+        'Pietermaritzburg','Newcastle','Richards Bay','Empangeni',
+        'Ladysmith','Dundee','Mtubatuba','Hluhluwe','Eshowe',
+        'Amanzimtoti','Pinetown','Westville','Chatsworth','Umlazi',
+        'Margate','Port Shepstone','Scottburgh','Hibberdene','Mthwalume',
+        'Kokstad','Howick','Greytown','Ulundi','Vryheid','Nongoma'],
+  GP:  ['Johannesburg','Sandton','Randburg','Roodepoort','Soweto',
+        'Pretoria','Centurion','Midrand','Ekurhuleni','Germiston',
+        'Benoni','Boksburg','Springs','Brakpan','Krugersdorp',
+        'Alberton','Edenvale','Kempton Park','Tembisa','Mamelodi',
+        'Soshanguve','Atteridgeville','Vereeniging','Vanderbijlpark',
+        'Meyerton','Heidelberg'],
+  WC:  ['Cape Town','Bellville','Mitchells Plain','Khayelitsha','Wynberg',
+        'Stellenbosch','Paarl','Wellington','Franschhoek',
+        'George','Mossel Bay','Knysna','Plettenberg Bay','Oudtshoorn',
+        'Worcester','Robertson','Swellendam','Hermanus','Strand','Somerset West',
+        'Malmesbury','Langebaan','Saldanha','Ceres','Beaufort West'],
+  EC:  ['Gqeberha','East London','Mthatha','Grahamstown','Bhisho',
+        "King William's Town",'Queenstown','Aliwal North','Cradock',
+        'Port Alfred','Butterworth','Sterkspruit','Komani','Zwelitsha',
+        'Fort Beaufort','Uitenhage','Jeffreys Bay','Humansdorp','Graaff-Reinet'],
+  MP:  ['Mbombela','Nelspruit','eMalahleni','Witbank','Middelburg','Secunda',
+        'Standerton','Ermelo','Piet Retief','Barberton','Hazyview',
+        'White River','Malelane','Komatipoort','Lydenburg','Sabie'],
+  LP:  ['Polokwane','Tzaneen','Louis Trichardt','Thohoyandou','Musina',
+        'Mokopane','Lephalale','Bela-Bela','Phalaborwa','Hoedspruit',
+        'Giyani','Lebowakgomo','Burgersfort','Seshego','Turfloop'],
+  NW:  ['Rustenburg','Mahikeng','Klerksdorp','Potchefstroom','Brits',
+        'Lichtenburg','Vryburg','Zeerust','Coligny','Mmabatho',
+        'Hartbeespoort','Orkney','Stilfontein'],
+  FS:  ['Bloemfontein','Welkom','Bethlehem','Sasolburg','Kroonstad',
+        'Phuthaditjhaba','Virginia','Botshabelo','Theunissen',
+        'Parys','Ficksburg','Ladybrand','Brandfort','Harrismith'],
+  NC:  ['Kimberley','Upington','Springbok','De Aar','Kuruman',
+        'Postmasburg','Kathu','Colesberg','Calvinia','Douglas',
+        'Prieska','Port Nolloth','Carnarvon','Fraserburg'],
 };
 
 /* ── UTILS ── */
@@ -1591,7 +1619,8 @@ async function loadFeed(resetPage = false) {
   try {
     const limit = 10, offset = (feedPage - 1) * limit;
     const params = new URLSearchParams({ page: feedPage, limit, _t: Date.now() });
-    if (feedCity  && feedCity  !== 'all') params.set('city',  feedCity);
+    if (feedCity && feedCity !== 'all') params.set('city', feedCity);
+    else if (feedProvince && feedProvince !== 'all') params.set('province', feedProvince);
     if (feedGenre === 'free')             params.set('genre', 'free');
     else if (feedGenre && feedGenre !== 'all') params.set('genre', feedGenre);
     const _abort = new AbortController();
@@ -1890,10 +1919,12 @@ function onProvChange(v) {
   el.disabled = !v;
   document.getElementById('sel-area').disabled = true;
   feedCity = 'all';
+  feedProvince = v || 'all';
   loadFeed(true);
 }
 function onCityChange(v) {
   feedCity = v || 'all';
+  feedProvince = v ? feedProvince : 'all';
   loadFeed(true);
 }
 function handleSearch(val) {
