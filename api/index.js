@@ -210,6 +210,7 @@ module.exports = async (req, res) => {
       const { data, error, count } = await query;
       if (error) return res.status(400).json({ error: error.message });
 
+      res.setHeader('Cache-Control', 'public, max-age=20, stale-while-revalidate=60');
       return res.status(200).json({
         events: data || [],
         total:  count || 0,

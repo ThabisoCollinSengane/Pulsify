@@ -1656,7 +1656,7 @@ async function loadFeed(resetPage = false) {
     else if (feedGenre && feedGenre !== 'all') params.set('genre', feedGenre);
     const _abort = new AbortController();
     const _timer = setTimeout(() => _abort.abort(), 12000);
-    const resp = await fetch('/api/events?' + params, { cache: 'no-store', signal: _abort.signal });
+    const resp = await fetch('/api/events?' + params, { signal: _abort.signal });
     clearTimeout(_timer);
     if (myReq !== _feedReqId) return;
     if (!resp.ok) throw new Error('API ' + resp.status);
@@ -1820,15 +1820,17 @@ function buildCard(ev, idx) {
   else if (iF)              badge = '<span class="fbg bfr">FREE</span>';
   else                      badge = '<span class="fbg bsn">' + fdate(ev.date_local) + '</span>';
   const srcLabel = { eventbrite: 'Eventbrite', ticketmaster: 'Ticketmaster', quicket: 'Quicket' }[ev.source] || '';
+  const srcClr   = { eventbrite: '#F05537', ticketmaster: '#026CDF', quicket: '#00C89C' }[ev.source] || '';
   const btnLbl   = gl.includes('march') ? 'Join March' : (iF ? 'RSVP Free' : 'Get Tickets');
   return `<div class="fc rv" data-evid="${x(ev.id)}" onclick="openEv('${x(ev.id)}')">
     <div class="fh"><div class="fa" style="background:${bg}">${emo}</div>
       <div style="flex:1;min-width:0"><div class="fo">${x(ev.organiser_name || ev.venue_name || 'Pulsefy')}</div>
       <div class="fl">📍 ${x(ev.venue_city)} · ${fdt(ev.date_local, ev.time_local)}</div></div>${badge}</div>
-    <div class="fb" style="background:transparent">
-      <img src="${x(ev.image_url || '')}" loading="lazy" onerror="this.style.display='none'"/>
-      <div class="fg"><div class="ft2">${x(ev.name)}</div>
-        <div class="fp ${iF ? 'fr' : ''}">${pr}${srcLabel ? '<span style="font-size:.6rem;opacity:.7;margin-left:6px">' + x(srcLabel) + '</span>' : ''}</div></div>
+    <div class="fb" style="background:${bg};position:relative">
+      <img src="${x(ev.image_url || '')}" loading="${idx < 3 ? 'eager' : 'lazy'}" onerror="this.style.display='none'" style="position:relative;z-index:1"/>
+      ${srcLabel ? `<span style="position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,.82);backdrop-filter:blur(6px);border:1px solid ${srcClr}88;border-radius:50px;padding:3px 10px;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;color:${srcClr};z-index:3;pointer-events:none">🎟 ${srcLabel}</span>` : ''}
+      <div class="fg" style="z-index:2"><div class="ft2">${x(ev.name)}</div>
+        <div class="fp ${iF ? 'fr' : ''}">${pr}</div></div>
     </div>
     <div class="fd">
       <div class="fm"><span class="fct">📍 ${x(ev.venue_city)}</span><span class="fdt"></span><span class="fda">${fdt(ev.date_local, ev.time_local)}</span></div>
@@ -2093,6 +2095,8 @@ async function openEv(evId) {
     window._tierCache = window._tierCache || {};
     window._tierCache[evId] = tiers;
     const iF = ev.is_free, bg = gg(ev.genre), emo = ge(ev.genre);
+    const srcMap = { eventbrite:'Eventbrite', ticketmaster:'Ticketmaster', quicket:'Quicket', manual:'Pulsefy Tickets' };
+    const srcClrDet = { eventbrite:'#F05537', ticketmaster:'#026CDF', quicket:'#00C89C' }[ev.source] || '';
     const lc = ev.like_count || 0, cc = ev.comment_count || 0;
     const totalCap = tiers.reduce((s, t) => s + (t.capacity || 0), 0) || ev.capacity || 0;
     const sold = tiers.reduce((s, t) => s + (t.sold || 0), 0) || ev.tickets_sold || ev.attendance_count || 0;
@@ -2145,7 +2149,7 @@ async function openEv(evId) {
     document.getElementById('ev-detail').innerHTML = `
       <div class="dh"><img src="${x(ev.image_url || '')}" alt="${x(ev.name)}" onerror="this.style.display='none'"/>
         <div class="dg"></div>
-        <div class="dhb"><div class="dbg">${emo} ${ev.source === 'manual' ? 'Pulsefy Tickets' : (ev.source || 'Event')}</div>
+        <div class="dhb"><div class="dbg"${srcClrDet ? ` style="background:${srcClrDet}22;border-color:${srcClrDet}55;color:${srcClrDet}"` : ''}>${emo} ${srcMap[ev.source] || ev.source || 'Event'}</div>
           <div class="dtt">${x(ev.name)}</div>
           <div class="ds">${x(ev.organiser_name || ev.venue_name || '')} · ${fdt(ev.date_local, ev.time_local)}</div>
         </div>
