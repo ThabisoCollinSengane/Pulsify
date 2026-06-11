@@ -2110,16 +2110,25 @@ async function openEv(evId) {
   showDetailTab('event-detail');
 
   try {
-    const sb = getSB();
-    const [{ data: evDb, error: evErr }, { data: evTiers }, { data: evPhotos }] = await Promise.all([
-      sb.from('events').select('*').eq('id', evId).single(),
-      sb.from('ticket_tiers').select('*').eq('event_id', evId).order('sort_order'),
-      sb.from('event_photos').select('*').eq('event_id', evId).order('created_at', { ascending: false }).limit(12),
-    ]);
-    // Fall back to in-memory feed cache for Quicket events not yet seeded to DB
-    const ev = evDb || (eventsForMap || []).find(e => String(e.id) === String(evId));
-    if (!ev) throw new Error('Not found');
-    const tiers = evTiers || [], photos = evPhotos || [];
+    // Short-lived cache so re-tapping the same event renders instantly (no refetch)
+    window._evDetailCache = window._evDetailCache || {};
+    const _cd = window._evDetailCache[evId];
+    let ev, tiers, photos;
+    if (_cd && Date.now() - _cd.t < 60000) {
+      ev = _cd.ev; tiers = _cd.tiers; photos = _cd.photos;
+    } else {
+      const sb = getSB();
+      const [{ data: evDb }, { data: evTiers }, { data: evPhotos }] = await Promise.all([
+        sb.from('events').select('*').eq('id', evId).single(),
+        sb.from('ticket_tiers').select('*').eq('event_id', evId).order('sort_order'),
+        sb.from('event_photos').select('*').eq('event_id', evId).order('created_at', { ascending: false }).limit(12),
+      ]);
+      // Fall back to in-memory feed cache for Quicket events not yet seeded to DB
+      ev = evDb || (eventsForMap || []).find(e => String(e.id) === String(evId));
+      if (!ev) throw new Error('Not found');
+      tiers = evTiers || []; photos = evPhotos || [];
+      window._evDetailCache[evId] = { ev, tiers, photos, t: Date.now() };
+    }
 
     selTier = tiers[0] || null; selQty = 1;
     window._tierCache = window._tierCache || {};
