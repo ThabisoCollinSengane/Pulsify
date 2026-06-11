@@ -62,6 +62,31 @@ Updated after every resolved issue.
 
 ## Resolved Issues
 
+### [2026-06-11] Map clustering broken — individual markers showing at country zoom
+- **Symptoms:** At country/province zoom, individual DOM pins rendered everywhere instead of collapsing into cluster bubbles. Cluster bubbles never appeared.
+- **Root cause (the big one):** Mapbox GL uses a custom marker element **AS the marker directly — there is NO wrapper element**. The hide logic set `opacity:0` on `m.getElement().parentElement`, which is the shared canvas container, not the marker. So nothing hid; every individual marker stayed fully visible and painted on top of the cluster bubbles underneath.
+- **Also tried & failed:** CSS approach `.mp-low-zoom .mapboxgl-marker { opacity:0 }` and `.mp-low-zoom .mp-dot { opacity:0 }` — unreliable because the custom element doesn't reliably carry the `mapboxgl-marker` class across Mapbox versions, and CSS specificity fought Mapbox's inline styles on Android Chrome.
+- **Fix:** `_toggleMapMarkersForZoom()` now sets `opacity` / `pointerEvents` / `transition` **directly on `m.getElement()`** (the `.mp-dot` element Mapbox positions). Inline styles always win. Below zoom 11 markers fade to `opacity:0` (0.4s ease) and the cluster bubbles show through; above 11 they fade back in. Added `_markersVisible` state guard to skip redundant writes, reset to `null` + re-applied after every `placeMapMarkers()` rebuild.
+- **Lesson:** With `new mapboxgl.Marker({element})`, `getElement()` IS the marker — never assume a wrapper; never rely on CSS classes/specificity to hide markers — set inline styles on `getElement()` directly.
+- **Clustering tuning:** `clusterRadius` raised 90→160 so country zoom collapses all of one province's markers into a single bubble (province → region → city → street hierarchy). `clusterMaxZoom: 11` matches the marker show/hide threshold exactly.
+- **Removed dead end:** the `icon-opacity` / `text-opacity` interpolate paint expressions on the cluster GL layers — they conflicted with Mapbox's internal cluster rendering and prevented bubbles appearing at all. Clusters manage their own display via the `['has','point_count']` filter.
+- **Files:** `apps/landing-page/index.html` — `_toggleMapMarkersForZoom`, `_addMapSourcesAndLayers`, `placeMapMarkers`, map `load` handler.
+
+### [2026-06-11] Durban events plotted in the Indian Ocean
+- **Symptoms:** Several Durban beachfront events (uShaka, Suncoast, Street Food Festival) rendered offshore in the water.
+- **Root cause:** Seeded `venue_lon` values were too far east of the actual coastline (Durban Golden Mile coast is ~lon 31.040–31.045; anything > ~31.046 at beachfront latitudes is in the sea).
+- **Fix (DB UPDATEs):** `ev_ushaka_dive` → -29.8675, 31.0446 (uShaka Marine World, the Point); `qk_dbn_001` Street Food Festival → -29.8625, 31.0420 (South Beach); `tm_dbn_003` + `qk_dbn_002` (Suncoast Casino) → lon 31.0415; original uShaka "fix" of 31.0535 was still offshore — corrected on the second pass.
+- **Note:** `ev_sunset_cruise` (Durban Sunset Ocean Cruise) intentionally left near the harbour mouth — it's a boat cruise. SA-bounds rule unchanged: lat -35 to -22, lon 16 to 33 (does not catch coastline-level offshore errors — those need manual landmark coords).
+- **Lesson:** SA-bounds validation passes coastline-offshore points. For beachfront venues, verify against the actual landmark longitude, don't trust seed data.
+
+### [2026-06-11] Community feed (feeds.html) — blackout flicker + "Refreshing" spam on scroll
+- **Symptoms:** Scrolling down flashed the feed to black and showed a "Refreshing…" toast roughly once per scroll gesture.
+- **Root cause:** The pull-to-refresh `touchend` handler computed `dy = clientY - _ty0`, but `_ty0` is only set when a touch *starts* at the top (scrollTop===0). On a normal scroll-down `_ty0` stayed 0, so `dy` became the raw `clientY` (large positive) and tripped the `dy > 70` refresh threshold every time. That spurious refresh called `render()`, which wipes the feed to skeleton placeholders (the blackout) and fired the toast.
+- **Fix:** Guard `touchend` with `if (!_ty0) return;` so refresh only fires for a genuine top-of-feed pull.
+- **Secondary:** an `.fc` fade-in animation (opacity 0→1, fill-mode `both`) I'd added briefly made it worse — under fast scroll the browser deferred the animation start, leaving cards stuck invisible. Removed it. Also switched `_loadMore` to append cards via a single DocumentFragment instead of N sequential `appendChild` calls.
+- **Smoothness:** feed images (`.fb` + multi-image gallery) given `aspect-ratio:4/5; object-fit:cover` so space is reserved before lazy images load — kills the layout-shift jump. Neutral surface background as the pre-load placeholder.
+- **Files:** `apps/landing-page/feeds.html` — `_initPullToRefresh`, `_loadMore`, `.fc`/`.fb` CSS.
+
 ### [2026-06-11] Supabase security & performance hardening (PR #12)
 - **auth_rls_initplan (97 instances):** All RLS policies on hot tables (events, posts, profiles, follows, notifications, ticket_tiers, payments, comments, bookings) were re-evaluating `auth.uid()` as a correlated subplan per row. Replaced with `(SELECT auth.uid())` so the planner treats it as a constant. Biggest query-perf fix without schema changes.
 - **Function search_path mutable:** 17 trigger/helper functions had a mutable `search_path`, enabling schema-hijack attacks. Added `SET search_path = 'public'` to all of them.
