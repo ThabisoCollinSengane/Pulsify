@@ -255,8 +255,8 @@ class PDF:
 
 def build_doc():
     d = PDF()
-    d.hero("Pulsefy News Desk - Week 1 Production Pack",
-           "Two ready-to-shoot scripts | 30-60 sec each | TikTok / Reels / Shorts | Purple & orange aesthetic")
+    d.hero("Pulsefy News Desk - Full Playbook",
+           "Part 1: Week 1 scripts | Part 2: production, image prompts, lip-sync, voice, animation maps")
 
     d.body("Note: the brief says \"Pulsefy\"; the live product is \"Pulsify\". Lock ONE spelling everywhere before posting. This pack uses Pulsefy as written.", color=MUTED, size=9.5)
 
@@ -351,6 +351,174 @@ def build_doc():
         d.bullet(b)
 
     d.body("Reminder: verify any event date within 48h of posting, keep satire WITH people not AT them (punch at situations: group-chat debates, parking, outfit panic), and DM any venue you feature with the view count - that screenshot is your sales pitch to onboard them.", color=MUTED, size=9.5)
+
+    # =====================================================================
+    # PART 2 - PRODUCTION & EDITING PLAYBOOK
+    # =====================================================================
+    d.h1("PART 2 - PRODUCTION & EDITING PLAYBOOK")
+
+    d.h2("Your master scene")
+    d.body("You have ONE finished studio scene (anchor bottom-left, clear of the screen; Durban coastline window; rich DURBAN / KZN screen with events + map pins; Zulu shield on the desk). Save it as pulsefy_master_scene.png and REUSE it every episode. You never re-position the anchor again - that job is done.", size=10)
+
+    d.h2("The layer model (CapCut)")
+    d.body("Think of every episode as a stack of layers. Only the screen-content layer changes week to week:", size=10)
+    for b in [
+        "Layer 1 - Background: the master scene (reused every episode).",
+        "Layer 2 - Screen content: this week's flyer / map screen-recording / B-roll, sized to sit inside the screen area (right side, over the map). THIS is the only layer you swap.",
+        "Layer 3 - Talking head: short lip-sync clips of the anchor for intro + outro only.",
+        "Layer 4 - Segment label: small SPOTLIGHT / MAP DROP tag (made in Canva).",
+        "Layer 5 - Captions: CapCut auto-captions.",
+        "Layer 6 - Audio: your voiceover (voice-changed) + music + news sting.",
+    ]:
+        d.bullet(b)
+
+    d.h2("Per-episode edits (about 6, most take seconds)")
+    d.table([
+        ["#", "Edit", "Effort"],
+        ["1", "Drop in the master scene as background", "5 sec (reused)"],
+        ["2", "Overlay your video / flyer onto the screen zone", "~2 min"],
+        ["3", "Record your voiceover", "real-time"],
+        ["4", "Apply AI voice change (CapCut Voice Changer)", "~30 sec"],
+        ["5", "Lip-sync the intro + outro clips (Hedra) + drop in", "~5 min"],
+        ["6", "Auto-captions + music + news sting, then export", "~3 min"],
+    ], widths=[0.08, 0.62, 0.30])
+    d.body("Realistically ~10-15 min per video once you've done one or two.", color=MUTED, size=9.5)
+
+    # IMAGE PROMPTS
+    d.h1("IMAGE PROMPTS (paste into ChatGPT)")
+    d.body("Note: AI image tools often misspell text on shirts/screens. If PULSEFY comes out wrong, generate the shirt plain and add the real logo in Canva/CapCut. Spell it exactly: P-U-L-S-E-F-Y.", color=MUTED, size=9.5)
+
+    d.codeblock(
+        "Create a vertical 9:16 news studio scene, rich and detailed, premium 3D-cartoon "
+        "style, deep purple (#6B2FB5) and vibrant orange (#FF7A1A) lighting.\n\n"
+        "- TOP 60%: a large glowing studio screen with a purple-orange neon bezel and a "
+        "header reading \"PULSEFY NEWS DESK\". Inside the screen: the aerial Durban coastline "
+        "with Moses Mabhida Stadium as the backdrop, a \"DURBAN - KWAZULU-NATAL\" title, an "
+        "\"UPCOMING EVENTS\" panel on the left with icons, and a glowing map of the KZN coast "
+        "on the right with location pins labelled Umlazi, Durban North, Morningside, Durban "
+        "CBD, Amanzimtoti. Include small South African flags. Rich and full.\n"
+        "- BOTTOM 40%: a young South African male anchor, mid-20s, short fade, light beard, "
+        "warm cheeky smile, seated behind a sleek reflective desk on the LEFT side, his body "
+        "BELOW the screen and NOT overlapping it. White t-shirt with a pink circular logo and "
+        "the word \"PULSEFY\". Small clip-on mic. A Zulu shield-and-spears ornament on the "
+        "desk. Purple desk under-glow.\n\n"
+        "Keep it rich and detailed. Anchor must not cover the screen. Vertical 9:16.",
+        title="A. Rich vertical scene (TikTok / Reels twin of your horizontal master)")
+
+    d.codeblock(
+        "Using the news anchor character from this image as reference, create a clean "
+        "front-facing close-up portrait of the SAME man - same face, same short fade haircut, "
+        "same light beard, same warm slightly cheeky smile, same skin tone.\n\n"
+        "Framing: head and shoulders, facing the camera directly, looking into the lens, "
+        "mouth relaxed and slightly open (ready to speak), eyes open.\n"
+        "Wardrobe: the same white t-shirt with the pink circular logo and the word "
+        "\"PULSEFY\".\n"
+        "Background: a simple, smooth dark-purple studio blur (no text, no screen, no "
+        "objects) so he can be cut out easily.\n"
+        "Lighting: soft, even, professional studio lighting on the face.\n"
+        "Style: same polished 3D-cartoon look as the reference.\n\n"
+        "Vertical portrait orientation, sharp focus on the face.",
+        title="B. Solo close-up portrait (your reusable talking-head for lip-sync)")
+
+    d.codeblock(
+        "Remove the \"Stan Sanetra\" text watermark in the top-left corner of this photo. "
+        "Fill that area cleanly with matching sky and ocean so it looks natural and "
+        "untouched. Do not change anything else in the image - keep the beachfront, stadium, "
+        "city and colours exactly the same. Output the full image at the same dimensions.",
+        title="C. Remove the photographer's signature (rights cleared by Stan Sanetra)")
+
+    d.codeblock(
+        "Recreate this exact news studio scene, keeping everything the same: the left window "
+        "showing the aerial Durban coastline with Moses Mabhida Stadium, the right screen with "
+        "the \"DURBAN - KWAZULU-NATAL\" title, the \"UPCOMING EVENTS\" panel, the glowing map "
+        "with location pins, the South African flags, the purple-and-orange lighting, the desk "
+        "and the Zulu shield ornament.\n\n"
+        "Change ONLY this: move the male anchor to the LOWER-LEFT of the frame, seated behind "
+        "the desk, so his head and body are clearly BELOW the screen and do NOT cover the "
+        "events panel or the map. Keep his face, hairstyle, beard, smile and white \"PULSEFY\" "
+        "t-shirt exactly the same. Everything else stays identical. 16:9 horizontal.",
+        title="D. Move the anchor aside on your rich HORIZONTAL scene")
+
+    d.body("Putting the Durban photo on the screen: use CapCut (non-destructive), NOT a full-image AI regen - that can change the anchor's face between episodes. In CapCut: Overlay -> Add overlay -> import the watermark-removed photo -> resize it to sit inside the screen area -> lower opacity to ~90 percent so it reads like a display.", size=10)
+
+    # TALKING ANCHOR
+    d.h1("TALKING ANCHOR - LIPS & MOTION")
+    d.body("Honest truth: lips are easy, hands are hard. Free tools lip-sync a still image well, but none reliably animate gesturing hands. Do not let hands hold up your launch.", size=10)
+    d.body("The trick: you only animate the 3-5 seconds he is actually on camera (intro line + outro CTA). The middle of the video is screen content + B-roll + voiceover, with the anchor NOT in frame. That cuts the work by ~80 percent.", size=10)
+    d.h2("Lip-sync apps (pick one - start with Hedra)")
+    d.table([
+        ["App", "What it does", "Free?"],
+        ["Hedra (start here)", "Photo + your audio -> lip-sync + natural head/upper-body motion", "Free tier"],
+        ["D-ID", "Photo + audio -> clean lip-sync (face only)", "Free trial credits"],
+        ["HeyGen (Talking Photo)", "Photo + audio -> talking avatar", "Free tier (watermark)"],
+        ["Vidnoz", "Free AI talking photo", "Free tier"],
+    ], widths=[0.26, 0.56, 0.18])
+    for b in [
+        "1. Use the solo close-up portrait (Prompt B) - lip-sync tools work best on a clear single face, not a busy wide scene.",
+        "2. Feed portrait + your voiceover audio into Hedra -> it lip-syncs and adds slight head motion.",
+        "3. In CapCut, drop the talking clip over the studio scene for the intro/outro moments only.",
+    ]:
+        d.bullet(b)
+    d.body("Hands gesturing (optional, later): use an image-to-video tool - Kling AI or Hailuo (MiniMax), both free tiers. Feed the scene + a prompt like \"the anchor talks and gestures naturally.\" Trade-off: more credits, slower, AI hands can glitch. Skip for now.", color=MUTED, size=9.5)
+
+    # VOICE
+    d.h1("VOICEOVER + AI VOICE CHANGE")
+    d.body("You speak the lines yourself, then change your voice so the anchor sounds like a different presenter. No extra app needed - CapCut has a built-in Voice Changer.", size=10)
+    for b in [
+        "Record your voice in CapCut (Audio -> Record) or import it.",
+        "Select the audio clip -> tap Voice changer -> pick an effect until it sounds like a different presenter.",
+        "Split out the intro audio and outro audio - those two pieces feed Hedra for lip-sync.",
+        "Upgrade option (later): ElevenLabs free tier has a realistic speech-to-speech voice changer.",
+    ]:
+        d.bullet(b)
+
+    # ANIMATION MAPS
+    d.h1("ANIMATION MAPS")
+    d.body("Rule: his face is only on screen when HE is talking (lip-sync). The moment it is pure voiceover, cut to the screen/B-roll fullscreen - so there is never a static face with a moving voice.", size=10)
+    d.h2("Video 1 - Map Drop (~40s) - only ~10 sec animated")
+    d.table([
+        ["Time", "On screen", "Animate?"],
+        ["0:00-0:03", "Anchor close-up - intro line", "YES - lip-sync (~3 sec)"],
+        ["0:03-0:33", "Pulsefy map zoom + pins + B-roll", "No - voiceover only, anchor NOT in frame"],
+        ["0:33-0:40", "Anchor close-up - outro + CTA", "YES - lip-sync (~7 sec)"],
+    ], widths=[0.16, 0.52, 0.32])
+    d.h2("Video 2 - Eyadini Spotlight (~45s) - only ~10 sec animated")
+    d.table([
+        ["Time", "On screen", "Animate?"],
+        ["0:00-0:03", "Anchor close-up - intro line", "YES - lip-sync (~3 sec)"],
+        ["0:03-0:38", "Eyadini flyer + braai B-roll + map pin", "No - voiceover only, anchor NOT in frame"],
+        ["0:38-0:45", "Anchor close-up - outro + CTA", "YES - lip-sync (~7 sec)"],
+    ], widths=[0.16, 0.52, 0.32])
+
+    # FREE APPS
+    d.h1("FREE APP STACK (R0 / month)")
+    d.table([
+        ["App", "Use"],
+        ["CapCut", "Main editor: overlay, captions, voice changer, zoom motion, export"],
+        ["Canva", "Logo PNG, segment labels, screen graphics, flyers"],
+        ["ChatGPT", "Studio scene + solo portrait + photo edits"],
+        ["Hedra / D-ID", "Lip-sync the intro + outro talking-head clips"],
+        ["Pexels + Pixabay", "Free B-roll: braai, crowds, nightlife, Durban aerials"],
+        ["Mixkit", "Free news sting + music bed"],
+        ["Kling / Hailuo (optional)", "Image-to-video for gesturing shots (later)"],
+    ], widths=[0.30, 0.70])
+
+    d.h2("Photo rights")
+    d.body("The Durban aerial belongs to photographer Stan Sanetra, who cleared it for free use and allowed removing his signature. Keep a record of that permission. For any future photo you do not own, either get written permission, use free-commercial stock (Pexels/Pixabay), or generate your own - never strip a watermark you have not been given rights to remove.", size=10)
+
+    # WEEKLY CHECKLIST
+    d.h1("WEEKLY CHECKLIST (per video)")
+    for b in [
+        "Pick the segment + write/confirm the script (use the Week 1 pack).",
+        "Record voiceover -> apply CapCut Voice Changer -> export audio.",
+        "Lip-sync intro + outro audio in Hedra using the solo portrait.",
+        "Screen-record the live Pulsefy map / gather the flyer + B-roll.",
+        "CapCut: master scene -> lip-sync intro -> screen content (voiceover) -> lip-sync outro.",
+        "Auto-captions (purple/orange) + music + news sting.",
+        "Export 1080x1920, 30fps. Post Thu 18:00-20:00 (TikTok) / Sun 11:00-13:00 (IG).",
+        "First hour: reply to every comment. DM any venue you featured the view count.",
+    ]:
+        d.bullet(b)
 
     return d.build()
 
