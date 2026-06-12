@@ -1704,8 +1704,9 @@ async function loadFeed(resetPage = false) {
     updatePagination();
     triggerRev();
 
-    // Cache events for map
+    // Cache events for map; refresh markers if map is already open
     eventsForMap = [...(eventsForMap.filter(e => !events.find(n => n.id === e.id))), ...events];
+    if (mapInited && mapObj && typeof placeMapMarkers === 'function') placeMapMarkers();
 
     // Wire promotions once resolved
     if (feedPage === 1) {
@@ -2704,8 +2705,8 @@ function initMap() {
     _addMapSourcesAndLayers();
 
     // Layer + map event handlers — attached once here; they persist across setStyle().
-    mapObj.on('click', 'clusters-anim', (e) => {
-      const features = mapObj.queryRenderedFeatures(e.point, { layers: ['clusters-anim'] });
+    mapObj.on('click', 'clusters-circle', (e) => {
+      const features = mapObj.queryRenderedFeatures(e.point, { layers: ['clusters-circle'] });
       if (!features.length) return;
       const clusterId = features[0].properties.cluster_id;
       const src = mapObj.getSource('pulsify-spots'); if (!src) return;
@@ -2714,8 +2715,8 @@ function initMap() {
         mapObj.easeTo({ center: features[0].geometry.coordinates, zoom });
       });
     });
-    mapObj.on('mouseenter', 'clusters-anim', () => { mapObj.getCanvas().style.cursor = 'pointer'; });
-    mapObj.on('mouseleave', 'clusters-anim', () => { mapObj.getCanvas().style.cursor = ''; });
+    mapObj.on('mouseenter', 'clusters-circle', () => { mapObj.getCanvas().style.cursor = 'pointer'; });
+    mapObj.on('mouseleave', 'clusters-circle', () => { mapObj.getCanvas().style.cursor = ''; });
     mapObj.on('zoom', _toggleMapMarkersForZoom);
     mapObj.on('zoomend', _toggleMapMarkersForZoom);
 
@@ -2759,20 +2760,19 @@ function initMap() {
 }
 
 // Show/hide DOM markers around clusterMaxZoom (11).
-// Mapbox uses the custom element AS the marker (no wrapper), so style getElement() directly.
-let _markersVisible = null; // tracks last state to avoid redundant writes
+// Removes markers from the map entirely at low zoom rather than relying on opacity,
+// which can be overridden by CSS or animation callbacks.
+let _markersVisible = null;
 function _toggleMapMarkersForZoom() {
   if (!mapObj || !mapMarkers.length) return;
   const shouldShow = mapObj.getZoom() >= 11;
-  if (_markersVisible === shouldShow) return; // no change
+  if (_markersVisible === shouldShow) return;
   _markersVisible = shouldShow;
-  mapMarkers.forEach(m => {
-    const el = m.getElement(); // the .mp-dot element itself (Mapbox positions it directly)
-    if (!el) return;
-    el.style.transition = 'opacity .4s ease';
-    el.style.opacity    = shouldShow ? '1' : '0';
-    el.style.pointerEvents = shouldShow ? '' : 'none';
-  });
+  if (shouldShow) {
+    mapMarkers.forEach(m => { try { m.addTo(mapObj); } catch(e){} });
+  } else {
+    mapMarkers.forEach(m => { try { m.remove(); } catch(e){} });
+  }
 }
 
 // Adds fog + cluster source + heatmap + animated cluster layers.
@@ -2822,89 +2822,36 @@ function _addMapSourcesAndLayers() {
         'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 8, 1, 12, 0]
       },
     });
-    // ── Cluster visuals: pulsing branded box ─────────────────────────────
-    // Mapbox StyleImageInterface — animated canvas redrawn every frame by the GL loop.
-    // render() draws both the pulsing rings AND the solid box so everything is one image.
-    const _CS = 100;  // canvas size (logical px, pixelRatio applied separately)
-    const _clusterImg = {
-      width: _CS, height: _CS,
-      data: new Uint8Array(_CS * _CS * 4),
-      _cv: null, _ctx: null,
-      onAdd() {
-        this._cv = document.createElement('canvas');
-        this._cv.width = _CS; this._cv.height = _CS;
-        this._ctx = this._cv.getContext('2d');
-      },
-      render() {
-        const ctx = this._ctx;
-        if (!ctx) return false;
-        const t  = (Date.now() % 2200) / 2200;   // 0→1 every 2.2 s
-        const t2 = (t + 0.55) % 1;               // second ring, offset half-phase
-        const cx = _CS / 2, cy = _CS / 2;
-
-        ctx.clearRect(0, 0, _CS, _CS);
-
-        // ── Pulsing rings (expand outward and fade) ──
-        [[t, 4, 0.65], [t2, 2.5, 0.45]].forEach(([ti, lw, maxA]) => {
-          ctx.beginPath();
-          ctx.arc(cx, cy, 10 + ti * 38, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(255,75,0,${(1 - ti) * maxA})`;
-          ctx.lineWidth = lw;
-          ctx.stroke();
-        });
-
-        // ── Rounded-rect box ──
-        const BW = 56, BH = 26, BR = 7;
-        const bx = cx - BW/2, by = cy - BH/2;
-        function rr(x,y,w,h,r) {
-          ctx.beginPath();
-          ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
-          ctx.arcTo(x+w,y,x+w,y+r,r); ctx.lineTo(x+w,y+h-r);
-          ctx.arcTo(x+w,y+h,x+w-r,y+h,r); ctx.lineTo(x+r,y+h);
-          ctx.arcTo(x,y+h,x,y+h-r,r); ctx.lineTo(x,y+r);
-          ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
-        }
-        // Fill: red→orange gradient
-        rr(bx, by, BW, BH, BR);
-        const g = ctx.createLinearGradient(bx, by, bx+BW, by+BH);
-        g.addColorStop(0,   '#BF1500');
-        g.addColorStop(0.4, '#FF3B00');
-        g.addColorStop(1,   '#FF6A1A');
-        ctx.fillStyle = g;
-        ctx.fill();
-        // Border
-        ctx.strokeStyle = 'rgba(255,195,120,.85)';
-        ctx.lineWidth = 1.4;
-        ctx.stroke();
-        // Top gloss
-        rr(bx, by, BW, BH/2, BR);
-        const sh = ctx.createLinearGradient(0, by, 0, by+BH/2);
-        sh.addColorStop(0, 'rgba(255,255,255,.22)');
-        sh.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.fillStyle = sh;
-        ctx.fill();
-
-        this.data = ctx.getImageData(0, 0, _CS, _CS).data;
-        mapObj.triggerRepaint();   // keep the GL loop running every frame
-        return true;
-      }
-    };
-    if (!mapObj.hasImage('cluster-anim')) mapObj.addImage('cluster-anim', _clusterImg);
-
-    // Layer 1: animated image (pulsing rings + box background)
+    // ── Cluster visuals: branded circles ─────────────────────────────
+    // Outer glow ring (renders behind the filled circle)
     mapObj.addLayer({
-      id: 'clusters-anim',
-      type: 'symbol',
+      id: 'clusters-glow',
+      type: 'circle',
       source: 'pulsify-spots',
       filter: ['has', 'point_count'],
-      layout: {
-        'icon-image': 'cluster-anim',
-        'icon-allow-overlap': true,
-        'icon-ignore-placement': true,
-        'icon-size': ['step', ['get', 'point_count'], 0.72, 10, 0.88, 25, 1.05],
+      paint: {
+        'circle-color': 'rgba(0,0,0,0)',
+        'circle-radius': ['step', ['get', 'point_count'], 30, 10, 38, 25, 46],
+        'circle-stroke-width': 3,
+        'circle-stroke-color': 'rgba(255,106,26,0.45)',
+        'circle-blur': 0.4,
       },
     });
-    // Layer 2: count text on top of the box
+    // Filled cluster circle
+    mapObj.addLayer({
+      id: 'clusters-circle',
+      type: 'circle',
+      source: 'pulsify-spots',
+      filter: ['has', 'point_count'],
+      paint: {
+        'circle-color': ['step', ['get', 'point_count'], '#FF3B00', 10, '#FF6A1A', 25, '#BF1500'],
+        'circle-radius': ['step', ['get', 'point_count'], 18, 10, 24, 25, 30],
+        'circle-stroke-width': 2,
+        'circle-stroke-color': 'rgba(255,195,120,.85)',
+        'circle-opacity': 0.93,
+      },
+    });
+    // Layer: count text on top of the circle
     mapObj.addLayer({
       id: 'clusters',
       type: 'symbol',
