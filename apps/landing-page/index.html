@@ -2760,20 +2760,19 @@ function initMap() {
 }
 
 // Show/hide DOM markers around clusterMaxZoom (11).
-// Mapbox uses the custom element AS the marker (no wrapper), so style getElement() directly.
-let _markersVisible = null; // tracks last state to avoid redundant writes
+// Removes markers from the map entirely at low zoom rather than relying on opacity,
+// which can be overridden by CSS or animation callbacks.
+let _markersVisible = null;
 function _toggleMapMarkersForZoom() {
   if (!mapObj || !mapMarkers.length) return;
   const shouldShow = mapObj.getZoom() >= 11;
-  if (_markersVisible === shouldShow) return; // no change
+  if (_markersVisible === shouldShow) return;
   _markersVisible = shouldShow;
-  mapMarkers.forEach(m => {
-    const el = m.getElement(); // the .mp-dot element itself (Mapbox positions it directly)
-    if (!el) return;
-    el.style.transition = 'opacity .4s ease';
-    el.style.opacity    = shouldShow ? '1' : '0';
-    el.style.pointerEvents = shouldShow ? '' : 'none';
-  });
+  if (shouldShow) {
+    mapMarkers.forEach(m => { try { m.addTo(mapObj); } catch(e){} });
+  } else {
+    mapMarkers.forEach(m => { try { m.remove(); } catch(e){} });
+  }
 }
 
 // Adds fog + cluster source + heatmap + animated cluster layers.
