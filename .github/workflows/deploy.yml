@@ -8,7 +8,7 @@ on:
 
 jobs:
   deploy:
-    name: Vercel Production Deploy
+    name: Vercel Deploy
     runs-on: ubuntu-latest
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -28,5 +28,14 @@ jobs:
           if [ -z "$VERCEL_PROJECT_ID" ]; then echo "ERROR: VERCEL_PROJECT_ID secret is not set" && exit 1; fi
           echo "All secrets present"
 
-      - name: Deploy
+      # Production deploy — ONLY from main. This is the single source of truth for
+      # pulsefy.co.za. Feature branches can never clobber the production alias.
+      - name: Deploy to Production (main only)
+        if: github.ref == 'refs/heads/main'
         run: npx vercel --prod --yes --force --token=$VERCEL_TOKEN
+
+      # Preview deploy — for claude/** feature branches. Produces a unique preview
+      # URL and never touches production. Merge to main to release.
+      - name: Deploy Preview (feature branches)
+        if: github.ref != 'refs/heads/main'
+        run: npx vercel --yes --token=$VERCEL_TOKEN
