@@ -520,6 +520,108 @@ def build_doc():
     ]:
         d.bullet(b)
 
+    # =====================================================================
+    # PART 3 - CHARLIE (CHARACTER) + CAMERA ANGLES
+    # =====================================================================
+    d.h1("PART 3 - MEET CHARLIE, THE HOST")
+    d.body("Charlie is the face of the desk. Lock his character so the satire is consistent every episode - same voice, same cheek, same warmth. Every script line should sound like it came out of his mouth.", size=10)
+
+    d.h2("Who he is")
+    for b in [
+        "Charlie - mid-20s, born-and-bred Durban. Sharp, quick-witted, effortlessly charming.",
+        "A smart young man who reads the city like a local: he knows the taxi routes, the braai spots, the group-chat debates.",
+        "Credible enough to 'report the news', cheeky enough to wink at the camera.",
+        "Confident but self-aware - he'll happily make Pulsefy (and himself) the butt of the joke.",
+    ]:
+        d.bullet(b)
+
+    d.h2("His comedic voice")
+    for b in [
+        "Deadpan news delivery of slightly absurd observations ('Breaking: man caught turning meat that wasn't his').",
+        "Mock-serious 'breaking news' energy applied to nightlife and shisanyama.",
+        "Local, specific references: taxis, load-shedding, Sunday plans, outfit panic, group chats.",
+        "Warm sarcasm - he teases the situation, never insults a person or a venue.",
+        "Lands the punchline, then a beat - a smirk to camera does half the work.",
+    ]:
+        d.bullet(b)
+
+    d.codeblock(
+        "OPEN:      \"Good evening Durban - you're watching the Pulsefy News Desk.\"\n"
+        "SIGN-OFF:  \"That's tonight's pulse.\"\n"
+        "FILLER:    \"Here's the report...\" / \"Sources say...\" / \"This just in...\" / "
+        "\"Consider it settled.\"\n"
+        "SELF-AWARE:\"...we honestly lost count after the third lounge.\"\n"
+        "CTA:       \"Want YOUR event or venue on this desk? It's free - link in bio.\"",
+        title="Charlie-isms (his signature lines / flavour)")
+
+    d.h2("Satire rules (keep it funny AND safe)")
+    for b in [
+        "Punch at SITUATIONS, never at people or a venue's quality.",
+        "When in doubt, make Charlie / Pulsefy the joke.",
+        "Keep it light, local and warm - clever, not cruel.",
+        "No politics, no punching down. Satire that makes people feel seen, not attacked.",
+    ]:
+        d.bullet(b)
+    d.body("Your Week 1 hooks already carry Charlie's voice - keep writing every future line as if he's saying it out loud with a smirk.", color=MUTED, size=9.5)
+
+    d.h1("CAMERA ANGLES - ChatGPT prompts for Charlie")
+    d.body("These give you shot variety so you can CUT between angles like a real broadcast. For EVERY prompt: first upload your master scene (or the solo portrait) as a reference so Charlie's face, hair, beard, white PULSEFY t-shirt and the purple-orange studio stay identical. Generate 2-3 of each and save them as your reusable 'angle library'.", size=10)
+
+    d.codeblock(
+        "Using Charlie, the news anchor from this reference image (same face, short fade, "
+        "light beard, white PULSEFY t-shirt, same purple-and-orange studio), create a MEDIUM "
+        "shot: waist up, seated at the news desk, both hands resting on the desk, looking into "
+        "the lens with a confident slightly cheeky smile. Frame it like a second studio camera "
+        "- a bit closer than the wide shot. Keep the desk, lighting and Zulu shield consistent. "
+        "Vertical 9:16.",
+        title="1. Medium shot (camera 2)")
+
+    d.codeblock(
+        "Using Charlie from this reference image (identical face and wardrobe), create a "
+        "3/4 SIDE-ANGLE shot: the camera sits to his side at about 45 degrees while he turns "
+        "his head toward the lens with a playful look. Same purple-orange studio and desk, "
+        "cinematic side lighting. Vertical 9:16.",
+        title="2. 3/4 side angle (dynamic cutaway)")
+
+    d.codeblock(
+        "Using Charlie from this reference image, create an OVER-THE-SHOULDER shot: camera "
+        "behind Charlie looking past his shoulder toward the large glowing studio screen that "
+        "shows the Durban map and pins. Back of his head and shoulder in soft focus, the screen "
+        "sharp. Same purple studio. Vertical 9:16.",
+        title="3. Over-the-shoulder (looking at the screen)")
+
+    d.codeblock(
+        "Using Charlie from this reference image, create a CLOSE-UP reaction shot, head and "
+        "shoulders, plain dark-purple studio blur background, with this expression: [SMIRK TO "
+        "CAMERA]. Same face, hair, beard and white PULSEFY t-shirt. Soft even lighting. "
+        "Vertical 9:16.\n\n"
+        "Swap the bracket for each reaction you want a cut for:\n"
+        "[SMIRK TO CAMERA]  [RAISED EYEBROW, SKEPTICAL]  [WIDE-EYED MOCK-SHOCK]\n"
+        "[HOLDING BACK LAUGHTER]  [DEADPAN, UNIMPRESSED]  [SLOW NOD, IMPRESSED]",
+        title="4. Reaction close-ups (COMEDY GOLD - one quick cut after a punchline)")
+
+    d.codeblock(
+        "Using Charlie from this reference image, create a slightly LOW-ANGLE close-up: he "
+        "leans toward the camera with a mock-serious 'breaking news' expression, dramatic "
+        "purple-orange rim lighting, intense but tongue-in-cheek. Same face and PULSEFY tee. "
+        "Vertical 9:16.",
+        title="5. Low-angle 'breaking news' (mock-dramatic intro)")
+
+    d.codeblock(
+        "Using Charlie from this reference image, create a close-up: hand on his chin, one "
+        "eyebrow raised, a playful skeptical 'hmm' look, as if reacting to something ridiculous. "
+        "Plain purple studio blur. Same face and wardrobe. Vertical 9:16.",
+        title="6. Hand-on-chin smirk (thinking / skeptical beat)")
+
+    d.codeblock(
+        "Using Charlie from this reference image, create a MEDIUM shot of him gesturing toward "
+        "the side of the frame with an open hand (presenting), looking at the camera with a "
+        "smile, as if pointing at the screen content. Same studio, desk and wardrobe. "
+        "Vertical 9:16.",
+        title="7. Presenting gesture (point to the screen - great for Map Drop)")
+
+    d.body("How to use the angle library in CapCut: open on the WIDE master scene, cut to a MEDIUM or SIDE angle for variety, drop a REACTION close-up for a beat right after a punchline, and use OVER-THE-SHOULDER when you talk about the map. Cutting between 3-4 angles is what makes 40 seconds feel like a real show instead of one static frame.", size=10)
+
     return d.build()
 
 
