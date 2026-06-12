@@ -1525,10 +1525,10 @@ function showTab(name, _noPush) {
       // First open — show splash, init map, ensure business pins
       showMapSplash();
       _pendingCityJump = cityKey; // applied once the map's load event fires
-      requestAnimationFrame(() => { initMap(); ensureBizForMap(); });
+      requestAnimationFrame(() => { initMap(); ensureBizForMap(); ensureEventsForMap(); });
     } else if (mapObj) {
       setTimeout(() => mapObj.resize(), 50);
-      // Refresh markers in case bizForMap loaded after first init
+      ensureEventsForMap(); // no-op if already loaded; loads if Supabase wasn't ready on first open
       if (typeof placeMapMarkers === 'function') placeMapMarkers();
       if (cityKey) jumpToCity(cityKey);
     }
@@ -1567,6 +1567,32 @@ async function ensureBizForMap() {
     });
     if (mapInited && typeof placeMapMarkers === 'function') placeMapMarkers();
   } catch(e) { /* ignore — map still works with events only */ }
+}
+// Fetch ALL approved SA events for the map — independent of the feed's city/province filter
+// so the map always shows JHB, Cape Town, Durban etc. even if feed is filtered to one city.
+let _mapEventsLoaded = false;
+async function ensureEventsForMap() {
+  if (_mapEventsLoaded) return;
+  _mapEventsLoaded = true;
+  try {
+    const sb = getSB(); if (!sb) return;
+    const today = new Date().toISOString().split('T')[0];
+    const { data } = await sb.from('events')
+      .select('id,name,date_local,time_local,venue_name,venue_city,venue_lat,venue_lon,price_min,is_free,genre,source,external_url,image_url,hype_score,organiser_name')
+      .eq('approved', true)
+      .eq('is_active', true)
+      .gte('date_local', today)
+      .not('venue_lat','is',null)
+      .not('venue_lon','is',null)
+      .order('hype_score', { ascending: false, nullsFirst: false })
+      .limit(500);
+    const fetched = (data || []).filter(e => {
+      const la = Number(e.venue_lat), lo = Number(e.venue_lon);
+      return Number.isFinite(la) && Number.isFinite(lo) && la >= -35 && la <= -22 && lo >= 16 && lo <= 33;
+    });
+    eventsForMap = [...(eventsForMap.filter(e => !fetched.find(n => n.id === e.id))), ...fetched];
+    if (mapInited && mapObj && typeof placeMapMarkers === 'function') placeMapMarkers();
+  } catch(e) { console.warn('[Map Events]', e.message); }
 }
 function showDetailTab(name, _noPush) {
   prevTab = curTab; curTab = name;
@@ -2762,10 +2788,11 @@ function initMap() {
 // Show/hide DOM markers around clusterMaxZoom (11).
 // Removes markers from the map entirely at low zoom rather than relying on opacity,
 // which can be overridden by CSS or animation callbacks.
+// Threshold > 13 matches clusterMaxZoom:13 — individual markers only at street/venue level.
 let _markersVisible = null;
 function _toggleMapMarkersForZoom() {
   if (!mapObj || !mapMarkers.length) return;
-  const shouldShow = mapObj.getZoom() >= 11;
+  const shouldShow = mapObj.getZoom() > 13;
   if (_markersVisible === shouldShow) return;
   _markersVisible = shouldShow;
   if (shouldShow) {
@@ -2797,8 +2824,8 @@ function _addMapSourcesAndLayers() {
       type: 'geojson',
       data: { type: 'FeatureCollection', features: [] },
       cluster: true,
-      clusterMaxZoom: 11,
-      clusterRadius: 160,
+      clusterMaxZoom: 13,
+      clusterRadius: 80,
     });
     // Heatmap layer beneath clusters — glowing "busy area" effect at low zoom.
     mapObj.addLayer({
