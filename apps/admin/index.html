@@ -391,22 +391,34 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Events</div>
       <div style="font-size:.82rem;color:var(--mu2)">View and approve all events on the platform</div>
     </div>
+
+    <!-- Map Pin Requests — inline queue -->
+    <div id="map-pin-queue-section" style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--cy)">📍 Map Pin Requests</div>
+        <button class="btn btn-surf" style="padding:4px 10px;font-size:.66rem" onclick="loadMapPinQueue()">↺</button>
+      </div>
+      <div id="map-pin-queue"><div style="padding:16px;text-align:center;color:var(--mu);font-size:.78rem">Loading…</div></div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin-bottom:16px"></div>
+
     <div class="search-row">
       <select class="inp" id="evt-filter" onchange="loadPendingEvents()" style="max-width:180px">
         <option value="all">All Events</option>
         <option value="pending">⏳ Pending Approval</option>
-        <option value="map_approval">📍 Map Approval</option>
       </select>
       <button class="btn btn-surf" onclick="loadPendingEvents()">↺ Refresh</button>
-      <button class="btn btn-or" onclick="document.getElementById('add-event-panel').classList.toggle('open')">➕ Add Event to Map</button>
+      <button class="btn btn-surf" style="font-size:.72rem" onclick="document.getElementById('add-event-panel').classList.toggle('open')">➕ Add External Event</button>
     </div>
 
-    <!-- Admin: manually add an event to the map -->
+    <!-- Admin: manually add an EXTERNAL event (not from organizer) -->
     <div class="edit-panel" id="add-event-panel">
       <h3>
-        <span>➕ Add Event to Map</span>
+        <span>➕ Add External Event</span>
         <button class="btn btn-surf" style="padding:5px 12px;font-size:.68rem" onclick="document.getElementById('add-event-panel').classList.remove('open')">✕ Close</button>
       </h3>
+      <div style="font-size:.75rem;color:var(--mu2);margin-bottom:14px;line-height:1.5;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.15);border-radius:10px;padding:10px">Use this to manually add events from outside the platform (e.g. events you scraped, Ticketmaster events, or events sent to you by email). For events submitted by organizers, use the queue above.</div>
       <div class="msg" id="add-event-msg"></div>
       <div class="edit-grid">
         <div class="field-full" style="grid-column:1/-1">
@@ -640,7 +652,14 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div id="tab-banners" class="tab-content">
     <div style="margin-bottom:20px">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Banner Manager</div>
-      <div style="font-size:.82rem;color:var(--mu2)">Create and manage promotional banners shown across the app</div>
+      <div style="font-size:.82rem;color:var(--mu2);margin-bottom:10px">Create and manage promotional banners shown across the app</div>
+      <div style="background:rgba(255,92,0,.07);border:1px solid rgba(255,92,0,.2);border-radius:12px;padding:12px;font-size:.78rem;line-height:1.6;color:var(--mu2)">
+        <strong style="color:var(--or)">What is a Banner?</strong> Banners are the sliding cards that appear in the promotions carousel on the Pulsify home screen — visible to all users. Use banners to:<br/>
+        • Promote an upcoming event ("🎉 Gqom Night this Saturday — Tap to view")<br/>
+        • Announce a new business on the platform ("🏢 Eyadini Lounge is now on Pulsify")<br/>
+        • Share a platform update or announcement<br/>
+        Set a <strong>Target URL</strong> so tapping the banner opens the relevant event, map location, or page. Set an expiry date so it auto-removes after the event date.
+      </div>
     </div>
 
     <!-- New banner form -->
@@ -1063,7 +1082,7 @@ function switchTab(tab, btn) {
   
   if (tab === 'users' && !ALL_USERS.length) loadUsers();
   else if (tab === 'businesses' && !ALL_BIZ.length) loadBusinesses();
-  else if (tab === 'events') loadPendingEvents();
+  else if (tab === 'events') { loadMapPinQueue(); loadPendingEvents(); }
   else if (tab === 'leads') loadLeads(1);
   else if (tab === 'verifications') loadVerifications();
   else if (tab === 'banners') loadBanners();
@@ -2010,6 +2029,33 @@ async function loadPendingEventsCount() {
   } catch(_) {}
 }
 
+async function loadMapPinQueue() {
+  const el = document.getElementById('map-pin-queue'); if (!el) return;
+  el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--mu);font-size:.78rem">Loading…</div>';
+  try {
+    const r = await fetch('/api/admin/events?filter=map_approval', { headers: { Authorization: 'Bearer ' + adminToken } });
+    const json = await safeJson(r);
+    const evs = json.events || [];
+    if (!evs.length) {
+      el.innerHTML = '<div style="padding:14px;text-align:center;color:var(--mu);font-size:.78rem">No pending map pin requests ✅</div>';
+      return;
+    }
+    el.innerHTML = evs.map(ev => {
+      const date = ev.date_local ? new Date(ev.date_local).toLocaleDateString('en-ZA') : '—';
+      return `<div style="background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.2);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800">${esc(ev.name)}</div>
+          <div style="font-size:.72rem;color:var(--mu2);margin-top:2px">${esc(ev.venue_city || '—')} · ${date} · ${esc(ev.organiser_name || '—')}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <button class="btn btn-cy" style="padding:7px 14px;font-size:.72rem" onclick="approveMapPin('${ev.id}',this)">📍 Approve Map Pin</button>
+          <button class="btn btn-pk" style="padding:7px 14px;font-size:.72rem" onclick="reviewEvent('${ev.id}',false,this)">❌ Reject</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = `<div style="padding:14px;text-align:center;color:var(--pk);font-size:.78rem">Error: ${e.message}</div>`; }
+}
+
 async function loadPendingEvents() {
   document.getElementById('events-list').innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Loading…</div>';
   const filter = document.getElementById('evt-filter')?.value || 'pending';
@@ -2076,6 +2122,7 @@ async function approveMapPin(eventId, btn) {
     const json = await safeJson(r);
     if (!r.ok) { showEvtMsg(json.error || 'Failed', 'err'); return; }
     showEvtMsg('📍 Map pin approved — event is now live on the map!', 'ok');
+    loadMapPinQueue();
     loadPendingEvents();
     loadPendingEventsCount();
   } catch(e) { showEvtMsg('Error: ' + e.message, 'err'); }
@@ -2099,6 +2146,7 @@ async function reviewEvent(eventId, approve, btn) {
     const json = await safeJson(r);
     if (!r.ok) { showEvtMsg(json.error || 'Failed', 'err'); return; }
     showEvtMsg(`✅ Event ${approve ? 'approved' : 'rejected'} successfully.`, 'ok');
+    loadMapPinQueue();
     loadPendingEvents();
     loadPendingEventsCount();
   } catch(e) { showEvtMsg('Error: ' + e.message, 'err'); }
