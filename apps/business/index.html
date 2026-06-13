@@ -517,7 +517,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
           <div class="setting-card-icon" style="background:linear-gradient(135deg,rgba(176,38,255,.2),rgba(255,92,0,.15));border:1px solid rgba(176,38,255,.3)">💎</div>
           <div>
             <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Upgrade to Premium</div>
-            <div style="font-size:.68rem;color:var(--mu)">R499/month — currently on free plan</div>
+            <div style="font-size:.68rem;color:var(--mu)">R360/month — currently on free plan</div>
           </div>
         </div>
         <button id="biz-sub-btn" class="btn-sec" style="padding:6px 12px;font-size:.72rem" onclick="upgradeBizToPremium()">Upgrade →</button>
@@ -874,7 +874,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
       <div style="text-align:center;padding:20px 0 16px;background:linear-gradient(135deg,rgba(176,38,255,.15),rgba(255,92,0,.1));border-radius:16px;margin-bottom:18px;border:1px solid rgba(176,38,255,.2)">
         <div style="font-size:2rem;margin-bottom:4px">💎</div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.06em">BUSINESS PREMIUM</div>
-        <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:#FF5C00">R499<span style="font-size:.8rem;font-weight:400;color:var(--mu)">/month</span></div>
+        <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:#FF5C00">R360<span style="font-size:.8rem;font-weight:400;color:var(--mu)">/month</span></div>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:22px">
         <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Featured map placement</div><div style="font-size:.71rem;color:var(--mu)">Appear at the top of map results in your area</div></div></div>
@@ -884,7 +884,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
         <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Top banner ads</div><div style="font-size:.71rem;color:var(--mu)">Purchase homepage carousel placement</div></div></div>
         <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Priority support</div><div style="font-size:.71rem;color:var(--mu)">Faster response from the Pulsefy team</div></div></div>
       </div>
-      <button class="btn-primary" style="width:100%;padding:15px;font-size:.92rem" id="biz-pay-btn" onclick="startBizPayment()">Pay R499/month · Activate Premium 🚀</button>
+      <button class="btn-primary" style="width:100%;padding:15px;font-size:.92rem" id="biz-pay-btn" onclick="startBizPayment()">Pay R360/month · Activate Premium 🚀</button>
       <div id="biz-pay-msg" style="text-align:center;font-size:.68rem;color:var(--mu);margin-top:10px">🔒 Secured by Paystack · Cancel anytime · Monthly billing</div>
     </div>
   </div>
@@ -1481,7 +1481,7 @@ async function startBizPayment() {
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Could not start payment');
-    if (btn) { btn.disabled = false; btn.textContent = 'Pay R499/month · Activate Premium 🚀'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Pay R360/month · Activate Premium 🚀'; }
     PaystackPop.resumeTransaction(d.access_code, {
       onSuccess: async function() {
         closeSheet('biz-upgrade-sheet');
@@ -1496,17 +1496,17 @@ async function startBizPayment() {
             toast('Payment received — upgrade will activate shortly', 'ok');
           }
         } catch(e) { toast('Payment received — contact support if Premium isn\'t active', 'err'); }
-        finally { if (btn) { btn.disabled = false; btn.textContent = 'Pay R499/month · Activate Premium 🚀'; } }
+        finally { if (btn) { btn.disabled = false; btn.textContent = 'Pay R360/month · Activate Premium 🚀'; } }
       },
       onCancel: function() {
         toast('Payment cancelled');
-        if (btn) { btn.disabled = false; btn.textContent = 'Pay R499/month · Activate Premium 🚀'; }
+        if (btn) { btn.disabled = false; btn.textContent = 'Pay R360/month · Activate Premium 🚀'; }
         if (msg) msg.textContent = '🔒 Secured by Paystack · Cancel anytime · Monthly billing';
       }
     });
   } catch(e) {
     toast('Error: ' + e.message, 'err');
-    if (btn) { btn.disabled = false; btn.textContent = 'Pay R499/month · Activate Premium 🚀'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Pay R360/month · Activate Premium 🚀'; }
     if (msg) msg.textContent = '🔒 Secured by Paystack · Cancel anytime · Monthly billing';
   }
 }
@@ -1677,7 +1677,7 @@ async function renderAnalytics() {
       <div style="font-size:3rem;margin-bottom:12px">💎</div>
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:6px">Premium Feature</div>
       <div style="font-size:.8rem;color:var(--mu2);line-height:1.6;margin-bottom:20px">Analytics is available on the Premium plan.<br/>Get revenue charts, order trends, and customer insights.</div>
-      <a href="mailto:hello@pulsefy.co.za?subject=Premium%20Upgrade" style="background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;padding:12px 28px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;text-decoration:none">Upgrade — R499/month</a>
+      <a href="mailto:hello@pulsefy.co.za?subject=Premium%20Upgrade" style="background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;padding:12px 28px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;text-decoration:none">Upgrade — R360/month</a>
     </div>`;
     return;
   }
@@ -3224,7 +3224,7 @@ const OB_STEPS = [
   { ill:'profile', title:'Setup Your Profile', body:'Add photos, opening hours and contact details. This is what customers see on the map.' },
   { ill:'menu',    title:'Add Menu Items',    body:'Build your menu with prices and photos. Customers can order via QR for pickup or table service.' },
   { ill:'order',   title:'Manage Orders',     body:'Incoming orders appear in real-time. Mark ready when the food is prepped — customers get notified.' },
-  { ill:'promote', title:'Boost Visibility',  body:'Premium businesses (R499/mo) appear at the top of the map and home feed, with unlimited posts.' },
+  { ill:'promote', title:'Boost Visibility',  body:'Premium businesses (R360/mo) appear at the top of the map and home feed, with unlimited posts.' },
 ];
 let _obIdx = 0;
 function startOnboardingBiz() {
