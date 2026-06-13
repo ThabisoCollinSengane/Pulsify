@@ -632,7 +632,8 @@ select.inp option{background:#1C1140}
     <div class="sn-handle"></div>
     <div class="sn-head"><div class="sn-title">Payment Method</div><button class="sn-close" onclick="closeOrgSheet('org-payment-sheet')">✕</button></div>
     <div class="sn-body" style="padding-bottom:32px">
-      <div style="background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:10px 14px;font-size:.76rem;color:var(--mu);margin:14px 0">💳 Banking details stored securely for ticket payout processing.</div>
+      <div style="background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:10px 14px;font-size:.76rem;color:var(--mu);margin:14px 0">💳 Banking details stored securely for ticket payout processing. We use them to create your Paystack payout account.</div>
+      <div style="background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:10px 14px;font-size:.76rem;color:var(--mu);margin:0 0 14px">⏱ <b>When you get paid:</b> Ticket payments go straight to your Paystack payout account. You receive your share (92% — after Pulsefy's 8% platform fee) and Paystack settles to South African bank accounts on its standard schedule, usually within 1–2 business days of each sale.</div>
       <div id="org-payment-msg" class="msg"></div>
       <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Bank Name *</div>
       <select class="inp" id="opm-bank" style="width:100%;background:var(--bg2);color:var(--tx);margin-bottom:10px">
@@ -875,6 +876,8 @@ const ORG_FAQ = [
   { q: 'How do I update my profile and settings?', a: 'Tap <b>⚙ Settings</b> in the bottom nav. From there you can update your display name, bio, city, genres, profile photo, social links, bank account details for payouts, and submit a verification request (KYC — upload selfie + ID). Verified organizers get a badge and boosted placement. ⚙️' },
   { q: 'How do I set the map location for my event?', a: 'In the event creation form, scroll to <b>Venue Coordinates</b>. Tap <b>📍 Use My Current Location</b> to auto-fill with GPS (stand at or near the venue), or type in the latitude and longitude manually. Once set, your event marker appears on the Pulsefy live map for all users to discover. 🗺️' },
   { q: 'What happens if I hit the post limit?', a: 'Free accounts get 5 posts per calendar month. When you reach the limit you\'ll see a prompt — tap Upgrade to switch to Premium for unlimited posts, events, and instant publishing without admin approval. Your counter resets on the 1st of each month. 💎' },
+  { q: 'How much does an Event Organiser subscription cost?', a: 'The Event Organiser plan is <b>R220/month</b>. It gives you instant event publishing (no admin approval wait), unlimited posts and events, ticket sales with QR scanning at the door, and promotion tools. You can cancel anytime — billing is monthly via Paystack. 💎' },
+  { q: 'When do I get paid for ticket sales?', a: 'Add your bank account under <b>⚙ Settings → Payment Method</b> to create your Paystack payout account. Ticket payments go straight to that account — you receive <b>92%</b> of each sale (Pulsefy keeps an 8% platform fee). Paystack settles to South African bank accounts on its standard schedule, usually within <b>1–2 business days</b> of each sale. 💳' },
 ];
 function renderOrgFAQ() {
   const el = document.getElementById('faq-org');

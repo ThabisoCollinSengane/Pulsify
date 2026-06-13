@@ -770,7 +770,8 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <div class="sheet-handle"></div>
     <div class="sheet-head"><div class="sheet-title">Payment Method</div><button class="sheet-close" onclick="closeSheet('payment-sheet')">✕</button></div>
     <div class="sheet-body">
-      <div class="info-box">💳 Your banking details are stored securely for payout processing only.</div>
+      <div class="info-box">💳 Your banking details are stored securely for payout processing only. We use them to create your Paystack payout account.</div>
+      <div class="info-box" style="margin-top:8px">⏱ <b>When you get paid:</b> Payouts go directly to this bank account via Paystack. You receive your share (92% — after Pulsefy's 8% platform fee) and Paystack settles to South African bank accounts on its standard schedule, usually within 1–2 business days of each completed order or booking.</div>
       <div id="payment-msg" class="msg"></div>
       <label class="ff-label">Bank Name *</label>
       <select class="ff" id="pm-bank">
@@ -942,6 +943,8 @@ const BIZ_FAQ = [
   { q: 'How do I run a promotion?', a: 'Tap <b>🚀 Promote</b> in the bottom nav. Pick a template (Club Night, Shisanyama Sunday, BnB Weekend, or Custom), fill in your details and upload a cover photo, then submit. After admin approval (usually within a few hours), your promo appears in user discovery feeds and the homepage featured section. Tap your active promo to edit or remove it. 📣' },
   { q: 'How do Squad Deals work?', a: 'Tap <b>🎁 Deals</b> in the bottom nav to create a group discount. Examples: "Table for 8 — 15% off", "Buy 4 get 1 free platter", "Ladies get in free before 10pm". Deals appear directly in the planning feeds of squads deciding where to go. Groups book immediately, spend more, and bring their friends back. Fill in the deal name, description, and validity period to create one. 💰' },
   { q: 'How do I get my verified badge?', a: 'Tap <b>⚙️ Profile → Verify Profile</b>. Upload a selfie (for identity) and your business registration documents or trading licence. Submission takes about 2 minutes — review is done within 1–3 business days. Verified businesses rank higher in search, display a trust badge, and get priority in map discovery. ✅' },
+  { q: 'How much does a Business subscription cost?', a: 'The Business account plan is <b>R360/month</b>. It gives you featured placement on the live map, unlimited menu items, full analytics, pickup-order management, event posting, promotions, and Squad Deals. Billing is monthly via Paystack and you can cancel anytime. 💎' },
+  { q: 'When do I get paid for orders and bookings?', a: 'Add your bank account under <b>⚙️ Profile → Payment Method</b> to create your Paystack payout account. Payments go straight to that account — you receive <b>92%</b> of each order or booking (Pulsefy keeps an 8% platform fee). Paystack settles to South African bank accounts on its standard schedule, usually within <b>1–2 business days</b> of each completed transaction. 💳' },
 ];
 function renderBizFAQ() {
   const el = document.getElementById('faq-biz');
@@ -1111,7 +1114,7 @@ async function submitVerification() {
 }
 
 // ── Payment Method ───────────────────────────────────────────
-function submitPaymentMethod() {
+async function submitPaymentMethod() {
   const bank    = document.getElementById('pm-bank').value;
   const name    = document.getElementById('pm-name').value.trim();
   const account = document.getElementById('pm-account').value.trim();
@@ -1119,11 +1122,30 @@ function submitPaymentMethod() {
   if (!bank || !name || !account || !type) {
     showMsg('payment-msg', 'Please fill in all required fields.', 'err'); return;
   }
-  const pm = { bank, name, account, type, branch: document.getElementById('pm-branch').value.trim(), saved_at: new Date().toISOString() };
-  save('payment', pm);
-  showMsg('payment-msg', '✅ Payment method saved.', 'ok');
-  loadVerifStatus();
-  setTimeout(() => closeSheet('payment-sheet'), 1800);
+  const btn = document.querySelector('#payment-sheet .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const sb = getSB(); if (!sb) throw new Error('Not initialised');
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) throw new Error('Session expired — please sign in again');
+    // Persist to profiles + auto-create a Paystack payout subaccount (handled server-side for business role)
+    const res = await fetch('/api/auth/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ bank_name: bank, account_number: account, business_name: name }),
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || 'Save failed');
+    // Keep a local copy for offline status display
+    save('payment', { bank, name, account, type, branch: document.getElementById('pm-branch').value.trim(), saved_at: new Date().toISOString() });
+    showMsg('payment-msg', d.paystack_subaccount_code ? '✅ Bank account saved & payout account created!' : '✅ Bank account saved — payouts will be activated by our team.', 'ok');
+    loadVerifStatus();
+    setTimeout(() => closeSheet('payment-sheet'), 2000);
+  } catch(e) {
+    showMsg('payment-msg', '❌ ' + e.message, 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Payment Method 💳'; }
+  }
 }
 
 function showMsg(id, text, type) {
