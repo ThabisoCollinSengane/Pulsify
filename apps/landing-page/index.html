@@ -173,12 +173,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .ft2{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.02em;line-height:1.1;color:#fff;text-shadow:0 2px 16px rgba(0,0,0,.8)}
 .fp{font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);padding:4px 12px;border-radius:50px;color:#fff;flex-shrink:0}
 .fp.fr{color:var(--li)}
-.fd{padding:10px 14px 4px}
-.fm{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:5px}
+.fd{padding:8px 14px 2px}
+.fm{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:3px}
 .fct{font-size:.68rem;color:var(--or);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .fdt{width:3px;height:3px;border-radius:50%;background:var(--mu)}
 .fda{font-size:.68rem;color:var(--mu)}
-.fv{font-size:.73rem;color:var(--mu);margin-bottom:8px}
+.fv{font-size:.73rem;color:var(--mu);margin-bottom:4px}
 .hr{display:flex;justify-content:space-between;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:4px}
 .hr span:last-child{color:var(--li)}
 .hb{height:2px;background:rgba(168,108,255,.14);border-radius:2px;overflow:hidden;margin-bottom:10px}
@@ -1865,7 +1865,6 @@ function buildCard(ev, idx) {
   const isT = ev.date_local === new Date().toISOString().split('T')[0];
   const iF  = ev.is_free;
   const pr  = iF ? 'FREE' : (ev.price_min ? 'R' + ev.price_min : 'TBA');
-  const hp  = ev.hype_score ?? 70;
   const bg  = gg(ev.genre);
   const emo = ge(ev.genre);
   const gl  = (ev.genre || '').toLowerCase();
@@ -1892,8 +1891,6 @@ function buildCard(ev, idx) {
     <div class="fd">
       <div class="fm"><span class="fct">📍 ${x(ev.venue_city)}</span><span class="fdt"></span><span class="fda">${fdt(ev.date_local, ev.time_local)}</span></div>
       <div class="fv">${x(ev.venue_name || '')} · ${x(ev.genre || '')}</div>
-      <div class="hr"><span>Hype Meter</span><span>🔥 ${hp}%</span></div>
-      <div class="hb"><div class="hf" style="width:${hp}%"></div></div>
     </div>
     <div class="fac" onclick="event.stopPropagation()">
       <button class="ab" onclick="toggleLike(this, '${x(ev.id)}', 'events')"><span class="ai">🤍</span><span>${fn(ev.like_count)}</span></button>
