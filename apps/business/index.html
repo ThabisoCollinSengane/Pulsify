@@ -1330,6 +1330,7 @@ function showTab(name, _noPush) {
 
 // ═══════════ DISCOVER (public events catalog) ═══════════
 let _discoverLoaded = false;
+let _discoverEvents = {};
 async function loadDiscoverEvents() {
   if (_discoverLoaded) return;
   const el = document.getElementById('discover-list'); if (!el) return;
@@ -1337,7 +1338,7 @@ async function loadDiscoverEvents() {
     const sb = getSB(); if (!sb) throw new Error('no SDK');
     const today = new Date().toISOString().split('T')[0];
     const { data, error } = await sb.from('events')
-      .select('id,name,date_local,time_local,venue_name,venue_city,price_min,is_free,image_url,genre,organiser_name')
+      .select('id,name,date_local,time_local,venue_name,venue_city,price_min,is_free,image_url,genre,organiser_name,description')
       .gte('date_local', today)
       .order('date_local', { ascending: true })
       .limit(40);
@@ -1347,6 +1348,8 @@ async function loadDiscoverEvents() {
       el.innerHTML = '<div style="padding:30px 0;text-align:center;color:var(--mu);font-size:.82rem">No upcoming events yet 🎟</div>';
       return;
     }
+    _discoverEvents = {};
+    events.forEach(ev => { _discoverEvents[ev.id] = ev; });
     el.innerHTML = events.map(renderDiscoverCard).join('');
     _discoverLoaded = true;
   } catch(e) {
@@ -1359,11 +1362,10 @@ function renderDiscoverCard(ev) {
   const d = ev.date_local ? new Date(ev.date_local) : null;
   const date = d ? d.toLocaleDateString('en-ZA', { day:'numeric', month:'short' }) : '';
   const time = ev.time_local ? ev.time_local.slice(0,5) : '';
-  const url = '/?eid=' + encodeURIComponent(ev.id);
   const img = ev.image_url
     ? `<img src="${xe(ev.image_url)}" loading="lazy" style="width:100%;height:120px;object-fit:cover;border-radius:12px;margin-bottom:8px" onerror="this.style.display='none'"/>`
     : `<div style="width:100%;height:120px;background:linear-gradient(135deg,rgba(176,38,255,.18),rgba(255,92,0,.14));border-radius:12px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:2.4rem">🎟</div>`;
-  return `<a href="${url}" target="_blank" rel="noopener" style="display:block;background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:10px;text-decoration:none;color:inherit">
+  return `<div onclick="openDiscoverDetail('${xe(ev.id)}')" style="display:block;background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:10px;cursor:pointer;color:inherit">
     ${img}
     <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.92rem;margin-bottom:4px;color:var(--tx)">${xe(ev.name)}</div>
     <div style="font-size:.72rem;color:var(--mu2);margin-bottom:3px">📍 ${xe(ev.venue_city || '')}${ev.venue_name ? ' · ' + xe(ev.venue_name) : ''}</div>
@@ -1371,7 +1373,45 @@ function renderDiscoverCard(ev) {
       <div style="font-size:.7rem;color:var(--mu)">📅 ${xe(date)}${time ? ' · ' + xe(time) : ''}${ev.genre ? ' · ' + xe(ev.genre) : ''}</div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:${ev.is_free ? 'var(--li)' : 'var(--or)'}">${price}</div>
     </div>
-  </a>`;
+  </div>`;
+}
+
+// In-dashboard event detail modal — never navigates away
+function openDiscoverDetail(id) {
+  const ev = _discoverEvents[id]; if (!ev) return;
+  const xe = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const price = ev.is_free ? 'FREE' : (ev.price_min ? 'R' + ev.price_min : 'Price TBA');
+  const d = ev.date_local ? new Date(ev.date_local) : null;
+  const date = d ? d.toLocaleDateString('en-ZA', { weekday:'short', day:'numeric', month:'long' }) : '';
+  const time = ev.time_local ? ev.time_local.slice(0,5) : '';
+  const url = '/?eid=' + encodeURIComponent(ev.id);
+  const hero = ev.image_url
+    ? `<img src="${xe(ev.image_url)}" style="width:100%;height:200px;object-fit:cover" onerror="this.style.display='none'"/>`
+    : `<div style="width:100%;height:160px;background:linear-gradient(135deg,rgba(176,38,255,.2),rgba(255,92,0,.14));display:flex;align-items:center;justify-content:center;font-size:3rem">🎟</div>`;
+  let ov = document.getElementById('discover-detail-ov');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'discover-detail-ov';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center';
+    ov.onclick = e => { if (e.target === ov) ov.remove(); };
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML = `<div style="width:100%;max-width:480px;max-height:90vh;overflow-y:auto;background:var(--bg);border-top-left-radius:22px;border-top-right-radius:22px;border:1px solid var(--border)">
+    <div style="position:relative">
+      ${hero}
+      <button onclick="document.getElementById('discover-detail-ov').remove()" style="position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.55);border:none;color:#fff;font-size:1.1rem;cursor:pointer">✕</button>
+    </div>
+    <div style="padding:18px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.7rem;line-height:1.05;margin-bottom:6px">${xe(ev.name)}</div>
+      <div style="font-size:.82rem;color:var(--mu2);margin-bottom:14px">${xe(ev.organiser_name || '')}${ev.organiser_name ? ' · ' : ''}${xe(date)}${time ? ' · ' + xe(time) : ''}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:10px"><div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:3px">Venue</div><div style="font-size:.82rem;font-weight:700">${xe(ev.venue_name || ev.venue_city || '—')}</div><div style="font-size:.72rem;color:var(--mu2)">${xe(ev.venue_city || '')}</div></div>
+        <div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:10px"><div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:3px">From</div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:${ev.is_free ? 'var(--li)' : 'var(--or)'}">${price}</div>${ev.genre ? `<div style="font-size:.72rem;color:var(--mu2)">${xe(ev.genre)}</div>` : ''}</div>
+      </div>
+      ${ev.description ? `<div style="font-size:.84rem;line-height:1.6;color:var(--tx);margin-bottom:16px">${xe(ev.description)}</div>` : ''}
+      <a href="${url}" target="_blank" rel="noopener" style="display:block;text-align:center;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;padding:13px;border-radius:50px;font-family:'Syne',sans-serif;font-weight:700;font-size:.86rem;text-decoration:none">View tickets & full details ↗</a>
+    </div>
+  </div>`;
 }
 // ═══════════ SOCIAL FEED ═══════════
 let _bizFeedLoaded = false;
