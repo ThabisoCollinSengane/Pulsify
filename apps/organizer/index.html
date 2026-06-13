@@ -205,9 +205,9 @@ select.inp option{background:#1C1140}
           <div>
             <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:5px">Time</div>
             <div style="display:flex;gap:4px">
-              <select class="inp" id="ev-time-h" style="margin-bottom:0;flex:1;padding-right:18px"></select>
-              <select class="inp" id="ev-time-m" style="margin-bottom:0;flex:1;padding-right:18px"></select>
-              <select class="inp" id="ev-time-ap" style="margin-bottom:0;flex:1;padding-right:18px"><option value="AM">AM</option><option value="PM">PM</option></select>
+              <select class="inp" id="ev-time-h" style="margin-bottom:0;flex:1;min-width:0;padding:11px 4px;text-align:center;font-size:.82rem"></select>
+              <select class="inp" id="ev-time-m" style="margin-bottom:0;flex:1;min-width:0;padding:11px 4px;text-align:center;font-size:.82rem"></select>
+              <select class="inp" id="ev-time-ap" style="margin-bottom:0;flex:1;min-width:0;padding:11px 4px;text-align:center;font-size:.82rem"><option value="AM">AM</option><option value="PM">PM</option></select>
             </div>
           </div>
         </div>
@@ -215,11 +215,12 @@ select.inp option{background:#1C1140}
         <input class="inp" id="ev-venue" placeholder="Venue name *"/>
         <select class="inp" id="ev-city-sel" onchange="onEvCitySel()"></select>
         <input class="inp" id="ev-city" placeholder="Type your town / city *" style="display:none"/>
-        <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Ticket Types</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Ticket Types <span style="text-transform:none;letter-spacing:0;color:var(--mu2);font-weight:400">— leave Qty blank for unlimited</span></div>
         <div id="ev-tiers-list">
-          <div class="ev-tier-row" style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center">
+          <div class="ev-tier-row" style="display:grid;grid-template-columns:1.3fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center">
             <input class="inp" style="margin-bottom:0" placeholder="Tier name" value="General Admission"/>
-            <input class="inp" style="margin-bottom:0" type="number" placeholder="Price (R, 0=free)" min="0"/>
+            <input class="inp" style="margin-bottom:0" type="number" placeholder="Price (R)" min="0"/>
+            <input class="inp" style="margin-bottom:0" type="number" placeholder="Qty" min="1"/>
             <div style="width:30px"></div>
           </div>
         </div>
@@ -814,6 +815,16 @@ select.inp option{background:#1C1140}
         <option value="other">Other</option>
       </select>
       <textarea class="inp" id="edit-ev-desc" placeholder="Description (optional)" maxlength="500" style="min-height:80px;resize:none"></textarea>
+      <!-- Banner image edit -->
+      <div style="margin-bottom:10px">
+        <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:5px">Banner Image</div>
+        <div id="edit-ev-img-preview" style="display:none;border-radius:10px;overflow:hidden;height:90px;background:#111;margin-bottom:8px"><img id="edit-ev-img-thumb" style="width:100%;height:100%;object-fit:cover"/></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button type="button" class="btn-sec" style="padding:8px 14px;font-size:.78rem" onclick="document.getElementById('edit-ev-img-file').click()">📷 Change Image</button>
+          <span id="edit-ev-img-name" style="font-size:.72rem;color:var(--mu2)">No new file</span>
+        </div>
+        <input type="file" id="edit-ev-img-file" accept="image/*" style="display:none" onchange="previewEditEvImg(this)"/>
+      </div>
       <!-- Location update -->
       <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:12px">
         <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Update Event Location</div>
@@ -1782,13 +1793,23 @@ function previewEvImg(input) {
   };
   reader.readAsDataURL(file);
 }
+function previewEditEvImg(input) {
+  const file = input.files[0]; if (!file) return;
+  document.getElementById('edit-ev-img-name').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('edit-ev-img-thumb').src = e.target.result;
+    document.getElementById('edit-ev-img-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
 
 function addEvTierRow() {
   const list = document.getElementById('ev-tiers-list');
   const row = document.createElement('div');
   row.className = 'ev-tier-row';
-  row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center';
-  row.innerHTML = `<input class="inp" style="margin-bottom:0" placeholder="Tier name"/><input class="inp" style="margin-bottom:0" type="number" placeholder="Price (R, 0=free)" min="0"/><button type="button" onclick="this.closest('.ev-tier-row').remove()" style="width:28px;height:28px;border-radius:8px;background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.3);color:#FF2D78;cursor:pointer;font-size:.9rem;flex-shrink:0">✕</button>`;
+  row.style.cssText = 'display:grid;grid-template-columns:1.3fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center';
+  row.innerHTML = `<input class="inp" style="margin-bottom:0" placeholder="Tier name"/><input class="inp" style="margin-bottom:0" type="number" placeholder="Price (R)" min="0"/><input class="inp" style="margin-bottom:0" type="number" placeholder="Qty" min="1"/><button type="button" onclick="this.closest('.ev-tier-row').remove()" style="width:28px;height:28px;border-radius:8px;background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.3);color:#FF2D78;cursor:pointer;font-size:.9rem;flex-shrink:0">✕</button>`;
   list.appendChild(row);
 }
 
@@ -1814,9 +1835,11 @@ async function submitEvent() {
     const inputs = row.querySelectorAll('input');
     const tierName = inputs[0]?.value?.trim();
     const tierPrice = parseFloat(inputs[1]?.value) || 0;
-    if (tierName) tiers.push({ name: tierName, price: tierPrice, is_free: tierPrice === 0, sort_order: i });
+    const qtyRaw = parseInt(inputs[2]?.value, 10);
+    const tierCap = (Number.isFinite(qtyRaw) && qtyRaw > 0) ? qtyRaw : null; // null = unlimited
+    if (tierName) tiers.push({ name: tierName, price: tierPrice, is_free: tierPrice === 0, capacity: tierCap, sort_order: i });
   });
-  if (!tiers.length) tiers.push({ name: 'General Admission', price: 0, is_free: true, sort_order: 0 });
+  if (!tiers.length) tiers.push({ name: 'General Admission', price: 0, is_free: true, capacity: null, sort_order: 0 });
 
   const minPrice = Math.min(...tiers.map(t => t.price));
   const maxPrice = Math.max(...tiers.map(t => t.price));
@@ -1876,7 +1899,7 @@ async function submitEvent() {
     // Insert all ticket tiers.
     // NOTE: is_free and sold_out are GENERATED columns in ticket_tiers — never insert them.
     if (tiers.length > 0) {
-      const tierRows = tiers.map(t => ({ event_id: eventId, name: t.name, price: t.price, sort_order: t.sort_order }));
+      const tierRows = tiers.map(t => ({ event_id: eventId, name: t.name, price: t.price, capacity: t.capacity, sort_order: t.sort_order }));
       const { error: tierErr } = await sb.from('ticket_tiers').insert(tierRows);
       if (tierErr) toast('Event saved, but ticket tiers failed: ' + tierErr.message, 'err');
     }
@@ -1914,7 +1937,7 @@ async function submitEvent() {
     document.getElementById('ev-img-name').textContent = 'No file chosen';
     const mapChk = document.getElementById('ev-show-on-map'); if (mapChk) mapChk.checked = false;
     // Reset tiers to single default row
-    document.getElementById('ev-tiers-list').innerHTML = `<div class="ev-tier-row" style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center"><input class="inp" style="margin-bottom:0" placeholder="Tier name" value="General Admission"/><input class="inp" style="margin-bottom:0" type="number" placeholder="Price (R, 0=free)" min="0"/><div style="width:30px"></div></div>`;
+    document.getElementById('ev-tiers-list').innerHTML = `<div class="ev-tier-row" style="display:grid;grid-template-columns:1.3fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center"><input class="inp" style="margin-bottom:0" placeholder="Tier name" value="General Admission"/><input class="inp" style="margin-bottom:0" type="number" placeholder="Price (R)" min="0"/><input class="inp" style="margin-bottom:0" type="number" placeholder="Qty" min="1"/><div style="width:30px"></div></div>`;
     document.getElementById('stat-events').textContent = parseInt(document.getElementById('stat-events').textContent||0)+1;
     _orgFeedLoaded = false; // invalidate feed cache so new event post appears
     loadMyEvents();
@@ -2038,6 +2061,13 @@ function openEditEventSheet(evId) {
   if (locEl) locEl.textContent = e.venue_lat && e.venue_lon ? `Current: ${parseFloat(e.venue_lat).toFixed(5)}, ${parseFloat(e.venue_lon).toFixed(5)}` : 'No location set';
   const msgEl = document.getElementById('edit-ev-loc-msg');
   if (msgEl) msgEl.textContent = '';
+  // Banner image: show current, clear any pending new file
+  const imgFile = document.getElementById('edit-ev-img-file'); if (imgFile) imgFile.value = '';
+  document.getElementById('edit-ev-img-name').textContent = 'No new file';
+  const imgPrev = document.getElementById('edit-ev-img-preview');
+  const imgThumb = document.getElementById('edit-ev-img-thumb');
+  if (e.image_url) { imgThumb.src = e.image_url; imgPrev.style.display = 'block'; }
+  else { imgPrev.style.display = 'none'; imgThumb.src = ''; }
   openOrgSheet('org-edit-event-sheet');
 }
 
@@ -2056,10 +2086,22 @@ async function saveEventEdit() {
   if (!city)  return toast('Enter a city', 'err');
   const btn = document.getElementById('save-ev-edit-btn');
   btn.disabled = true; btn.textContent = 'Saving…';
-  const { error } = await sb.from('events').update({ name, date_local: date, time_local: time||null, venue_name: venue, venue_city: city, genre: genre||null, description: desc||null }).eq('id', _editEvId).eq('organiser_id', currentUser.id);
+  // Upload a new banner image if one was chosen
+  let newImgUrl;
+  const editImgFile = document.getElementById('edit-ev-img-file')?.files[0];
+  if (editImgFile) {
+    const ext  = editImgFile.name.split('.').pop() || 'jpg';
+    const path = currentUser.id + '/events/' + Date.now() + '.' + ext;
+    const { error: upErr } = await sb.storage.from('post-images').upload(path, editImgFile, { upsert: false });
+    if (upErr) { toast('Image upload failed — saving other changes', 'err'); }
+    else { newImgUrl = sb.storage.from('post-images').getPublicUrl(path).data.publicUrl; }
+  }
+  const upd = { name, date_local: date, time_local: time||null, venue_name: venue, venue_city: city, genre: genre||null, description: desc||null };
+  if (newImgUrl) upd.image_url = newImgUrl;
+  const { error } = await sb.from('events').update(upd).eq('id', _editEvId).eq('organiser_id', currentUser.id);
   btn.disabled = false; btn.textContent = 'Save Event ✅';
   if (error) { toast('Could not save event: ' + error.message, 'err'); return; }
-  if (_evMap[_editEvId]) Object.assign(_evMap[_editEvId], { name, date_local: date, time_local: time||null, venue_name: venue, venue_city: city, genre: genre||null, description: desc||null });
+  if (_evMap[_editEvId]) Object.assign(_evMap[_editEvId], upd);
   closeOrgSheet('org-edit-event-sheet');
   toast('Event updated ✅', 'ok');
   loadMyEvents();
@@ -2261,13 +2303,13 @@ async function loadScanStats() {
   try {
     const [bookingsRes, tiersRes] = await Promise.all([
       sb.from('bookings').select('id,checked_in,checked_in_at,buyer_name,quantity,tier_id').eq('event_id', evId).eq('status', 'confirmed').order('checked_in_at', { ascending: false, nullsFirst: false }),
-      sb.from('ticket_tiers').select('id,name,price,is_free,quantity').eq('event_id', evId).order('sort_order', { ascending: true })
+      sb.from('ticket_tiers').select('id,name,price,is_free,capacity').eq('event_id', evId).order('sort_order', { ascending: true })
     ]);
     const all     = bookingsRes.data || [];
     const tiers   = tiersRes.data || [];
     const checked = all.filter(b => b.checked_in).reduce((s,b) => s + (b.quantity||1), 0);
     const soldQty = all.reduce((s,b) => s + (b.quantity||1), 0);
-    const capacity = tiers.reduce((s,t) => s + (t.quantity || 0), 0);
+    const capacity = tiers.reduce((s,t) => s + (t.capacity || 0), 0);
     const pct = capacity > 0 ? Math.min(100, Math.round(checked / capacity * 100)) : (soldQty > 0 ? Math.min(100, Math.round(checked / soldQty * 100)) : 0);
     const remaining = capacity > 0 ? Math.max(0, capacity - soldQty) : null;
 
@@ -2294,7 +2336,7 @@ async function loadScanStats() {
         ${tiers.length > 1 ? `<div style="margin-top:10px">${tiers.map(t => {
           const tierSold = all.filter(b => b.tier_id === t.id).reduce((s,b) => s+(b.quantity||1),0);
           const tierScanned = all.filter(b => b.tier_id === t.id && b.checked_in).reduce((s,b) => s+(b.quantity||1),0);
-          const tierCap = t.quantity || 0;
+          const tierCap = t.capacity || 0;
           return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:.74rem;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--tx);font-family:'Syne',sans-serif;font-weight:700">${xe(t.name)}</span><span style="color:var(--mu)">${tierScanned}✅ / ${tierSold} sold${tierCap > 0 ? ' / ' + tierCap + ' cap' : ''}</span></div>`;
         }).join('')}</div>` : ''}
       </div>`;
