@@ -2206,10 +2206,6 @@ async function openEv(evId) {
       tkHTML = `<div class="tkb"><div class="tkt2">🎟 Tickets</div><div style="font-size:.84rem;color:var(--mu);padding:12px 0">${iF ? 'Free entry — just show up!' : 'Contact the organiser for tickets.'}</div></div>`;
     }
 
-    const memHTML = photos.length ? photos.map(p => `<img class="skel" style="width:70px;height:70px;border-radius:10px;object-fit:cover;flex-shrink:0;border:1.5px solid var(--border)" src="${x(iU(p.url, 200, 70))}" loading="lazy"/>`).join('') :
-      `<img style="width:70px;height:70px;border-radius:10px;object-fit:cover;flex-shrink:0;border:1.5px solid var(--border)" src="https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=200&q=70&fm=webp&fit=crop&auto=compress" loading="lazy"/>
-       <img style="width:70px;height:70px;border-radius:10px;object-fit:cover;flex-shrink:0;border:1.5px solid var(--border)" src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=200&q=70&fm=webp&fit=crop&auto=compress" loading="lazy"/>`;
-
     document.getElementById('ev-detail').innerHTML = `
       <div class="dh"><img src="${x(iU(ev.image_url, 1200, 80))}" alt="${x(ev.name)}" onload="this.style.opacity=1" onerror="this.style.display='none'" style="opacity:0;transition:opacity .45s ease"/>
         <div class="dg"></div>
@@ -2246,17 +2242,70 @@ async function openEv(evId) {
         </div>
         ${ev.description ? `<div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:18px"><div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">About</div><div style="font-size:.82rem;line-height:1.65;color:var(--mu2)">${x(ev.description)}</div></div>` : ''}
         ${tkHTML}
-        <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">📸 Memories</div>
-        <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:20px">
-          <div onclick="showToast('Sign in to post 📸')" style="width:70px;height:70px;border-radius:10px;flex-shrink:0;border:1.5px dashed rgba(0,229,255,.35);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--cy);font-size:1.3rem">📷</div>
-          ${memHTML}
+        <div id="similar-ev-sec-${x(ev.id)}" style="margin-bottom:20px">
+          <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">✨ Similar Events</div>
+          <div id="similar-ev-${x(ev.id)}" style="display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px">
+            <div style="color:var(--mu);font-size:.74rem;padding:8px 0">Finding events like this…</div>
+          </div>
         </div>
       </div>`;
 
     triggerRev();
+    loadSimilarEvents(ev);
   } catch(err) {
     document.getElementById('ev-detail').innerHTML = `<div style="padding:40px;text-align:center;color:var(--mu)">Could not load event. <button onclick="goBack()" style="color:var(--or);background:none;border:none;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700">Go back</button></div>`;
   }
+}
+
+// Contextual "more like this" strip in the event detail panel — events sharing
+// the current event's genre or city. Distinct from the Discover tab's full browse.
+async function loadSimilarEvents(ev) {
+  const host = document.getElementById('similar-ev-' + ev.id);
+  const sec  = document.getElementById('similar-ev-sec-' + ev.id);
+  if (!host) return;
+  const hide = () => { if (sec) sec.style.display = 'none'; };
+  try {
+    const sb = getSB(); if (!sb) return hide();
+    const today = new Date().toISOString().split('T')[0];
+    const genre = (ev.genre || '').split(',')[0].trim();
+    const city  = (ev.venue_city || '').trim();
+    const cols  = 'id,name,date_local,time_local,venue_city,image_url,genre,is_free,price_min,source';
+    let q = sb.from('events').select(cols)
+      .neq('id', ev.id).eq('approved', true).eq('is_active', true)
+      .gte('date_local', today).order('date_local', { ascending: true }).limit(12);
+    const ors = [];
+    if (genre) ors.push(`genre.ilike.%${genre}%`);
+    if (city)  ors.push(`venue_city.ilike.%${city}%`);
+    if (ors.length) q = q.or(ors.join(','));
+    let { data } = await q;
+    data = data || [];
+    // Fallback to any upcoming events if nothing matched the genre/city
+    if (!data.length && ors.length) {
+      const r = await sb.from('events').select(cols)
+        .neq('id', ev.id).eq('approved', true).eq('is_active', true)
+        .gte('date_local', today).order('date_local', { ascending: true }).limit(8);
+      data = r.data || [];
+    }
+    if (!data.length) return hide();
+    host.innerHTML = data.slice(0, 8).map(e => {
+      const bg = gg(e.genre), emo = ge(e.genre);
+      const pr = e.is_free ? 'FREE' : (e.price_min ? 'R' + e.price_min : 'TBA');
+      const img = e.image_url
+        ? `<img src="${x(iU(e.image_url, 320))}" loading="lazy" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover"/>`
+        : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.6rem">${emo}</div>`;
+      return `<div onclick="openEv('${x(e.id)}')" style="width:150px;flex-shrink:0;border-radius:14px;overflow:hidden;background:var(--surf);border:1px solid var(--border);cursor:pointer">
+        <div style="height:96px;background:${bg}">${img}</div>
+        <div style="padding:8px 10px">
+          <div style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(e.name)}</div>
+          <div style="font-size:.62rem;color:var(--mu);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📍 ${x(e.venue_city||'')}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px">
+            <span style="font-size:.6rem;color:var(--mu2)">${x(fdate(e.date_local))}</span>
+            <span style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;color:${e.is_free?'var(--li)':'var(--or)'}">${pr}</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { hide(); }
 }
 
 function buildOrder() {
