@@ -5335,6 +5335,10 @@ window.addEventListener('DOMContentLoaded', () => {
   loadFrontline();
   loadPromoBanners();
   loadCommunityPosts();
+  // When the page is restored from the back-forward cache (e.g. pressing back
+  // from /feeds after liking a post), the browser skips JS re-run, leaving the
+  // "Latest from organizers" strip showing stale like counts. Refresh it.
+  window.addEventListener('pageshow', (e) => { if (e.persisted) loadCommunityPosts(); });
   if (_restoredTab !== 'home') showTab(_restoredTab, true);
   else triggerRev();
 
