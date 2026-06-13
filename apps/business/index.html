@@ -212,6 +212,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <nav class="bn">
   <button class="bb active" data-tab="home" onclick="showTab('home')"><span class="bb-ico">🏠</span><span class="bb-lbl">Home</span></button>
   <button class="bb" data-tab="posts" onclick="showTab('posts')"><span class="bb-ico">📸</span><span class="bb-lbl">Posts</span></button>
+  <button class="bb" data-tab="feed" onclick="showTab('feed')"><span class="bb-ico">📰</span><span class="bb-lbl">Feed</span></button>
   <button class="bb" data-tab="events" onclick="showTab('events')"><span class="bb-ico">🎉</span><span class="bb-lbl">Events</span></button>
   <button class="bb" data-tab="menu-mgr" onclick="showTab('menu-mgr')"><span class="bb-ico">🍽️</span><span class="bb-lbl">Menu</span></button>
   <button class="bb" data-tab="orders" onclick="showTab('orders')"><span class="bb-ico">📦</span><span class="bb-lbl">Orders</span><span class="bb-badge" id="orders-badge">0</span></button>
@@ -260,6 +261,15 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <button class="btn-primary" onclick="openPostSheet()">+ Post</button>
   </div>
   <div id="posts-list"></div>
+</div>
+
+<!-- ══ SOCIAL FEED ══ -->
+<div class="panel" id="tab-feed">
+  <div class="sec-head">
+    <div><div class="sec-title">Social Feed</div><div class="sec-sub">Recent posts from everyone on Pulsefy</div></div>
+    <button class="btn-sec" onclick="_bizFeedLoaded=false;loadBizFeed()">↺</button>
+  </div>
+  <div id="biz-feed-list" style="padding:0 14px 80px"><div style="padding:40px 0;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div></div>
 </div>
 
 <!-- ══ EVENTS ══ -->
@@ -1311,6 +1321,7 @@ function showTab(name, _noPush) {
   if (name === 'analytics') renderAnalytics();
   if (name === 'promote')   loadBizPromotions();
   if (name === 'events')    loadDiscoverEvents();
+  if (name === 'feed')      loadBizFeed();
   if (name === 'sqpromos')  loadMyBizSquadPromos();
   if (name === 'profile')   renderBizFAQ();
   if (name === 'profile')   loadBizSocialLinks();
@@ -1352,7 +1363,7 @@ function renderDiscoverCard(ev) {
   const img = ev.image_url
     ? `<img src="${xe(ev.image_url)}" loading="lazy" style="width:100%;height:120px;object-fit:cover;border-radius:12px;margin-bottom:8px" onerror="this.style.display='none'"/>`
     : `<div style="width:100%;height:120px;background:linear-gradient(135deg,rgba(176,38,255,.18),rgba(255,92,0,.14));border-radius:12px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:2.4rem">🎟</div>`;
-  return `<a href="${url}" style="display:block;background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:10px;text-decoration:none;color:inherit">
+  return `<a href="${url}" target="_blank" rel="noopener" style="display:block;background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:10px;text-decoration:none;color:inherit">
     ${img}
     <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.92rem;margin-bottom:4px;color:var(--tx)">${xe(ev.name)}</div>
     <div style="font-size:.72rem;color:var(--mu2);margin-bottom:3px">📍 ${xe(ev.venue_city || '')}${ev.venue_name ? ' · ' + xe(ev.venue_name) : ''}</div>
@@ -1362,6 +1373,63 @@ function renderDiscoverCard(ev) {
     </div>
   </a>`;
 }
+// ═══════════ SOCIAL FEED ═══════════
+let _bizFeedLoaded = false;
+function _bfTimeAgo(ts) {
+  const d = (Date.now() - new Date(ts)) / 1000;
+  if (d < 60) return 'just now';
+  if (d < 3600) return Math.floor(d/60)+'m ago';
+  if (d < 86400) return Math.floor(d/3600)+'h ago';
+  return Math.floor(d/86400)+'d ago';
+}
+async function loadBizFeed() {
+  if (_bizFeedLoaded) return;
+  const el = document.getElementById('biz-feed-list'); if (!el) return;
+  el.innerHTML = '<div style="padding:40px 0;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div>';
+  try {
+    const sb2 = getSB(); if (!sb2) throw new Error('no SDK');
+    const { data, error } = await sb2.from('posts')
+      .select('id,caption,image_url,created_at,post_type,like_count,comment_count,user_id,profiles!posts_user_id_fkey(display_name,avatar_url,username,role)')
+      .order('created_at', { ascending: false }).limit(40);
+    if (error) throw error;
+    const posts = data || [];
+    if (!posts.length) {
+      el.innerHTML = '<div style="padding:40px 0;text-align:center;color:var(--mu);font-size:.82rem">No posts yet 📸</div>';
+      _bizFeedLoaded = true; return;
+    }
+    const xe = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    el.innerHTML = posts.map(p => {
+      const prof = p.profiles || {};
+      const avatar = prof.avatar_url
+        ? `<img src="${xe(prof.avatar_url)}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0" onerror="this.style.display='none'"/>`
+        : `<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0">${xe((prof.display_name||'?')[0]).toUpperCase()}</div>`;
+      const roleTag = prof.role === 'business' ? '<span style="background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.2);color:var(--cy);border-radius:50px;padding:1px 7px;font-size:.58rem;font-family:Syne,sans-serif;font-weight:700">🏢 Biz</span>'
+        : prof.role === 'organizer' ? '<span style="background:rgba(198,255,74,.1);border:1px solid rgba(198,255,74,.2);color:var(--li);border-radius:50px;padding:1px 7px;font-size:.58rem;font-family:Syne,sans-serif;font-weight:700">🎪 Org</span>' : '';
+      const imgs = (() => { try { const u = p.image_url; if (!u) return ''; const arr = Array.isArray(u) ? u : (u.startsWith('[') ? JSON.parse(u) : [u]); return arr.slice(0,3).map(s=>`<img src="${xe(s)}" loading="lazy" style="flex:1;min-width:0;height:160px;object-fit:cover" onerror="this.parentNode.removeChild(this)"/>`).join(''); } catch { return ''; } })();
+      return `<div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:12px">
+        ${imgs ? `<div style="display:flex;gap:2px;max-height:160px;overflow:hidden">${imgs}</div>` : ''}
+        <div style="padding:12px 14px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            ${avatar}
+            <div style="flex:1;min-width:0">
+              <div style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;display:flex;align-items:center;gap:6px">${xe(prof.display_name||'User')} ${roleTag}</div>
+              <div style="font-size:.66rem;color:var(--mu)">${_bfTimeAgo(p.created_at)}</div>
+            </div>
+          </div>
+          ${p.caption ? `<div style="font-size:.8rem;line-height:1.5;color:var(--tx);word-break:break-word">${xe(p.caption)}</div>` : ''}
+          <div style="display:flex;gap:14px;margin-top:8px">
+            <span style="font-size:.72rem;color:var(--mu)">❤️ ${p.like_count||0}</span>
+            <span style="font-size:.72rem;color:var(--mu)">💬 ${p.comment_count||0}</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    _bizFeedLoaded = true;
+  } catch(e) {
+    el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--pk);font-size:.78rem">Could not load feed.<br/><button onclick="_bizFeedLoaded=false;loadBizFeed()" style="margin-top:10px;padding:6px 14px;background:var(--surf);border:1px solid var(--border2);border-radius:50px;color:var(--tx);font-family:Syne,sans-serif;font-size:.7rem;cursor:pointer">Retry</button></div>`;
+  }
+}
+
 function openSheet(id)  { document.getElementById(id).classList.add('open'); }
 function closeSheet(id) { document.getElementById(id).classList.remove('open'); }
 function toast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast ' + type + ' show'; setTimeout(() => t.className = 'toast', 4500); }
