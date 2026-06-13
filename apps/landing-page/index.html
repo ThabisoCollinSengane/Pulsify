@@ -2894,7 +2894,7 @@ function _toggleMapMarkersForZoom() {
 }
 function _togglePoiMarkersForZoom() {
   if (!mapObj || !poiMarkers.length) return;
-  const shouldShow = mapObj.getZoom() > 11;
+  const shouldShow = mapObj.getZoom() > 9;
   if (_poiMarkersVisible === shouldShow) return;
   _poiMarkersVisible = shouldShow;
   if (shouldShow) poiMarkers.forEach(m => { try { m.addTo(mapObj); } catch(e){} });
@@ -3279,8 +3279,9 @@ function placePoisOnMap() {
     if (lat < -35 || lat > -22 || lon < 16 || lon > 33) return;
     const cfg = _POI_CAT[poi.category] || _POI_CAT.other;
     const el = document.createElement('div');
-    el.style.cssText = `width:24px;height:24px;border-radius:50%;background:rgba(5,8,15,.88);border:2px solid ${cfg.bg};display:flex;align-items:center;justify-content:center;font-size:.68rem;cursor:pointer;position:absolute;top:0;left:0;box-shadow:0 2px 8px rgba(0,0,0,.7),0 0 8px ${cfg.bg}55;backdrop-filter:blur(4px);`;
-    el.innerHTML = `<span style="pointer-events:none">${cfg.emoji}</span>`;
+    el.className = 'mp-dot';
+    el.style.cssText = `width:18px;height:18px;border-radius:50%;background:rgba(5,8,15,.9);border:1.5px solid ${cfg.bg};display:flex;align-items:center;justify-content:center;font-size:.52rem;cursor:pointer;box-shadow:0 1px 5px rgba(0,0,0,.8);`;
+    el.innerHTML = `<span style="pointer-events:none;line-height:1">${cfg.emoji}</span>`;
     const _open = e => { e.stopPropagation(); showPoiPanel(poi, cfg); };
     el.addEventListener('click', _open);
     el.addEventListener('touchend', _open, { passive: false });
