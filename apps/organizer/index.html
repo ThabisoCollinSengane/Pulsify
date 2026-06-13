@@ -436,13 +436,17 @@ select.inp option{background:#1C1140}
         <input class="inp" id="org-mi-desc" placeholder="Short description (optional)"/>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
           <input class="inp" id="org-mi-price" type="number" min="0" placeholder="Price (R) *" style="margin-bottom:0"/>
-          <input class="inp" id="org-mi-cat" placeholder="Category" list="org-mi-cats" style="margin-bottom:0"/>
+          <select class="inp" id="org-mi-cat" style="margin-bottom:0">
+            <option value="General">Category…</option>
+            <option value="Packages">Packages</option>
+            <option value="Services">Services</option>
+            <option value="Tickets">Tickets</option>
+            <option value="Catering">Catering</option>
+            <option value="Drinks">Drinks</option>
+            <option value="Food">Food</option>
+            <option value="Other">Other</option>
+          </select>
         </div>
-        <datalist id="org-mi-cats">
-          <option value="Packages"></option><option value="Services"></option>
-          <option value="Tickets"></option><option value="Catering"></option>
-          <option value="Drinks"></option><option value="General"></option>
-        </datalist>
         <div style="display:flex;gap:8px;margin-top:12px">
           <button class="btn-sec" style="flex:1" id="org-mi-cancel" onclick="resetOrgMenuForm()" >Clear</button>
           <button class="btn-primary" style="flex:2" id="org-mi-save" onclick="submitOrgMenuItem()">Add Item ✅</button>
@@ -2182,7 +2186,11 @@ function editOrgMenuItem(id) {
   document.getElementById('org-mi-name').value = it.name || '';
   document.getElementById('org-mi-desc').value = it.description || '';
   document.getElementById('org-mi-price').value = it.price ?? '';
-  document.getElementById('org-mi-cat').value = it.category || '';
+  const catSel = document.getElementById('org-mi-cat');
+  if (it.category && !Array.from(catSel.options).some(o => o.value === it.category)) {
+    catSel.add(new Option(it.category, it.category)); // preserve a legacy/custom category
+  }
+  catSel.value = it.category || 'General';
   document.getElementById('org-menu-form-title').textContent = 'Edit Item';
   document.getElementById('org-mi-save').textContent = 'Save Changes ✅';
   document.getElementById('pane-pricelist').scrollIntoView({ behavior: 'smooth', block: 'start' });

@@ -677,7 +677,18 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
         <div><label class="ff-label">Emoji</label><input class="ff" type="text" id="mi-emoji" placeholder="🍖" maxlength="4"/></div>
       </div>
       <label class="ff-label">Category</label>
-      <input class="ff" type="text" id="mi-cat" placeholder="e.g. Mains, Drinks, Sides…"/>
+      <select class="ff" id="mi-cat">
+        <option value="General">Category…</option>
+        <option value="Mains">Mains</option>
+        <option value="Starters">Starters</option>
+        <option value="Sides">Sides</option>
+        <option value="Grill">Grill</option>
+        <option value="Drinks">Drinks</option>
+        <option value="Cocktails">Cocktails</option>
+        <option value="Desserts">Desserts</option>
+        <option value="Specials">Specials</option>
+        <option value="Other">Other</option>
+      </select>
       <label class="ff-label">Photos (up to 10)</label>
       <div id="mi-img-drop" onclick="document.getElementById('mi-img-file').click()" style="height:70px;background:rgba(255,255,255,.03);border:1.5px dashed rgba(0,229,255,.3);border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-bottom:8px;flex-direction:column;gap:4px">
         <span style="font-size:1.2rem">🍽️</span>
@@ -2412,9 +2423,13 @@ async function submitMenuItem() {
     photos = existing?.photos || [];
   }
 
-  const bizId = getBizId();
   const sb = getSB();
   if (!sb) { toast('Not connected', 'err'); return; }
+  // Fall back to the authenticated user id if the business profile id isn't loaded —
+  // RLS allows business_id = auth.uid()::text, so this prevents a silent insert failure.
+  let bizId = getBizId();
+  if (!bizId) { const { data: { session } } = await sb.auth.getSession(); bizId = session?.user?.id || ''; }
+  if (!bizId) { toast('Please sign in again', 'err'); return; }
 
   // Free plan: cap at 10 items (only on new items, not edits)
   if (!id) {
@@ -2458,7 +2473,11 @@ async function editMenuItem(id) {
   document.getElementById('mi-desc').value  = item.description || '';
   document.getElementById('mi-price').value = item.price || '';
   document.getElementById('mi-emoji').value = '';
-  document.getElementById('mi-cat').value   = item.category || '';
+  const miCatSel = document.getElementById('mi-cat');
+  if (item.category && !Array.from(miCatSel.options).some(o => o.value === item.category)) {
+    miCatSel.add(new Option(item.category, item.category)); // preserve a legacy/custom category
+  }
+  miCatSel.value = item.category || 'General';
   document.getElementById('mi-avail').value = item.is_available !== false ? '1' : '0';
   _menuImgFiles = [];
   const grid = document.getElementById('mi-img-grid');
