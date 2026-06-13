@@ -2037,7 +2037,7 @@ async function renderEvents() {
       const emo = GENRE_EMOJI[(ev.genre || '').toLowerCase()] || '🎉';
       const approvalBadge = ev.approved
         ? `<span style="background:rgba(0,229,100,.12);color:#00e564;border:1px solid rgba(0,229,100,.3);border-radius:20px;padding:2px 8px;font-size:.6rem;font-weight:700">✅ Live</span>`
-        : `<span style="background:rgba(255,180,0,.1);color:#FFB400;border:1px solid rgba(255,180,0,.25);border-radius:20px;padding:2px 8px;font-size:.6rem;font-weight:700">⏳ Pending approval</span>`;
+        : `<span style="background:rgba(255,180,0,.1);color:#FFB400;border:1px solid rgba(255,180,0,.25);border-radius:20px;padding:2px 8px;font-size:.6rem;font-weight:700">⏳ Under review</span>`;
       return `<div class="ev-row">
         <div class="ev-thumb">${ev.image_url ? `<img src="${xe(ev.image_url)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : ''}${emo}</div>
         <div class="ev-info">
@@ -2968,7 +2968,7 @@ async function loadBizPromoMine(token) {
       <div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px">
           <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.84rem">${xb(p.title)}</div>
-          <span style="flex-shrink:0;padding:2px 8px;border-radius:50px;font-size:.62rem;font-family:'Syne',sans-serif;font-weight:700;background:${p.is_active ? 'rgba(198,255,74,.12)' : 'rgba(255,92,0,.12)'};color:${p.is_active ? '#C6FF4A' : 'var(--or)'}">${p.is_active ? 'LIVE' : 'Pending'}</span>
+          <span style="flex-shrink:0;padding:2px 8px;border-radius:50px;font-size:.62rem;font-family:'Syne',sans-serif;font-weight:700;background:${p.is_active ? 'rgba(198,255,74,.12)' : 'rgba(255,92,0,.12)'};color:${p.is_active ? '#C6FF4A' : 'var(--or)'}">${p.is_active ? '✅ LIVE' : '⏳ Under review'}</span>
         </div>
         <div style="font-size:.72rem;color:var(--mu)">${p.placement} · ${p.ends_at ? 'Ends ' + p.ends_at.slice(0,10) : 'No end'}</div>
         <button data-id="${p.id}" onclick="deleteBizPromo(this)" style="margin-top:8px;background:rgba(255,45,120,.1);color:#FF2D78;border:none;border-radius:8px;padding:4px 12px;font-size:.7rem;cursor:pointer">Delete</button>
@@ -3127,7 +3127,7 @@ async function loadMyBizSquadPromos() {
         ? `<span style="background:rgba(198,255,74,.12);border:1px solid rgba(198,255,74,.3);color:#C6FF4A;font-size:.6rem;font-family:'Syne',sans-serif;font-weight:700;padding:2px 9px;border-radius:50px">✅ Live</span>`
         : p.rejected
           ? `<span style="background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.25);color:#FF2D78;font-size:.6rem;font-family:'Syne',sans-serif;font-weight:700;padding:2px 9px;border-radius:50px">❌ Rejected</span>`
-          : `<span style="background:rgba(255,200,0,.08);border:1px solid rgba(255,200,0,.2);color:#FFC800;font-size:.6rem;font-family:'Syne',sans-serif;font-weight:700;padding:2px 9px;border-radius:50px">⏳ Pending</span>`;
+          : `<span style="background:rgba(255,200,0,.08);border:1px solid rgba(255,200,0,.2);color:#FFC800;font-size:.6rem;font-family:'Syne',sans-serif;font-weight:700;padding:2px 9px;border-radius:50px">⏳ Under review</span>`;
       return `<div style="background:var(--surf2);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:10px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
           <span style="font-size:1.1rem">${BIZ_DEAL_ICONS[p.deal_type]||'🎁'}</span>
