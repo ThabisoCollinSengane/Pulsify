@@ -2266,9 +2266,14 @@ async function openSNPanel() {
   try {
     const r = await fetch('/api/notifications?limit=30', { headers: { 'Authorization': 'Bearer ' + session.access_token } });
     const { notifications } = await safeJson(r);
-    if (!notifications?.length) { list.innerHTML = '<div style="padding:30px;text-align:center;color:var(--mu)">No notifications yet.</div>'; return; }
-    const ICON = { like:'❤️', comment:'💬', follow:'👤', event:'🎟', order:'📦' };
-    list.innerHTML = notifications.map(n => `<div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border)"><div style="width:38px;height:38px;border-radius:50%;background:var(--surf2,#121B30);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">${ICON[n.type]||'🔔'}</div><div style="flex:1;min-width:0"><div style="font-size:.82rem;line-height:1.4;color:var(--tx)">${n.message||''}</div><div style="font-size:.68rem;color:var(--mu);margin-top:3px">${new Date(n.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div></div></div>`).join('');
+    if (!notifications?.length) { list.innerHTML = '<div style="padding:30px;text-align:center"><div style="font-size:2rem;margin-bottom:8px">✓</div><div style="font-size:.78rem;color:var(--mu)">You\'re all caught up!</div></div>'; return; }
+    // Match the landing-page notification styling: colored icon badge + actor/message + timestamp
+    const ICON = {follow:'👤',like:'❤️',comment:'💬',reply:'↩️',repost:'🔁',ticket:'🎟',event:'🎟',business_post:'📢',event_approved:'✅',event_rejected:'🚫',verification:'🏆',account:'⚙️',order:'📦',payment:'💳',squad_invite:'👥',squad_plan:'📅',system:'🔔',broadcast:'📣'};
+    const CLR  = {follow:'#B026FF',like:'#FF2D78',comment:'#00E5FF',reply:'#00E5FF',repost:'#C6FF4A',ticket:'#FF5C00',event:'#FF5C00',event_approved:'#C6FF4A',event_rejected:'#FF2D78',verification:'#FF5C00',order:'#00D4AA',payment:'#FF5C00',squad_invite:'#B026FF',squad_plan:'#B026FF',broadcast:'#FF5C00'};
+    list.innerHTML = notifications.map(n => {
+      const c = CLR[n.type] || '#B026FF';
+      return `<div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border)"><div style="width:48px;height:48px;border-radius:50%;background:${c}1a;border:1px solid ${c}40;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">${ICON[n.type]||'🔔'}</div><div style="flex:1;min-width:0"><div style="font-size:.82rem;line-height:1.45;color:var(--tx)">${xe(n.message||'')}</div><div style="font-size:.68rem;color:var(--mu);margin-top:3px">${new Date(n.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div></div></div>`;
+    }).join('');
     fetch('/api/notifications/mark-all-read', { method:'POST', headers:{'Authorization':'Bearer '+session.access_token} }).catch(()=>{});
     const dot = document.getElementById('sn-dot');
     if (dot) dot.style.display = 'none';
