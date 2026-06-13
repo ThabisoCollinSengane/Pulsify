@@ -531,7 +531,9 @@ function buildCard(post) {
       '<button class="ab" onclick="toggleCmt(\u0027'+x(post.id)+'\u0027)"><span class="ai">💬</span> <span id="cc-'+x(post.id)+'">'+cmtCount+'</span></button>' +
       '<button class="ab '+(reposted?'rp':'')+'" id="rb-'+x(post.id)+'" onclick="doRepost(\u0027'+x(post.id)+'\u0027)"><span class="ai">🔁</span> <span id="rc-'+x(post.id)+'">'+fn(reposts.length)+'</span></button>' +
       '<button class="ab" onclick="doShare(\u0027'+x(post.caption||'')+'\u0027)"><span class="ai">🔗</span></button>' +
-      '<button class="ab" onclick="openReportPost(\u0027'+x(post.id)+'\u0027,\u0027'+x((post.caption||'').slice(0,80).replace(/\u0027/g,''))+'\u0027)" title="Report post"><span class="ai">🚩</span></button>' +
+      (isOwn
+        ? '<button class="ab" onclick="editPost(\u0027'+x(post.id)+'\u0027)" title="Edit post"><span class="ai">✏️</span></button>'
+        : '<button class="ab" onclick="openReportPost(\u0027'+x(post.id)+'\u0027,\u0027'+x((post.caption||'').slice(0,80).replace(/\u0027/g,''))+'\u0027)" title="Report post"><span class="ai">🚩</span></button>') +
     '</div>' +
     '<div class="cmt-wrap" id="cmt-'+x(post.id)+'">' +
       '<div id="cmtl-'+x(post.id)+'">'+(_cmtCache[post.id]?buildCmts(_cmtCache[post.id],post.id):'<div style="padding:10px 14px;font-size:.74rem;color:var(--mu)">Tap to load comments…</div>')+'</div>' +
@@ -862,6 +864,7 @@ async function doFollowOverlay(targetId) {
 
 let _cImg = null;
 let _cImgFile = null;
+let _editingPostId = null;
 function openCompose() {
   if (!_uid) { window.location.href='/signin'; return; }
   const isOrg = ['organizer','business','admin'].includes(_session?.role);
@@ -881,6 +884,48 @@ function closeCompose() {
   if (to) to.value = '';
   document.getElementById('img-drop').innerHTML = '<span style="font-size:2rem">📷</span><span style="font-size:.8rem;color:var(--mu)" id="img-drop-hint">Tap to add a photo</span>';
   _cImg = null; _cImgFile = null;
+  // reset edit mode
+  _editingPostId = null;
+  const title = document.querySelector('#compose-modal .ct'); if (title) title.textContent = '📸 Share a Post';
+  const sbtn = document.getElementById('post-submit'); if (sbtn) sbtn.textContent = 'Share 🔥';
+}
+
+// Extract the first image URL from a post's image_url (single string or JSON array)
+function firstImg(image_url) {
+  if (!image_url) return null;
+  if (Array.isArray(image_url)) return image_url.find(u => typeof u === 'string' && u.trim()) || null;
+  if (typeof image_url === 'string') {
+    if (image_url.trim().startsWith('[')) {
+      try { const a = JSON.parse(image_url); return a.find(u => typeof u === 'string' && u.trim()) || null; } catch(e) { return image_url; }
+    }
+    return image_url;
+  }
+  return null;
+}
+
+// Open the composer pre-filled to edit an existing own post (caption + image).
+function editPost(id) {
+  const post = _posts.find(p => p.id === id);
+  if (!post) return;
+  if (post.user_id !== _uid) { showToast('You can only edit your own posts', 'err'); return; }
+  openCompose();
+  _editingPostId = id;
+  const cap = post.caption || '';
+  const isOrg = ['organizer','business','admin'].includes(_session?.role);
+  // For organizers a text-only post uses the announcement box; otherwise the caption box
+  if (isOrg && !firstImg(post.image_url) && cap) {
+    const to = document.getElementById('post-text-only'); if (to) to.value = cap;
+  } else {
+    document.getElementById('post-caption').value = cap;
+  }
+  document.getElementById('post-event-name').value = post.event_name || '';
+  const img = firstImg(post.image_url);
+  if (img) {
+    _cImg = img; _cImgFile = null; // existing remote image; only re-upload if they pick a new one
+    document.getElementById('img-drop').innerHTML = '<img src="'+x(img)+'" style="width:100%;height:100%;object-fit:cover;border-radius:12px"/>';
+  }
+  const title = document.querySelector('#compose-modal .ct'); if (title) title.textContent = '✏️ Edit Post';
+  const sbtn = document.getElementById('post-submit'); if (sbtn) sbtn.textContent = 'Save changes ✓';
 }
 function handleImg(input) {
   const file = input.files[0]; if (!file) return;
@@ -903,7 +948,7 @@ async function submitPost() {
   if (isOrg && !_cImg && !finalCap) return showToast('Add a photo or write something', 'err');
 
   const btn = document.getElementById('post-submit');
-  btn.disabled = true; btn.textContent = 'Sharing…';
+  btn.disabled = true; btn.textContent = _editingPostId ? 'Saving…' : 'Sharing…';
 
   const name  = _profile?.display_name || _session?.display_name || 'You';
   const uname = _profile?.username     || _session?.email?.split('@')[0] || 'you';
@@ -925,7 +970,24 @@ async function submitPost() {
 
     const post_type = isOrg ? 'business_update' : 'attended_photo';
 
-    if (sb && _uid) {
+    if (_editingPostId) {
+      // ── EDIT existing post ──
+      if (sb && _uid) {
+        const token = (await sb.auth.getSession())?.data?.session?.access_token;
+        const res = await fetch('/api/posts/' + encodeURIComponent(_editingPostId), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') },
+          body: JSON.stringify({ caption: finalCap, image_url: imageUrl, event_name: evName || null }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Could not save changes');
+      }
+      const ep = _posts.find(p => p.id === _editingPostId);
+      if (ep) { ep.caption = finalCap; ep.image_url = imageUrl; ep.event_name = evName || null; }
+      closeCompose();
+      _page = 1; render();
+      showToast('✓ Post updated', 'ok');
+    } else if (sb && _uid) {
       const token = (await sb.auth.getSession())?.data?.session?.access_token;
       const res = await fetch('/api/posts', {
         method: 'POST',
@@ -939,20 +1001,22 @@ async function submitPost() {
           event_name: evName||null, image_url: imageUrl, caption: finalCap,
           likes:[], comments:[], reposts:[], ts: data.post.created_at });
       }
+      closeCompose();
+      _page = 1; render();
+      showToast('🔥 Post shared!', 'ok');
     } else {
       _posts.unshift({ id: 'p_'+Date.now(), user_id: _uid||'anon', username: uname, display_name: name,
         role: _session?.role||'user', avatar_url: _profile?.avatar_url||null,
         event_name: evName||null, image_url: imageUrl || _cImg, caption: finalCap,
         likes:[], comments:[], reposts:[], ts: new Date().toISOString() });
+      closeCompose();
+      _page = 1; render();
+      showToast('🔥 Post shared!', 'ok');
     }
-
-    closeCompose();
-    _page = 1; render();
-    showToast('🔥 Post shared!', 'ok');
   } catch(e) {
     showToast('Failed to post: ' + e.message, 'err');
   }
-  btn.disabled = false; btn.textContent = 'Share 🔥';
+  btn.disabled = false; btn.textContent = _editingPostId ? 'Save changes ✓' : 'Share 🔥';
 }
 
 async function initFeed() {

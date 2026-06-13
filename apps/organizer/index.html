@@ -80,6 +80,9 @@ select.inp option{background:#1C1140}
 .msg-err{background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);color:var(--pk)}
 .btn-sec{background:var(--surf);border:1.5px solid var(--border2);border-radius:50px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;padding:9px 16px;cursor:pointer;transition:all .2s}
 .section-label{font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:8px;margin-top:14px}
+.sqp-group{background:var(--surf2);border:1px solid var(--border);border-radius:14px;padding:13px 13px 14px;margin-bottom:12px}
+.sqp-group-label{font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--or);margin-bottom:10px}
+.sqp-fl{display:block;font-size:.66rem;font-weight:600;color:var(--mu2);margin-bottom:4px}
 .toast{position:fixed;bottom:calc(var(--bh)+16px);left:50%;transform:translateX(-50%) translateY(12px);background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 22px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--tx);z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.ok{border-color:rgba(198,255,74,.4);color:var(--li)}
@@ -224,7 +227,15 @@ select.inp option{background:#1C1140}
             <div style="width:30px"></div>
           </div>
         </div>
-        <button type="button" class="btn-sec" style="width:100%;padding:8px;font-size:.76rem;margin-bottom:10px" onclick="addEvTierRow()">+ Add Ticket Type (VIP / Early Bird)</button>
+        <button type="button" class="btn-sec" style="width:100%;padding:8px;font-size:.76rem;margin-bottom:6px" onclick="addEvTierRow()">+ Add Ticket Type (VIP / Early Bird)</button>
+        <select class="inp" id="ev-discount-add" onchange="addDiscountTier(this.value);this.value=''" style="margin-bottom:10px;font-size:.78rem">
+          <option value="">🎁 Quick-add an intro deal / discount…</option>
+          <option value="earlybird">🎟 Early Bird — discounted intro price</option>
+          <option value="student">🎓 Student Discount</option>
+          <option value="group">👥 Group / Squad Deal</option>
+          <option value="ladies">💃 Ladies Night Special</option>
+          <option value="vip">⭐ VIP Upgrade</option>
+        </select>
         <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Genres <span style="text-transform:none;letter-spacing:0;color:var(--mu2);font-weight:400">— tap all that apply</span></div>
         <div id="ev-genre-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
         <textarea class="inp" id="ev-desc" placeholder="Event description (optional)" maxlength="500"></textarea>
@@ -403,21 +414,46 @@ select.inp option{background:#1C1140}
           </div>
         </div>
 
-        <input class="inp" id="org-sqp-title" placeholder="Deal title e.g. Squad VIP Bundle *" style="margin-bottom:8px"/>
-        <input class="inp" id="org-sqp-venue" placeholder="Venue name *" style="margin-bottom:8px"/>
-        <input class="inp" id="org-sqp-city" placeholder="City (e.g. Johannesburg)" style="margin-bottom:8px"/>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <input class="inp" id="org-sqp-min" type="number" placeholder="Min squad size" min="2" max="20" value="4" style="margin-bottom:0"/>
-          <input class="inp" id="org-sqp-max" type="number" placeholder="Max squad size" min="2" max="100" value="10" style="margin-bottom:0"/>
+        <!-- Section: Deal details -->
+        <div class="sqp-group">
+          <div class="sqp-group-label">📋 Deal Details</div>
+          <label class="sqp-fl">Deal title *</label>
+          <input class="inp" id="org-sqp-title" placeholder="e.g. Squad VIP Bundle" style="margin-bottom:8px"/>
+          <label class="sqp-fl">Venue *</label>
+          <input class="inp" id="org-sqp-venue" placeholder="Venue name" style="margin-bottom:8px"/>
+          <label class="sqp-fl">City</label>
+          <input class="inp" id="org-sqp-city" placeholder="e.g. Johannesburg" style="margin-bottom:0"/>
         </div>
-        <input class="inp" id="org-sqp-price" type="number" placeholder="Total group price (R) — leave blank if free" min="0" style="margin-bottom:8px"/>
-        <input class="inp" id="org-sqp-days" placeholder="Valid days e.g. Fri–Sun or Mon–Thu" style="margin-bottom:8px"/>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <input class="inp" id="org-sqp-from" type="date" style="margin-bottom:0"/>
-          <input class="inp" id="org-sqp-to" type="date" style="margin-bottom:0"/>
+
+        <!-- Section: Squad size & price -->
+        <div class="sqp-group">
+          <div class="sqp-group-label">👥 Squad Size & Price</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+            <div><label class="sqp-fl">Min squad</label><input class="inp" id="org-sqp-min" type="number" min="2" max="20" value="4" style="margin-bottom:0"/></div>
+            <div><label class="sqp-fl">Max squad</label><input class="inp" id="org-sqp-max" type="number" min="2" max="100" value="10" style="margin-bottom:0"/></div>
+          </div>
+          <label class="sqp-fl">Total group price (R) — leave blank if free</label>
+          <input class="inp" id="org-sqp-price" type="number" placeholder="0" min="0" style="margin-bottom:0"/>
         </div>
-        <textarea class="inp" id="org-sqp-desc" placeholder="Describe the deal for squads…" rows="3" style="resize:none;margin-bottom:12px"></textarea>
-        <button class="btn-primary" id="org-sqp-btn" onclick="submitOrgSquadPromo()">Submit Deal for Approval 🎁</button>
+
+        <!-- Section: Validity -->
+        <div class="sqp-group">
+          <div class="sqp-group-label">📅 When It's Valid</div>
+          <label class="sqp-fl">Valid days</label>
+          <input class="inp" id="org-sqp-days" placeholder="e.g. Fri–Sun or Mon–Thu" style="margin-bottom:8px"/>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0">
+            <div><label class="sqp-fl">From</label><input class="inp" id="org-sqp-from" type="date" style="margin-bottom:0"/></div>
+            <div><label class="sqp-fl">To</label><input class="inp" id="org-sqp-to" type="date" style="margin-bottom:0"/></div>
+          </div>
+        </div>
+
+        <!-- Section: Description -->
+        <div class="sqp-group">
+          <div class="sqp-group-label">📝 Description</div>
+          <textarea class="inp" id="org-sqp-desc" placeholder="Describe the deal for squads…" rows="3" style="resize:none;margin-bottom:0"></textarea>
+        </div>
+
+        <button class="btn-primary" id="org-sqp-btn" onclick="submitOrgSquadPromo()" style="width:100%">Submit Deal for Approval 🎁</button>
       </div>
     </div>
 
@@ -1811,13 +1847,34 @@ function previewEditEvImg(input) {
   reader.readAsDataURL(file);
 }
 
-function addEvTierRow() {
+function addEvTierRow(prefillName) {
   const list = document.getElementById('ev-tiers-list');
   const row = document.createElement('div');
   row.className = 'ev-tier-row';
   row.style.cssText = 'display:grid;grid-template-columns:1.3fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center';
-  row.innerHTML = `<input class="inp" style="margin-bottom:0" placeholder="Tier name"/><input class="inp" style="margin-bottom:0" type="number" placeholder="Price (R)" min="0"/><input class="inp" style="margin-bottom:0" type="number" placeholder="Qty" min="1"/><button type="button" onclick="this.closest('.ev-tier-row').remove()" style="width:28px;height:28px;border-radius:8px;background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.3);color:#FF2D78;cursor:pointer;font-size:.9rem;flex-shrink:0">✕</button>`;
+  const nameVal = prefillName ? ` value="${prefillName.replace(/"/g,'&quot;')}"` : '';
+  row.innerHTML = `<input class="inp" style="margin-bottom:0" placeholder="Tier name"${nameVal}/><input class="inp" style="margin-bottom:0" type="number" placeholder="Price (R)" min="0"/><input class="inp" style="margin-bottom:0" type="number" placeholder="Qty" min="1"/><button type="button" onclick="this.closest('.ev-tier-row').remove()" style="width:28px;height:28px;border-radius:8px;background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.3);color:#FF2D78;cursor:pointer;font-size:.9rem;flex-shrink:0">✕</button>`;
   list.appendChild(row);
+  return row;
+}
+
+// Quick-add a discounted ticket tier with a sensible pre-filled name.
+// Reuses the existing ticket-tier system — the organizer just sets the discounted price.
+const _DISCOUNT_TIER_NAMES = {
+  earlybird: 'Early Bird',
+  student:   'Student Discount',
+  group:     'Group Deal',
+  ladies:    'Ladies Night',
+  vip:       'VIP',
+};
+function addDiscountTier(type) {
+  if (!type) return;
+  const name = _DISCOUNT_TIER_NAMES[type] || 'Discount';
+  const row = addEvTierRow(name);
+  // Focus the price field so they can type the discounted price immediately
+  const priceInput = row.querySelectorAll('input')[1];
+  if (priceInput) priceInput.focus();
+  if (typeof toast === 'function') toast(`Added "${name}" tier — set its discounted price`, 'ok');
 }
 
 async function submitEvent() {

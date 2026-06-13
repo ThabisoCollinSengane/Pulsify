@@ -387,6 +387,30 @@ module.exports = async (req, res) => {
       return res.status(200).json({ post, success: true });
     }
 
+    /* ─── PATCH /posts/:id (edit own post) ────────────────── */
+    const editPostId = url.match(/^\/posts\/([^/]+)$/)?.[1];
+    if (editPostId && req.method === 'PATCH') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      // Ownership check — only the author can edit
+      const { data: existing } = await sb().from('posts').select('user_id').eq('id', editPostId).single();
+      if (!existing) return res.status(404).json({ error: 'Post not found' });
+      if (existing.user_id !== user.id) return res.status(403).json({ error: 'Not your post' });
+
+      const { caption, image_url, event_name } = req.body || {};
+      const patch = {};
+      if (caption !== undefined)    patch.caption    = caption || null;
+      if (image_url !== undefined)  patch.image_url  = image_url || null;
+      if (event_name !== undefined) patch.event_name = event_name || null;
+      if (!Object.keys(patch).length) return res.status(400).json({ error: 'Nothing to update' });
+
+      const { data: post, error } = await sb().from('posts').update(patch).eq('id', editPostId).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ post, success: true });
+    }
+
     /* ─── GET /profiles/:id ───────────────────────────────── */
     const profId = url.match(/^\/profiles\/([^/]+)$/)?.[1];
     if (profId && req.method === 'GET') {
