@@ -395,6 +395,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <select class="inp" id="evt-filter" onchange="loadPendingEvents()" style="max-width:180px">
         <option value="all">All Events</option>
         <option value="pending">⏳ Pending Approval</option>
+        <option value="map_approval">📍 Map Approval</option>
       </select>
       <button class="btn btn-surf" onclick="loadPendingEvents()">↺ Refresh</button>
       <button class="btn btn-or" onclick="document.getElementById('add-event-panel').classList.toggle('open')">➕ Add Event to Map</button>
@@ -1997,10 +1998,14 @@ let ALL_EVENTS = [];
 
 async function loadPendingEventsCount() {
   try {
-    const { count } = await sb.from('events').select('id', { count: 'exact', head: true }).eq('approved', false);
+    const [{ count: pendingCount }, { count: mapCount }] = await Promise.all([
+      sb.from('events').select('id', { count: 'exact', head: true }).eq('approved', false).eq('map_pin_requested', false),
+      sb.from('events').select('id', { count: 'exact', head: true }).eq('map_pin_requested', true),
+    ]);
+    const total = (pendingCount || 0) + (mapCount || 0);
     const badge = document.getElementById('ev-pending-badge');
     if (!badge) return;
-    if (count > 0) { badge.textContent = count; badge.style.display = 'inline'; }
+    if (total > 0) { badge.textContent = total; badge.style.display = 'inline'; }
     else badge.style.display = 'none';
   } catch(_) {}
 }
@@ -2027,21 +2032,53 @@ function renderEventsList() {
     const approvedBadge = ev.approved
       ? '<span class="status-badge s-ok">✅ Approved</span>'
       : '<span class="status-badge s-warn">⏳ Pending</span>';
-    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-bottom:14px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px">
+    const mapBadge = ev.map_pin_requested
+      ? '<span class="status-badge" style="background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.25);color:var(--cy)">📍 Map Approval</span>'
+      : '';
+    const actionBtns = ev.map_pin_requested
+      ? `<div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-cy" onclick="approveMapPin('${ev.id}',this)" style="flex:1">📍 Approve Map Pin</button>
+          <button class="btn btn-pk" onclick="reviewEvent('${ev.id}',false,this)" style="flex:1">❌ Reject Event</button>
+        </div>`
+      : (!ev.approved ? `<div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-li" onclick="reviewEvent('${ev.id}',true,this)" style="flex:1">✅ Approve</button>
+          <button class="btn btn-pk" onclick="reviewEvent('${ev.id}',false,this)" style="flex:1">❌ Reject</button>
+        </div>` : '');
+    return `<div style="background:var(--bg2);border:1px solid ${ev.map_pin_requested ? 'rgba(0,229,255,.3)' : 'var(--border)'};border-radius:16px;padding:16px 18px;margin-bottom:14px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap">
         <div style="flex:1">
           <div style="font-family:'Syne',sans-serif;font-size:.9rem;font-weight:800">${esc(ev.name)}</div>
           <div style="font-size:.72rem;color:var(--mu2);margin-top:3px">${esc(ev.venue_name || '—')} · ${esc(ev.venue_city || '—')} · ${date}</div>
           <div style="font-size:.72rem;color:var(--mu2);margin-top:2px">Genre: ${esc(ev.genre || '—')} · Organizer: ${esc(ev.organiser_name || ev.organiser_id || '—')}</div>
         </div>
-        ${approvedBadge}
+        <div style="display:flex;gap:6px;flex-wrap:wrap">${mapBadge}${approvedBadge}</div>
       </div>
-      ${!ev.approved ? `<div style="display:flex;gap:8px;margin-top:10px">
-        <button class="btn btn-li" onclick="reviewEvent('${ev.id}',true,this)" style="flex:1">✅ Approve</button>
-        <button class="btn btn-pk" onclick="reviewEvent('${ev.id}',false,this)" style="flex:1">❌ Reject</button>
-      </div>` : ''}
+      ${actionBtns}
     </div>`;
   }).join('');
+}
+
+async function approveMapPin(eventId, btn) {
+  if (btn && !btn.dataset.confirm) {
+    btn.dataset.confirm = '1';
+    const orig = btn.textContent;
+    btn.textContent = 'Sure? 📍';
+    setTimeout(() => { if (btn && btn.dataset.confirm) { delete btn.dataset.confirm; btn.textContent = orig; } }, 5000);
+    return;
+  }
+  if (btn) delete btn.dataset.confirm;
+  try {
+    const r = await fetch(`/api/admin/events/${eventId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ approve_map_pin: true }),
+    });
+    const json = await safeJson(r);
+    if (!r.ok) { showEvtMsg(json.error || 'Failed', 'err'); return; }
+    showEvtMsg('📍 Map pin approved — event is now live on the map!', 'ok');
+    loadPendingEvents();
+    loadPendingEventsCount();
+  } catch(e) { showEvtMsg('Error: ' + e.message, 'err'); }
 }
 
 async function reviewEvent(eventId, approve, btn) {

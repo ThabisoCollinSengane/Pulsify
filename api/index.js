@@ -972,6 +972,8 @@ module.exports = async (req, res) => {
       const { data: ev } = await sb().from('events').select('id,name,venue_city,organiser_id').eq('id', eventId).single();
       if (!ev || ev.organiser_id !== user.id) return res.status(403).json({ error: 'Forbidden' });
 
+      await sb().from('events').update({ map_pin_requested: true }).eq('id', eventId);
+
       const { data: admins } = await sb().from('profiles').select('id').eq('role', 'admin');
       if (admins?.length) {
         await sb().from('notifications').insert(admins.map(a => ({
@@ -1817,8 +1819,9 @@ module.exports = async (req, res) => {
       const auth = await authUser(req);
       if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
       const filter = req.query?.filter || 'pending';
-      let query = sb().from('events').select('id,name,venue_name,venue_city,date_local,genre,organiser_id,organiser_name,approved,created_at').order('created_at', { ascending: false });
+      let query = sb().from('events').select('id,name,venue_name,venue_city,date_local,genre,organiser_id,organiser_name,approved,map_pin_requested,created_at').order('created_at', { ascending: false });
       if (filter === 'pending') query = query.eq('approved', false);
+      else if (filter === 'map_approval') query = query.eq('map_pin_requested', true);
       const { data, error } = await query;
       if (error) return res.status(400).json({ error: error.message });
       return res.status(200).json({ events: data || [] });
@@ -1830,9 +1833,26 @@ module.exports = async (req, res) => {
       const auth = await authUser(req);
       if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
       const eventId = adminEventMatch[1];
-      const { approved } = req.body || {};
+      const { approved, approve_map_pin } = req.body || {};
       const { data: evtRow } = await sb().from('events').select('name,organiser_name,organiser_id').eq('id', eventId).single();
       const adminName = auth.profile.display_name || auth.user.email || 'Admin';
+
+      /* ── Map pin approval ── */
+      if (approve_map_pin === true) {
+        const { data, error } = await sb().from('events').update({ approved: true, map_pin_requested: false }).eq('id', eventId).select().single();
+        if (error) return res.status(400).json({ error: error.message });
+        await logAdminAction(auth.user.id, adminName, 'map_pin_approve', eventId, evtRow?.name || eventId, {});
+        if (evtRow?.organiser_id) {
+          await sb().from('notifications').insert({
+            user_id: evtRow.organiser_id, type: 'map_pin_approved',
+            entity_id: eventId, entity_type: 'event',
+            from_display_name: 'Pulsefy Admin',
+            message: `📍 Your event "${evtRow.name}" has been approved and is now showing on the map!`,
+          }).catch(() => {});
+        }
+        return res.status(200).json({ success: true, event: data });
+      }
+
       if (approved === false) {
         const { error } = await sb().from('events').delete().eq('id', eventId);
         if (error) return res.status(400).json({ error: error.message });
