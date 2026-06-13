@@ -1875,8 +1875,9 @@ function buildCard(ev, idx) {
   else if (gl.includes('sport')) badge = '<span class="fbg bsp">⚽ ' + fdate(ev.date_local) + '</span>';
   else if (iF)              badge = '<span class="fbg bfr">FREE</span>';
   else                      badge = '<span class="fbg bsn">' + fdate(ev.date_local) + '</span>';
-  const srcLabel = { eventbrite: 'Eventbrite', ticketmaster: 'Ticketmaster', quicket: 'Quicket' }[ev.source] || '';
-  const srcClr   = { eventbrite: '#F05537', ticketmaster: '#026CDF', quicket: '#00C89C' }[ev.source] || '';
+  const srcLabel = { eventbrite: 'Eventbrite', ticketmaster: 'Ticketmaster', quicket: 'Quicket', organizer: 'Event Organiser', business: 'Business' }[ev.source] || '';
+  const srcClr   = { eventbrite: '#F05537', ticketmaster: '#026CDF', quicket: '#00C89C', organizer: '#FF5C00', business: '#B026FF' }[ev.source] || '';
+  const srcIco   = { organizer: '📢', business: '🏢' }[ev.source] || '🎟';
   const btnLbl   = gl.includes('march') ? 'Join March' : (iF ? 'RSVP Free' : 'Get Tickets');
   return `<div class="fc rv" data-evid="${x(ev.id)}" onclick="openEv('${x(ev.id)}')">
     <div class="fh"><div class="fa" style="background:${bg}">${emo}</div>
@@ -1884,7 +1885,7 @@ function buildCard(ev, idx) {
       <div class="fl">📍 ${x(ev.venue_city)} · ${fdt(ev.date_local, ev.time_local)}</div></div>${badge}</div>
     <div class="fb" style="background:${bg};position:relative">
       <img src="${x(iU(ev.image_url, 800))}" loading="${idx < 3 ? 'eager' : 'lazy'}" onload="this.style.opacity=1" onerror="this.style.display='none'" style="position:relative;z-index:1;opacity:0;transition:opacity .45s ease"/>
-      ${srcLabel ? `<span style="position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,.82);backdrop-filter:blur(6px);border:1px solid ${srcClr}88;border-radius:50px;padding:3px 10px;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;color:${srcClr};z-index:3;pointer-events:none">🎟 ${srcLabel}</span>` : ''}
+      ${srcLabel ? `<span style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.82);backdrop-filter:blur(6px);border:1px solid ${srcClr}88;border-radius:50px;padding:3px 10px;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;color:${srcClr};z-index:3;pointer-events:none">${srcIco} ${srcLabel}</span>` : ''}
       <div class="fg" style="z-index:2"><div class="ft2">${x(ev.name)}</div>
         <div class="fp ${iF ? 'fr' : ''}">${pr}</div></div>
     </div>
@@ -2160,8 +2161,8 @@ async function openEv(evId) {
     window._tierCache = window._tierCache || {};
     window._tierCache[evId] = tiers;
     const iF = ev.is_free, bg = gg(ev.genre), emo = ge(ev.genre);
-    const srcMap = { eventbrite:'Eventbrite', ticketmaster:'Ticketmaster', quicket:'Quicket', manual:'Pulsefy Tickets' };
-    const srcClrDet = { eventbrite:'#F05537', ticketmaster:'#026CDF', quicket:'#00C89C' }[ev.source] || '';
+    const srcMap = { eventbrite:'Eventbrite', ticketmaster:'Ticketmaster', quicket:'Quicket', manual:'Pulsefy Tickets', organizer:'Event Organiser', business:'Business' };
+    const srcClrDet = { eventbrite:'#F05537', ticketmaster:'#026CDF', quicket:'#00C89C', organizer:'#FF5C00', business:'#B026FF' }[ev.source] || '';
     const lc = ev.like_count || 0, cc = ev.comment_count || 0;
     const totalCap = tiers.reduce((s, t) => s + (t.capacity || 0), 0) || ev.capacity || 0;
     const sold = tiers.reduce((s, t) => s + (t.sold || 0), 0) || ev.tickets_sold || ev.attendance_count || 0;
