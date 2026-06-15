@@ -614,14 +614,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
       <div class="hs" id="tonight-rail-row"></div>
     </div>
 
-    <!-- ══ TOP SPOTS ══ -->
-    <div class="sl"><span>📍 Where to go before &amp; after the event</span><a onclick="openBizPage();return false">See all →</a></div>
-    <div class="hs" id="frontline-row"><div class="skel" style="width:164px;height:170px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:164px;height:170px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:164px;height:170px;flex-shrink:0;border-radius:18px"></div></div>
-    <div id="featured-weekend" style="display:none">
-      <div class="sl"><span>⚡ Featured This Weekend</span></div>
-      <div id="featured-weekend-cards"></div>
-    </div>
-
     <!-- ══ EVENTS ══ -->
     <div class="sl"><span id="feed-lbl">🔥 Upcoming Events</span><a href="/map">View Map →</a></div>
     <div id="events-feed"></div>
@@ -661,29 +653,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
       </span>
     </div>
 
-    <!-- ══ TRUST BAR ══ -->
-    <div class="rd-trust">
-      <span class="rd-trust-item">✔ Trusted by event-goers across SA</span>
-      <span class="rd-trust-item">✔ Verified venues &amp; organisers</span>
-      <span class="rd-trust-item">✔ Real events happening near you</span>
-    </div>
-
-    <!-- ══ WHY PULSEFY ══ -->
-    <div class="sl"><span>✦ Why Pulsefy</span></div>
-    <div class="rd-why">
-      <div class="rd-why-card"><div class="rd-why-ic">⚡</div><div><div class="rd-why-t">Find events instantly</div><div class="rd-why-s">Tonight, this weekend, near you — in seconds.</div></div></div>
-      <div class="rd-why-card"><div class="rd-why-ic">🫂</div><div><div class="rd-why-t">Go out with your squad</div><div class="rd-why-s">Plan, invite and roll out together.</div></div></div>
-      <div class="rd-why-card"><div class="rd-why-ic">🎉</div><div><div class="rd-why-t">Discover experiences</div><div class="rd-why-s">Gigs, shisanyamas, nightlife and more.</div></div></div>
-    </div>
-
-    <!-- Hidden anchors for featured/community renderers — never moved, always in DOM -->
+    <!-- Hidden anchor for the featured-weekend promo renderer (never moved) -->
     <div id="featured-weekend" style="display:none">
       <div class="sl"><span>⚡ Featured This Weekend</span></div>
       <div id="featured-weekend-cards"></div>
-    </div>
-    <div id="community-pulse" style="display:none">
-      <div class="sl"><span>📣 From the Community</span></div>
-      <div class="hs" id="community-pulse-row"></div>
     </div>
     <div style="margin:20px 14px 8px;padding:12px 14px;border-top:1px solid var(--border);font-size:.62rem;color:var(--mu);line-height:1.7;text-align:center">
       Third-party event listings (Ticketmaster, Quicket, Eventbrite, etc.) are owned and managed by those companies — for ticket issues, refunds, or cancellations, contact them directly. Only events marked as a <strong style="color:var(--tx)">Pulsefy event</strong> are our responsibility.<br/>
@@ -1840,23 +1813,51 @@ function bizSkeleton() {
 let _feedReqId = 0;
 let _feedLoadingMore = false;
 
-// Insert businesses HTML after 15th event card (string-only, no DOM moving)
-let _frontlineHtml = '';
-function _injectFeedBreak() {
-  if (!_frontlineHtml) return;
+/* ── Feed breaks (string-only, no DOM moving) ──
+   Three sections are woven INTO the events feed at fixed event counts:
+     • businesses ("Where to go")  → after 6 events
+     • community ("From the Community") → after 12 events
+     • trust + why Pulsefy          → after 18 events
+   Each is built as a string when its data is ready; _placeBreak inserts it
+   after the Nth .fc card. Idempotent: once a break's id exists it's left
+   alone. `final` (feed fully loaded) lets a break fall back to the last card
+   when there aren't enough events to reach its target. */
+let _frontlineHtml = '';   // businesses
+let _communityHtml = '';   // community posts
+let _feedFinal     = false; // true once the last feed page has loaded
+
+const _TRUST_HTML = `<div id="feed-break-trust">
+  <div class="rd-trust" style="margin-top:14px">
+    <span class="rd-trust-item">✔ Trusted by event-goers across SA</span>
+    <span class="rd-trust-item">✔ Verified venues &amp; organisers</span>
+    <span class="rd-trust-item">✔ Real events happening near you</span>
+  </div>
+  <div class="sl"><span>✦ Why Pulsefy</span></div>
+  <div class="rd-why">
+    <div class="rd-why-card"><div class="rd-why-ic">⚡</div><div><div class="rd-why-t">Find events instantly</div><div class="rd-why-s">Tonight, this weekend, near you — in seconds.</div></div></div>
+    <div class="rd-why-card"><div class="rd-why-ic">🫂</div><div><div class="rd-why-t">Go out with your squad</div><div class="rd-why-s">Plan, invite and roll out together.</div></div></div>
+    <div class="rd-why-card"><div class="rd-why-ic">🎉</div><div><div class="rd-why-t">Discover experiences</div><div class="rd-why-s">Gigs, shisanyamas, nightlife and more.</div></div></div>
+  </div>
+</div>`;
+
+function _placeBreak(id, html, afterCount, fallbackLast) {
+  if (!html) return;
   const feedEl = document.getElementById('events-feed');
-  if (!feedEl) return;
-  const old = document.getElementById('feed-break-inline');
-  if (old) old.remove();
+  if (!feedEl || document.getElementById(id)) return; // already placed → leave it
   const cards = feedEl.querySelectorAll('.fc');
   if (!cards.length) return;
-  const anchor = cards[14] || cards[cards.length - 1];
-  anchor.insertAdjacentHTML('afterend', _frontlineHtml);
+  let idx = afterCount;
+  if (cards.length < afterCount) { if (!fallbackLast) return; idx = cards.length; }
+  cards[idx - 1].insertAdjacentHTML('afterend', html);
 }
-// Remove the injected businesses block (called before clearing the feed)
-function _ejectFeedBreak() {
-  const el = document.getElementById('feed-break-inline');
-  if (el) el.remove();
+function _injectFeedBreaks(final) {
+  _placeBreak('feed-break-biz',       _frontlineHtml, 6,  final);
+  _placeBreak('feed-break-community', _communityHtml, 12, final);
+  _placeBreak('feed-break-trust',     _TRUST_HTML,    18, final);
+}
+function _ejectFeedBreaks() {
+  ['feed-break-biz', 'feed-break-community', 'feed-break-trust']
+    .forEach(id => document.getElementById(id)?.remove());
 }
 
 // append=true → infinite scroll: keep existing cards, add the next page at the bottom.
@@ -1868,7 +1869,7 @@ async function loadFeed(resetPage = false, append = false) {
     _feedLoadingMore = true;
     feedEl.insertAdjacentHTML('beforeend', '<div id="feed-more-loader" style="text-align:center;padding:18px;color:var(--mu);font-size:.78rem">Loading more…</div>');
   } else {
-    _ejectFeedBreak(); // pull break out before clearing
+    _ejectFeedBreaks(); // pull breaks out before clearing
     feedEl.innerHTML = feedSkeleton();
     document.getElementById('feed-pg').style.display = 'none';
   }
@@ -1892,6 +1893,7 @@ async function loadFeed(resetPage = false, append = false) {
     const events = json.events || [];
     const count  = json.total  || events.length;
     feedTotalPages = json.total_pages || Math.ceil(count / limit) || 1;
+    _feedFinal = feedPage >= feedTotalPages;
     document.getElementById('feed-lbl').textContent = '🔥 ' + count + ' Upcoming Events';
 
     const _loaderEl = document.getElementById('feed-more-loader');
@@ -1907,6 +1909,7 @@ async function loadFeed(resetPage = false, append = false) {
         triggerRev();
         eventsForMap = [...eventsForMap.filter(e => !fresh.find(n => n.id === e.id)), ...fresh];
         if (mapInited && mapObj && typeof placeMapMarkers === 'function') placeMapMarkers();
+        _injectFeedBreaks(_feedFinal); // now that more events exist, place any pending breaks (e.g. trust @18)
       }
       _feedLoadingMore = false;
       return;
@@ -1935,8 +1938,8 @@ async function loadFeed(resetPage = false, append = false) {
     updatePagination();
     triggerRev();
 
-    // Inject Top Spots + Community break after first 10 events
-    _injectFeedBreak();
+    // Weave businesses (@6), community (@12), trust (@18) into the feed
+    _injectFeedBreaks(_feedFinal);
 
     // Cache events for map; refresh markers if map is already open
     eventsForMap = [...(eventsForMap.filter(e => !events.find(n => n.id === e.id))), ...events];
@@ -1946,7 +1949,7 @@ async function loadFeed(resetPage = false, append = false) {
     if (feedPage === 1) {
       promoPromise.then(({ featured = [], injected = [] }) => {
         renderFeaturedWeekend(featured);
-        if (injected.length) { feedEl.innerHTML = injectPromos(cards, injected); _injectFeedBreak(); }
+        if (injected.length) { feedEl.innerHTML = injectPromos(cards, injected); _injectFeedBreaks(_feedFinal); }
       });
       loadQuicketEvents(feedCity, feedGenre);
     }
@@ -2384,8 +2387,8 @@ async function loadFrontline() {
     bizForMap = bizs;
     if (!bizs.length) return;
     const showMore = `<div class="bc" onclick="showTab('discover')" style="background:rgba(255,92,0,.06);border:1.5px dashed rgba(255,92,0,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-width:130px"><span style="font-size:1.6rem">→</span><span style="font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--or);text-align:center;padding:0 8px">Show More</span></div>`;
-    _frontlineHtml = `<div id="feed-break-inline"><div class="sl" style="margin-top:6px"><span>📍 Where to go before &amp; after the event</span><a onclick="openBizPage();return false" style="cursor:pointer">See all →</a></div><div class="hs">${bizs.map(b => buildBizCard(b)).join('')}${showMore}</div></div>`;
-    _injectFeedBreak(); // inject if the feed is already rendered
+    _frontlineHtml = `<div id="feed-break-biz"><div class="sl" style="margin-top:6px"><span>📍 Where to go before &amp; after the event</span><a onclick="openBizPage();return false" style="cursor:pointer">See all →</a></div><div class="hs">${bizs.map(b => buildBizCard(b)).join('')}${showMore}</div></div>`;
+    _injectFeedBreaks(_feedFinal); // inject if the feed is already rendered
     if (mapInited && mapObj && typeof placeMapMarkers === 'function') placeMapMarkers();
   } catch(e) {
     console.warn('[Frontline]', e.message);
@@ -5071,10 +5074,7 @@ async function loadCommunityPosts() {
     const uids = [...new Set(posts.map(p => p.user_id).filter(Boolean))];
     const { data: profs } = await sb.from('profiles').select('id,display_name,username,avatar_url,role').in('id', uids);
     const pm = {}; (profs || []).forEach(p => { pm[p.id] = p; });
-    const row = document.getElementById('community-pulse-row');
-    const wrap = document.getElementById('community-pulse');
-    if (!row || !wrap) return;
-    row.innerHTML = posts.map(p => {
+    const cardsHtml = posts.map(p => {
       const a = pm[p.user_id] || {};
       const img = firstImg(p.image_url);
       const name = x(a.display_name || a.username || 'Pulsefy');
@@ -5092,7 +5092,8 @@ async function loadCommunityPosts() {
         </div>
       </div>`;
     }).join('');
-    wrap.style.display = '';
+    _communityHtml = `<div id="feed-break-community"><div class="sl"><span>📣 From the Community</span></div><div class="hs">${cardsHtml}</div></div>`;
+    _injectFeedBreaks(_feedFinal); // weave into the feed after event 12
   } catch(e) { console.warn('[CommunityPulse]', e.message); }
 }
 
