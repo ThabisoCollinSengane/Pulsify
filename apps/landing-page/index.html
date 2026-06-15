@@ -1387,6 +1387,7 @@ let discCat        = 'all';
 let discGenre      = 'all';
 let discQuery      = '';
 let _discTimer     = null;
+let _discPage      = 0;
 let nearMeActive   = false;
 let nearMeRadius   = 5;
 let userLat        = null;
@@ -2919,14 +2920,17 @@ function setNearMeRadius(km, btn) {
   loadDiscover();
 }
 
-async function loadDiscover(cat) {
+async function loadDiscover(cat, append) {
+  if (!append) _discPage = 0;
   if (!cat) cat = discCat;
   const q = (discQuery || '').trim();
+  const PAGE_SIZE = 20;
   try {
     const sb = getSB();
     const today = new Date().toISOString().split('T')[0];
     let bq = sb.from('businesses')
       .select('id,name,category,suburb,city,lat,lon,rating,review_count,price_range,cover_image_url,is_frontline,frontline_rank,tagline')
+      .eq('is_active', true)
       .order('is_frontline', { ascending: false })
       .order('rating', { ascending: false, nullsFirst: false }).limit(nearMeActive ? 200 : 20);
     if (cat && cat !== 'all') bq = bq.eq('category', cat);
@@ -2934,10 +2938,16 @@ async function loadDiscover(cat) {
     if (q) bq = bq.or(`name.ilike.%${q}%,suburb.ilike.%${q}%,city.ilike.%${q}%,tagline.ilike.%${q}%`);
 
     let eq = sb.from('events')
-      .select('id,name,date_local,image_url,genre,is_free,price_min,hype_score,venue_city,venue_lat,venue_lon')
+      .select('id,name,date_local,image_url,genre,is_free,price_min,venue_city,venue_lat,venue_lon')
+      .eq('is_active', true)
+      .eq('approved', true)
+      .not('status', 'in', '(cancelled,postponed)')
       .gte('date_local', today)
-      .order('hype_score', { ascending: false, nullsFirst: false }).limit(nearMeActive ? 200 : 20);
+      .order('is_frontline', { ascending: false })
+      .order('date_local',   { ascending: true })
+      .range(_discPage * PAGE_SIZE, _discPage * PAGE_SIZE + PAGE_SIZE - 1);
     if (discGenre && discGenre !== 'all') eq = eq.ilike('genre', `%${discGenre}%`);
+    if (!nearMeActive && feedCity && feedCity !== 'all') eq = eq.ilike('venue_city', `%${feedCity}%`);
     if (q) eq = eq.or(`name.ilike.%${q}%,venue_city.ilike.%${q}%,genre.ilike.%${q}%`);
 
     const [{ data: rawBiz }, { data: rawEv }] = await Promise.all([bq, eq]);
@@ -2968,36 +2978,66 @@ async function loadDiscover(cat) {
             : 'No places listed' + (feedCity && feedCity !== 'all' ? ' in ' + x(feedCity) : '') + ' yet.'}</p>`;
 
     const de = document.getElementById('disc-events');
-    if (de) de.innerHTML = evList.length
-      ? evList.map(ev => `
-        <div class="de" onclick="openEv('${ev.id}')">
-          <div class="det" style="background:${gg(ev.genre)}">${ev.image_url ? `<img src="${ev.image_url}" loading="lazy" onerror="this.style.display='none'"/>` : ge(ev.genre)}<span class="ddb">${fdate(ev.date_local)}</span></div>
-          <div class="deb"><div class="den">${x(ev.name)}</div><div class="dec">${x(ev.venue_city)}</div>
-            <div class="def"><span class="dep ${ev.is_free ? 'fr' : ''}">${ev.is_free ? 'FREE' : ev.price_min ? 'R' + ev.price_min : 'TBA'}</span><span class="deh">🔥${ev.hype_score}%</span></div>
+    if (!de) return;
+    const evCards = evList.map(ev => {
+      const isTonight = ev.date_local === today;
+      const badge = isTonight
+        ? `<span style="position:absolute;top:8px;left:8px;background:#FF6B00;color:#fff;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:900;padding:2px 7px;border-radius:50px;letter-spacing:.04em">🔥 TONIGHT</span>`
+        : ev.is_free
+        ? `<span style="position:absolute;top:8px;left:8px;background:#6EFF47;color:#000;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:900;padding:2px 7px;border-radius:50px;letter-spacing:.04em">🎟 FREE</span>`
+        : '';
+      return `<div class="de" onclick="openEv('${ev.id}')">
+          <div class="det" style="background:${gg(ev.genre)};position:relative">${ev.image_url ? `<img src="${ev.image_url}" loading="lazy" onerror="this.style.display='none'"/>` : ge(ev.genre)}<span class="ddb">${fdate(ev.date_local)}</span>${badge}</div>
+          <div class="deb"><div class="den">${x(ev.name)}</div><div class="dec">${x(ev.venue_city||'')}</div>
+            <div class="def"><span class="dep ${ev.is_free ? 'fr' : ''}">${ev.is_free ? 'FREE' : ev.price_min ? 'R' + ev.price_min : 'TBA'}</span></div>
           </div>
-        </div>`).join('')
-      : `<p style="grid-column:1/-1;padding:16px;color:var(--mu);font-size:.8rem;text-align:center">${
+        </div>`;
+    }).join('');
+
+    if (append) {
+      const existing = de.querySelector('.disc-load-more');
+      if (existing) existing.remove();
+      de.insertAdjacentHTML('beforeend', evCards);
+    } else {
+      de.innerHTML = evCards || `<p style="grid-column:1/-1;padding:24px 16px;color:var(--mu);font-size:.8rem;text-align:center">${
           q ? 'No events match "' + x(q) + '".'
             : discGenre !== 'all' ? 'No ' + x(discGenre) + ' events coming up.'
             : nearMeActive ? 'No events within ' + nearMeRadius + 'km.'
             : 'No upcoming events yet.'}</p>`;
+    }
+
+    // Show load more if a full page came back
+    if (evList.length === PAGE_SIZE) {
+      const lm = document.createElement('div');
+      lm.className = 'disc-load-more';
+      lm.style.cssText = 'grid-column:1/-1;text-align:center;padding:12px 0 4px';
+      lm.innerHTML = `<button onclick="_discLoadMore()" style="background:var(--surf);border:1px solid var(--border);color:var(--tx);font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;padding:10px 28px;border-radius:50px;cursor:pointer">Load more</button>`;
+      de.appendChild(lm);
+    }
   } catch(e) {}
+}
+function _discLoadMore() {
+  _discPage++;
+  loadDiscover(discCat, true);
 }
 function setDiscCat(btn, cat) {
   btn.closest('.cr').querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   discCat = cat;
+  _discPage = 0;
   loadDiscover(cat);
 }
 function setDiscGenre(btn, genre) {
   btn.closest('.cr').querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   discGenre = genre;
+  _discPage = 0;
   loadDiscover();
 }
 // Live search across discover businesses + events (debounced)
 function handleDiscSearch(val) {
   discQuery = val || '';
+  _discPage = 0;
   clearTimeout(_discTimer);
   _discTimer = setTimeout(() => loadDiscover(), 300);
 }
