@@ -1,6 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 const { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail, sendTicketEmail } = require('./email');
+const { rateLimited, captureError } = require('./shared');
 
 const SUPA_URL  = process.env.SUPABASE_URL  || 'https://cjzewfvtdayjgjdpdmln.supabase.co';
 const SUPA_ANON = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
@@ -160,6 +161,7 @@ async function logAdminAction(adminId, adminName, actionType, targetId, targetNa
 module.exports = async (req, res) => {
   Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
   if (req.method === 'OPTIONS') return res.status(200).end();
+  if (rateLimited(req, res, { limit: 100, windowMs: 60000 })) return;
 
   const url    = (req.url || '/').split('?')[0].replace(/^\/api/, '') || '/';
   const q      = Object.fromEntries(new URL(req.url, 'http://x').searchParams);
@@ -3226,6 +3228,7 @@ module.exports = async (req, res) => {
 
   } catch (err) {
     console.error('[Pulsify API]', err.message);
+    captureError(err, { url: req.url });
     return res.status(500).json({ error: 'Server error', detail: err.message });
   }
 };

@@ -89,6 +89,10 @@ function openAvatarLightbox() {
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://js.paystack.co/v1/inline.js"></script>
+<!-- Error monitoring (Sentry) — inert until a DSN is set.
+     To enable: paste your Sentry project DSN into PULSIFY_SENTRY_DSN below. -->
+<script>window.PULSIFY_SENTRY_DSN = window.PULSIFY_SENTRY_DSN || '';</script>
+<script>(function(){var d=window.PULSIFY_SENTRY_DSN;if(!d)return;var s=document.createElement('script');s.src='https://browser.sentry-cdn.com/7.120.0/bundle.min.js';s.crossOrigin='anonymous';s.onload=function(){if(window.Sentry)window.Sentry.init({dsn:d,environment:location.hostname.indexOf('localhost')>-1?'dev':'prod',tracesSampleRate:0.1});};document.head.appendChild(s);})();</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#160C32;--bg2:#1C1140;--surf:#241652;--surf2:#2E1C66;--border:rgba(168,108,255,.16);--border2:rgba(168,108,255,.32);--or:#FF6B00;--li:#6EFF47;--pk:#FF2D88;--cy:#00EEFF;--pu:#CC44FF;--te:#00FFB8;--tx:#F4EDFF;--mu:#8575AE;--mu2:#B09CC8;--th:58px;--tk:30px;--bh:70px}
@@ -823,7 +827,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
       <div id="profile-genres" style="position:absolute;right:10px;bottom:8px;z-index:1;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px;max-width:65%"></div>
       <div style="position:absolute;bottom:7px;left:10px;z-index:1;font-size:.55rem;font-family:'Syne',sans-serif;font-weight:700;color:rgba(255,255,255,.45);letter-spacing:.06em">📷 TAP TO CHANGE COVER</div>
     </div>
-    <input type="file" id="profile-cover-file" accept="image/*" style="display:none" onchange="handleProfileCover(this)"/>
+    <input type="file" id="profile-cover-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleProfileCover(this)"/>
 
     <!-- Avatar + name + settings — fully below the cover, no overlap -->
     <div style="padding:12px 16px 4px;display:flex;align-items:center;gap:12px">
@@ -1466,6 +1470,14 @@ const PROV_CITY = {
 
 /* ── UTILS ── */
 function x(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// Guard for image uploads — allowed types + 5MB cap. Server-side limits are
+// also enforced on the Supabase storage buckets (allowed_mime_types/file_size_limit).
+function validImageFile(file) {
+  if (!file) return false;
+  if (!['image/jpeg','image/png','image/webp'].includes(file.type)) { showToast('Only JPG, PNG or WebP images allowed', 'err'); return false; }
+  if (file.size > 5 * 1024 * 1024) { showToast('Image too large (max 5MB)', 'err'); return false; }
+  return true;
+}
 function firstImg(imageUrl) {
   if (!imageUrl) return null;
   if (imageUrl.startsWith('[')) { try { const arr = JSON.parse(imageUrl); return arr[0] || null; } catch(e) {} }
@@ -3819,6 +3831,7 @@ async function handleSignUp() {
 // Upload a cover photo directly from the "Me" tab (tap cover → file picker)
 async function handleProfileCover(input) {
   const file = input.files[0]; if (!file) return;
+  if (!validImageFile(file)) return;
   if (!currentUser) { showToast('Sign in to set a cover photo'); return; }
   const sb = getSB(); if (!sb) return;
   const coverEl = document.getElementById('profile-cover');
@@ -6046,7 +6059,7 @@ function renderSquadWorkspace(detail, container) {
         ? `<label style="position:relative;cursor:pointer;flex-shrink:0;display:block" title="Upload squad photo">
              <div style="width:40px;height:40px;border-radius:10px;background:${squad.avatar_url ? '#000' : `linear-gradient(135deg,${tmpl.color}22,${tmpl.color}55)`};display:flex;align-items:center;justify-content:center;font-size:1.2rem;overflow:hidden;border:1.5px solid var(--border2)">${squad.avatar_url ? `<img src="${x(squad.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>` : tmpl.icon}</div>
              <div style="position:absolute;bottom:-3px;right:-3px;width:15px;height:15px;border-radius:50%;background:var(--or);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.5rem;border:2px solid var(--bg);font-weight:900">📷</div>
-             <input type="file" accept="image/*" style="display:none" onchange="uploadSquadAvatar('${x(squad.id)}', this)"/>
+             <input type="file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="uploadSquadAvatar('${x(squad.id)}', this)"/>
            </label>`
         : `<div style="width:40px;height:40px;border-radius:10px;background:${squad.avatar_url ? '#000' : `linear-gradient(135deg,${tmpl.color}22,${tmpl.color}55)`};display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;overflow:hidden">${squad.avatar_url ? `<img src="${x(squad.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>` : tmpl.icon}</div>`}
       <div style="flex:1;min-width:0">
@@ -6964,7 +6977,7 @@ async function loadSquadInviteList() {
 
 async function uploadSquadAvatar(squadId, input) {
   const file = input.files?.[0]; if (!file) return;
-  if (file.size > 5 * 1024 * 1024) return showToast('Image too large (max 5MB)', 'err');
+  if (!validImageFile(file)) return;
   const sb = getSB(); if (!sb) return showToast('Sign in first', 'err');
   const session = (await sb.auth.getSession()).data?.session;
   if (!session) return showToast('Sign in first', 'err');
