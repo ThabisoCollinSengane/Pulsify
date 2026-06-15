@@ -1,9 +1,10 @@
-const { sb, sbAs, authUser, tokenFrom, CORS, verifyToken, logAdminAction } = require('../shared');
+const { sb, sbAs, authUser, tokenFrom, CORS, verifyToken, logAdminAction, rateLimited, captureError } = require('../shared');
 const { sendVerifApprovedEmail, sendVerifRejectedEmail } = require('../email');
 
 module.exports = async (req, res) => {
   Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
   if (req.method === 'OPTIONS') return res.status(200).end();
+  if (rateLimited(req, res, { limit: 100, windowMs: 60000 })) return;
 
   const url = (req.url || '/').split('?')[0].replace(/^\/api/, '') || '/';
   const q   = Object.fromEntries(new URL(req.url, 'http://x').searchParams);
@@ -789,6 +790,7 @@ module.exports = async (req, res) => {
 
     return res.status(404).json({ error: 'Not found' });
   } catch (e) {
+    captureError(e, { url });
     return res.status(500).json({ error: e.message });
   }
 };

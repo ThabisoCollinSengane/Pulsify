@@ -1,10 +1,11 @@
 const crypto = require('crypto');
-const { sb, sbAs, authUser, tokenFrom, CORS, verifyToken, logAdminAction } = require('../shared');
+const { sb, sbAs, authUser, tokenFrom, CORS, verifyToken, logAdminAction, rateLimited, captureError } = require('../shared');
 const { sendPaymentConfirmEmail } = require('../email');
 
 module.exports = async (req, res) => {
   Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
   if (req.method === 'OPTIONS') return res.status(200).end();
+  if (rateLimited(req, res, { limit: 30, windowMs: 60000 })) return;
 
   const url = (req.url || '/').split('?')[0].replace(/^\/api/, '') || '/';
   const q   = Object.fromEntries(new URL(req.url, 'http://x').searchParams);
@@ -92,7 +93,7 @@ module.exports = async (req, res) => {
       if (!qr_data) return res.status(400).json({ error: 'qr_data required' });
 
       const parts = String(qr_data).split(':');
-      if (parts.length < 4 || parts[0] !== 'PULSEFY' || parts[3] !== 'VALID')
+      if (parts.length < 4 || parts[0] !== 'PULSIFY' || parts[3] !== 'VALID')
         return res.status(400).json({ error: 'Invalid QR code' });
 
       const booking_ref = parts[1];
@@ -304,6 +305,7 @@ module.exports = async (req, res) => {
 
     return res.status(404).json({ error: 'Not found' });
   } catch (e) {
+    captureError(e, { url });
     return res.status(500).json({ error: e.message });
   }
 };

@@ -65,4 +65,45 @@ async function logAdminAction(adminId, adminName, actionType, targetId, targetNa
   } catch(e) { /* non-fatal */ }
 }
 
-module.exports = { sb, sbAs, tokenFrom, CORS, haverBox, verifyToken, authUser, logAdminAction };
+/* ─── Rate limiting ───────────────────────────────────────────
+   In-memory sliding window. NOTE: state lives in a single warm
+   serverless instance, so limits are per-instance, not globally
+   exact. Good enough to blunt bursts/abuse; for hard global limits
+   move to Vercel KV / Upstash Redis. */
+const _rlHits = new Map();
+function rateLimit(req, { limit = 100, windowMs = 60000 } = {}) {
+  const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
+           || req.socket?.remoteAddress || 'unknown';
+  const now = Date.now();
+  const rec = _rlHits.get(ip);
+  if (!rec || now > rec.reset) {
+    _rlHits.set(ip, { count: 1, reset: now + windowMs });
+    if (_rlHits.size > 5000) for (const [k, v] of _rlHits) if (now > v.reset) _rlHits.delete(k);
+    return { ok: true };
+  }
+  rec.count++;
+  if (rec.count > limit) return { ok: false, retryAfter: Math.ceil((rec.reset - now) / 1000) };
+  return { ok: true };
+}
+// Applies the limit and writes a 429 if exceeded. Returns true if the request was blocked.
+function rateLimited(req, res, opts) {
+  const r = rateLimit(req, opts);
+  if (r.ok) return false;
+  res.setHeader('Retry-After', r.retryAfter);
+  res.status(429).json({ error: 'Too many requests — slow down.' });
+  return true;
+}
+
+/* ─── Error monitoring (Sentry, optional) ─────────────────────
+   Inert unless SENTRY_DSN is set in the environment. */
+let _sentry = null, _sentryInit = false;
+function captureError(err, context) {
+  const dsn = process.env.SENTRY_DSN;
+  if (!dsn) { console.error('[error]', err?.message || err); return; }
+  try {
+    if (!_sentryInit) { _sentry = require('@sentry/node'); _sentry.init({ dsn, tracesSampleRate: 0.1 }); _sentryInit = true; }
+    _sentry.captureException(err, context ? { extra: context } : undefined);
+  } catch (e) { console.error('[error]', err?.message || err); }
+}
+
+module.exports = { sb, sbAs, tokenFrom, CORS, haverBox, verifyToken, authUser, logAdminAction, rateLimit, rateLimited, captureError };
