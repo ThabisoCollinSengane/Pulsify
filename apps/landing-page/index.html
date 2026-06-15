@@ -2000,12 +2000,15 @@ function buildCard(ev, idx) {
   // Social proof — only shown once real RSVPs exist (never "0 going").
   const att = ev.attendance_count || 0;
   const social = att >= 2 ? `<span class="fsoc">🔥 ${fn(att)} going</span>` : '';
+  // Selling fast = at least half the capacity already sold.
+  const cap = ev.capacity || 0;
+  const sellingFast = cap > 0 && (ev.tickets_sold || 0) >= cap * 0.5;
   let badge = '';
   if (isT)                  badge = '<span class="fbg blv"><span class="blink"></span>TONIGHT</span>';
   else if (gl.includes('march')) badge = '<span class="fbg" style="background:rgba(198,255,74,.1);color:var(--li);border:1px solid rgba(198,255,74,.22)">✊ ' + fdate(ev.date_local) + '</span>';
   else if (gl.includes('sport')) badge = '<span class="fbg bsp">⚽ ' + fdate(ev.date_local) + '</span>';
   else if (iF)              badge = '<span class="fbg bfr">🎟️ FREE</span>';
-  else if (hp >= 85)        badge = '<span class="fbg bff">⚡ Selling fast</span>';
+  else if (sellingFast)     badge = '<span class="fbg bff">⚡ Selling fast</span>';
   else                      badge = '<span class="fbg bsn">' + fdate(ev.date_local) + '</span>';
   const srcLabel = { eventbrite: 'Eventbrite', ticketmaster: 'Ticketmaster', quicket: 'Quicket', organizer: 'Event Organiser', business: 'Business' }[ev.source] || '';
   const srcClr   = { eventbrite: '#F05537', ticketmaster: '#026CDF', quicket: '#00C89C', organizer: '#FF5C00', business: '#B026FF' }[ev.source] || '';
