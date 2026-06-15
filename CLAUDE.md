@@ -97,16 +97,20 @@ Claude works in an **MCP environment** with the repo mounted. All deploys happen
 ### How edits flow
 1. Claude edits files directly in the MCP repo using Read/Edit/Write.
 2. Claude commits + pushes to the assigned branch (e.g. `claude/fix-...`).
-3. GitHub Actions runs `.github/workflows/deploy.yml` automatically and deploys to Vercel production.
-4. Claude can merge the PR via GitHub MCP tools when the work is complete.
+3. **Merge the PR to `main`** — this is the step that deploys to production.
+4. Claude merges using `mcp__github__merge_pull_request` once conflicts are resolved.
 
 ### GitHub Actions deploy workflow
 - Triggers on push to `main` or any `claude/**` branch.
+- **CRITICAL — only `main` deploys to production (`pulsefy.co.za`).**
+  `claude/**` branches deploy to a **preview URL only** — the live site is NOT updated.
+  Always merge to `main` before telling the user to check the site.
 - Requires 3 repository secrets (already configured):
   - `VERCEL_TOKEN` — authentication token
   - `VERCEL_ORG_ID` — Vercel team/org ID
   - `VERCEL_PROJECT_ID` — Vercel project ID
-- Uses `npx vercel --prod --yes --force` (same `--force` flag as manual deploys).
+- Production deploy: `npx vercel --prod --yes --force --token=$VERCEL_TOKEN` (main only).
+- Preview deploy: `npx vercel --yes --token=$VERCEL_TOKEN` (claude/** branches).
 - Workflow file: `.github/workflows/deploy.yml`
 
 ### Manual deploy (fallback if Actions unavailable)
