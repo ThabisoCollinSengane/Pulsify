@@ -1889,8 +1889,9 @@ async function submitEvent() {
   const evImgFile = document.getElementById('ev-img-file')?.files[0];
   const evLatRaw = parseFloat(document.getElementById('ev-lat')?.value);
   const evLonRaw = parseFloat(document.getElementById('ev-lon')?.value);
-  const evLat = (!isNaN(evLatRaw) && evLatRaw >= -35 && evLatRaw <= -22) ? evLatRaw : null;
-  const evLon = (!isNaN(evLonRaw) && evLonRaw >= 16 && evLonRaw <= 33) ? evLonRaw : null;
+  let evLat = (!isNaN(evLatRaw) && evLatRaw >= -35 && evLatRaw <= -22) ? evLatRaw : null;
+  let evLon = (!isNaN(evLonRaw) && evLonRaw >= 16 && evLonRaw <= 33) ? evLonRaw : null;
+  let locConfidence = (evLat && evLon) ? 50 : null; // 50 = manual, 80 = geocoded
 
   // collect tiers from UI
   const tierRows = document.querySelectorAll('.ev-tier-row');
@@ -1920,6 +1921,17 @@ async function submitEvent() {
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Creating…';
 
   try {
+    // Auto-geocode if organiser didn't provide coordinates
+    if (!evLat || !evLon) {
+      try {
+        const gr = await fetch(`/api/geocode?venue=${encodeURIComponent(venue)}&city=${encodeURIComponent(city)}`);
+        if (gr.ok) {
+          const gd = await gr.json();
+          if (gd.lat && gd.lon) { evLat = gd.lat; evLon = gd.lon; locConfidence = 80; }
+        }
+      } catch(_) {}
+    }
+
     // Always get a fresh token before insert
     const { data: { session: freshSess } } = await sb.auth.getSession();
     if (!freshSess) throw new Error('Session expired — please sign in again');
@@ -1956,6 +1968,7 @@ async function submitEvent() {
       source: 'organizer',
       venue_lat: evLat,
       venue_lon: evLon,
+      location_confidence: locConfidence,
       approved: currentProfile?.subscription_type === 'premium' || currentProfile?.subscription_type === 'trial',
     });
     if (error) throw new Error(error.message);
@@ -2162,6 +2175,19 @@ async function saveEventEdit() {
   }
   const upd = { name, date_local: date, time_local: time||null, venue_name: venue, venue_city: city, genre: genre||null, description: desc||null };
   if (newImgUrl) upd.image_url = newImgUrl;
+
+  // Auto-geocode if the current edit clears or changes the venue and there are no existing coords
+  const existingEv = _evMap[_editEvId];
+  if (!existingEv?.venue_lat || !existingEv?.venue_lon) {
+    try {
+      const gr = await fetch(`/api/geocode?venue=${encodeURIComponent(venue)}&city=${encodeURIComponent(city)}`);
+      if (gr.ok) {
+        const gd = await gr.json();
+        if (gd.lat && gd.lon) { upd.venue_lat = gd.lat; upd.venue_lon = gd.lon; upd.location_confidence = 80; }
+      }
+    } catch(_) {}
+  }
+
   const { error } = await sb.from('events').update(upd).eq('id', _editEvId).eq('organiser_id', currentUser.id);
   btn.disabled = false; btn.textContent = 'Save Event ✅';
   if (error) { toast('Could not save event: ' + error.message, 'err'); return; }
