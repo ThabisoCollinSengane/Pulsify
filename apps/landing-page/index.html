@@ -397,9 +397,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   top:0;
   left:0;
 }
-.mp-dot:active{filter:brightness(1.3) saturate(1.4)}
+.mp-dot:active{filter:brightness(1.1) saturate(1.1)}
 .mp-dot::after{display:none}
 .mp-dot-ev{width:32px;height:32px;font-size:.85rem;border-width:2.5px}
+.mp-dot-img{width:40px;height:40px;border-width:2.5px}
 .mp-ring{
   position:absolute;
   inset:-10px;
@@ -409,9 +410,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   pointer-events:none;
 }
 @keyframes gring{
-  0%{transform:scale(.9);opacity:.9}
-  65%{transform:scale(2);opacity:0}
-  100%{transform:scale(2);opacity:0}
+  0%{transform:scale(.9);opacity:.55}
+  65%{transform:scale(1.75);opacity:0}
+  100%{transform:scale(1.75);opacity:0}
 }
 @keyframes locPulse{
   0%{transform:scale(.85);opacity:.85}
@@ -669,19 +670,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
       <div class="rd-why-card"><div class="rd-why-ic">🎉</div><div><div class="rd-why-t">Discover experiences</div><div class="rd-why-s">Gigs, shisanyamas, nightlife and more.</div></div></div>
     </div>
 
-    <!-- ══ FEED BREAK SOURCE — injected into events feed after 10 events ══ -->
-    <!-- This block gets moved into #events-feed by _injectFeedBreak() at runtime -->
-    <div id="feed-break-src" style="display:none">
-      <div class="sl" style="margin-top:6px"><span>📍 Where to go before &amp; after the event</span><a onclick="openBizPage();return false">See all →</a></div>
-      <div class="hs" id="frontline-row"><div class="skel" style="width:164px;height:170px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:164px;height:170px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:164px;height:170px;flex-shrink:0;border-radius:18px"></div></div>
-      <div id="featured-weekend" style="display:none">
-        <div class="sl"><span>⚡ Featured This Weekend</span></div>
-        <div id="featured-weekend-cards"></div>
-      </div>
-      <div id="community-pulse" style="display:none">
-        <div class="sl"><span>📣 From the Community</span></div>
-        <div class="hs" id="community-pulse-row"></div>
-      </div>
+    <!-- Hidden anchors for featured/community renderers — never moved, always in DOM -->
+    <div id="featured-weekend" style="display:none">
+      <div class="sl"><span>⚡ Featured This Weekend</span></div>
+      <div id="featured-weekend-cards"></div>
+    </div>
+    <div id="community-pulse" style="display:none">
+      <div class="sl"><span>📣 From the Community</span></div>
+      <div class="hs" id="community-pulse-row"></div>
     </div>
     <div style="margin:20px 14px 8px;padding:12px 14px;border-top:1px solid var(--border);font-size:.62rem;color:var(--mu);line-height:1.7;text-align:center">
       Third-party event listings (Ticketmaster, Quicket, Eventbrite, etc.) are owned and managed by those companies — for ticket issues, refunds, or cancellations, contact them directly. Only events marked as a <strong style="color:var(--tx)">Pulsefy event</strong> are our responsibility.<br/>
@@ -1832,21 +1828,23 @@ function bizSkeleton() {
 let _feedReqId = 0;
 let _feedLoadingMore = false;
 
-// Move feed-break-src block INTO the events-feed after first 10 events
+// Insert businesses HTML after 15th event card (string-only, no DOM moving)
+let _frontlineHtml = '';
 function _injectFeedBreak() {
+  if (!_frontlineHtml) return;
   const feedEl = document.getElementById('events-feed');
-  const src    = document.getElementById('feed-break-src');
-  if (!feedEl || !src || feedEl.contains(src)) return;
-  src.style.display = '';
-  feedEl.appendChild(src);
+  if (!feedEl) return;
+  const old = document.getElementById('feed-break-inline');
+  if (old) old.remove();
+  const cards = feedEl.querySelectorAll('.fc');
+  if (!cards.length) return;
+  const anchor = cards[14] || cards[cards.length - 1];
+  anchor.insertAdjacentHTML('afterend', _frontlineHtml);
 }
-// Move feed-break-src back to home panel BEFORE clearing the feed
+// Remove the injected businesses block (called before clearing the feed)
 function _ejectFeedBreak() {
-  const homeHi = document.querySelector('#tab-home .hi');
-  const src    = document.getElementById('feed-break-src');
-  if (!homeHi || !src) return;
-  src.style.display = 'none';
-  homeHi.appendChild(src);
+  const el = document.getElementById('feed-break-inline');
+  if (el) el.remove();
 }
 
 // append=true → infinite scroll: keep existing cards, add the next page at the bottom.
@@ -1864,7 +1862,7 @@ async function loadFeed(resetPage = false, append = false) {
   }
 
   try {
-    const limit = 10, offset = (feedPage - 1) * limit;
+    const limit = 15, offset = (feedPage - 1) * limit;
     const params = new URLSearchParams({ page: feedPage, limit, _t: Date.now() });
     if (feedCity && feedCity !== 'all') params.set('city', feedCity);
     else if (feedProvince && feedProvince !== 'all') params.set('province', feedProvince);
@@ -1873,7 +1871,7 @@ async function loadFeed(resetPage = false, append = false) {
     if (feedFrom) params.set('from_date', feedFrom);
     if (feedTo)   params.set('to_date', feedTo);
     const _abort = new AbortController();
-    const _timer = setTimeout(() => _abort.abort(), 12000);
+    const _timer = setTimeout(() => _abort.abort(), 8000);
     const resp = await fetch('/api/events?' + params, { signal: _abort.signal });
     clearTimeout(_timer);
     if (myReq !== _feedReqId) return;
@@ -2229,7 +2227,6 @@ function browseCategory(genre, btn) {
   feedFrom = ''; feedTo = '';
   feedGenre = genre;
   loadFeed(true);
-  const lbl = document.getElementById('feed-lbl'); if (lbl) lbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function toggleMoreCats(btn) {
   const m = document.getElementById('rd-more-cats'); if (!m) return;
@@ -2360,7 +2357,6 @@ function _renderBanner(idx) {
 }
 
 async function loadFrontline() {
-  document.getElementById('frontline-row').innerHTML = bizSkeleton();
   try {
     const sb = getSB();
     let bq = sb.from('businesses')
@@ -2369,18 +2365,18 @@ async function loadFrontline() {
       .order('rating', { ascending: false, nullsFirst: false })
       .limit(6);
     if (feedCity && feedCity !== 'all') bq = bq.ilike('city', `%${feedCity}%`);
-    const _ba = new AbortController(); setTimeout(() => _ba.abort(), 12000);
+    const _ba = new AbortController(); setTimeout(() => _ba.abort(), 8000);
     const { data: rawBizs, error: bizErr } = await bq.abortSignal(_ba.signal);
     if (bizErr) throw new Error(bizErr.message);
     const bizs = rawBizs || [];
-    bizForMap  = bizs;
-    document.getElementById('frontline-row').innerHTML = bizs.map(b => buildBizCard(b)).join('') + `
-      <div class="bc" onclick="showTab('discover')" style="background:rgba(255,92,0,.06);border:1.5px dashed rgba(255,92,0,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-width:130px">
-        <span style="font-size:1.6rem">→</span>
-        <span style="font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--or);text-align:center;padding:0 8px">Show More</span>
-      </div>`;
+    bizForMap = bizs;
+    if (!bizs.length) return;
+    const showMore = `<div class="bc" onclick="showTab('discover')" style="background:rgba(255,92,0,.06);border:1.5px dashed rgba(255,92,0,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-width:130px"><span style="font-size:1.6rem">→</span><span style="font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--or);text-align:center;padding:0 8px">Show More</span></div>`;
+    _frontlineHtml = `<div id="feed-break-inline"><div class="sl" style="margin-top:6px"><span>📍 Where to go before &amp; after the event</span><a onclick="openBizPage();return false" style="cursor:pointer">See all →</a></div><div class="hs">${bizs.map(b => buildBizCard(b)).join('')}${showMore}</div></div>`;
+    _injectFeedBreak(); // inject if the feed is already rendered
+    if (mapInited && mapObj && typeof placeMapMarkers === 'function') placeMapMarkers();
   } catch(e) {
-    document.getElementById('frontline-row').innerHTML = `<div style="padding:14px;color:var(--mu);font-size:.78rem">Could not load places: ${e.message}</div>`;
+    console.warn('[Frontline]', e.message);
   }
 }
 
@@ -3404,26 +3400,34 @@ function setMapFilter(cat, btn) {
   if (mapInited && mapObj) { placeMapMarkers(); placePoisOnMap(); }
 }
 
-function _makeMarkerEl(s, isEv, labelText, countBadge) {
+function _makeMarkerEl(s, isEv, labelText, countBadge, imgUrl) {
+  const useImg = !!(imgUrl && isEv && !countBadge);
   const el = document.createElement('div');
-  el.className = isEv ? 'mp-dot mp-dot-ev' : 'mp-dot';
+  el.className = isEv ? (useImg ? 'mp-dot mp-dot-img' : 'mp-dot mp-dot-ev') : 'mp-dot';
   // position:absolute;top:0;left:0 set INLINE so Mapbox positioning can never be overridden
-  el.style.cssText = `position:absolute;top:0;left:0;background:${s.grad||s.bg};color:${s.dark?'#000':'#fff'};`;
-  el.style.fontSize = isEv ? '.72rem' : '.62rem';
-  el.style.boxShadow = `0 0 5px rgba(${s.sh},.9),0 0 12px rgba(${s.sh},.45),0 2px 8px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.4)`;
 
-  const iconHtml = countBadge
-    ? `<span style="display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:900">${countBadge}</span>`
-    : `<span style="display:flex;align-items:center;justify-content:center;pointer-events:none">${s.ico}</span>`;
-  el.insertAdjacentHTML('afterbegin', iconHtml);
+  if (useImg) {
+    el.style.cssText = `position:absolute;top:0;left:0;border:2.5px solid rgba(255,255,255,.82);box-shadow:0 0 0 1px rgba(${s.sh},.2),0 3px 10px rgba(0,0,0,.8),0 0 12px rgba(${s.sh},.2);`;
+    const imgDiv = document.createElement('div');
+    imgDiv.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;border-radius:50%;background-color:${s.bg};background-size:cover;background-position:center;pointer-events:none;`;
+    imgDiv.style.backgroundImage = `url(${JSON.stringify(imgUrl)})`;
+    el.appendChild(imgDiv);
+  } else {
+    el.style.cssText = `position:absolute;top:0;left:0;background:${s.grad||s.bg};color:${s.dark?'#000':'#fff'};box-shadow:0 0 5px rgba(${s.sh},.5),0 0 12px rgba(${s.sh},.18),0 2px 8px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.15);filter:saturate(.55) brightness(.8);`;
+    el.style.fontSize = isEv ? '.72rem' : '.62rem';
+    const iconHtml = countBadge
+      ? `<span style="display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:900">${countBadge}</span>`
+      : `<span style="display:flex;align-items:center;justify-content:center;pointer-events:none">${s.ico}</span>`;
+    el.insertAdjacentHTML('afterbegin', iconHtml);
+  }
 
-  const ringSize = isEv ? 38 : 30;
+  const ringSize = useImg ? 52 : (isEv ? 38 : 30);
   const ring = document.createElement('div');
   ring.className = 'mp-ring';
-  ring.style.cssText = `position:absolute;width:${ringSize}px;height:${ringSize}px;top:50%;left:50%;margin-top:-${ringSize/2}px;margin-left:-${ringSize/2}px;border-radius:50%;border:${isEv?'2px':'1.5px'} solid ${s.bg};animation:gring ${isEv?'1.8s':'2.6s'} ease-out infinite;pointer-events:none;`;
+  ring.style.cssText = `position:absolute;width:${ringSize}px;height:${ringSize}px;top:50%;left:50%;margin-top:-${ringSize/2}px;margin-left:-${ringSize/2}px;border-radius:50%;border:1.5px solid ${s.bg};animation:gring ${useImg?'2.6s':isEv?'2s':'3s'} ease-out infinite;pointer-events:none;opacity:.5;`;
   el.appendChild(ring);
 
-  el.addEventListener('mouseenter', () => { el.style.zIndex='1000'; el.style.filter='brightness(1.15)'; });
+  el.addEventListener('mouseenter', () => { el.style.zIndex='1000'; el.style.filter='brightness(1.08)'; });
   el.addEventListener('mouseleave', () => { el.style.zIndex=''; el.style.filter=''; });
 
   const label = document.createElement('div');
@@ -3462,7 +3466,7 @@ function placeMapMarkers() {
     const ev0 = events[0];
     const s   = _ms(ev0, 'event');
     const cnt = events.length;
-    const el  = _makeMarkerEl(s, true, cnt > 1 ? (ev0.venue_name || ev0.name || '') : (ev0.name || ''), cnt > 1 ? cnt : null);
+    const el  = _makeMarkerEl(s, true, cnt > 1 ? (ev0.venue_name || ev0.name || '') : (ev0.name || ''), cnt > 1 ? cnt : null, cnt === 1 ? ev0.image_url : null);
 
     const _open = e => {
       e.stopPropagation();

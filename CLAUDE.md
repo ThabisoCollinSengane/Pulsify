@@ -167,6 +167,16 @@ Inspected `cjzewfvtdayjgjdpdmln` — coordinates were clean (no positive lats, n
 ### `ticket_tiers.is_free` / `sold_out` are GENERATED columns — never insert them
 `is_free` is `(price = 0)` and `sold_out` is `(capacity IS NOT NULL AND sold >= capacity)`, both `GENERATED ALWAYS`. Inserting an explicit value raises Postgres `428C9: cannot insert a non-DEFAULT value into column`. Both the organizer and business dashboards used to insert `is_free` into `ticket_tiers` inside a `.catch(()=>{})`, so paid events were saved with **zero tiers** and the event detail panel fell through to "Contact the organiser" instead of showing the Paystack buy flow. **Fix:** insert only `event_id, name, price, sort_order`; surface (don't swallow) the error. The buy flow in `index.html` `openEv()` keys entirely off `ticket_tiers` rows existing.
 
+### Home feed businesses ("Where to go") section — MUST use string injection
+**Do NOT use DOM-movement** to position the businesses break inside the events feed. The pattern `element.appendChild(src)` / `homeHi.appendChild(src)` was tried three times and broke each time because `feedEl.innerHTML = injectPromos(...)` destroys any live DOM node that was moved into `feedEl`, leaving `getElementById('feed-break-src')` returning null.
+
+**Correct pattern (enforced in production):**
+- `_frontlineHtml`: a plain string, built by `loadFrontline()` after fetching biz data.
+- `_injectFeedBreak()`: calls `feedEl.querySelectorAll('.fc')`, grabs the 15th card (or last), and calls `anchor.insertAdjacentHTML('afterend', _frontlineHtml)`. Creates `#feed-break-inline` fresh each call.
+- `_ejectFeedBreak()`: does `document.getElementById('feed-break-inline')?.remove()`. Nothing else.
+- `loadFrontline()` must call `_injectFeedBreak()` after setting `_frontlineHtml` (handles the race where loadFeed finishes before loadFrontline).
+- `featured-weekend` and `community-pulse` are **standalone divs** in the HTML — never inside any moveable container. Their JS renderers (`renderFeaturedWeekend`, community-pulse handler) find them by ID regardless of feed state.
+
 ### Map quick-jump, style toggle, stacked-marker fan-out
 - **City jump** (`<select id="map-city-jump">` → `jumpToCity()`): flies to Durban/Joburg/Cape Town/Pretoria/Gqeberha; "All SA" resets `_mapFitDone=false` and re-fits to all markers. A manual jump sets `_mapFitDone=true` so the auto-fit doesn't fight it.
 - **Auto-jump on feed filter:** `showTab('map')` maps `feedCity`/`feedProvince` via `_cityKeyFromName()` and focuses the map there on open. First-open uses `_pendingCityJump` (applied in the `load` handler since init is async).
