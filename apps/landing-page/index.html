@@ -1856,7 +1856,7 @@ async function loadFeed(resetPage = false, append = false) {
   }
 
   try {
-    const limit = 10, offset = (feedPage - 1) * limit;
+    const limit = 15, offset = (feedPage - 1) * limit;
     const params = new URLSearchParams({ page: feedPage, limit, _t: Date.now() });
     if (feedCity && feedCity !== 'all') params.set('city', feedCity);
     else if (feedProvince && feedProvince !== 'all') params.set('province', feedProvince);
@@ -1865,7 +1865,7 @@ async function loadFeed(resetPage = false, append = false) {
     if (feedFrom) params.set('from_date', feedFrom);
     if (feedTo)   params.set('to_date', feedTo);
     const _abort = new AbortController();
-    const _timer = setTimeout(() => _abort.abort(), 12000);
+    const _timer = setTimeout(() => _abort.abort(), 8000);
     const resp = await fetch('/api/events?' + params, { signal: _abort.signal });
     clearTimeout(_timer);
     if (myReq !== _feedReqId) return;
@@ -2221,7 +2221,6 @@ function browseCategory(genre, btn) {
   feedFrom = ''; feedTo = '';
   feedGenre = genre;
   loadFeed(true);
-  const lbl = document.getElementById('feed-lbl'); if (lbl) lbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function toggleMoreCats(btn) {
   const m = document.getElementById('rd-more-cats'); if (!m) return;
