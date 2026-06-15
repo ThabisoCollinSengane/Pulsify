@@ -669,10 +669,19 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
       <div class="rd-why-card"><div class="rd-why-ic">🎉</div><div><div class="rd-why-t">Discover experiences</div><div class="rd-why-s">Gigs, shisanyamas, nightlife and more.</div></div></div>
     </div>
 
-    <!-- ══ POSTS (moved lower, visual-first) ══ -->
-    <div id="community-pulse" style="display:none">
-      <div class="sl"><span>📣 From the Community</span></div>
-      <div class="hs" id="community-pulse-row"></div>
+    <!-- ══ FEED BREAK SOURCE — injected into events feed after 10 events ══ -->
+    <!-- This block gets moved into #events-feed by _injectFeedBreak() at runtime -->
+    <div id="feed-break-src" style="display:none">
+      <div class="sl" style="margin-top:6px"><span>📍 Where to go before &amp; after the event</span><a onclick="openBizPage();return false">See all →</a></div>
+      <div class="hs" id="frontline-row"><div class="skel" style="width:164px;height:170px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:164px;height:170px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:164px;height:170px;flex-shrink:0;border-radius:18px"></div></div>
+      <div id="featured-weekend" style="display:none">
+        <div class="sl"><span>⚡ Featured This Weekend</span></div>
+        <div id="featured-weekend-cards"></div>
+      </div>
+      <div id="community-pulse" style="display:none">
+        <div class="sl"><span>📣 From the Community</span></div>
+        <div class="hs" id="community-pulse-row"></div>
+      </div>
     </div>
     <div style="margin:20px 14px 8px;padding:12px 14px;border-top:1px solid var(--border);font-size:.62rem;color:var(--mu);line-height:1.7;text-align:center">
       Third-party event listings (Ticketmaster, Quicket, Eventbrite, etc.) are owned and managed by those companies — for ticket issues, refunds, or cancellations, contact them directly. Only events marked as a <strong style="color:var(--tx)">Pulsefy event</strong> are our responsibility.<br/>
@@ -1822,6 +1831,24 @@ function bizSkeleton() {
 ══════════════════════════════════════════════════ */
 let _feedReqId = 0;
 let _feedLoadingMore = false;
+
+// Move feed-break-src block INTO the events-feed after first 10 events
+function _injectFeedBreak() {
+  const feedEl = document.getElementById('events-feed');
+  const src    = document.getElementById('feed-break-src');
+  if (!feedEl || !src || feedEl.contains(src)) return;
+  src.style.display = '';
+  feedEl.appendChild(src);
+}
+// Move feed-break-src back to home panel BEFORE clearing the feed
+function _ejectFeedBreak() {
+  const homeHi = document.querySelector('#tab-home .hi');
+  const src    = document.getElementById('feed-break-src');
+  if (!homeHi || !src) return;
+  src.style.display = 'none';
+  homeHi.appendChild(src);
+}
+
 // append=true → infinite scroll: keep existing cards, add the next page at the bottom.
 async function loadFeed(resetPage = false, append = false) {
   if (resetPage) feedPage = 1;
@@ -1831,6 +1858,7 @@ async function loadFeed(resetPage = false, append = false) {
     _feedLoadingMore = true;
     feedEl.insertAdjacentHTML('beforeend', '<div id="feed-more-loader" style="text-align:center;padding:18px;color:var(--mu);font-size:.78rem">Loading more…</div>');
   } else {
+    _ejectFeedBreak(); // pull break out before clearing
     feedEl.innerHTML = feedSkeleton();
     document.getElementById('feed-pg').style.display = 'none';
   }
@@ -1897,6 +1925,9 @@ async function loadFeed(resetPage = false, append = false) {
     updatePagination();
     triggerRev();
 
+    // Inject Top Spots + Community break after first 10 events
+    _injectFeedBreak();
+
     // Cache events for map; refresh markers if map is already open
     eventsForMap = [...(eventsForMap.filter(e => !events.find(n => n.id === e.id))), ...events];
     if (mapInited && mapObj && typeof placeMapMarkers === 'function') placeMapMarkers();
@@ -1905,7 +1936,7 @@ async function loadFeed(resetPage = false, append = false) {
     if (feedPage === 1) {
       promoPromise.then(({ featured = [], injected = [] }) => {
         renderFeaturedWeekend(featured);
-        if (injected.length) feedEl.innerHTML = injectPromos(cards, injected);
+        if (injected.length) { feedEl.innerHTML = injectPromos(cards, injected); _injectFeedBreak(); }
       });
       loadQuicketEvents(feedCity, feedGenre);
     }
