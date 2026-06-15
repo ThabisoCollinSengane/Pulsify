@@ -3224,6 +3224,35 @@ module.exports = async (req, res) => {
       return res.status(200).json({ success: true });
     }
 
+    /* ─── GET /geocode?venue=&city= ─────────────────────────── */
+    if (url === '/geocode' && req.method === 'GET') {
+      const venue = (q.venue || '').trim();
+      const city  = (q.city  || '').trim();
+      if (!venue && !city) return res.status(400).json({ error: 'venue or city required' });
+
+      const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN || 'pk.eyJ1IjoidGhhY29sbGluMiIsImEiOiJjbW51Mm95cHEwYm8xMnJyMXEzaXgxMDBmIn0.nF80wBOn-jxhjpAIus9anw';
+      const q2 = encodeURIComponent([venue, city, 'South Africa'].filter(Boolean).join(', '));
+      const mbUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${q2}.json?access_token=${MAPBOX_TOKEN}&country=za&types=poi,address,place&limit=1`;
+
+      const https = require('https');
+      const result = await new Promise((resolve) => {
+        https.get(mbUrl, (r) => {
+          let d = '';
+          r.on('data', c => d += c);
+          r.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve(null); } });
+        }).on('error', () => resolve(null));
+      });
+
+      const feat = result?.features?.[0];
+      if (!feat) return res.status(200).json({ lat: null, lon: null });
+
+      const [lon, lat] = feat.center;
+      if (lat < -35 || lat > -22 || lon < 16 || lon > 33) {
+        return res.status(200).json({ lat: null, lon: null });
+      }
+      return res.status(200).json({ lat, lon, place_name: feat.place_name, confidence: 80 });
+    }
+
     return res.status(404).json({ error: `Route not found: ${req.method} ${url}` });
 
   } catch (err) {
