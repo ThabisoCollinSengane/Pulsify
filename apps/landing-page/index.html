@@ -3405,7 +3405,7 @@ function _makeMarkerEl(s, isEv, labelText, countBadge, imgUrl) {
     imgDiv.style.backgroundImage = `url(${JSON.stringify(imgUrl)})`;
     el.appendChild(imgDiv);
   } else {
-    el.style.cssText = `position:absolute;top:0;left:0;background:${s.grad||s.bg};color:${s.dark?'#000':'#fff'};box-shadow:0 0 5px rgba(${s.sh},.5),0 0 12px rgba(${s.sh},.18),0 2px 8px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.15);`;
+    el.style.cssText = `position:absolute;top:0;left:0;background:${s.grad||s.bg};color:${s.dark?'#000':'#fff'};box-shadow:0 0 5px rgba(${s.sh},.5),0 0 12px rgba(${s.sh},.18),0 2px 8px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.15);filter:saturate(.55) brightness(.8);`;
     el.style.fontSize = isEv ? '.72rem' : '.62rem';
     const iconHtml = countBadge
       ? `<span style="display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:900">${countBadge}</span>`
