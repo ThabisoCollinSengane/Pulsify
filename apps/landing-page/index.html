@@ -514,8 +514,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 <!-- ══ HOME ══ -->
 <style>
 /* ══ HOMEPAGE REDESIGN (experimental — branch claude/homepage-redesign-experiment) ══ */
-.rd-hero{position:relative;min-height:236px;display:flex;align-items:flex-end;overflow:hidden;background:url('/hero-tonight.jpg') center/cover no-repeat,url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1100&q=70') center/cover no-repeat,#0c0722}
-.rd-hero-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(22,12,50,.3) 0%,rgba(22,12,50,.74) 55%,rgba(22,12,50,.98) 100%)}
+.rd-hero{position:relative;min-height:320px;display:flex;align-items:flex-end;overflow:hidden;background:url('/hero-tonight.jpg') center 35%/cover no-repeat,url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1100&q=70') center 35%/cover no-repeat,#0c0722}
+.rd-hero-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(22,12,50,.1) 0%,rgba(22,12,50,.55) 45%,rgba(22,12,50,.97) 100%)}
 .rd-hero-inner{position:relative;z-index:1;padding:24px 18px 20px;width:100%}
 .rd-hero-h{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;line-height:.97;letter-spacing:.01em;color:var(--tx);margin:0 0 6px;text-shadow:0 2px 16px rgba(0,0,0,.65)}
 .rd-hero-sub{font-family:'Syne',sans-serif;font-size:.92rem;font-weight:700;color:var(--mu2);margin:0 0 14px}
@@ -548,8 +548,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
         <h1 class="rd-hero-h">WHAT ARE YOU DOING THIS WEEKEND?</h1>
         <p class="rd-hero-sub">Find events near you.</p>
         <div class="rd-hero-btns">
-          <button class="rd-hbtn rd-hbtn-p" onclick="showTab('map')">📍 Find Events Near You</button>
-          <button class="rd-hbtn" onclick="browseCategory('nightlife')">🌙 Explore Nightlife</button>
+          <button class="rd-hbtn rd-hbtn-p" onclick="document.getElementById('feed-lbl').scrollIntoView({behavior:'smooth',block:'start'})">🎟 Browse Events</button>
+          <button class="rd-hbtn" onclick="showTab('map')">🗺 Explore Map</button>
           <button class="rd-hbtn" onclick="browseCategory('free')">✅ Free Events</button>
         </div>
       </div>
@@ -2150,8 +2150,16 @@ function homeQuick(type, btn) {
     feedFrom = tISO; feedTo = tISO;
   } else if (type === 'weekend') {
     const d = new Date(); const day = d.getDay();
-    const sat = new Date(d); sat.setDate(d.getDate() + ((6 - day + 7) % 7));
-    const sun = new Date(sat); sun.setDate(sat.getDate() + 1);
+    let sat, sun;
+    if (day === 0) {
+      // Sunday — "this weekend" is yesterday (Sat) + today (Sun)
+      sat = new Date(d); sat.setDate(d.getDate() - 1);
+      sun = new Date(d);
+    } else {
+      // Any other day — upcoming Sat + Sun
+      sat = new Date(d); sat.setDate(d.getDate() + ((6 - day + 7) % 7));
+      sun = new Date(sat); sun.setDate(sat.getDate() + 1);
+    }
     feedFrom = sat.toISOString().split('T')[0];
     feedTo   = sun.toISOString().split('T')[0];
   }
