@@ -512,8 +512,50 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 </div>
 
 <!-- ══ HOME ══ -->
+<style>
+/* ══ HOMEPAGE REDESIGN (experimental — branch claude/homepage-redesign-experiment) ══ */
+.rd-hero{position:relative;min-height:236px;display:flex;align-items:flex-end;overflow:hidden;background:#0c0722 url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1100&q=70') center/cover no-repeat}
+.rd-hero-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(22,12,50,.3) 0%,rgba(22,12,50,.74) 55%,rgba(22,12,50,.98) 100%)}
+.rd-hero-inner{position:relative;z-index:1;padding:24px 18px 20px;width:100%}
+.rd-hero-h{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;line-height:.97;letter-spacing:.01em;color:var(--tx);margin:0 0 6px;text-shadow:0 2px 16px rgba(0,0,0,.65)}
+.rd-hero-sub{font-family:'Syne',sans-serif;font-size:.92rem;font-weight:700;color:var(--mu2);margin:0 0 14px}
+.rd-hero-btns{display:flex;flex-wrap:wrap;gap:8px}
+.rd-hbtn{flex:0 0 auto;background:rgba(36,22,82,.82);backdrop-filter:blur(6px);border:1px solid var(--border2);color:var(--tx);font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;padding:9px 15px;border-radius:50px;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent}
+.rd-hbtn:active{transform:scale(.96)}
+.rd-hbtn-p{background:linear-gradient(135deg,#B026FF,#FF5C00);border-color:transparent;color:#fff;box-shadow:0 4px 18px rgba(255,92,0,.28)}
+.rd-qa{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:12px 14px 6px}
+.rd-qa::-webkit-scrollbar{display:none}
+.rd-qbtn{flex-shrink:0;white-space:nowrap;background:rgba(168,108,255,.06);border:1px solid var(--border);color:var(--tx);font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;padding:8px 16px;border-radius:50px;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent}
+.rd-qbtn:active{transform:scale(.96)}
+.rd-qbtn.active{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.1)}
+.rd-more-btn{color:var(--mu2)!important}
+.rd-trust{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 16px;margin:8px 14px 4px;padding:12px;background:rgba(36,22,82,.4);border:1px solid var(--border);border-radius:14px}
+.rd-trust-item{font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--li);letter-spacing:.02em;display:inline-flex;align-items:center;gap:5px}
+.rd-why{display:grid;grid-template-columns:1fr;gap:10px;padding:2px 14px 10px}
+.rd-why-card{background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px}
+.rd-why-ic{font-size:1.6rem;flex-shrink:0}
+.rd-why-t{font-family:'Syne',sans-serif;font-size:.86rem;font-weight:700;color:var(--tx);margin-bottom:2px}
+.rd-why-s{font-size:.72rem;color:var(--mu);line-height:1.4}
+.fbg.bff{background:rgba(255,45,136,.12);color:var(--pk);border:1px solid rgba(255,45,136,.3)}
+</style>
 <div class="panel active" id="tab-home">
   <div class="hi">
+
+    <!-- ══ HERO ══ -->
+    <div class="rd-hero">
+      <div class="rd-hero-ov"></div>
+      <div class="rd-hero-inner">
+        <h1 class="rd-hero-h">WHAT ARE YOU DOING THIS WEEKEND?</h1>
+        <p class="rd-hero-sub">Find events near you.</p>
+        <div class="rd-hero-btns">
+          <button class="rd-hbtn rd-hbtn-p" onclick="showTab('map')">📍 Find Events Near You</button>
+          <button class="rd-hbtn" onclick="browseCategory('nightlife')">🌙 Explore Nightlife</button>
+          <button class="rd-hbtn" onclick="browseCategory('free')">✅ Free Events</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SEARCH + LOCATION ══ -->
     <div class="sw"><span class="sic">🔍</span>
       <input class="si" type="search" id="search-inp" placeholder="Search events, venues, artists…" autocomplete="off" oninput="handleSearch(this.value)"/>
     </div>
@@ -541,50 +583,84 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
       </select>
       <select class="ls" id="sel-area" disabled><option value="">📍 Area</option></select>
     </div>
-    <div class="cr" id="genre-chip-row">
-      <button class="chip active" onclick="setGenre(this,'all')">✦ All</button>
-      <button class="chip" onclick="setGenre(this,'free')">✅ Free</button>
-      <button class="chip" onclick="setGenre(this,'gqom')">🔊 Gqom</button>
-      <button class="chip" onclick="setGenre(this,'amapiano')">🎶 Amapiano</button>
-      <button class="chip" onclick="setGenre(this,'nightlife')">🌙 Nightlife</button>
-      <button class="chip" onclick="setGenre(this,'sport')">⚽ Sport</button>
-      <button class="chip" onclick="setGenre(this,'outdoor')">🏞️ Outdoor</button>
-      <button class="chip" onclick="setGenre(this,'ceremonies')">💍 Ceremonies</button>
-      <button class="chip" onclick="setGenre(this,'workshop')">🛠️ Workshop</button>
-      <button class="chip" onclick="setGenre(this,'food')">🍴 Food</button>
-      <button class="chip" onclick="setGenre(this,'cultural')">🥁 Cultural</button>
-      <button class="chip" onclick="setGenre(this,'business')">💼 Business</button>
-      <button class="chip" onclick="setGenre(this,'wellness')">🧘 Wellness</button>
-      <button class="chip" onclick="setGenre(this,'art')">🎨 Art</button>
-      <button class="chip" onclick="setGenre(this,'market')">🛍️ Market</button>
-      <button class="chip" onclick="setGenre(this,'kids')">🧸 Kids</button>
-      <button class="chip" onclick="setGenre(this,'charity')">❤️ Charity</button>
-      <button class="chip" onclick="setGenre(this,'comedy')">😂 Comedy</button>
-      <button class="chip" onclick="setGenre(this,'jazz')">🎷 Jazz</button>
-      <button class="chip" onclick="setGenre(this,'gospel')">🙏 Gospel</button>
-      <button class="chip" onclick="setGenre(this,'march')">✊ March</button>
-      <button class="chip" onclick="setGenre(this,'student')">🎓 Student</button>
+
+    <!-- ══ QUICK ACTIONS ══ -->
+    <div class="rd-qa">
+      <button class="rd-qbtn" onclick="homeQuick('tonight',this)">🔥 Tonight</button>
+      <button class="rd-qbtn" onclick="browseCategory('free')">✅ Free Events</button>
+      <button class="rd-qbtn" onclick="showTab('map')">📍 Near You</button>
+      <button class="rd-qbtn" onclick="homeQuick('weekend',this)">⚡ Popular This Weekend</button>
     </div>
+
     <!-- Admin promo banners slider -->
     <div id="promo-banner-wrap" style="display:none;margin:8px 14px 4px;border-radius:16px;overflow:hidden;cursor:pointer;position:relative"></div>
 
-    <div class="sl"><span>🏆 Top Spots</span><a onclick="openBizPage();return false">See all →</a></div>
-    <div class="hs" id="frontline-row"><div class="skel" style="width:150px;height:120px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:150px;height:120px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:150px;height:120px;flex-shrink:0;border-radius:18px"></div></div>
-    <div id="featured-weekend" style="display:none">
-      <div class="sl"><span>⚡ Featured This Weekend</span></div>
-      <div id="featured-weekend-cards"></div>
-    </div>
-    <!-- Public posts from organizer & business accounts -->
-    <div id="community-pulse" style="display:none">
-      <div class="sl"><span>📣 Latest from Organizers &amp; Venues</span></div>
-      <div class="hs" id="community-pulse-row"></div>
-    </div>
+    <!-- ══ EVENTS ══ -->
     <div class="sl"><span id="feed-lbl">🔥 Upcoming Events</span><a href="/map">View Map →</a></div>
     <div id="events-feed"></div>
     <div class="pg" id="feed-pg" style="display:none">
       <button class="pb" id="pg-prev" onclick="changePage(-1)" disabled>← Prev</button>
       <span class="pi" id="pg-info">1 / 1</span>
       <button class="pb" id="pg-next" onclick="changePage(1)">Next →</button>
+    </div>
+
+    <!-- ══ CATEGORIES (browse) ══ -->
+    <div class="sl"><span>🎯 Browse by Category</span></div>
+    <div class="cr" id="genre-chip-row">
+      <button class="chip active" data-g="all" onclick="browseCategory('all',this)">✦ All</button>
+      <button class="chip" data-g="nightlife" onclick="browseCategory('nightlife',this)">🌙 Nightlife</button>
+      <button class="chip" data-g="amapiano" onclick="browseCategory('amapiano',this)">🎶 Amapiano</button>
+      <button class="chip" data-g="food" onclick="browseCategory('food',this)">🍴 Food &amp; Social</button>
+      <button class="chip" data-g="free" onclick="browseCategory('free',this)">✅ Free</button>
+      <button class="chip rd-more-btn" onclick="toggleMoreCats(this)">More ▾</button>
+      <span id="rd-more-cats" style="display:none;gap:7px;align-items:center">
+        <button class="chip" data-g="gqom" onclick="browseCategory('gqom',this)">🔊 Gqom</button>
+        <button class="chip" data-g="sport" onclick="browseCategory('sport',this)">⚽ Sport</button>
+        <button class="chip" data-g="outdoor" onclick="browseCategory('outdoor',this)">🏞️ Outdoor</button>
+        <button class="chip" data-g="ceremonies" onclick="browseCategory('ceremonies',this)">💍 Ceremonies</button>
+        <button class="chip" data-g="workshop" onclick="browseCategory('workshop',this)">🛠️ Workshop</button>
+        <button class="chip" data-g="cultural" onclick="browseCategory('cultural',this)">🥁 Cultural</button>
+        <button class="chip" data-g="business" onclick="browseCategory('business',this)">💼 Business</button>
+        <button class="chip" data-g="wellness" onclick="browseCategory('wellness',this)">🧘 Wellness</button>
+        <button class="chip" data-g="art" onclick="browseCategory('art',this)">🎨 Art</button>
+        <button class="chip" data-g="market" onclick="browseCategory('market',this)">🛍️ Market</button>
+        <button class="chip" data-g="kids" onclick="browseCategory('kids',this)">🧸 Kids</button>
+        <button class="chip" data-g="charity" onclick="browseCategory('charity',this)">❤️ Charity</button>
+        <button class="chip" data-g="comedy" onclick="browseCategory('comedy',this)">😂 Comedy</button>
+        <button class="chip" data-g="jazz" onclick="browseCategory('jazz',this)">🎷 Jazz</button>
+        <button class="chip" data-g="gospel" onclick="browseCategory('gospel',this)">🙏 Gospel</button>
+        <button class="chip" data-g="march" onclick="browseCategory('march',this)">✊ March</button>
+        <button class="chip" data-g="student" onclick="browseCategory('student',this)">🎓 Student</button>
+      </span>
+    </div>
+
+    <!-- ══ TRUST BAR ══ -->
+    <div class="rd-trust">
+      <span class="rd-trust-item">✔ Secure ticketing</span>
+      <span class="rd-trust-item">✔ Verified organisers</span>
+      <span class="rd-trust-item">✔ Real events</span>
+    </div>
+
+    <!-- ══ TOP SPOTS ══ -->
+    <div class="sl"><span>📍 Where to go before &amp; after the event</span><a onclick="openBizPage();return false">See all →</a></div>
+    <div class="hs" id="frontline-row"><div class="skel" style="width:150px;height:120px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:150px;height:120px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:150px;height:120px;flex-shrink:0;border-radius:18px"></div></div>
+    <div id="featured-weekend" style="display:none">
+      <div class="sl"><span>⚡ Featured This Weekend</span></div>
+      <div id="featured-weekend-cards"></div>
+    </div>
+
+    <!-- ══ WHY PULSEFY ══ -->
+    <div class="sl"><span>✦ Why Pulsefy</span></div>
+    <div class="rd-why">
+      <div class="rd-why-card"><div class="rd-why-ic">⚡</div><div><div class="rd-why-t">Find events instantly</div><div class="rd-why-s">Tonight, this weekend, near you — in seconds.</div></div></div>
+      <div class="rd-why-card"><div class="rd-why-ic">🫂</div><div><div class="rd-why-t">Go out with your squad</div><div class="rd-why-s">Plan, invite and roll out together.</div></div></div>
+      <div class="rd-why-card"><div class="rd-why-ic">🎉</div><div><div class="rd-why-t">Discover experiences</div><div class="rd-why-s">Gigs, shisanyamas, nightlife and more.</div></div></div>
+    </div>
+
+    <!-- ══ POSTS (moved lower, visual-first) ══ -->
+    <div id="community-pulse" style="display:none">
+      <div class="sl"><span>📣 From the Community</span></div>
+      <div class="hs" id="community-pulse-row"></div>
     </div>
     <div style="margin:20px 14px 8px;padding:12px 14px;border-top:1px solid var(--border);font-size:.62rem;color:var(--mu);line-height:1.7;text-align:center">
       Third-party event listings (Ticketmaster, Quicket, Eventbrite, etc.) are owned and managed by those companies — for ticket issues, refunds, or cancellations, contact them directly. Only events marked as a <strong style="color:var(--tx)">Pulsefy event</strong> are our responsibility.<br/>
@@ -1847,12 +1923,13 @@ function buildCard(ev, idx) {
   if (isT)                  badge = '<span class="fbg blv"><span class="blink"></span>TONIGHT</span>';
   else if (gl.includes('march')) badge = '<span class="fbg" style="background:rgba(198,255,74,.1);color:var(--li);border:1px solid rgba(198,255,74,.22)">✊ ' + fdate(ev.date_local) + '</span>';
   else if (gl.includes('sport')) badge = '<span class="fbg bsp">⚽ ' + fdate(ev.date_local) + '</span>';
-  else if (iF)              badge = '<span class="fbg bfr">FREE</span>';
+  else if (iF)              badge = '<span class="fbg bfr">🎟️ FREE</span>';
+  else if (hp >= 85)        badge = '<span class="fbg bff">⚡ Selling fast</span>';
   else                      badge = '<span class="fbg bsn">' + fdate(ev.date_local) + '</span>';
   const srcLabel = { eventbrite: 'Eventbrite', ticketmaster: 'Ticketmaster', quicket: 'Quicket' }[ev.source] || '';
   const srcClr   = { eventbrite: '#F05537', ticketmaster: '#026CDF', quicket: '#00C89C' }[ev.source] || '';
   const btnLbl   = gl.includes('march') ? 'Join March' : (iF ? 'RSVP Free' : 'Get Tickets');
-  return `<div class="fc rv" data-evid="${x(ev.id)}" onclick="openEv('${x(ev.id)}')">
+  return `<div class="fc rv" data-evid="${x(ev.id)}" data-date="${x(ev.date_local)}" data-hype="${hp}" onclick="openEv('${x(ev.id)}')">
     <div class="fh"><div class="fa" style="background:${bg}">${emo}</div>
       <div style="flex:1;min-width:0"><div class="fo">${x(ev.organiser_name || ev.venue_name || 'Pulsefy')}</div>
       <div class="fl">📍 ${x(ev.venue_city)} · ${fdt(ev.date_local, ev.time_local)}</div></div>${badge}</div>
@@ -1968,6 +2045,56 @@ function setGenre(btn, genre) {
   btn.classList.add('active');
   feedGenre = genre;
   loadFeed(true);
+}
+
+/* ══ HOMEPAGE REDESIGN helpers (experimental) ══ */
+let _homeQuickActive = null;
+function browseCategory(genre, btn) {
+  document.querySelectorAll('#genre-chip-row .chip').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  else { const c = document.querySelector('#genre-chip-row .chip[data-g="' + genre + '"]'); if (c) c.classList.add('active'); }
+  _homeQuickActive = null;
+  document.querySelectorAll('.rd-qbtn').forEach(b => b.classList.remove('active'));
+  feedGenre = genre;
+  loadFeed(true);
+  const lbl = document.getElementById('feed-lbl'); if (lbl) lbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function toggleMoreCats(btn) {
+  const m = document.getElementById('rd-more-cats'); if (!m) return;
+  const open = m.style.display !== 'none';
+  m.style.display = open ? 'none' : 'inline-flex';
+  btn.textContent = open ? 'More ▾' : 'Less ▴';
+}
+function homeQuick(type, btn) {
+  const feed = document.getElementById('events-feed'); if (!feed) return;
+  const cards = [...feed.querySelectorAll('.fc')];
+  if (_homeQuickActive === type) {
+    _homeQuickActive = null; btn.classList.remove('active');
+    cards.forEach(c => c.style.display = ''); return;
+  }
+  document.querySelectorAll('.rd-qbtn').forEach(b => b.classList.remove('active'));
+  _homeQuickActive = type; btn.classList.add('active');
+  const tISO = new Date().toISOString().split('T')[0];
+  let lo, hi;
+  if (type === 'weekend') {
+    const d = new Date(); const day = d.getDay();
+    const sat = new Date(d); sat.setDate(d.getDate() + ((6 - day + 7) % 7));
+    const sun = new Date(sat); sun.setDate(sat.getDate() + 1);
+    lo = sat.toISOString().split('T')[0]; hi = sun.toISOString().split('T')[0];
+  }
+  let shown = 0;
+  cards.forEach(c => {
+    const dt = c.getAttribute('data-date') || ''; let ok = false;
+    if (type === 'tonight') ok = (dt === tISO);
+    else if (type === 'weekend') ok = (dt >= lo && dt <= hi);
+    c.style.display = ok ? '' : 'none'; if (ok) shown++;
+  });
+  if (!shown) {
+    _homeQuickActive = null; btn.classList.remove('active');
+    cards.forEach(c => c.style.display = '');
+    showToast(type === 'tonight' ? 'No events tonight yet — showing all' : 'Nothing this weekend yet — showing all');
+  }
+  const lbl = document.getElementById('feed-lbl'); if (lbl) lbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function setFeedCity(btn, city) {
   document.querySelectorAll('#city-chip-row .chip').forEach(b => b.classList.remove('active'));
