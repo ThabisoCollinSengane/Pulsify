@@ -22,6 +22,7 @@ module.exports = async (req, res) => {
       const lon    = parseFloat(q.lon)       || null;
       const km     = parseFloat(q.radius_km) || 100;
       const from_date = q.from_date || today;
+      const to_date   = q.to_date   || '';
 
       let query = sb().from('events')
         .select(`id,name,date_local,time_local,venue_name,venue_city,venue_address,
@@ -37,6 +38,7 @@ module.exports = async (req, res) => {
         .order('date_local',     { ascending: true })
         .range(offset, offset + limit - 1);
 
+      if (to_date)                 query = query.lte('date_local', to_date);
       if (city && city !== 'all')  query = query.ilike('venue_city', `%${city}%`);
       if (genre === 'free')        query = query.eq('is_free', true);
       else if (genre && genre !== 'all') query = query.ilike('genre', `%${genre}%`);
