@@ -514,7 +514,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 <!-- ══ HOME ══ -->
 <style>
 /* ══ HOMEPAGE REDESIGN (experimental — branch claude/homepage-redesign-experiment) ══ */
-.rd-hero{position:relative;min-height:236px;display:flex;align-items:flex-end;overflow:hidden;background:#0c0722 url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1100&q=70') center/cover no-repeat}
+.rd-hero{position:relative;min-height:236px;display:flex;align-items:flex-end;overflow:hidden;background:url('/hero-tonight.jpg') center/cover no-repeat,url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1100&q=70') center/cover no-repeat,#0c0722}
 .rd-hero-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(22,12,50,.3) 0%,rgba(22,12,50,.74) 55%,rgba(22,12,50,.98) 100%)}
 .rd-hero-inner{position:relative;z-index:1;padding:24px 18px 20px;width:100%}
 .rd-hero-h{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;line-height:.97;letter-spacing:.01em;color:var(--tx);margin:0 0 6px;text-shadow:0 2px 16px rgba(0,0,0,.65)}
@@ -1369,6 +1369,8 @@ let feedTotalPages = 1;
 let feedGenre      = 'all';
 let feedCity       = 'all';
 let feedProvince   = 'all';
+let feedFrom       = '';
+let feedTo         = '';
 let discCat        = 'all';
 let discGenre      = 'all';
 let discQuery      = '';
@@ -1812,6 +1814,8 @@ async function loadFeed(resetPage = false) {
     else if (feedProvince && feedProvince !== 'all') params.set('province', feedProvince);
     if (feedGenre === 'free')             params.set('genre', 'free');
     else if (feedGenre && feedGenre !== 'all') params.set('genre', feedGenre);
+    if (feedFrom) params.set('from_date', feedFrom);
+    if (feedTo)   params.set('to_date', feedTo);
     const _abort = new AbortController();
     const _timer = setTimeout(() => _abort.abort(), 12000);
     const resp = await fetch('/api/events?' + params, { signal: _abort.signal });
@@ -1831,7 +1835,7 @@ async function loadFeed(resetPage = false) {
           <div class="no-results-ico">🎟</div>
           <div class="no-results-title">No events found</div>
           <div class="no-results-sub">Try a different city or genre</div>
-          <button class="no-results-btn" onclick="feedCity='all';feedGenre='all';feedPage=1;document.querySelectorAll('#city-chip-row .chip,#genre-chip-row .chip').forEach(b=>b.classList.remove('active'));document.querySelector('#city-chip-row .chip').classList.add('active');document.querySelector('#genre-chip-row .chip').classList.add('active');loadFeed(true)">Show All Events</button>
+          <button class="no-results-btn" onclick="feedCity='all';feedGenre='all';feedFrom='';feedTo='';_homeQuickActive=null;feedPage=1;document.querySelectorAll('.rd-qbtn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('#city-chip-row .chip,#genre-chip-row .chip').forEach(b=>b.classList.remove('active'));document.querySelector('#city-chip-row .chip')?.classList.add('active');document.querySelector('#genre-chip-row .chip').classList.add('active');loadFeed(true)">Show All Events</button>
         </div>`;
       return;
     }
@@ -1984,6 +1988,7 @@ function buildCard(ev, idx) {
   const bg  = gg(ev.genre);
   const emo = ge(ev.genre);
   const gl  = (ev.genre || '').toLowerCase();
+  const hp  = ev.hype_score ?? 0;
   let badge = '';
   if (isT)                  badge = '<span class="fbg blv"><span class="blink"></span>TONIGHT</span>';
   else if (gl.includes('march')) badge = '<span class="fbg" style="background:rgba(198,255,74,.1);color:var(--li);border:1px solid rgba(198,255,74,.22)">✊ ' + fdate(ev.date_local) + '</span>';
@@ -2119,6 +2124,7 @@ function browseCategory(genre, btn) {
   else { const c = document.querySelector('#genre-chip-row .chip[data-g="' + genre + '"]'); if (c) c.classList.add('active'); }
   _homeQuickActive = null;
   document.querySelectorAll('.rd-qbtn').forEach(b => b.classList.remove('active'));
+  feedFrom = ''; feedTo = '';
   feedGenre = genre;
   loadFeed(true);
   const lbl = document.getElementById('feed-lbl'); if (lbl) lbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2130,34 +2136,26 @@ function toggleMoreCats(btn) {
   btn.textContent = open ? 'More ▾' : 'Less ▴';
 }
 function homeQuick(type, btn) {
-  const feed = document.getElementById('events-feed'); if (!feed) return;
-  const cards = [...feed.querySelectorAll('.fc')];
+  // Toggle off — clear the date filter and reload the full feed.
   if (_homeQuickActive === type) {
     _homeQuickActive = null; btn.classList.remove('active');
-    cards.forEach(c => c.style.display = ''); return;
+    feedFrom = ''; feedTo = '';
+    loadFeed(true);
+    return;
   }
   document.querySelectorAll('.rd-qbtn').forEach(b => b.classList.remove('active'));
   _homeQuickActive = type; btn.classList.add('active');
   const tISO = new Date().toISOString().split('T')[0];
-  let lo, hi;
-  if (type === 'weekend') {
+  if (type === 'tonight') {
+    feedFrom = tISO; feedTo = tISO;
+  } else if (type === 'weekend') {
     const d = new Date(); const day = d.getDay();
     const sat = new Date(d); sat.setDate(d.getDate() + ((6 - day + 7) % 7));
     const sun = new Date(sat); sun.setDate(sat.getDate() + 1);
-    lo = sat.toISOString().split('T')[0]; hi = sun.toISOString().split('T')[0];
+    feedFrom = sat.toISOString().split('T')[0];
+    feedTo   = sun.toISOString().split('T')[0];
   }
-  let shown = 0;
-  cards.forEach(c => {
-    const dt = c.getAttribute('data-date') || ''; let ok = false;
-    if (type === 'tonight') ok = (dt === tISO);
-    else if (type === 'weekend') ok = (dt >= lo && dt <= hi);
-    c.style.display = ok ? '' : 'none'; if (ok) shown++;
-  });
-  if (!shown) {
-    _homeQuickActive = null; btn.classList.remove('active');
-    cards.forEach(c => c.style.display = '');
-    showToast(type === 'tonight' ? 'No events tonight yet — showing all' : 'Nothing this weekend yet — showing all');
-  }
+  loadFeed(true);
   const lbl = document.getElementById('feed-lbl'); if (lbl) lbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function setFeedCity(btn, city) {
