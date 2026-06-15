@@ -178,6 +178,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .fct{font-size:.68rem;color:var(--or);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .fdt{width:3px;height:3px;border-radius:50%;background:var(--mu)}
 .fda{font-size:.68rem;color:var(--mu)}
+.fsoc{font-size:.66rem;font-family:'Syne',sans-serif;font-weight:700;color:var(--pk);background:rgba(255,45,136,.1);border:1px solid rgba(255,45,136,.25);padding:1px 8px;border-radius:50px;margin-left:auto}
 .fv{font-size:.73rem;color:var(--mu);margin-bottom:4px}
 .hr{display:flex;justify-content:space-between;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:4px}
 .hr span:last-child{color:var(--li)}
@@ -515,13 +516,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 <!-- ══ HOME ══ -->
 <style>
 /* ══ HOMEPAGE REDESIGN (experimental — branch claude/homepage-redesign-experiment) ══ */
-.rd-hero{position:relative;min-height:320px;display:flex;align-items:flex-end;overflow:hidden;background:url('/hero-tonight.jpg') center 35%/cover no-repeat,url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1100&q=70') center 35%/cover no-repeat,#0c0722}
-.rd-hero-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(22,12,50,.1) 0%,rgba(22,12,50,.55) 45%,rgba(22,12,50,.97) 100%)}
-.rd-hero-inner{position:relative;z-index:1;padding:24px 18px 20px;width:100%}
-.rd-hero-h{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;line-height:.97;letter-spacing:.01em;color:var(--tx);margin:0 0 6px;text-shadow:0 2px 16px rgba(0,0,0,.65)}
-.rd-hero-sub{font-family:'Syne',sans-serif;font-size:.92rem;font-weight:700;color:var(--mu2);margin:0 0 14px}
+.rd-hero{position:relative;min-height:340px;display:flex;align-items:flex-end;overflow:hidden;background:url('/hero-tonight.jpg') center 35%/cover no-repeat,url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1100&q=70') center 35%/cover no-repeat,#0c0722}
+.rd-hero-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(22,12,50,.05) 0%,rgba(22,12,50,.45) 40%,rgba(22,12,50,.85) 72%,rgba(22,12,50,1) 100%)}
+.rd-hero-inner{position:relative;z-index:1;padding:24px 18px 22px;width:100%}
+.rd-hero-h{font-family:'Bebas Neue',sans-serif;font-size:2.7rem;line-height:.94;letter-spacing:.01em;color:#fff;margin:0 0 8px;text-shadow:0 2px 22px rgba(0,0,0,.8)}
+.rd-hero-sub{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;color:var(--tx);margin:0 0 16px;text-shadow:0 1px 10px rgba(0,0,0,.7)}
 .rd-hero-btns{display:flex;flex-wrap:wrap;gap:8px}
-.rd-hbtn{flex:0 0 auto;background:rgba(36,22,82,.82);backdrop-filter:blur(6px);border:1px solid var(--border2);color:var(--tx);font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;padding:9px 15px;border-radius:50px;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent}
+.rd-hbtn{flex:0 0 auto;background:rgba(36,22,82,.82);backdrop-filter:blur(6px);border:1px solid var(--border2);color:var(--tx);font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;padding:12px 18px;border-radius:50px;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent}
 .rd-hbtn:active{transform:scale(.96)}
 .rd-hbtn-p{background:linear-gradient(135deg,#B026FF,#FF5C00);border-color:transparent;color:#fff;box-shadow:0 4px 18px rgba(255,92,0,.28)}
 .rd-qa{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:12px 14px 6px}
@@ -595,6 +596,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 
     <!-- Admin promo banners slider -->
     <div id="promo-banner-wrap" style="display:none;margin:8px 14px 4px;border-radius:16px;overflow:hidden;cursor:pointer;position:relative"></div>
+
+    <!-- ══ HAPPENING TONIGHT (auto — hidden when there are no events tonight) ══ -->
+    <div id="tonight-rail" style="display:none">
+      <div class="sl"><span>🔥 Happening Tonight</span><a onclick="seeAllTonight();return false">See all →</a></div>
+      <div class="hs" id="tonight-rail-row"></div>
+    </div>
 
     <!-- ══ EVENTS ══ -->
     <div class="sl"><span id="feed-lbl">🔥 Upcoming Events</span><a href="/map">View Map →</a></div>
@@ -1990,6 +1997,9 @@ function buildCard(ev, idx) {
   const emo = ge(ev.genre);
   const gl  = (ev.genre || '').toLowerCase();
   const hp  = ev.hype_score ?? 0;
+  // Social proof — only shown once real RSVPs exist (never "0 going").
+  const att = ev.attendance_count || 0;
+  const social = att >= 2 ? `<span class="fsoc">🔥 ${fn(att)} going</span>` : '';
   let badge = '';
   if (isT)                  badge = '<span class="fbg blv"><span class="blink"></span>TONIGHT</span>';
   else if (gl.includes('march')) badge = '<span class="fbg" style="background:rgba(198,255,74,.1);color:var(--li);border:1px solid rgba(198,255,74,.22)">✊ ' + fdate(ev.date_local) + '</span>';
@@ -2012,7 +2022,7 @@ function buildCard(ev, idx) {
         <div class="fp ${iF ? 'fr' : ''}">${pr}</div></div>
     </div>
     <div class="fd">
-      <div class="fm"><span class="fct">📍 ${x(ev.venue_city)}</span><span class="fdt"></span><span class="fda">${fdt(ev.date_local, ev.time_local)}</span></div>
+      <div class="fm"><span class="fct">📍 ${x(ev.venue_city)}</span><span class="fdt"></span><span class="fda">${fdt(ev.date_local, ev.time_local)}</span>${social}</div>
       <div class="fv">${x(ev.venue_name || '')} · ${x(ev.genre || '')}</div>
     </div>
     <div class="fac" onclick="event.stopPropagation()">
@@ -2303,6 +2313,44 @@ function buildBizCard(b) {
       <div class="bf"><span class="brat">${b.rating ? '★' + b.rating : 'New'}</span><span class="bpr">${b.price_range || ''}</span></div>
     </div>
   </div>`;
+}
+
+/* ══ HAPPENING TONIGHT rail — auto, hidden when empty ══ */
+async function loadTonightRail() {
+  const wrap = document.getElementById('tonight-rail');
+  const row  = document.getElementById('tonight-rail-row');
+  if (!wrap || !row) return;
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const r = await fetch(`/api/events?from_date=${today}&to_date=${today}&limit=8&_t=${Date.now()}`);
+    if (!r.ok) return;
+    const events = (await r.json()).events || [];
+    if (!events.length) { wrap.style.display = 'none'; return; }   // never show an empty section
+    row.innerHTML = events.map(buildTonightCard).join('');
+    wrap.style.display = '';
+  } catch (e) { console.warn('[TonightRail]', e.message); }
+}
+function buildTonightCard(ev) {
+  const iF = ev.is_free;
+  const pr = iF ? 'FREE' : (ev.price_min ? 'R' + ev.price_min : 'TBA');
+  const bg = gg(ev.genre), emo = ge(ev.genre);
+  return `<div class="bc" onclick="openEv('${x(ev.id)}')">
+    <div class="bt" style="background:${bg}">
+      ${ev.image_url ? `<img src="${x(iU(ev.image_url, 600))}" loading="lazy" onerror="this.style.display='none'"/>` : `<span>${emo}</span>`}
+      <div class="btg"></div>
+      <span class="bb2" style="color:var(--pk)">🔥 Tonight</span>
+    </div>
+    <div class="bi">
+      <div class="bn2">${x(ev.name)}</div>
+      <div class="bm">📍 ${x(ev.venue_city || '')}</div>
+      <div class="bf"><span class="brat" style="color:${iF ? 'var(--li)' : 'var(--tx)'}">${pr}</span><span class="bpr">${x(ev.time_local || '')}</span></div>
+    </div>
+  </div>`;
+}
+function seeAllTonight() {
+  const btn = document.querySelector('#tab-home .rd-qbtn');   // first quick action = 🔥 Tonight
+  if (btn && _homeQuickActive !== 'tonight') btn.click();
+  const lbl = document.getElementById('feed-lbl'); if (lbl) lbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /* ══════════════════════════════════════════════════
@@ -5653,6 +5701,7 @@ window.addEventListener('DOMContentLoaded', () => {
   history.pushState({ tab: _restoredTab, detail: false }, '');
   // Always preload home feed data in the background
   loadFeed(true);
+  loadTonightRail();
   loadFrontline();
   loadPromoBanners();
   loadCommunityPosts();
