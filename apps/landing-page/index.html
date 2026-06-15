@@ -3073,6 +3073,7 @@ function initMap() {
     mapObj.on('mouseleave', 'clusters-circle', () => { mapObj.getCanvas().style.cursor = ''; });
     mapObj.on('zoom', _toggleMapMarkersForZoom);
     mapObj.on('zoomend', _toggleMapMarkersForZoom);
+    mapObj.on('moveend', () => { clearTimeout(_mapBoundsDebounce); _mapBoundsDebounce = setTimeout(_loadEventsByBounds, 700); });
 
     placeMapMarkers();
     _toggleMapMarkersForZoom(); // sync call: hide markers immediately if zoomed out (no flash)
@@ -3332,6 +3333,36 @@ function setMapFilter(cat, btn) {
   if (mapInited && mapObj) { placeMapMarkers(); placePoisOnMap(); }
 }
 
+function _makeMarkerEl(s, isEv, labelText, countBadge) {
+  const el = document.createElement('div');
+  el.className = isEv ? 'mp-dot mp-dot-ev' : 'mp-dot';
+  // position:absolute;top:0;left:0 set INLINE so Mapbox positioning can never be overridden
+  el.style.cssText = `position:absolute;top:0;left:0;background:${s.grad||s.bg};color:${s.dark?'#000':'#fff'};`;
+  el.style.fontSize = isEv ? '.72rem' : '.62rem';
+  el.style.boxShadow = `0 0 5px rgba(${s.sh},.9),0 0 12px rgba(${s.sh},.45),0 2px 8px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.4)`;
+
+  const iconHtml = countBadge
+    ? `<span style="display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:900">${countBadge}</span>`
+    : `<span style="display:flex;align-items:center;justify-content:center;pointer-events:none">${s.ico}</span>`;
+  el.insertAdjacentHTML('afterbegin', iconHtml);
+
+  const ringSize = isEv ? 38 : 30;
+  const ring = document.createElement('div');
+  ring.className = 'mp-ring';
+  ring.style.cssText = `position:absolute;width:${ringSize}px;height:${ringSize}px;top:50%;left:50%;margin-top:-${ringSize/2}px;margin-left:-${ringSize/2}px;border-radius:50%;border:${isEv?'2px':'1.5px'} solid ${s.bg};animation:gring ${isEv?'1.8s':'2.6s'} ease-out infinite;pointer-events:none;`;
+  el.appendChild(ring);
+
+  el.addEventListener('mouseenter', () => { el.style.zIndex='1000'; el.style.filter='brightness(1.15)'; });
+  el.addEventListener('mouseleave', () => { el.style.zIndex=''; el.style.filter=''; });
+
+  const label = document.createElement('div');
+  label.style.cssText = `position:absolute;top:100%;margin-top:5px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(5,8,15,.78);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.13);border-radius:50px;padding:2px 7px;font-family:'Syne',sans-serif;font-size:.52rem;font-weight:700;color:#fff;pointer-events:none;max-width:90px;overflow:hidden;text-overflow:ellipsis;`;
+  label.textContent = (labelText||'').substring(0, 18);
+  el.appendChild(label);
+
+  return el;
+}
+
 function placeMapMarkers() {
   if (!mapObj) return;
   mapMarkers.forEach(m => { try { m.remove(); } catch(e){} });
@@ -3342,141 +3373,57 @@ function placeMapMarkers() {
   let evs = eventsForMap.filter(e => e.venue_lat && e.venue_lon);
   let bzs = bizForMap.filter(b => b.lat && b.lon);
 
-  if (catF === 'event')      bzs = [];
+  if (catF === 'event')         bzs = [];
   else if (catF === 'business') evs = [];
-  else if (catF !== 'all') { evs = []; bzs = bzs.filter(b => (b.category||'').toLowerCase().includes(catF)); }
+  else if (catF !== 'all')      { evs = []; bzs = bzs.filter(b => (b.category||'').toLowerCase().includes(catF)); }
 
-  // Pre-pass: count how many markers share each exact coordinate (e.g. 4 concerts at one stadium).
-  // Stacked markers get fanned out in a small ring so they're all individually tappable when zoomed in.
-  const _coordCounts = {}, _coordSeen = {};
-  [...evs.map(e=>({item:e,type:'event'})), ...bzs.map(b=>({item:b,type:'biz'}))].forEach(({item,type}) => {
-    const la = parseFloat(type==='event' ? item.venue_lat : item.lat);
-    const lo = parseFloat(type==='event' ? item.venue_lon : item.lon);
-    if (!isNaN(la) && !isNaN(lo)) { const k = la.toFixed(5)+','+lo.toFixed(5); _coordCounts[k] = (_coordCounts[k]||0) + 1; }
+  // ── Events: one marker per venue (grouped by rounded lat/lon) ──
+  const venueGroups = new Map();
+  evs.forEach(ev => {
+    const la = parseFloat(ev.venue_lat), lo = parseFloat(ev.venue_lon);
+    if (isNaN(la) || isNaN(lo) || la < -35 || la > -22 || lo < 16 || lo > 33) return;
+    const key = la.toFixed(4) + ',' + lo.toFixed(4);
+    if (!venueGroups.has(key)) venueGroups.set(key, { lat: la, lon: lo, events: [] });
+    venueGroups.get(key).events.push(ev);
   });
 
-  [...evs.map(e=>({item:e,type:'event'})), ...bzs.map(b=>({item:b,type:'biz'}))].forEach(({item,type}) => {
-    let lat = parseFloat(type==='event' ? item.venue_lat : item.lat);
-    let lon = parseFloat(type==='event' ? item.venue_lon : item.lon);
-    
-    // Strict validation for South Africa coordinates
-    if (!lat || !lon || isNaN(lat) || isNaN(lon)) { 
-      console.warn("[Map] Invalid coords for", item.name); 
-      return; 
-    }
-    
-    // South Africa bounds: lat -22 to -35, lon 16 to 33
-    if (lat < -35 || lat > -22 || lon < 16 || lon > 33) { 
-      console.warn("[Map] Outside SA bounds:", item.name, "lat:", lat, "lon:", lon); 
-      return; 
-    }
+  venueGroups.forEach(({ lat, lon, events }) => {
+    const ev0 = events[0];
+    const s   = _ms(ev0, 'event');
+    const cnt = events.length;
+    const el  = _makeMarkerEl(s, true, cnt > 1 ? (ev0.venue_name || ev0.name || '') : (ev0.name || ''), cnt > 1 ? cnt : null);
 
-    const s    = _ms(item, type);
-    const isEv = type === 'event';
-
-    const el = document.createElement('div');
-    el.className = isEv ? 'mp-dot mp-dot-ev' : 'mp-dot';
-    // position:absolute;top:0;left:0 set INLINE (highest specificity) so Mapbox's
-    // required positioning can never be overridden — prevents low-zoom drift to sea.
-    el.style.cssText = `
-      position:absolute;top:0;left:0;
-      background: ${s.grad || s.bg};
-      color: ${s.dark ? '#000' : '#fff'};
-    `;
-    el.insertAdjacentHTML('afterbegin', `<span style="display:flex;align-items:center;justify-content:center;pointer-events:none">${s.ico}</span>`);
-    el.style.fontSize = isEv ? '.72rem' : '.62rem';
-    // Subtle neon glow — kept tight so busy areas don't get squashed
-    el.style.boxShadow = `
-      0 0 5px  rgba(${s.sh},.9),
-      0 0 12px rgba(${s.sh},.45),
-      0 2px 8px rgba(0,0,0,.85),
-      inset 0 1px 0 rgba(255,255,255,.4)
-    `;
-
-    // Pulsing ring — explicit size/margin instead of inset to avoid mobile overflow bugs
-    const ringSize = isEv ? 38 : 30;
-    const ring = document.createElement('div');
-    ring.className = 'mp-ring';
-    ring.style.cssText = `
-      position:absolute;
-      width:${ringSize}px;height:${ringSize}px;
-      top:50%;left:50%;
-      margin-top:-${ringSize/2}px;margin-left:-${ringSize/2}px;
-      border-radius:50%;
-      border:${isEv ? '2px' : '1.5px'} solid ${s.bg};
-      animation:gring ${isEv ? '1.8s' : '2.6s'} ease-out infinite;
-      pointer-events:none;
-    `;
-    el.appendChild(ring);
-
-    // Hover effect — only change shadow (NEVER touch transform — Mapbox uses transform for positioning)
-    el.addEventListener('mouseenter', () => {
-      el.style.zIndex = '1000';
-      el.style.filter = 'brightness(1.15)';
-      el.style.boxShadow = `
-        0 0 ${isEv ? 14 : 10}px rgba(${s.sh}, .9),
-        0 3px 10px rgba(0,0,0,0.85),
-        inset 0 1px 0 rgba(255,255,255,0.4)
-      `;
-    });
-
-    el.addEventListener('mouseleave', () => {
-      el.style.zIndex = '';
-      el.style.filter = '';
-      el.style.boxShadow = `
-        0 0 5px rgba(${s.sh},.9),
-        0 0 12px rgba(${s.sh},.45),
-        0 2px 8px rgba(0,0,0,.85),
-        inset 0 1px 0 rgba(255,255,255,.4)
-      `;
-    });
-
-    const _markerOpen = e => {
+    const _open = e => {
       e.stopPropagation();
       if (window._mapMarkerTapped) window._mapMarkerTapped();
-      showMapPanel(item, type, s);
+      if (cnt === 1) showMapPanel(ev0, 'event', s);
+      else showVenueEventsPanel(events, s);
     };
-    el.addEventListener('click', _markerOpen);
-    el.addEventListener('touchend', _markerOpen, { passive: false });
+    el.addEventListener('click', _open);
+    el.addEventListener('touchend', _open, { passive: false });
 
-    // Name label pill below marker
-    const label = document.createElement('div');
-    label.style.cssText = `
-      position:absolute;
-      top:100%;margin-top:5px;
-      left:50%;transform:translateX(-50%);
-      white-space:nowrap;
-      background:rgba(5,8,15,.78);
-      backdrop-filter:blur(6px);
-      border:1px solid rgba(255,255,255,.13);
-      border-radius:50px;
-      padding:2px 7px;
-      font-family:'Syne',sans-serif;
-      font-size:.52rem;
-      font-weight:700;
-      color:#fff;
-      pointer-events:none;
-      max-width:90px;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    `;
-    label.textContent = (item.name||'').substring(0, 18);
-    el.appendChild(label);
-
-    // Fan out markers that share an exact coordinate so each is tappable (e.g. multiple events at one stadium)
-    const _ck = lat.toFixed(5)+','+lon.toFixed(5);
-    if (_coordCounts[_ck] > 1) {
-      const n = _coordCounts[_ck];
-      const i = (_coordSeen[_ck] = (_coordSeen[_ck] || 0)); _coordSeen[_ck]++;
-      const R = 0.0004; // ~40m radius — visible once zoomed past clustering, negligible at city scale
-      lon += R * Math.cos((2 * Math.PI * i) / n);
-      lat += R * Math.sin((2 * Math.PI * i) / n);
-    }
-
-    mapMarkers.push(new mapboxgl.Marker({element: el, anchor: 'center'}).setLngLat([lon, lat]).addTo(mapObj));
+    mapMarkers.push(new mapboxgl.Marker({ element: el, anchor: 'center' }).setLngLat([lon, lat]).addTo(mapObj));
   });
 
-  // Sync the cluster source so low-zoom shows cluster bubbles instead of overlapping markers
+  // ── Businesses: one marker per business ──
+  bzs.forEach(item => {
+    const lat = parseFloat(item.lat), lon = parseFloat(item.lon);
+    if (isNaN(lat) || isNaN(lon) || lat < -35 || lat > -22 || lon < 16 || lon > 33) return;
+    const s  = _ms(item, 'biz');
+    const el = _makeMarkerEl(s, false, item.name || '', null);
+
+    const _open = e => {
+      e.stopPropagation();
+      if (window._mapMarkerTapped) window._mapMarkerTapped();
+      showMapPanel(item, 'biz', s);
+    };
+    el.addEventListener('click', _open);
+    el.addEventListener('touchend', _open, { passive: false });
+
+    mapMarkers.push(new mapboxgl.Marker({ element: el, anchor: 'center' }).setLngLat([lon, lat]).addTo(mapObj));
+  });
+
+  // Sync cluster source
   if (mapObj.getSource && mapObj.getSource('pulsify-spots')) {
     const features = mapMarkers.map(m => {
       const ll = m.getLngLat();
@@ -3485,20 +3432,71 @@ function placeMapMarkers() {
     mapObj.getSource('pulsify-spots').setData({ type: 'FeatureCollection', features });
   }
 
-  // Force re-apply visibility after markers are rebuilt (resets cached state)
   _markersVisible = null;
   _toggleMapMarkersForZoom();
 
   const cntEl = document.getElementById('map-cnt');
   if (cntEl) cntEl.textContent = mapMarkers.length;
 
-  // Fit to ALL current markers once per tab-open; don't re-fit on filter changes or background updates
   if (!_mapFitDone && mapMarkers.length > 0) {
     _mapFitDone = true;
     const bounds = new mapboxgl.LngLatBounds();
     mapMarkers.forEach(m => bounds.extend(m.getLngLat()));
     mapObj.fitBounds(bounds, { padding: 80, maxZoom: 13, duration: 1200 });
   }
+}
+
+function showVenueEventsPanel(events, s) {
+  const panel = document.getElementById('map-panel');
+  const mp    = document.getElementById('mp-content');
+  if (!panel || !mp) return;
+  const vName = escapeHtml(events[0].venue_name || 'Venue');
+  const vCity = events[0].venue_city ? escapeHtml(events[0].venue_city) : '';
+  mp.innerHTML = `
+    <div class="mp-hero-wrap" style="background:linear-gradient(135deg,rgba(${s.sh},.22),rgba(5,8,15,.96));min-height:70px">
+      <button class="mp-close" onclick="closeMapPanel()">✕</button>
+      <span style="position:absolute;top:10px;left:10px;padding:4px 10px;border-radius:50px;background:rgba(${s.sh},.25);border:1px solid rgba(${s.sh},.5);color:rgb(${s.sh});font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(6px)">🎪 ${events.length} Events</span>
+      <div style="position:absolute;bottom:12px;left:14px;right:44px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;line-height:1.1;letter-spacing:.02em;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.95)">${vName}</div>
+        ${vCity ? `<div style="font-size:.7rem;color:rgba(255,255,255,.72);margin-top:3px">📍 ${vCity}</div>` : ''}
+      </div>
+    </div>
+    <div style="overflow-y:auto;max-height:290px;padding:4px 14px 16px">
+      ${events.map(ev => {
+        const es = _ms(ev, 'event');
+        const price = ev.is_free ? '<span style="color:var(--li);font-size:.65rem;font-weight:700">FREE</span>' : ev.price_min ? `<span style="color:var(--li);font-size:.65rem;font-weight:700">From R${ev.price_min}</span>` : '';
+        return `<div onclick="openEv('${escapeHtml(String(ev.id))}');closeMapPanel()" style="display:flex;gap:11px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;align-items:center">
+          ${ev.image_url ? `<img src="${escapeHtml(ev.image_url)}" style="width:52px;height:52px;border-radius:10px;object-fit:cover;flex-shrink:0" loading="lazy">` : `<div style="width:52px;height:52px;border-radius:10px;background:rgba(${es.sh},.18);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">${es.ico}</div>`}
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(ev.name||'')}</div>
+            <div style="font-size:.68rem;color:var(--mu);margin-top:2px">${ev.date_local?fdt(ev.date_local,ev.time_local):''}</div>
+            <div style="margin-top:2px">${price}</div>
+          </div>
+          <div style="color:var(--mu);font-size:.9rem;flex-shrink:0">›</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  panel.classList.add('open');
+}
+
+let _mapBoundsDebounce;
+async function _loadEventsByBounds() {
+  if (!mapObj) return;
+  const b  = mapObj.getBounds();
+  const bw = b.getWest().toFixed(4), bs2 = b.getSouth().toFixed(4);
+  const be = b.getEast().toFixed(4), bn  = b.getNorth().toFixed(4);
+  // Skip if viewport is entirely outside SA
+  if (parseFloat(bn) < -35 || parseFloat(bs2) > -22 || parseFloat(be) < 16 || parseFloat(bw) > 33) return;
+  try {
+    const r = await fetch(`/api/events?bounds=${bw},${bs2},${be},${bn}&limit=50&_t=${Date.now()}`);
+    if (!r.ok) return;
+    const { events } = await r.json();
+    if (!events?.length) return;
+    const fresh = events.filter(ev => !eventsForMap.find(e2 => e2.id === ev.id));
+    if (!fresh.length) return;
+    eventsForMap = [...eventsForMap, ...fresh];
+    if (mapInited && mapObj) placeMapMarkers();
+  } catch(_) {}
 }
 
 function placePoisOnMap() {
