@@ -48,7 +48,14 @@ module.exports = async (req, res) => {
         else if (genres.length === 1) query = query.ilike('genre', `%${genres[0]}%`);
       }
       if (search) query = query.textSearch('id', search, { type: 'websearch', config: 'english' });
-      if (lat && lon) {
+      if (q.bounds) {
+        const [bw, bs, be, bn] = q.bounds.split(',').map(parseFloat);
+        if (!isNaN(bw) && !isNaN(bs) && !isNaN(be) && !isNaN(bn)) {
+          query = query
+            .gte('venue_lat', bs).lte('venue_lat', bn)
+            .gte('venue_lon', bw).lte('venue_lon', be);
+        }
+      } else if (lat && lon) {
         const b = haverBox(lat, lon, km);
         query = query
           .gte('venue_lat', b.minLat).lte('venue_lat', b.maxLat)
