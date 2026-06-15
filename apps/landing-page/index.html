@@ -135,13 +135,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .cr::-webkit-scrollbar{display:none}
 .chip{flex-shrink:0;padding:6px 14px;border-radius:50px;border:1px solid var(--border);background:rgba(168,108,255,.06);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu);cursor:pointer;transition:all .2s;white-space:nowrap;-webkit-tap-highlight-color:transparent}
 .chip.active{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.09)}
-.sl{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 8px;font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--mu)}
+.sl{display:flex;align-items:center;justify-content:space-between;padding:18px 16px 8px;font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--mu)}
 .sl a{color:var(--or);font-size:.64rem;letter-spacing:.04em;cursor:pointer;text-decoration:none}
 .hs{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding:0 14px 8px}
 .hs::-webkit-scrollbar{display:none}
-.bc{flex-shrink:0;width:150px;background:var(--surf);border:1px solid var(--border);border-radius:18px;overflow:hidden;cursor:pointer;transition:transform .22s,border-color .22s;-webkit-tap-highlight-color:transparent}
+.bc{flex-shrink:0;width:164px;background:var(--surf);border:1px solid var(--border);border-radius:18px;overflow:hidden;cursor:pointer;transition:transform .22s,border-color .22s;-webkit-tap-highlight-color:transparent;box-shadow:0 6px 18px rgba(0,0,0,.18)}
 .bc:active{transform:scale(.97)}.bc.ft{border-color:rgba(255,92,0,.5);box-shadow:0 0 20px rgba(255,92,0,.1)}
-.bt{height:90px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:2rem}
+.bt{height:108px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:2rem}
 .bt img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .btg{position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.6))}
 .bb2{position:absolute;top:6px;left:6px;z-index:1;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:50px;color:var(--or)}
@@ -154,8 +154,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .bpr{font-size:.6rem;color:var(--mu)}
 .hi{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .hi::-webkit-scrollbar{display:none}
-.fc{margin:0 0 2px;border-bottom:1px solid var(--border);background:var(--surf);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:border-color .2s}
-.fc:active{border-color:rgba(255,92,0,.3)}
+.fc{margin:0 0 8px;border-bottom:1px solid var(--border);background:var(--surf);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:border-color .2s,transform .15s;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.fc:active{border-color:rgba(255,92,0,.3);transform:scale(.985)}
 .fh{display:flex;align-items:center;gap:10px;padding:12px 14px 10px}
 .fa{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;border:1.5px solid var(--border)}
 .fo{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;line-height:1.2}
@@ -167,10 +167,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .bsp{background:rgba(0,212,170,.1);color:var(--te);border:1px solid rgba(0,212,170,.25)}
 .blink{width:5px;height:5px;border-radius:50%;background:#fff;animation:bl 1s ease-in-out infinite}
 @keyframes bl{0%,100%{opacity:1}50%{opacity:.1}}
-.fb{width:100%;height:210px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:3.5rem}
+.fb{width:100%;height:234px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:3.5rem}
 .fb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .fg{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(22,12,50,.92));padding:28px 14px 12px;display:flex;align-items:flex-end;justify-content:space-between}
-.ft2{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.02em;line-height:1.1;color:#fff;text-shadow:0 2px 16px rgba(0,0,0,.8)}
+.ft2{font-family:'Bebas Neue',sans-serif;font-size:1.65rem;letter-spacing:.02em;line-height:1.08;color:#fff;text-shadow:0 2px 16px rgba(0,0,0,.8)}
 .fp{font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);padding:4px 12px;border-radius:50px;color:#fff;flex-shrink:0}
 .fp.fr{color:var(--li)}
 .fd{padding:8px 14px 2px}
@@ -178,6 +178,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .fct{font-size:.68rem;color:var(--or);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .fdt{width:3px;height:3px;border-radius:50%;background:var(--mu)}
 .fda{font-size:.68rem;color:var(--mu)}
+.fsoc{font-size:.66rem;font-family:'Syne',sans-serif;font-weight:700;color:var(--pk);background:rgba(255,45,136,.1);border:1px solid rgba(255,45,136,.25);padding:1px 8px;border-radius:50px;margin-left:auto}
 .fv{font-size:.73rem;color:var(--mu);margin-bottom:4px}
 .hr{display:flex;justify-content:space-between;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:4px}
 .hr span:last-child{color:var(--li)}
@@ -186,7 +187,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .fac{display:flex;align-items:center;gap:8px;padding:4px 14px 14px}
 .ab{display:flex;align-items:center;gap:5px;background:transparent;border:none;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu);cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;transition:color .2s}
 .ab.lk{color:var(--pk)}.ai{font-size:1.05rem;line-height:1}
-.tb2{margin-left:auto;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:8px 18px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;box-shadow:0 0 20px rgba(176,38,255,.25);-webkit-tap-highlight-color:transparent}
+.tb2{margin-left:auto;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:11px 22px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;box-shadow:0 0 20px rgba(176,38,255,.25);-webkit-tap-highlight-color:transparent;transition:transform .15s}
+.tb2:active{transform:scale(.95)}
 .tb2.fr{background:transparent;border:1px solid var(--li);color:var(--li);box-shadow:none}
 .pg{display:flex;gap:10px;padding:16px 14px 24px;justify-content:center;align-items:center}
 .pb{background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 22px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;color:var(--tx);cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
@@ -514,18 +516,18 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 <!-- ══ HOME ══ -->
 <style>
 /* ══ HOMEPAGE REDESIGN (experimental — branch claude/homepage-redesign-experiment) ══ */
-.rd-hero{position:relative;min-height:320px;display:flex;align-items:flex-end;overflow:hidden;background:url('/hero-tonight.jpg') center 35%/cover no-repeat,url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1100&q=70') center 35%/cover no-repeat,#0c0722}
-.rd-hero-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(22,12,50,.1) 0%,rgba(22,12,50,.55) 45%,rgba(22,12,50,.97) 100%)}
-.rd-hero-inner{position:relative;z-index:1;padding:24px 18px 20px;width:100%}
-.rd-hero-h{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;line-height:.97;letter-spacing:.01em;color:var(--tx);margin:0 0 6px;text-shadow:0 2px 16px rgba(0,0,0,.65)}
-.rd-hero-sub{font-family:'Syne',sans-serif;font-size:.92rem;font-weight:700;color:var(--mu2);margin:0 0 14px}
+.rd-hero{position:relative;min-height:340px;display:flex;align-items:flex-end;overflow:hidden;background:url('/hero-tonight.jpg') center 35%/cover no-repeat,url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1100&q=70') center 35%/cover no-repeat,#0c0722}
+.rd-hero-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(22,12,50,.05) 0%,rgba(22,12,50,.45) 40%,rgba(22,12,50,.85) 72%,rgba(22,12,50,1) 100%)}
+.rd-hero-inner{position:relative;z-index:1;padding:24px 18px 22px;width:100%}
+.rd-hero-h{font-family:'Bebas Neue',sans-serif;font-size:2.7rem;line-height:.94;letter-spacing:.01em;color:#fff;margin:0 0 8px;text-shadow:0 2px 22px rgba(0,0,0,.8)}
+.rd-hero-sub{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;color:var(--tx);margin:0 0 16px;text-shadow:0 1px 10px rgba(0,0,0,.7)}
 .rd-hero-btns{display:flex;flex-wrap:wrap;gap:8px}
-.rd-hbtn{flex:0 0 auto;background:rgba(36,22,82,.82);backdrop-filter:blur(6px);border:1px solid var(--border2);color:var(--tx);font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;padding:9px 15px;border-radius:50px;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent}
+.rd-hbtn{flex:0 0 auto;background:rgba(36,22,82,.82);backdrop-filter:blur(6px);border:1px solid var(--border2);color:var(--tx);font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;padding:12px 18px;border-radius:50px;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent}
 .rd-hbtn:active{transform:scale(.96)}
 .rd-hbtn-p{background:linear-gradient(135deg,#B026FF,#FF5C00);border-color:transparent;color:#fff;box-shadow:0 4px 18px rgba(255,92,0,.28)}
 .rd-qa{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:12px 14px 6px}
 .rd-qa::-webkit-scrollbar{display:none}
-.rd-qbtn{flex-shrink:0;white-space:nowrap;background:rgba(168,108,255,.06);border:1px solid var(--border);color:var(--tx);font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;padding:8px 16px;border-radius:50px;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent}
+.rd-qbtn{flex-shrink:0;white-space:nowrap;background:rgba(168,108,255,.08);border:1px solid var(--border);color:var(--tx);font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;padding:11px 18px;border-radius:50px;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent}
 .rd-qbtn:active{transform:scale(.96)}
 .rd-qbtn.active{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.1)}
 .rd-more-btn{color:var(--mu2)!important}
@@ -595,6 +597,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     <!-- Admin promo banners slider -->
     <div id="promo-banner-wrap" style="display:none;margin:8px 14px 4px;border-radius:16px;overflow:hidden;cursor:pointer;position:relative"></div>
 
+    <!-- ══ HAPPENING TONIGHT (auto — hidden when there are no events tonight) ══ -->
+    <div id="tonight-rail" style="display:none">
+      <div class="sl"><span>🔥 Happening Tonight</span><a onclick="seeAllTonight();return false">See all →</a></div>
+      <div class="hs" id="tonight-rail-row"></div>
+    </div>
+
     <!-- ══ EVENTS ══ -->
     <div class="sl"><span id="feed-lbl">🔥 Upcoming Events</span><a href="/map">View Map →</a></div>
     <div id="events-feed"></div>
@@ -636,14 +644,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 
     <!-- ══ TRUST BAR ══ -->
     <div class="rd-trust">
-      <span class="rd-trust-item">✔ Secure ticketing</span>
-      <span class="rd-trust-item">✔ Verified organisers</span>
-      <span class="rd-trust-item">✔ Real events</span>
+      <span class="rd-trust-item">✔ Trusted by event-goers across SA</span>
+      <span class="rd-trust-item">✔ Verified venues &amp; organisers</span>
+      <span class="rd-trust-item">✔ Real events happening near you</span>
     </div>
 
     <!-- ══ TOP SPOTS ══ -->
     <div class="sl"><span>📍 Where to go before &amp; after the event</span><a onclick="openBizPage();return false">See all →</a></div>
-    <div class="hs" id="frontline-row"><div class="skel" style="width:150px;height:120px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:150px;height:120px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:150px;height:120px;flex-shrink:0;border-radius:18px"></div></div>
+    <div class="hs" id="frontline-row"><div class="skel" style="width:164px;height:170px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:164px;height:170px;flex-shrink:0;border-radius:18px"></div><div class="skel" style="width:164px;height:170px;flex-shrink:0;border-radius:18px"></div></div>
     <div id="featured-weekend" style="display:none">
       <div class="sl"><span>⚡ Featured This Weekend</span></div>
       <div id="featured-weekend-cards"></div>
@@ -1793,7 +1801,7 @@ function feedSkeleton() {
   `).join('');
 }
 function bizSkeleton() {
-  return [1,2,3].map(() => `<div class="skel" style="width:150px;height:150px;flex-shrink:0;border-radius:18px"></div>`).join('');
+  return [1,2,3].map(() => `<div class="skel" style="width:164px;height:170px;flex-shrink:0;border-radius:18px"></div>`).join('');
 }
 
 /* ══════════════════════════════════════════════════
@@ -1813,7 +1821,7 @@ async function loadFeed(resetPage = false) {
     if (feedCity && feedCity !== 'all') params.set('city', feedCity);
     else if (feedProvince && feedProvince !== 'all') params.set('province', feedProvince);
     if (feedGenre === 'free')             params.set('genre', 'free');
-    else if (feedGenre && feedGenre !== 'all') params.set('genre', feedGenre);
+    else if (feedGenre && feedGenre !== 'all') params.set('genre', (CAT_MAP[feedGenre] || [feedGenre]).join(','));
     if (feedFrom) params.set('from_date', feedFrom);
     if (feedTo)   params.set('to_date', feedTo);
     const _abort = new AbortController();
@@ -1989,12 +1997,18 @@ function buildCard(ev, idx) {
   const emo = ge(ev.genre);
   const gl  = (ev.genre || '').toLowerCase();
   const hp  = ev.hype_score ?? 0;
+  // Social proof — only shown once real RSVPs exist (never "0 going").
+  const att = ev.attendance_count || 0;
+  const social = att >= 2 ? `<span class="fsoc">🔥 ${fn(att)} going</span>` : '';
+  // Selling fast = at least half the capacity already sold.
+  const cap = ev.capacity || 0;
+  const sellingFast = cap > 0 && (ev.tickets_sold || 0) >= cap * 0.5;
   let badge = '';
   if (isT)                  badge = '<span class="fbg blv"><span class="blink"></span>TONIGHT</span>';
   else if (gl.includes('march')) badge = '<span class="fbg" style="background:rgba(198,255,74,.1);color:var(--li);border:1px solid rgba(198,255,74,.22)">✊ ' + fdate(ev.date_local) + '</span>';
   else if (gl.includes('sport')) badge = '<span class="fbg bsp">⚽ ' + fdate(ev.date_local) + '</span>';
   else if (iF)              badge = '<span class="fbg bfr">🎟️ FREE</span>';
-  else if (hp >= 85)        badge = '<span class="fbg bff">⚡ Selling fast</span>';
+  else if (sellingFast)     badge = '<span class="fbg bff">⚡ Selling fast</span>';
   else                      badge = '<span class="fbg bsn">' + fdate(ev.date_local) + '</span>';
   const srcLabel = { eventbrite: 'Eventbrite', ticketmaster: 'Ticketmaster', quicket: 'Quicket', organizer: 'Event Organiser', business: 'Business' }[ev.source] || '';
   const srcClr   = { eventbrite: '#F05537', ticketmaster: '#026CDF', quicket: '#00C89C', organizer: '#FF5C00', business: '#B026FF' }[ev.source] || '';
@@ -2011,7 +2025,7 @@ function buildCard(ev, idx) {
         <div class="fp ${iF ? 'fr' : ''}">${pr}</div></div>
     </div>
     <div class="fd">
-      <div class="fm"><span class="fct">📍 ${x(ev.venue_city)}</span><span class="fdt"></span><span class="fda">${fdt(ev.date_local, ev.time_local)}</span></div>
+      <div class="fm"><span class="fct">📍 ${x(ev.venue_city)}</span><span class="fdt"></span><span class="fda">${fdt(ev.date_local, ev.time_local)}</span>${social}</div>
       <div class="fv">${x(ev.venue_name || '')} · ${x(ev.genre || '')}</div>
     </div>
     <div class="fac" onclick="event.stopPropagation()">
@@ -2117,6 +2131,12 @@ function setGenre(btn, genre) {
 }
 
 /* ══ HOMEPAGE REDESIGN helpers (experimental) ══ */
+// Friendly category chips → real genre values in the DB. Aggregate chips map to
+// several genres so they never come back empty (sent as a comma list to the API).
+const CAT_MAP = {
+  nightlife: ['gqom', 'amapiano', 'house', 'club', 'festival', 'nightlife'],
+  food:      ['food', 'market', 'cultural', 'social'],
+};
 let _homeQuickActive = null;
 function browseCategory(genre, btn) {
   document.querySelectorAll('#genre-chip-row .chip').forEach(b => b.classList.remove('active'));
@@ -2296,6 +2316,44 @@ function buildBizCard(b) {
       <div class="bf"><span class="brat">${b.rating ? '★' + b.rating : 'New'}</span><span class="bpr">${b.price_range || ''}</span></div>
     </div>
   </div>`;
+}
+
+/* ══ HAPPENING TONIGHT rail — auto, hidden when empty ══ */
+async function loadTonightRail() {
+  const wrap = document.getElementById('tonight-rail');
+  const row  = document.getElementById('tonight-rail-row');
+  if (!wrap || !row) return;
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const r = await fetch(`/api/events?from_date=${today}&to_date=${today}&limit=8&_t=${Date.now()}`);
+    if (!r.ok) return;
+    const events = (await r.json()).events || [];
+    if (!events.length) { wrap.style.display = 'none'; return; }   // never show an empty section
+    row.innerHTML = events.map(buildTonightCard).join('');
+    wrap.style.display = '';
+  } catch (e) { console.warn('[TonightRail]', e.message); }
+}
+function buildTonightCard(ev) {
+  const iF = ev.is_free;
+  const pr = iF ? 'FREE' : (ev.price_min ? 'R' + ev.price_min : 'TBA');
+  const bg = gg(ev.genre), emo = ge(ev.genre);
+  return `<div class="bc" onclick="openEv('${x(ev.id)}')">
+    <div class="bt" style="background:${bg}">
+      ${ev.image_url ? `<img src="${x(iU(ev.image_url, 600))}" loading="lazy" onerror="this.style.display='none'"/>` : `<span>${emo}</span>`}
+      <div class="btg"></div>
+      <span class="bb2" style="color:var(--pk)">🔥 Tonight</span>
+    </div>
+    <div class="bi">
+      <div class="bn2">${x(ev.name)}</div>
+      <div class="bm">📍 ${x(ev.venue_city || '')}</div>
+      <div class="bf"><span class="brat" style="color:${iF ? 'var(--li)' : 'var(--tx)'}">${pr}</span><span class="bpr">${x(ev.time_local || '')}</span></div>
+    </div>
+  </div>`;
+}
+function seeAllTonight() {
+  const btn = document.querySelector('#tab-home .rd-qbtn');   // first quick action = 🔥 Tonight
+  if (btn && _homeQuickActive !== 'tonight') btn.click();
+  const lbl = document.getElementById('feed-lbl'); if (lbl) lbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /* ══════════════════════════════════════════════════
@@ -5646,6 +5704,7 @@ window.addEventListener('DOMContentLoaded', () => {
   history.pushState({ tab: _restoredTab, detail: false }, '');
   // Always preload home feed data in the background
   loadFeed(true);
+  loadTonightRail();
   loadFrontline();
   loadPromoBanners();
   loadCommunityPosts();

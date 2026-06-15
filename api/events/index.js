@@ -41,7 +41,11 @@ module.exports = async (req, res) => {
       if (to_date)                 query = query.lte('date_local', to_date);
       if (city && city !== 'all')  query = query.ilike('venue_city', `%${city}%`);
       if (genre === 'free')        query = query.eq('is_free', true);
-      else if (genre && genre !== 'all') query = query.ilike('genre', `%${genre}%`);
+      else if (genre && genre !== 'all') {
+        const genres = genre.split(',').map(g => g.trim()).filter(Boolean);
+        if (genres.length > 1) query = query.or(genres.map(g => `genre.ilike.%${g}%`).join(','));
+        else if (genres.length === 1) query = query.ilike('genre', `%${genres[0]}%`);
+      }
       if (search) query = query.textSearch('id', search, { type: 'websearch', config: 'english' });
       if (lat && lon) {
         const b = haverBox(lat, lon, km);
