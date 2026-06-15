@@ -1820,12 +1820,19 @@ function bizSkeleton() {
    LIVE API — EVENTS
 ══════════════════════════════════════════════════ */
 let _feedReqId = 0;
-async function loadFeed(resetPage = false) {
+let _feedLoadingMore = false;
+// append=true → infinite scroll: keep existing cards, add the next page at the bottom.
+async function loadFeed(resetPage = false, append = false) {
   if (resetPage) feedPage = 1;
   const myReq = ++_feedReqId;
   const feedEl = document.getElementById('events-feed');
-  feedEl.innerHTML = feedSkeleton();
-  document.getElementById('feed-pg').style.display = 'none';
+  if (append) {
+    _feedLoadingMore = true;
+    feedEl.insertAdjacentHTML('beforeend', '<div id="feed-more-loader" style="text-align:center;padding:18px;color:var(--mu);font-size:.78rem">Loading more…</div>');
+  } else {
+    feedEl.innerHTML = feedSkeleton();
+    document.getElementById('feed-pg').style.display = 'none';
+  }
 
   try {
     const limit = 10, offset = (feedPage - 1) * limit;
@@ -1844,10 +1851,29 @@ async function loadFeed(resetPage = false) {
     if (!resp.ok) throw new Error('API ' + resp.status);
     const json = await resp.json();
     const events = json.events || [];
-    _feedSeenFp = new Set(events.map(_evFp));
     const count  = json.total  || events.length;
     feedTotalPages = json.total_pages || Math.ceil(count / limit) || 1;
     document.getElementById('feed-lbl').textContent = '🔥 ' + count + ' Upcoming Events';
+
+    const _loaderEl = document.getElementById('feed-more-loader');
+    if (_loaderEl) _loaderEl.remove();
+
+    if (append) {
+      // Infinite scroll: append only events not already on screen.
+      const fresh = events.filter(ev => !_feedSeenFp.has(_evFp(ev)));
+      fresh.forEach(ev => _feedSeenFp.add(_evFp(ev)));
+      if (fresh.length) {
+        const moreCards = fresh.map((ev, i) => buildCard(ev, i).replace('class="fc rv"', 'class="fc rv in"'));
+        feedEl.insertAdjacentHTML('beforeend', moreCards.join(''));
+        triggerRev();
+        eventsForMap = [...eventsForMap.filter(e => !fresh.find(n => n.id === e.id)), ...fresh];
+        if (mapInited && mapObj && typeof placeMapMarkers === 'function') placeMapMarkers();
+      }
+      _feedLoadingMore = false;
+      return;
+    }
+
+    _feedSeenFp = new Set(events.map(_evFp));
 
     if (events.length === 0) {
       feedEl.innerHTML = `
@@ -1885,6 +1911,9 @@ async function loadFeed(resetPage = false) {
 
   } catch(err) {
     if (myReq !== _feedReqId) return;
+    const _le = document.getElementById('feed-more-loader');
+    if (_le) _le.remove();
+    if (append) { _feedLoadingMore = false; feedPage = Math.max(1, feedPage - 1); return; }
     console.error('[Feed]', err);
     feedEl.innerHTML = `<div class="api-error" style="text-align:center;padding:32px 16px">
       <div style="font-size:2rem;margin-bottom:12px">⚠️</div>
@@ -2120,20 +2149,29 @@ function renderFeaturedWeekend(featured) {
   section.style.display = 'block';
 }
 
+// Pagination control is superseded by infinite scroll (see _initFeedInfiniteScroll);
+// the underlying API is still fetched 10/page. Keep the control hidden.
 function updatePagination() {
   const pg = document.getElementById('feed-pg');
-  if (feedTotalPages > 1) {
-    pg.style.display = 'flex';
-    document.getElementById('pg-info').textContent = feedPage + ' / ' + feedTotalPages;
-    document.getElementById('pg-prev').disabled = feedPage === 1;
-    document.getElementById('pg-next').disabled = feedPage >= feedTotalPages;
-  } else {
-    pg.style.display = 'none';
-  }
+  if (pg) pg.style.display = 'none';
 }
 function changePage(delta) {
   feedPage += delta;
   loadFeed();
+}
+// Infinite scroll: when the home feed nears the bottom, append the next page.
+function _initFeedInfiniteScroll() {
+  const sc = document.querySelector('#tab-home .hi');
+  if (!sc || sc._infWired) return;
+  sc._infWired = true;
+  sc.addEventListener('scroll', () => {
+    if (_feedLoadingMore || feedPage >= feedTotalPages) return;
+    if (!document.getElementById('tab-home').classList.contains('active')) return;
+    if (sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 600) {
+      feedPage++;
+      loadFeed(false, true);
+    }
+  }, { passive: true });
 }
 function setGenre(btn, genre) {
   document.querySelectorAll('#genre-chip-row .chip').forEach(b => b.classList.remove('active'));
@@ -5717,6 +5755,7 @@ window.addEventListener('DOMContentLoaded', () => {
   history.pushState({ tab: _restoredTab, detail: false }, '');
   // Always preload home feed data in the background
   loadFeed(true);
+  _initFeedInfiniteScroll();
   loadTonightRail();
   loadFrontline();
   loadPromoBanners();

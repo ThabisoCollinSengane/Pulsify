@@ -172,3 +172,59 @@ Inspected `cjzewfvtdayjgjdpdmln` — coordinates were clean (no positive lats, n
 - **Auto-jump on feed filter:** `showTab('map')` maps `feedCity`/`feedProvince` via `_cityKeyFromName()` and focuses the map there on open. First-open uses `_pendingCityJump` (applied in the `load` handler since init is async).
 - **Style toggle** (🌗 `toggleMapStyle()`): satellite-streets ⇄ dark-v11. `setStyle()` wipes custom sources/layers/images, so the cluster source + heatmap + animated cluster layers are extracted into `_addMapSourcesAndLayers()` and re-added on `once('style.load')`. Layer/map event handlers (click/hover/zoomend) are attached **once** in the `load` handler — they persist across `setStyle`, so don't re-attach them.
 - **Stacked markers:** events at one venue (e.g. 4 concerts at FNB Stadium) share exact coords. A pre-pass counts duplicates per coordinate; duplicates are fanned out on a ~40m ring so each is individually tappable when zoomed in (negligible offset at city scale, handled by clustering below z11).
+
+---
+
+## 8. Roadmap / Deferred Checklist
+
+Tracked work from the security, architecture and map briefs. Tackle in order:
+**architecture first, then map.** Tick items as they ship.
+
+### A. Done (shipped)
+- [x] #2 API rate limiting (per-IP, all entrypoints) — PR #21
+- [x] #1 RLS lockdown: revoked EXECUTE on trigger fns; anon blocked on login-RPCs; auth required for notifications/report inserts — PR #21
+- [x] #5 Upload limits: client guard + 6 storage buckets (5MB, jpg/png/webp) — PR #21
+- [x] QR validate prefix bug (PULSEFY→PULSIFY) — PR #21
+- [x] #11 Sentry wiring (inert until DSN set) — PR #21
+- [x] Category mapping, Tonight rail, social-proof pill, hero, card polish — PR #20
+
+### B. Needs YOU (decisions / accounts — not code)
+- [ ] **Enable Leaked Password Protection** — Supabase → Auth → Passwords (1 click)
+- [ ] **Sentry DSN** — create project; set `PULSIFY_SENTRY_DSN` (frontend) + `SENTRY_DSN` (Vercel env)
+- [ ] **Daily backups (#12)** — confirm Supabase plan includes PITR/daily backups
+- [ ] **Paystack go-live** — provide live keys before payment-verify can be enabled
+
+### C. Architecture (do FIRST — `pulsefy_architecture_1.txt`)
+- [ ] **Server-side payment verification (#3 / arch §3,§7,§10)** — Paystack is currently
+      DISABLED; bookings auto-confirm. Build verify flow (Client→API→create booking
+      pending→Paystack verify→confirm) BEFORE taking real money. **Highest priority.**
+- [ ] **Frontend API service layer (arch §2)** — wrap `/api/*` + Supabase calls in one
+      `Api` module; stop scattering direct DB calls through the 7,200-line index.html.
+      (Incremental: migrate core event/booking calls first.)
+- [ ] **Infinite scroll (arch §6D)** — keep 10/page, load next page on scroll.
+- [ ] **Consistent request validation (arch §3)** — shared validator for API bodies.
+- [ ] **Frontend modularization (#14)** — split index.html into modules (big, later).
+- [ ] **Queue/background jobs (arch §8)** — emails/ticket confirmations off the request path.
+
+### D. Map (do AFTER architecture — `pulsefy_map_fixes.txt`)
+- [ ] **Venues table (#1, CRITICAL)** — `venues(id,name,lat,lng,city,province,verified)`;
+      events link `venue_id` instead of raw coords. De-dupes locations.
+- [ ] **Auto-geocoding (#2)** — Mapbox Geocoding primary (Google Places optional);
+      store name+address → generate+validate lat/lng.
+- [ ] **Coordinate validation (#3)** — match city/province; reject outside SA bounds
+      (lat -35..-22, lon 16..33 — Hard rule #5); distance-from-city-centre check.
+- [ ] **`location_confidence` field (#4)** — 100 verified / 80 geocoded / 50 manual / 0 unknown.
+- [ ] **Group events by venue (#5)** — one marker per venue; click → all events there.
+      (Current code fans out stacked markers; replace with venue grouping.)
+- [ ] **Load events by map bounds (#6)** — `GET /events?bounds=w,s,e,n`; debounce moveend.
+- [ ] **Render only visible markers / limit at low zoom (#7)** — keep clustering.
+- [ ] **Heatmap view toggle (#8)** — red/purple/blue activity (heatmap layer already exists).
+- [ ] **Nearby-events panel (#9)** — list synced to viewport.
+- [ ] **User-location intelligence (#10)** — auto-centre + prioritise nearby (toggle exists).
+- [ ] **Data cleaning (#11)** — auto-remove expired events; dedupe venues; flag bad coords.
+
+### E. Other deferred (from security audit)
+- [ ] RLS: scope `leads` + `profile_claims` permissive policies (need usage review)
+- [ ] Move `pg_trgm` extension out of `public` schema (low risk)
+- [ ] #15 Engagement-based `hype_score` (compute from likes/views, not seeded)
+- [ ] #13 Feature-flag system (DB-backed) to toggle features safely
