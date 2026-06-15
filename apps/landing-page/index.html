@@ -73,7 +73,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Great+Vibes&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet"/>
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
 <script>
@@ -458,24 +458,15 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .mcb{flex-shrink:0;background:rgba(10,14,26,.82);backdrop-filter:blur(20px);border:1.5px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);padding:6px 14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s;-webkit-tap-highlight-color:transparent}
 .mcb.active{background:linear-gradient(135deg,var(--pu),var(--or));color:#fff;border-color:transparent;box-shadow:0 4px 18px rgba(176,38,255,.45)}
 
-/* ── MAP SPLASH (signature "Pulsefy" over hero) ── */
-#map-splash{position:absolute;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:linear-gradient(180deg,rgba(22,12,50,.45) 0%,rgba(22,12,50,.28) 45%,rgba(11,7,34,.9) 100%),url('/map-splash.png') center/cover no-repeat,#160C32;animation:msIn .35s ease-out;text-align:center;padding:24px;pointer-events:none}
-#map-splash.ms-fade{animation:msOut .5s ease-in forwards;pointer-events:none}
-/* small brand ring (echoes the logo) */
-.ms-pulse{position:relative;width:62px;height:62px;display:flex;align-items:center;justify-content:center;margin-bottom:2px}
-.ms-pulse::before,.ms-pulse::after{content:'';position:absolute;inset:0;border-radius:50%;border:1.5px solid var(--pu);box-shadow:0 0 22px rgba(176,38,255,.55);animation:msRing 2s ease-out infinite}
-.ms-pulse::after{animation-delay:1s;border-color:var(--or);box-shadow:0 0 22px rgba(255,92,0,.5)}
-.ms-dot{width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,var(--pu) 60%,var(--or));box-shadow:0 0 22px rgba(176,38,255,.85),0 0 40px rgba(123,47,255,.55);animation:msDot 1.7s ease-in-out infinite}
-/* signature writes in left→right, then glows */
-.ms-sign{font-family:'Great Vibes',cursive;font-size:3.6rem;color:#fff;line-height:1.05;padding:0 .15em;-webkit-clip-path:inset(0 100% 0 0);clip-path:inset(0 100% 0 0);animation:msWrite 1.7s cubic-bezier(.6,.05,.25,1) .25s forwards,msGlow 2s ease-in-out 1.9s infinite}
-.ms-sub2{font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.42em;text-transform:uppercase;color:var(--cy);text-shadow:0 0 10px rgba(0,229,255,.55);padding-left:.42em;opacity:0;animation:msSubIn .6s ease-out 1.6s forwards}
+/* ── MAP SPLASH (logo wordmark over hero) ── */
+#map-splash{position:absolute;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(11,7,34,.4) 0%,rgba(11,7,34,.25) 45%,rgba(11,7,34,.85) 100%),url('/map-splash.png') center/cover no-repeat,#0B0722;animation:msIn .35s ease-out;text-align:center;padding:24px;pointer-events:none}
+#map-splash.ms-fade{animation:msOut .6s ease-in forwards;pointer-events:none}
+/* PULSEFY wordmark — screen-blended so its black bg drops out over the hero */
+.ms-logo{width:min(78vw,360px);max-height:40vh;object-fit:contain;mix-blend-mode:screen;filter:drop-shadow(0 0 24px rgba(176,38,255,.45));animation:msLogoIn 1s ease-out both,msLogoGlow 2.6s ease-in-out 1s infinite}
 @keyframes msIn{from{opacity:0}to{opacity:1}}
 @keyframes msOut{from{opacity:1}to{opacity:0}}
-@keyframes msRing{0%{transform:scale(.6);opacity:1}100%{transform:scale(1.85);opacity:0}}
-@keyframes msDot{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
-@keyframes msWrite{to{-webkit-clip-path:inset(0 0 0 0);clip-path:inset(0 0 0 0)}}
-@keyframes msGlow{0%,100%{text-shadow:0 0 12px rgba(176,38,255,.55),0 0 26px rgba(176,38,255,.3)}50%{text-shadow:0 0 20px rgba(176,38,255,.9),0 0 46px rgba(123,47,255,.6),0 0 78px rgba(255,92,0,.28)}}
-@keyframes msSubIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes msLogoIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+@keyframes msLogoGlow{0%,100%{filter:drop-shadow(0 0 18px rgba(176,38,255,.4))}50%{filter:drop-shadow(0 0 30px rgba(176,38,255,.7))}}
 /* ── Pulsefy verified badge ── */
 .puls-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);box-shadow:0 0 10px rgba(255,92,0,.85),0 0 20px rgba(255,45,120,.55);position:relative;vertical-align:middle;margin-left:5px;flex-shrink:0;cursor:default;font-size:10px;font-weight:900;color:#fff;line-height:1;animation:puls-glow 1.6s ease-in-out infinite}
 .puls-badge::before{content:'';position:absolute;inset:-5px;border-radius:50%;background:radial-gradient(circle,rgba(255,92,0,.55),rgba(255,45,120,.25),transparent 70%);animation:puls-ring 1.8s ease-out infinite;z-index:-1}
@@ -563,7 +554,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
         <div class="rd-hero-btns">
           <button class="rd-hbtn rd-hbtn-p" onclick="document.getElementById('feed-lbl').scrollIntoView({behavior:'smooth',block:'start'})">🎟 Browse Events</button>
           <button class="rd-hbtn" onclick="showTab('map')">🗺 Explore Map</button>
-          <button class="rd-hbtn" onclick="browseCategory('free')">✅ Free Events</button>
         </div>
       </div>
     </div>
@@ -1651,19 +1641,15 @@ function showMapSplash() {
   if (document.getElementById('map-splash')) return;
   const splash = document.createElement('div');
   splash.id = 'map-splash';
-  splash.innerHTML = `
-    <div class="ms-pulse"><div class="ms-dot"></div></div>
-    <div class="ms-sign">Pulsefy</div>
-    <div class="ms-sub2">Map Explorer</div>`;
+  splash.innerHTML = `<img class="ms-logo" src="/pulsefy-wordmark.png" alt="Pulsefy"/>`;
   mc.appendChild(splash);
   _mapSplashShownAt = Date.now();
 }
 function hideMapSplash() {
   const s = document.getElementById('map-splash');
   if (!s) return;
-  // Hold the signature splash ~3s so the write-in + glow plays, even if the
-  // map loaded faster.
-  const wait = Math.max(0, 3000 - (Date.now() - _mapSplashShownAt));
+  // Hold the hero ~4s so the Pulsefy wordmark shows, then fade it away.
+  const wait = Math.max(0, 4000 - (Date.now() - _mapSplashShownAt));
   setTimeout(() => {
     s.classList.add('ms-fade');
     setTimeout(() => s.remove(), 460);
@@ -5866,7 +5852,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Preload the map splash hero during idle time so it's ready before the user
   // opens the Map tab (large image — don't let it compete with the home feed).
-  setTimeout(() => { new Image().src = '/map-splash.png'; }, 2500);
+  setTimeout(() => { new Image().src = '/map-splash.png'; new Image().src = '/pulsefy-wordmark.png'; }, 2500);
 
   // First-run welcome tour — fires for every new visitor (incl. PWA, where
   // localStorage is partitioned separately from the browser, and signed-out
