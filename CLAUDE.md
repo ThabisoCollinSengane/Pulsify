@@ -200,6 +200,10 @@ Mechanics:
 Tracked work from the security, architecture and map briefs. Tackle in order:
 **architecture first, then map.** Tick items as they ship.
 
+> See `docs/roadmap-fixes.md` for the ranked, phased fix plan (Critical → High →
+> Medium) derived from the dashboards code review, and `docs/dashboards-handover.md`
+> for the line-referenced review findings behind those items.
+
 ### A. Done (shipped)
 - [x] #2 API rate limiting (per-IP, all entrypoints) — PR #21
 - [x] #1 RLS lockdown: revoked EXECUTE on trigger fns; anon blocked on login-RPCs; auth required for notifications/report inserts — PR #21
