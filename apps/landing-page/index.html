@@ -4248,17 +4248,14 @@ async function renderBookings() {
   const bl = document.getElementById('bookings-list');
   if (!bl) { renderSaved(); return; }
 
-  let token = '';
-  try { const _sb = getSB(); const { data: { session } } = await _sb.auth.getSession(); token = session?.access_token || localStorage.getItem('p_token') || ''; } catch(_) { token = localStorage.getItem('p_token') || ''; }
-  if (!token || !currentUser) {
+  if (!currentUser) {
     bl.innerHTML = `<div class="no-results"><div class="no-results-ico">🎟</div><div class="no-results-title">Sign in to see your tickets</div><button class="no-results-btn" onclick="window.location.href='/signin'">Sign In</button></div>`;
     renderSaved(); return;
   }
 
   bl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--mu);font-size:.82rem">Loading your tickets…</div>';
   try {
-    const r = await fetch(API + '/user/bookings', { headers: { Authorization: 'Bearer ' + token } });
-    const d = await safeJson(r);
+    const d = await Api.get('/user/bookings', { auth: true });
     const bookings = d.bookings || [];
     if (!bookings.length) {
       bl.innerHTML = `<div class="no-results"><div class="no-results-ico">🎟</div><div class="no-results-title">No tickets yet</div><div class="no-results-sub">Your confirmed tickets appear here with QR codes for entry.</div><button class="no-results-btn" onclick="showTab('home')">Browse Events</button></div>`;
@@ -4305,8 +4302,7 @@ async function renderPickupOrders() {
       el.innerHTML = `<div style="padding:40px 20px;text-align:center;color:var(--mu)"><div style="font-size:2.5rem;margin-bottom:10px">📦</div><div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:6px">Sign in to see your orders</div><div style="font-size:.78rem">Orders placed while logged in are tracked here across all your devices.</div></div>`;
       return;
     }
-    const r = await fetch('/api/user/pickup-orders', { headers: { Authorization: 'Bearer ' + session.access_token } });
-    const d = await r.json();
+    const d = await Api.get('/user/pickup-orders', { auth: true });
     const orders = d.orders || [];
     if (!orders.length) {
       el.innerHTML = `<div style="padding:40px 20px;text-align:center;color:var(--mu)"><div style="font-size:2.5rem;margin-bottom:10px">📦</div><div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:6px">No orders yet</div><div style="font-size:.78rem">Place a pickup order from any venue's menu and it will appear here.</div></div>`;
