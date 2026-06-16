@@ -158,12 +158,19 @@ const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
       });
-      const { profile, error } = await res.json();
+      const { profile, error } = await res.json().catch(() => ({}));
       if (res.ok && profile) {
         await saveConfirmedProfile(session, profile);
         redirectByRole();
+      } else {
+        // Valid session but the profile sync failed — don't leave the user
+        // stuck silently. Surface it so they can retry (no auto sign-out: the
+        // session is good, this may be a transient API/network blip).
+        showMsg('login-msg', (error || 'Could not load your business profile.') + ' Please refresh to try again.', 'err');
       }
-    } catch (e) { console.warn('Session sync failed:', e.message); }
+    } catch (e) {
+      showMsg('login-msg', 'Could not reach the server. Please refresh to try again.', 'err');
+    }
   }
 })();
 

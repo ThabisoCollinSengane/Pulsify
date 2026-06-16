@@ -163,7 +163,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:'DM S
       <select class="ff" id="co-time"><option value="">Select pickup time…</option></select>
       <label class="ff-label">Special Instructions (optional)</label>
       <textarea class="ff" id="co-notes" placeholder="e.g. Extra chakalaka, no onions…" rows="2" style="resize:none"></textarea>
-      <button class="pay-btn" onclick="placeOrder()">
+      <button class="pay-btn" id="place-order-btn" onclick="placeOrder()">
         🎭 Simulate Payment &amp; Confirm Order
       </button>
       <div class="pay-note">🔒 No real charge — demo mode · Real Paystack integration coming soon<br/>Your order will be sent directly to the business.</div>
@@ -379,7 +379,7 @@ function buildTimeSlots() {
   }
 }
 
-function placeOrder() {
+async function placeOrder() {
   const name       = document.getElementById('co-name').value.trim();
   const phone      = document.getElementById('co-phone').value.trim();
   const pickupTime = document.getElementById('co-time').value;
@@ -391,24 +391,39 @@ function placeOrder() {
   const subtotal = cartTotal();
   const service  = Math.round(subtotal * 0.05 * 100) / 100;
   const total    = +(subtotal + service).toFixed(2);
+  const notes    = document.getElementById('co-notes').value.trim();
 
-  const order = {
-    id: 'ord_' + Date.now(), bizId: BIZ_ID, customer: name, phone, items,
-    subtotal, service, total, pickupTime,
-    notes: document.getElementById('co-notes').value.trim(),
-    status: 'pending', created: new Date().toISOString()
-  };
+  const btn = document.getElementById('place-order-btn');
+  const btnLabel = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Placing…'; }
 
-  // Save to business orders store (read by business-dashboard.html)
-  const ordersKey = BIZ_ID + '_orders';
-  const orders = JSON.parse(localStorage.getItem(ordersKey) || '[]');
-  orders.push(order); localStorage.setItem(ordersKey, JSON.stringify(orders));
+  try {
+    const res = await fetch('/api/pickup-orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        business_id: BIZ_ID, customer_name: name, customer_phone: phone,
+        items, notes, pickup_time: pickupTime, total,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { toast(data.error || 'Could not place order — please try again', 'err'); return; }
 
-  // Save for confirmation page
-  localStorage.setItem('last_order', JSON.stringify({ ...order, bizName: BIZ_DATA.name, bizAddress: BIZ_DATA.address || BIZ_DATA.city }));
+    // Save for the confirmation page (display only)
+    localStorage.setItem('last_order', JSON.stringify({
+      id: data.order_id, order_ref: data.order_ref, bizId: BIZ_ID,
+      customer: name, phone, items, subtotal, service, total, pickupTime, notes,
+      status: 'pending', created: new Date().toISOString(),
+      bizName: BIZ_DATA.name, bizAddress: BIZ_DATA.address || BIZ_DATA.city,
+    }));
 
-  CART = {}; closeSheet('checkout-sheet');
-  window.location.href = '/business/order-confirmation';
+    CART = {}; closeSheet('checkout-sheet');
+    window.location.href = '/business/order-confirmation';
+  } catch (e) {
+    toast('Network error — please try again', 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = btnLabel; }
+  }
 }
 
 // ════════════════════════════════════════════════════════════
