@@ -732,7 +732,7 @@ module.exports = async (req, res) => {
       if (!qr_data) return res.status(400).json({ error: 'qr_data required' });
 
       const parts = String(qr_data).split(':');
-      if (parts.length < 4 || parts[0] !== 'PULSEFY')
+      if (parts.length < 4 || parts[0] !== 'PULSIFY')
         return res.status(400).json({ error: 'Invalid QR code' });
 
       const booking_ref = parts[1];
