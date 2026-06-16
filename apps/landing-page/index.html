@@ -600,8 +600,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 
     <!-- ══ HAPPENING TONIGHT (auto — hidden when there are no events tonight) ══ -->
     <div id="tonight-rail" style="display:none">
-      <div class="sl"><span>🔥 Happening Tonight</span><a onclick="seeAllTonight();return false">See all →</a></div>
+      <div class="sl"><span id="tonight-rail-lbl">🔥 Happening Tonight</span><a onclick="seeAllTonight();return false">See all →</a></div>
       <div class="hs" id="tonight-rail-row"></div>
+    </div>
+
+    <!-- ══ TRENDING NEARBY (auto — hidden when there's nothing to show) ══ -->
+    <div id="trending-rail" style="display:none">
+      <div class="sl"><span>📈 Trending Nearby</span><a onclick="seeAllTrending();return false">See all →</a></div>
+      <div class="hs" id="trending-rail-row"></div>
     </div>
 
     <!-- ══ EVENTS ══ -->
@@ -2442,14 +2448,54 @@ function buildBizCard(b) {
 async function loadTonightRail() {
   const wrap = document.getElementById('tonight-rail');
   const row  = document.getElementById('tonight-rail-row');
+  const lbl  = document.getElementById('tonight-rail-lbl');
   if (!wrap || !row) return;
   try {
     const today = new Date().toISOString().split('T')[0];
-    const events = (await Api.get(`/events?from_date=${today}&to_date=${today}&limit=8&_t=${Date.now()}`)).events || [];
+    let events = (await Api.get(`/events?from_date=${today}&to_date=${today}&limit=8&_t=${Date.now()}`)).events || [];
     if (!events.length) { wrap.style.display = 'none'; return; }   // never show an empty section
+    const hasLoc = userLat != null && userLon != null;
+    if (hasLoc) events = _proximityRank(events);
+    if (lbl) lbl.textContent = hasLoc ? '🔥 Tonight Near You' : '🔥 Happening Tonight';
     row.innerHTML = events.map(buildTonightCard).join('');
     wrap.style.display = '';
   } catch (e) { console.warn('[TonightRail]', e.message); }
+}
+
+async function loadTrendingRail() {
+  const wrap = document.getElementById('trending-rail');
+  const row  = document.getElementById('trending-rail-row');
+  if (!wrap || !row) return;
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    let events = (await Api.get(`/events?from_date=${today}&limit=20&_t=${Date.now()}`)).events || [];
+    if (!events.length) { wrap.style.display = 'none'; return; }   // never show an empty section
+    events = _proximityRank(events).slice(0, 8);
+    row.innerHTML = events.map(buildTrendingCard).join('');
+    wrap.style.display = '';
+  } catch (e) { console.warn('[TrendingRail]', e.message); }
+}
+
+function buildTrendingCard(ev) {
+  const iF = ev.is_free;
+  const pr = iF ? 'FREE' : (ev.price_min ? 'R' + ev.price_min : 'TBA');
+  const bg = gg(ev.genre), emo = ge(ev.genre);
+  return `<div class="bc" onclick="openEv('${x(ev.id)}')">
+    <div class="bt" style="background:${bg}">
+      ${ev.image_url ? `<img src="${x(iU(ev.image_url, 600))}" loading="lazy" onerror="this.style.display='none'"/>` : `<span>${emo}</span>`}
+      <div class="btg"></div>
+      <span class="bb2" style="color:var(--pu)">📈 Trending</span>
+    </div>
+    <div class="bi">
+      <div class="bn2">${x(ev.name)}</div>
+      <div class="bm">📍 ${x(ev.venue_city || '')}</div>
+      <div class="bf"><span class="brat" style="color:${iF ? 'var(--li)' : 'var(--tx)'}">${pr}</span><span class="bpr">${x(ev.date_local || '')}</span></div>
+    </div>
+  </div>`;
+}
+
+function seeAllTrending() {
+  const lbl = document.getElementById('feed-lbl'); if (lbl) lbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function buildTonightCard(ev) {
   const iF = ev.is_free;
@@ -5898,6 +5944,7 @@ window.addEventListener('DOMContentLoaded', () => {
   loadFeed(true);
   _initFeedInfiniteScroll();
   loadTonightRail();
+  loadTrendingRail();
   loadFrontline();
   loadPromoBanners();
   loadCommunityPosts();
