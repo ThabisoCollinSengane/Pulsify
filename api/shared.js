@@ -60,6 +60,29 @@ function verifyQr(bookingRef, eventId, sig) {
   return signQr(bookingRef, eventId) === sig;
 }
 
+/* ─── Geocoding (Nominatim / OpenStreetMap) ───────────────────
+   Free, keyless geocoder (mirrors the admin dashboard's client-side
+   usage). Restricted to South Africa and validated against SA bounds
+   (lat -35..-22, lon 16..33) so a bad lookup can never persist an
+   off-map coordinate. Returns { lat, lon } or null. One lookup per
+   call — callers must respect Nominatim's ~1 req/sec policy if batching. */
+async function geocodeSA(query) {
+  const q = (query || '').trim();
+  if (!q) return null;
+  try {
+    const r = await fetch('https://nominatim.openstreetmap.org/search?' + new URLSearchParams({
+      q, format: 'json', limit: '1', countrycodes: 'za',
+    }), { headers: { 'User-Agent': 'Pulsefy/2.0 (https://pulsefy.co.za)' } });
+    if (!r.ok) return null;
+    const results = await r.json().catch(() => []);
+    if (!Array.isArray(results) || !results.length) return null;
+    const lat = parseFloat(results[0].lat), lon = parseFloat(results[0].lon);
+    if (isNaN(lat) || isNaN(lon)) return null;
+    if (lat < -35 || lat > -22 || lon < 16 || lon > 33) return null; // SA bounds
+    return { lat, lon };
+  } catch (_) { return null; }
+}
+
 function haverBox(lat, lon, km) {
   const R = 111, d = km / R, dl = km / (R * Math.cos(lat * Math.PI / 180));
   return { minLat: lat - d, maxLat: lat + d, minLon: lon - dl, maxLon: lon + dl };
@@ -142,4 +165,4 @@ function captureError(err, context) {
   } catch (e) { console.error('[error]', err?.message || err); }
 }
 
-module.exports = { sb, sbAs, tokenFrom, CORS, corsHeaders, haverBox, signQr, verifyQr, verifyToken, authUser, logAdminAction, rateLimit, rateLimited, captureError };
+module.exports = { sb, sbAs, tokenFrom, CORS, corsHeaders, haverBox, geocodeSA, signQr, verifyQr, verifyToken, authUser, logAdminAction, rateLimit, rateLimited, captureError };

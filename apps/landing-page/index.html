@@ -1877,7 +1877,7 @@ async function loadFeed(resetPage = false, append = false) {
     if (myReq !== _feedReqId) return;
     if (!resp.ok) throw new Error('API ' + resp.status);
     const json = await resp.json();
-    const events = json.events || [];
+    const events = _proximityRank(json.events || []);
     const count  = json.total  || events.length;
     feedTotalPages = json.total_pages || Math.ceil(count / limit) || 1;
     _feedFinal = feedPage >= feedTotalPages;
@@ -2921,6 +2921,27 @@ function _distBadge(ev) {
   if (!isFinite(km)) return '';
   const label = km < 1 ? Math.round(km * 1000) + 'm' : (km < 10 ? km.toFixed(1) : Math.round(km)) + 'km';
   return `<span class="fda" style="color:var(--li);font-weight:600">📍 ${label} away</span>`;
+}
+
+// Proximity-aware re-rank of a batch of events. Adds the 4th ranking term
+// (proximity) on top of the server's rank_score (hype + engagement + recency).
+// No-op unless the user has shared their location. Applied per-batch so it
+// blends nearby events toward the top of each loaded page without ever
+// reordering cards already on screen (keeps infinite scroll stable). Promoted
+// (is_frontline) events always stay first.
+function _proximityRank(events) {
+  if (userLat == null || userLon == null) return events;
+  const scored = events.map((ev, i) => {
+    const lat = parseFloat(ev.venue_lat), lon = parseFloat(ev.venue_lon);
+    let bonus = 0;
+    if (lat && lon) {
+      const km = _haversineKm(userLat, userLon, lat, lon);
+      if (isFinite(km)) bonus = Math.max(0, 50 - km); // within 50km gets up to +50
+    }
+    return { ev, i, blended: (ev.rank_score || 0) + bonus, front: ev.is_frontline ? 1 : 0 };
+  });
+  scored.sort((a, b) => (b.front - a.front) || (b.blended - a.blended) || (a.i - b.i));
+  return scored.map(s => s.ev);
 }
 
 function toggleNearMe() {

@@ -1,4 +1,4 @@
-const { sb, corsHeaders, haverBox, rateLimited, authUser, captureError } = require('../shared');
+const { sb, corsHeaders, haverBox, geocodeSA, rateLimited, authUser, captureError } = require('../shared');
 
 module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
@@ -130,6 +130,13 @@ module.exports = async (req, res) => {
       if (venue_lon != null && (isNaN(venue_lon) || venue_lon < 16 || venue_lon > 33)) venue_lon = null;
       if (venue_lat == null || venue_lon == null) { venue_lat = null; venue_lon = null; }
 
+      // Auto-geocode when no valid coords were supplied — turns a name/address
+      // into a validated SA coordinate so the event still lands on the map.
+      if (venue_lat == null || venue_lon == null) {
+        const geo = await geocodeSA([b.venue_address, venue_name, venue_city, b.venue_province].filter(Boolean).join(', '));
+        if (geo) { venue_lat = geo.lat; venue_lon = geo.lon; }
+      }
+
       const tiers = Array.isArray(b.tiers) && b.tiers.length
         ? b.tiers.map((t, i) => ({
             name: (t.name || 'General Admission').trim(),
@@ -193,6 +200,11 @@ module.exports = async (req, res) => {
       if (b.venue_lat != null && b.venue_lon != null) {
         const lat = parseFloat(b.venue_lat), lon = parseFloat(b.venue_lon);
         if (lat >= -35 && lat <= -22 && lon >= 16 && lon <= 33) { patch.venue_lat = lat; patch.venue_lon = lon; }
+      }
+      // Venue changed without explicit coords — re-geocode from the new venue.
+      if (patch.venue_lat === undefined && b.venue_name && b.venue_city) {
+        const geo = await geocodeSA([b.venue_address, b.venue_name, b.venue_city, b.venue_province].filter(Boolean).join(', '));
+        if (geo) { patch.venue_lat = geo.lat; patch.venue_lon = geo.lon; patch.location_confidence = 80; }
       }
       if (!Object.keys(patch).length) return res.status(400).json({ error: 'Nothing to update' });
 
