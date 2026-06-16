@@ -952,6 +952,20 @@ module.exports = async (req, res) => {
       if (!email || !password || !name)
         return res.status(400).json({ error: 'email, password and business_name are required' });
 
+      // Block obvious duplicates: same business name in the same city, or same phone number already on file
+      const dupCity = (b.city || '').trim();
+      if (role === 'business') {
+        let dupQuery = sb().from('businesses').select('id').ilike('name', name);
+        if (dupCity) dupQuery = dupQuery.ilike('city', dupCity);
+        const { data: dupByName } = await dupQuery.limit(1);
+        if (dupByName?.length) return res.status(409).json({ error: 'A business with this name already exists in this city. Contact support if this is your business.' });
+
+        if (b.phone) {
+          const { data: dupByPhone } = await sb().from('businesses').select('id').eq('contact_phone', b.phone).limit(1);
+          if (dupByPhone?.length) return res.status(409).json({ error: 'A business is already registered with this phone number.' });
+        }
+      }
+
       // Create auth user via admin API
       const adminSb = createClient(SUPA_URL, SUPA_SVC);
       const { data: newUser, error: signUpErr } = await adminSb.auth.admin.createUser({
