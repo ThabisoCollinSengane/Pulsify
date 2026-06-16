@@ -2314,7 +2314,26 @@ async function sendAdminNotification() {
   }
 
   const btn = document.getElementById('notif-send-btn');
-  btn.disabled = true; btn.textContent = 'Sending…';
+  btn.disabled = true; btn.textContent = 'Checking audience…';
+
+  // Audience preview: show how many users this will reach and require confirmation
+  let audienceCount = null;
+  try {
+    const ar = await fetch('/api/admin/notify/audience?target=' + encodeURIComponent(target), {
+      headers: { Authorization: 'Bearer ' + adminToken },
+    });
+    const ad = await safeJson(ar);
+    if (ar.ok) audienceCount = ad.count;
+  } catch(_) {}
+
+  const who = targetKey === 'all' ? 'ALL users' : `users matching "${target}"`;
+  const countStr = audienceCount != null ? `${audienceCount} ` : '';
+  if (!confirm(`Send "${title}" to ${countStr}${who}?`)) {
+    btn.disabled = false; btn.textContent = '🔔 Send Notification';
+    return;
+  }
+
+  btn.textContent = 'Sending…';
 
   try {
     const r = await fetch('/api/admin/notify', {

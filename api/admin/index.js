@@ -545,6 +545,21 @@ module.exports = async (req, res) => {
       return res.status(200).json({ success: true });
     }
 
+    /* ─── GET /admin/notify/audience (preview recipient count) ── */
+    if (url === '/admin/notify/audience' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+
+      const target = q.target || 'all';
+      let uq = sb().from('profiles').select('id', { count: 'exact', head: true });
+      if (target.startsWith('city:'))  uq = uq.ilike('city', target.slice(5));
+      if (target.startsWith('genre:')) uq = uq.contains('genres', [target.slice(6)]);
+      if (target.startsWith('user:'))  uq = uq.eq('id', target.slice(5));
+      const { count, error } = await uq;
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ count: count || 0, target });
+    }
+
     /* ─── POST /admin/notify ─────────────────────────────── */
     if (url === '/admin/notify' && req.method === 'POST') {
       const auth = await authUser(req);
