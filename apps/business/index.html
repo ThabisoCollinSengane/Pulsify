@@ -2431,17 +2431,7 @@ async function submitMenuItem() {
   if (!bizId) { const { data: { session } } = await sb.auth.getSession(); bizId = session?.user?.id || ''; }
   if (!bizId) { toast('Please sign in again', 'err'); return; }
 
-  // Free plan: cap at 10 items (only on new items, not edits)
-  if (!id) {
-    const { count } = await sb.from('menu_items').select('id', { count: 'exact', head: true }).eq('business_id', bizId);
-    if ((count || 0) >= 10) {
-      toast('Free plan limit: 10 items. Upgrade to premium for unlimited.', 'err');
-      return;
-    }
-  }
-
   const row = {
-    business_id:  bizId,
     name,
     description:  document.getElementById('mi-desc').value.trim() || null,
     price,
@@ -2450,13 +2440,16 @@ async function submitMenuItem() {
     is_available: document.getElementById('mi-avail').value !== '0',
   };
 
-  let error;
-  if (id) {
-    ({ error } = await sb.from('menu_items').update(row).eq('id', id).eq('business_id', bizId));
-  } else {
-    ({ error } = await sb.from('menu_items').insert(row));
-  }
-  if (error) { toast('Failed to save: ' + error.message, 'err'); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { toast('Session expired — please sign in again', 'err'); return; }
+  const url = '/api/businesses/' + bizId + '/menu-items' + (id ? '/' + id : '');
+  const r = await fetch(url, {
+    method: id ? 'PATCH' : 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+    body: JSON.stringify(row),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { toast(d.message || d.error || 'Failed to save', 'err'); return; }
 
   closeSheet('menu-sheet'); resetMenuForm();
   toast(id ? 'Item updated ✅' : 'Item added ✅', 'ok');
@@ -2511,8 +2504,13 @@ async function deleteMenuItem(id, btn) {
   }
   btn.textContent = '…';
   const sb = getSB(); if (!sb) return;
-  const { error } = await sb.from('menu_items').delete().eq('id', id).eq('business_id', getBizId());
-  if (error) { toast('Failed to remove: ' + error.message, 'err'); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { toast('Session expired — please sign in again', 'err'); return; }
+  const r = await fetch('/api/businesses/' + getBizId() + '/menu-items/' + id, {
+    method: 'DELETE',
+    headers: { 'Authorization': 'Bearer ' + session.access_token },
+  });
+  if (!r.ok) { toast('Failed to remove', 'err'); return; }
   renderMenu(); toast('Item removed');
 }
 

@@ -279,6 +279,72 @@ module.exports = async (req, res) => {
       return res.status(200).json({ success: true });
     }
 
+    /* ─── POST /businesses/:id/menu-items (owner adds item) ── */
+    const menuBizId = url.match(/^\/businesses\/([^/]+)\/menu-items$/)?.[1];
+    if (menuBizId && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+
+      let owned = menuBizId === auth.user.id;
+      if (!owned) {
+        const { data: biz } = await sb().from('businesses').select('owner_id').eq('id', menuBizId).maybeSingle();
+        owned = biz?.owner_id === auth.user.id;
+      }
+      if (!owned) return res.status(403).json({ error: 'Not your business' });
+
+      const b = req.body || {};
+      const name = (b.name || '').trim();
+      const price = parseFloat(b.price);
+      if (!name || isNaN(price) || price < 0) return res.status(400).json({ error: 'name and a valid price are required' });
+
+      if (auth.profile.subscription_type !== 'premium' && auth.profile.subscription_type !== 'trial') {
+        const { count } = await sb().from('menu_items').select('id', { count: 'exact', head: true }).eq('business_id', menuBizId);
+        if ((count || 0) >= 10) return res.status(403).json({ error: 'MENU_LIMIT_REACHED', limit: 10, message: 'Free plan limit: 10 items. Upgrade to premium for unlimited.' });
+      }
+
+      const { data: item, error } = await sb().from('menu_items').insert({
+        business_id: menuBizId, name, price,
+        description: b.description || null,
+        category: b.category || 'General',
+        image_url: b.image_url || null,
+        is_available: b.is_available !== false,
+      }).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ item, success: true });
+    }
+
+    /* ─── PATCH/DELETE /businesses/:id/menu-items/:itemId ──── */
+    const menuItemMatch = url.match(/^\/businesses\/([^/]+)\/menu-items\/([^/]+)$/);
+    if (menuItemMatch && (req.method === 'PATCH' || req.method === 'DELETE')) {
+      const [, mBizId, itemId] = menuItemMatch;
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+
+      let owned = mBizId === auth.user.id;
+      if (!owned) {
+        const { data: biz } = await sb().from('businesses').select('owner_id').eq('id', mBizId).maybeSingle();
+        owned = biz?.owner_id === auth.user.id;
+      }
+      if (!owned) return res.status(403).json({ error: 'Not your business' });
+
+      if (req.method === 'DELETE') {
+        const { error } = await sb().from('menu_items').delete().eq('id', itemId).eq('business_id', mBizId);
+        if (error) return res.status(400).json({ error: error.message });
+        return res.status(200).json({ success: true });
+      }
+
+      const b = req.body || {};
+      const patch = {};
+      for (const k of ['name', 'description', 'category', 'image_url']) if (b[k] !== undefined) patch[k] = b[k] || null;
+      if (b.price !== undefined) patch.price = parseFloat(b.price) || 0;
+      if (b.is_available !== undefined) patch.is_available = !!b.is_available;
+      if (!Object.keys(patch).length) return res.status(400).json({ error: 'Nothing to update' });
+
+      const { error } = await sb().from('menu_items').update(patch).eq('id', itemId).eq('business_id', mBizId);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ success: true });
+    }
+
     return res.status(404).json({ error: 'Not found' });
   } catch (e) {
     captureError(e, { url });
