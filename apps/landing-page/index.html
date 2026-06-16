@@ -712,6 +712,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     <button id="map-style-btn" onclick="toggleMapStyle()" title="Toggle map style" style="width:36px;height:36px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">🌗</button>
     <button onclick="snapMapBack()" title="Reset view" style="width:36px;height:36px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">⌂</button>
     <button onclick="showNearbyEventsPanel()" title="Nearby events list" style="width:36px;height:36px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">☰</button>
+    <button id="map-heat-btn" onclick="toggleHeatmapView()" title="Toggle heatmap" style="width:36px;height:36px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">🔥</button>
   </div>
   <!-- Filter chips — floats over map, below header -->
   <div style="position:absolute;top:calc(var(--th) + var(--tk) + 56px);left:0;right:0;z-index:49;display:flex;gap:6px;padding:8px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;background:linear-gradient(180deg,rgba(5,8,15,.5) 0%,rgba(5,8,15,0) 100%);backdrop-filter:blur(4px)">
@@ -3378,6 +3379,30 @@ function jumpToCity(key) {
 
 // ── Map style toggle (satellite ⇄ dark vector) ───────────────
 let _mapStyleDark = false;
+// Heatmap view toggle — the 'spots-heat' layer already exists (added in
+// _addMapSourcesAndLayers) and auto-fades out above zoom 12. This toggle lets
+// the user force a pure heatmap view: keeps the heat layer visible at any
+// zoom and hides the individual/cluster markers so density reads cleanly.
+let _heatmapForced = false;
+function toggleHeatmapView() {
+  if (!mapObj) return;
+  _heatmapForced = !_heatmapForced;
+  const vis = _heatmapForced ? 'none' : 'visible';
+  ['clusters-glow', 'clusters-circle', 'clusters'].forEach(id => {
+    if (mapObj.getLayer(id)) mapObj.setLayoutProperty(id, 'visibility', vis);
+  });
+  if (mapObj.getLayer('spots-heat')) {
+    mapObj.setPaintProperty('spots-heat', 'heatmap-opacity',
+      _heatmapForced ? 0.75 : ['interpolate', ['linear'], ['zoom'], 8, 1, 12, 0]);
+  }
+  mapMarkers.forEach(m => { m.getElement().style.display = _heatmapForced ? 'none' : ''; });
+  const btn = document.getElementById('map-heat-btn');
+  if (btn) {
+    btn.style.background = _heatmapForced ? 'rgba(255,92,0,.35)' : 'rgba(5,8,15,.65)';
+    btn.style.borderColor = _heatmapForced ? 'rgba(255,92,0,.6)' : 'rgba(255,255,255,.2)';
+  }
+}
+
 function toggleMapStyle() {
   if (!mapObj) return;
   _mapStyleDark = !_mapStyleDark;
@@ -3385,6 +3410,9 @@ function toggleMapStyle() {
     ? 'mapbox://styles/mapbox/dark-v11'
     : 'mapbox://styles/mapbox/satellite-streets-v12';
   // setStyle wipes custom sources/layers/images — re-add them once the new style loads.
+  // Heatmap-forced state can't survive the wipe (layers are rebuilt with default
+  // paint), so drop back to normal view rather than show a stale toggle state.
+  _heatmapForced = false;
   mapObj.once('style.load', () => {
     _addMapSourcesAndLayers();
     placeMapMarkers();
@@ -3394,6 +3422,8 @@ function toggleMapStyle() {
   mapObj.setStyle(style);
   const btn = document.getElementById('map-style-btn');
   if (btn) { btn.textContent = _mapStyleDark ? '🛰' : '🌗'; btn.title = _mapStyleDark ? 'Satellite view' : 'Dark view'; }
+  const heatBtn = document.getElementById('map-heat-btn');
+  if (heatBtn) { heatBtn.style.background = 'rgba(5,8,15,.65)'; heatBtn.style.borderColor = 'rgba(255,255,255,.2)'; }
 }
 
 /* SVG icon set for map markers */
