@@ -413,6 +413,21 @@ module.exports = async (req, res) => {
       return res.status(200).json({ post, success: true });
     }
 
+    /* ─── DELETE /posts/:id (delete own post) ─────────────── */
+    if (editPostId && req.method === 'DELETE') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { data: existing } = await sb().from('posts').select('user_id').eq('id', editPostId).single();
+      if (!existing) return res.status(404).json({ error: 'Post not found' });
+      if (existing.user_id !== user.id) return res.status(403).json({ error: 'Not your post' });
+
+      const { error } = await sb().from('posts').delete().eq('id', editPostId);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ success: true });
+    }
+
     /* ─── GET /profiles/:id ───────────────────────────────── */
     const profId = url.match(/^\/profiles\/([^/]+)$/)?.[1];
     if (profId && req.method === 'GET') {
@@ -732,7 +747,7 @@ module.exports = async (req, res) => {
       if (!qr_data) return res.status(400).json({ error: 'qr_data required' });
 
       const parts = String(qr_data).split(':');
-      if (parts.length < 4 || parts[0] !== 'PULSEFY')
+      if (parts.length < 4 || parts[0] !== 'PULSIFY')
         return res.status(400).json({ error: 'Invalid QR code' });
 
       const booking_ref = parts[1];
@@ -936,6 +951,20 @@ module.exports = async (req, res) => {
 
       if (!email || !password || !name)
         return res.status(400).json({ error: 'email, password and business_name are required' });
+
+      // Block obvious duplicates: same business name in the same city, or same phone number already on file
+      const dupCity = (b.city || '').trim();
+      if (role === 'business') {
+        let dupQuery = sb().from('businesses').select('id').ilike('name', name);
+        if (dupCity) dupQuery = dupQuery.ilike('city', dupCity);
+        const { data: dupByName } = await dupQuery.limit(1);
+        if (dupByName?.length) return res.status(409).json({ error: 'A business with this name already exists in this city. Contact support if this is your business.' });
+
+        if (b.phone) {
+          const { data: dupByPhone } = await sb().from('businesses').select('id').eq('contact_phone', b.phone).limit(1);
+          if (dupByPhone?.length) return res.status(409).json({ error: 'A business is already registered with this phone number.' });
+        }
+      }
 
       // Create auth user via admin API
       const adminSb = createClient(SUPA_URL, SUPA_SVC);

@@ -1729,7 +1729,7 @@ function renderLeadsTable(leads) {
     const statusCls = { new:'s-warn', contacted:'', converted:'s-ok', ignored:'s-bad' }[l.status] || '';
     const contact = [l.phone, l.email].filter(Boolean).join(' · ') || '—';
     const socials = [
-      l.instagram ? `<a href="https://instagram.com/${l.instagram.replace('@','')}" target="_blank" style="color:var(--pk)">IG</a>` : '',
+      l.instagram ? `<a href="https://instagram.com/${esc(l.instagram.replace('@',''))}" target="_blank" style="color:var(--pk)">IG</a>` : '',
       l.website   ? `<a href="${esc(l.website)}" target="_blank" style="color:var(--pk)">Web</a>` : '',
     ].filter(Boolean).join(' ');
     return `<tr>

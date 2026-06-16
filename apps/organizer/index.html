@@ -1946,40 +1946,31 @@ async function submitEvent() {
       else { imgUrl = sb.storage.from('post-images').getPublicUrl(path).data.publicUrl; }
     }
 
-    const eventId = 'org_' + currentUser.id.slice(0,8) + '_' + Date.now();
-
-    const { error } = await sb.from('events').insert({
-      id: eventId,
-      name,
-      date_local: date,
-      time_local: time || null,
-      venue_name: venue,
-      venue_city: city,
-      venue_province: cityToProvince(city) || currentProfile.province || null,
-      image_url: imgUrl || null,
-      genre: genre || 'other',
-      description: desc || null,
-      price_min: minPrice,
-      price_max: maxPrice,
-      is_free: allFree,
-      organiser_name: currentProfile.display_name || currentUser.email?.split('@')[0],
-      organiser_id: currentUser.id,
-      is_active: true,
-      source: 'organizer',
-      venue_lat: evLat,
-      venue_lon: evLon,
-      location_confidence: locConfidence,
-      approved: currentProfile?.subscription_type === 'premium' || currentProfile?.subscription_type === 'trial',
+    const evRes = await fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + freshToken },
+      body: JSON.stringify({
+        name,
+        date_local: date,
+        time_local: time || null,
+        venue_name: venue,
+        venue_city: city,
+        venue_province: cityToProvince(city) || currentProfile.province || null,
+        image_url: imgUrl || null,
+        genre: genre || 'other',
+        description: desc || null,
+        venue_lat: evLat,
+        venue_lon: evLon,
+        location_confidence: locConfidence,
+        tiers,
+      }),
     });
-    if (error) throw new Error(error.message);
+    const evData = await evRes.json();
+    if (!evRes.ok) throw new Error(evData.error || 'Failed to create event');
+    if (evData.tier_error) toast('Event saved, but ticket tiers failed: ' + evData.tier_error, 'err');
 
-    // Insert all ticket tiers.
-    // NOTE: is_free and sold_out are GENERATED columns in ticket_tiers — never insert them.
-    if (tiers.length > 0) {
-      const tierRows = tiers.map(t => ({ event_id: eventId, name: t.name, price: t.price, capacity: t.capacity, sort_order: t.sort_order }));
-      const { error: tierErr } = await sb.from('ticket_tiers').insert(tierRows);
-      if (tierErr) toast('Event saved, but ticket tiers failed: ' + tierErr.message, 'err');
-    }
+    const eventId = evData.id;
+    const isPremiumApproved = evData.approved;
 
     if (showOnMap) {
       await fetch('/api/events/' + eventId + '/request-map', {
@@ -2000,8 +1991,7 @@ async function submitEvent() {
       })
     }).catch(() => {});
 
-    const isPremium = currentProfile?.subscription_type === 'premium' || currentProfile?.subscription_type === 'trial';
-    toast(showOnMap ? '🎉 Event submitted! Map pin request sent to admin.' : (isPremium ? '🎉 Event created and posted to feed!' : '🎉 Event submitted — pending admin approval before it goes live.'), 'ok');
+    toast(showOnMap ? '🎉 Event submitted! Map pin request sent to admin.' : (isPremiumApproved ? '🎉 Event created and posted to feed!' : '🎉 Event submitted — pending admin approval before it goes live.'), 'ok');
     document.getElementById('ev-name').value = '';
     document.getElementById('ev-date').value = '';
     document.getElementById('ev-venue').value = '';
@@ -2087,8 +2077,12 @@ async function deletePost(postId, btn) {
     return;
   }
   btn.disabled = true; btn.textContent = '…';
-  const { error } = await sb.from('posts').delete().eq('id', postId).eq('user_id', currentUser.id);
-  if (error) { toast('Delete failed', 'err'); btn.disabled = false; btn.textContent = 'Delete'; btn.dataset.confirm = ''; return; }
+  const { data: { session: pDelSess } } = await sb.auth.getSession();
+  const pDelRes = await fetch('/api/posts/' + postId, {
+    method: 'DELETE',
+    headers: { 'Authorization': 'Bearer ' + pDelSess?.access_token },
+  });
+  if (!pDelRes.ok) { toast('Delete failed', 'err'); btn.disabled = false; btn.textContent = 'Delete'; btn.dataset.confirm = ''; return; }
   btn.closest('.post-item').remove();
   const n = parseInt(document.getElementById('stat-posts').textContent || 0) - 1;
   document.getElementById('stat-posts').textContent = Math.max(0, n);
@@ -2112,9 +2106,14 @@ async function savePostEdit() {
   const evTag   = document.getElementById('edit-post-event-tag').value.trim();
   const btn = document.getElementById('save-post-edit-btn');
   btn.disabled = true; btn.textContent = 'Saving…';
-  const { error } = await sb.from('posts').update({ caption: caption || null, event_name: evTag || null }).eq('id', _editPostId).eq('user_id', currentUser.id);
+  const { data: { session: pEditSess } } = await sb.auth.getSession();
+  const pEditRes = await fetch('/api/posts/' + _editPostId, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pEditSess?.access_token },
+    body: JSON.stringify({ caption: caption || null, event_name: evTag || null }),
+  });
   btn.disabled = false; btn.textContent = 'Save Changes ✅';
-  if (error) { toast('Could not save', 'err'); return; }
+  if (!pEditRes.ok) { toast('Could not save', 'err'); return; }
   const capEl = document.getElementById('post-cap-' + _editPostId);
   if (capEl) capEl.textContent = caption || '(no caption)';
   if (_postDataMap[_editPostId]) { _postDataMap[_editPostId].caption = caption; _postDataMap[_editPostId].event_name = evTag; }
@@ -2188,9 +2187,15 @@ async function saveEventEdit() {
     } catch(_) {}
   }
 
-  const { error } = await sb.from('events').update(upd).eq('id', _editEvId).eq('organiser_id', currentUser.id);
+  const { data: { session: editSess } } = await sb.auth.getSession();
+  const editRes = await fetch('/api/events/' + _editEvId, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + editSess?.access_token },
+    body: JSON.stringify(upd),
+  });
+  const editData = await editRes.json();
   btn.disabled = false; btn.textContent = 'Save Event ✅';
-  if (error) { toast('Could not save event: ' + error.message, 'err'); return; }
+  if (!editRes.ok) { toast('Could not save event: ' + (editData.error || 'unknown error'), 'err'); return; }
   if (_evMap[_editEvId]) Object.assign(_evMap[_editEvId], upd);
   closeOrgSheet('org-edit-event-sheet');
   toast('Event updated ✅', 'ok');
@@ -2212,8 +2217,12 @@ async function deleteEvent(evId, btn) {
     return;
   }
   btn.textContent = '…';
-  const { error } = await sb.from('events').delete().eq('id', evId).eq('organiser_id', currentUser.id);
-  if (error) { toast('Delete failed', 'err'); btn.textContent = 'Delete'; return; }
+  const { data: { session: delSess } } = await sb.auth.getSession();
+  const delRes = await fetch('/api/events/' + evId, {
+    method: 'DELETE',
+    headers: { 'Authorization': 'Bearer ' + delSess?.access_token },
+  });
+  if (!delRes.ok) { toast('Delete failed', 'err'); btn.textContent = 'Delete'; return; }
   document.getElementById('ev-item-' + evId)?.remove();
   delete _evMap[evId];
   const n = parseInt(document.getElementById('stat-events').textContent||0)-1;

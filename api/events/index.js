@@ -1,4 +1,4 @@
-const { sb, CORS, haverBox, rateLimited, captureError } = require('../shared');
+const { sb, CORS, haverBox, rateLimited, authUser, captureError } = require('../shared');
 
 module.exports = async (req, res) => {
   Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
@@ -105,6 +105,112 @@ module.exports = async (req, res) => {
       return res.status(200).json({ event: ev, tiers: tiers || [], photos: photos || [] });
     }
 
+    /* ─── POST /events (organizer creates event) ─────────── */
+    if (url === '/events' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+      if (auth.profile.role !== 'organizer') return res.status(403).json({ error: 'Organizer role required' });
+
+      const b = req.body || {};
+      const name = (b.name || '').trim();
+      const date_local = (b.date_local || '').trim();
+      const venue_name = (b.venue_name || '').trim();
+      const venue_city = (b.venue_city || '').trim();
+      if (!name || !date_local || !venue_name || !venue_city) {
+        return res.status(400).json({ error: 'name, date_local, venue_name and venue_city are required' });
+      }
+
+      let venue_lat = b.venue_lat != null ? parseFloat(b.venue_lat) : null;
+      let venue_lon = b.venue_lon != null ? parseFloat(b.venue_lon) : null;
+      if (venue_lat != null && (isNaN(venue_lat) || venue_lat < -35 || venue_lat > -22)) venue_lat = null;
+      if (venue_lon != null && (isNaN(venue_lon) || venue_lon < 16 || venue_lon > 33)) venue_lon = null;
+      if (venue_lat == null || venue_lon == null) { venue_lat = null; venue_lon = null; }
+
+      const tiers = Array.isArray(b.tiers) && b.tiers.length
+        ? b.tiers.map((t, i) => ({
+            name: (t.name || 'General Admission').trim(),
+            price: Math.max(0, parseFloat(t.price) || 0),
+            capacity: (Number.isFinite(parseInt(t.capacity, 10)) && parseInt(t.capacity, 10) > 0) ? parseInt(t.capacity, 10) : null,
+            sort_order: i,
+          }))
+        : [{ name: 'General Admission', price: 0, capacity: null, sort_order: 0 }];
+
+      const price_min = Math.min(...tiers.map(t => t.price));
+      const price_max = Math.max(...tiers.map(t => t.price));
+      const is_free = tiers.every(t => t.price === 0);
+
+      // approved is decided server-side from the organizer's subscription — never trust the client for this.
+      const approved = auth.profile.subscription_type === 'premium' || auth.profile.subscription_type === 'trial';
+
+      const eventId = 'org_' + auth.user.id.slice(0, 8) + '_' + Date.now();
+
+      const { error } = await sb().from('events').insert({
+        id: eventId,
+        name,
+        date_local,
+        time_local: b.time_local || null,
+        venue_name,
+        venue_city,
+        venue_province: b.venue_province || null,
+        image_url: b.image_url || null,
+        genre: b.genre || 'other',
+        description: b.description || null,
+        price_min, price_max, is_free,
+        organiser_name: auth.profile.display_name || auth.user.email?.split('@')[0],
+        organiser_id: auth.user.id,
+        is_active: true,
+        source: 'organizer',
+        venue_lat, venue_lon,
+        location_confidence: b.location_confidence || (venue_lat ? 80 : 0),
+        approved,
+      });
+      if (error) return res.status(400).json({ error: error.message });
+
+      const tierRows = tiers.map(t => ({ event_id: eventId, name: t.name, price: t.price, capacity: t.capacity, sort_order: t.sort_order }));
+      const { error: tierErr } = await sb().from('ticket_tiers').insert(tierRows);
+
+      return res.status(200).json({ id: eventId, approved, tier_error: tierErr ? tierErr.message : null });
+    }
+
+    /* ─── PATCH /events/:id (organizer edits own event) ──── */
+    const editEvId = url.match(/^\/events\/([^/]+)$/)?.[1];
+    if (editEvId && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { data: existing } = await sb().from('events').select('organiser_id').eq('id', editEvId).single();
+      if (!existing) return res.status(404).json({ error: 'Event not found' });
+      if (existing.organiser_id !== auth.user.id) return res.status(403).json({ error: 'Not your event' });
+
+      const b = req.body || {};
+      const patch = {};
+      const allowed = ['name', 'date_local', 'time_local', 'venue_name', 'venue_city', 'venue_province', 'image_url', 'genre', 'description'];
+      for (const k of allowed) if (b[k] !== undefined) patch[k] = b[k] || null;
+      if (b.venue_lat != null && b.venue_lon != null) {
+        const lat = parseFloat(b.venue_lat), lon = parseFloat(b.venue_lon);
+        if (lat >= -35 && lat <= -22 && lon >= 16 && lon <= 33) { patch.venue_lat = lat; patch.venue_lon = lon; }
+      }
+      if (!Object.keys(patch).length) return res.status(400).json({ error: 'Nothing to update' });
+
+      const { error } = await sb().from('events').update(patch).eq('id', editEvId);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ success: true });
+    }
+
+    /* ─── DELETE /events/:id (organizer deletes own event) ── */
+    if (editEvId && req.method === 'DELETE') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { data: existing } = await sb().from('events').select('organiser_id').eq('id', editEvId).single();
+      if (!existing) return res.status(404).json({ error: 'Event not found' });
+      if (existing.organiser_id !== auth.user.id) return res.status(403).json({ error: 'Not your event' });
+
+      const { error } = await sb().from('events').delete().eq('id', editEvId);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ success: true });
+    }
+
     /* ─── GET /businesses ─────────────────────────────────── */
     if (url === '/businesses' && req.method === 'GET') {
       const show_all  = q.show_all === 'true';
@@ -154,6 +260,89 @@ module.exports = async (req, res) => {
       const { data: biz, error } = await sb().from('businesses').select('*').eq('id', bizId).single();
       if (error || !biz) return res.status(404).json({ error: 'Business not found' });
       return res.status(200).json({ business: biz });
+    }
+
+    /* ─── PATCH /businesses/:id (owner updates own listing) ── */
+    if (bizId && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { data: existing } = await sb().from('businesses').select('owner_id').eq('id', bizId).single();
+      if (!existing) return res.status(404).json({ error: 'Business not found' });
+      if (existing.owner_id !== auth.user.id) return res.status(403).json({ error: 'Not your business' });
+
+      const { hours } = req.body || {};
+      if (!Array.isArray(hours)) return res.status(400).json({ error: 'hours array required' });
+
+      const { error } = await sb().from('businesses').update({ hours }).eq('id', bizId);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ success: true });
+    }
+
+    /* ─── POST /businesses/:id/menu-items (owner adds item) ── */
+    const menuBizId = url.match(/^\/businesses\/([^/]+)\/menu-items$/)?.[1];
+    if (menuBizId && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+
+      let owned = menuBizId === auth.user.id;
+      if (!owned) {
+        const { data: biz } = await sb().from('businesses').select('owner_id').eq('id', menuBizId).maybeSingle();
+        owned = biz?.owner_id === auth.user.id;
+      }
+      if (!owned) return res.status(403).json({ error: 'Not your business' });
+
+      const b = req.body || {};
+      const name = (b.name || '').trim();
+      const price = parseFloat(b.price);
+      if (!name || isNaN(price) || price < 0) return res.status(400).json({ error: 'name and a valid price are required' });
+
+      if (auth.profile.subscription_type !== 'premium' && auth.profile.subscription_type !== 'trial') {
+        const { count } = await sb().from('menu_items').select('id', { count: 'exact', head: true }).eq('business_id', menuBizId);
+        if ((count || 0) >= 10) return res.status(403).json({ error: 'MENU_LIMIT_REACHED', limit: 10, message: 'Free plan limit: 10 items. Upgrade to premium for unlimited.' });
+      }
+
+      const { data: item, error } = await sb().from('menu_items').insert({
+        business_id: menuBizId, name, price,
+        description: b.description || null,
+        category: b.category || 'General',
+        image_url: b.image_url || null,
+        is_available: b.is_available !== false,
+      }).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ item, success: true });
+    }
+
+    /* ─── PATCH/DELETE /businesses/:id/menu-items/:itemId ──── */
+    const menuItemMatch = url.match(/^\/businesses\/([^/]+)\/menu-items\/([^/]+)$/);
+    if (menuItemMatch && (req.method === 'PATCH' || req.method === 'DELETE')) {
+      const [, mBizId, itemId] = menuItemMatch;
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+
+      let owned = mBizId === auth.user.id;
+      if (!owned) {
+        const { data: biz } = await sb().from('businesses').select('owner_id').eq('id', mBizId).maybeSingle();
+        owned = biz?.owner_id === auth.user.id;
+      }
+      if (!owned) return res.status(403).json({ error: 'Not your business' });
+
+      if (req.method === 'DELETE') {
+        const { error } = await sb().from('menu_items').delete().eq('id', itemId).eq('business_id', mBizId);
+        if (error) return res.status(400).json({ error: error.message });
+        return res.status(200).json({ success: true });
+      }
+
+      const b = req.body || {};
+      const patch = {};
+      for (const k of ['name', 'description', 'category', 'image_url']) if (b[k] !== undefined) patch[k] = b[k] || null;
+      if (b.price !== undefined) patch.price = parseFloat(b.price) || 0;
+      if (b.is_available !== undefined) patch.is_available = !!b.is_available;
+      if (!Object.keys(patch).length) return res.status(400).json({ error: 'Nothing to update' });
+
+      const { error } = await sb().from('menu_items').update(patch).eq('id', itemId).eq('business_id', mBizId);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ success: true });
     }
 
     return res.status(404).json({ error: 'Not found' });
