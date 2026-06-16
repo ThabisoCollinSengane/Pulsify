@@ -1385,7 +1385,7 @@ function renderDiscoverCard(ev) {
   const img = ev.image_url
     ? `<img src="${xe(ev.image_url)}" loading="lazy" style="width:100%;height:120px;object-fit:cover;border-radius:12px;margin-bottom:8px" onerror="this.style.display='none'"/>`
     : `<div style="width:100%;height:120px;background:linear-gradient(135deg,rgba(176,38,255,.18),rgba(255,92,0,.14));border-radius:12px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:2.4rem">🎟</div>`;
-  return `<a href="${url}" style="display:block;background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:10px;text-decoration:none;color:inherit">
+  return `<a href="${url}" target="_blank" rel="noopener" style="display:block;background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:10px;text-decoration:none;color:inherit">
     ${img}
     <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.92rem;margin-bottom:4px;color:var(--tx)">${xe(ev.name)}</div>
     <div style="font-size:.72rem;color:var(--mu2);margin-bottom:3px">📍 ${xe(ev.venue_city || '')}${ev.venue_name ? ' · ' + xe(ev.venue_name) : ''}</div>
