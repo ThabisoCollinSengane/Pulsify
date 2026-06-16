@@ -2165,9 +2165,7 @@ async function loadPromotions() {
   if (!ADS_ENABLED) return { featured: [], injected: [] };
   try {
     const params = new URLSearchParams({ city: feedCity || '', genre: feedGenre || '' });
-    const r = await fetch('/api/promotions?' + params);
-    if (!r.ok) return { featured: [], injected: [] };
-    _cachedPromos = await safeJson(r);
+    _cachedPromos = await Api.get('/promotions?' + params);
     return _cachedPromos;
   } catch(e) { return { featured: [], injected: [] }; }
 }
@@ -2363,9 +2361,7 @@ let _banners = [], _bannerIdx = 0, _bannerTimer = null;
 
 async function loadPromoBanners() {
   try {
-    const r = await fetch('/api/banners');
-    if (!r.ok) return;
-    const { banners } = await r.json();
+    const { banners } = await Api.get('/banners');
     if (!banners?.length) return;
     _banners = banners;
     const wrap = document.getElementById('promo-banner-wrap');
@@ -2690,7 +2686,7 @@ function chgQ(delta) {
   const oe = document.getElementById('order-summary'); if (oe) oe.innerHTML = buildOrder();
 }
 let _paystackPK = '';
-fetch('/api/config').then(r => r.json()).then(d => { _paystackPK = d.paystackPublicKey || ''; }).catch(() => {});
+Api.get('/config').then(d => { _paystackPK = d.paystackPublicKey || ''; }).catch(() => {});
 
 async function initPay(evId) {
   const name  = document.getElementById('buyer-name')?.value.trim();
@@ -5975,7 +5971,7 @@ async function _registerPush(user) {
     const reg = await navigator.serviceWorker.register('/sw.js');
     const existing = await reg.pushManager.getSubscription();
     if (existing) return; // already subscribed
-    const { key } = await fetch('/api/push/vapid-public-key').then(r => r.json());
+    const { key } = await Api.get('/push/vapid-public-key');
     if (!key) return; // VAPID not configured
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
@@ -5984,11 +5980,7 @@ async function _registerPush(user) {
     const { data: { session } } = await getSB().auth.getSession();
     if (!session) return;
     const pf = JSON.parse(localStorage.getItem('p_profile') || '{}');
-    await fetch('/api/push/subscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-      body: JSON.stringify({ subscription: sub, city: pf.city || null, genres: pf.genres || [] }),
-    });
+    await Api.post('/push/subscribe', { subscription: sub, city: pf.city || null, genres: pf.genres || [] }, { auth: true });
   } catch(e) { /* push not supported or denied — silent fail */ }
 }
 
