@@ -1619,8 +1619,15 @@ const Api = {
     const headers = {};
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     if (auth) {
+      // Canonical token logic: prefer the live session token (localStorage
+      // p_token goes stale when Supabase silently refreshes ~hourly), persist
+      // it, and fall back to the last-known p_token if getSession is unavailable.
       let token = '';
-      try { const { data: { session } } = await getSB().auth.getSession(); token = session?.access_token || ''; } catch (_) {}
+      try {
+        const { data: { session } } = await getSB().auth.getSession();
+        if (session?.access_token) { token = session.access_token; localStorage.setItem('p_token', token); }
+      } catch (_) {}
+      if (!token) token = localStorage.getItem('p_token') || '';
       if (token) headers['Authorization'] = 'Bearer ' + token;
       else if (auth === true) throw new Error('Not signed in');
     }
@@ -1632,8 +1639,9 @@ const Api = {
     if (!res.ok) throw new Error((data && data.error) || ('HTTP ' + res.status));
     return data || {};
   },
-  get(path, opts)        { return this._req('GET',  path, opts); },
-  post(path, body, opts) { return this._req('POST', path, { ...opts, body }); },
+  get(path, opts)        { return this._req('GET',    path, opts); },
+  post(path, body, opts) { return this._req('POST',   path, { ...opts, body }); },
+  del(path, body, opts)  { return this._req('DELETE', path, { ...opts, body }); },
 };
 
 /* ── NAVIGATION ── */
@@ -4495,17 +4503,10 @@ async function postComment() {
   if (!currentUser) return showToast('Please sign in to comment.', 'err');
 
   inp.disabled = true;
-  const token = localStorage.getItem('p_token') || '';
   try {
     const payload = { entity_id: activeEntityId, entity_type: activeEntityType, content: val };
     if (window._cmtReplyTo) payload.parent_id = window._cmtReplyTo;
-    const res = await fetch('/api/comments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify(payload),
-    });
-    const json = await safeJson(res);
-    if (!res.ok) throw new Error(json.error || 'Could not save — please retry');
+    const json = await Api.post('/comments', payload, { auth: true });
     if (!json.comment) throw new Error('Could not save — please retry');
 
     const prof = JSON.parse(localStorage.getItem('p_profile') || '{}');
@@ -4538,23 +4539,9 @@ async function toggleLike(btn, entityId, entityType = 'event') {
   ico.textContent = liked ? '❤️' : '🤍';
   cntEl.textContent = fn(liked ? currentNum + 1 : Math.max(0, currentNum - 1));
 
-  // Always use the live session token — localStorage p_token goes stale when
-  // Supabase silently refreshes the access token every ~1 hour.
-  let token = '';
   try {
-    const sb2 = getSB();
-    const { data: { session } } = await sb2.auth.getSession();
-    token = session?.access_token || localStorage.getItem('p_token') || '';
-    if (session?.access_token) localStorage.setItem('p_token', session.access_token);
-  } catch(_) { token = localStorage.getItem('p_token') || ''; }
-
-  try {
-    const res = await fetch('/api/reactions', {
-      method: liked ? 'POST' : 'DELETE',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ entity_type: entityType, entity_id: entityId, type: 'like' }),
-    });
-    if (!res.ok) { const j = await safeJson(res); throw new Error(j.error || 'Failed'); }
+    const body = { entity_type: entityType, entity_id: entityId, type: 'like' };
+    await (liked ? Api.post('/reactions', body, { auth: true }) : Api.del('/reactions', body, { auth: true }));
   } catch(e) {
     console.error('Like error:', e);
     btn.classList.toggle('lk');
