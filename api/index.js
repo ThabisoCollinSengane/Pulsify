@@ -1,7 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 const { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail, sendTicketEmail } = require('./email');
-const { rateLimited, captureError, corsHeaders } = require('./shared');
+const { rateLimited, captureError, corsHeaders, signQr, verifyQr } = require('./shared');
 
 const SUPA_URL  = process.env.SUPABASE_URL  || 'https://cjzewfvtdayjgjdpdmln.supabase.co';
 const SUPA_ANON = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
@@ -25,7 +25,6 @@ const sbAs = (token) => {
 const tokenFrom = (req) => (req.headers.authorization || '').replace('Bearer ', '').trim();
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || '';
-const QR_SECRET       = process.env.QR_SECRET || 'pulsefy-qr-fallback-secret';
 const PAYSTACK_BASE   = 'https://api.paystack.co';
 
 // SA bank name → Paystack clearing code
@@ -40,13 +39,6 @@ const SA_BANK_CODES = {
   'African Bank':  '430000',
 };
 
-function signQr(bookingRef, eventId) {
-  return crypto.createHmac('sha256', QR_SECRET).update(`${bookingRef}:${eventId}`).digest('hex').slice(0, 16);
-}
-
-function verifyQr(bookingRef, eventId, sig) {
-  return signQr(bookingRef, eventId) === sig;
-}
 
 async function paystackPost(path, body) {
   const https = require('https');
@@ -748,8 +740,9 @@ module.exports = async (req, res) => {
       const event_id    = parts[2];
       const qr_sig      = parts[3];
 
-      // Accept old VALID format OR new HMAC-signed format
-      if (qr_sig !== 'VALID' && !verifyQr(booking_ref, event_id, qr_sig))
+      // Require a valid HMAC signature — the legacy literal "VALID"
+      // sentinel is no longer accepted (it let anyone forge a QR).
+      if (!verifyQr(booking_ref, event_id, qr_sig))
         return res.status(400).json({ error: 'QR signature invalid' });
 
       const { data: booking } = await sb().from('bookings')
