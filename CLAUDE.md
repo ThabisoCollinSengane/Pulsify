@@ -174,17 +174,18 @@ Inspected `cjzewfvtdayjgjdpdmln` — coordinates were clean (no positive lats, n
 ### Home feed breaks (businesses / community / trust) — MUST use string injection
 **Do NOT use DOM-movement** and **never add a static skeleton placeholder** for these sections in the page HTML. DOM-movement (`appendChild`) broke 3× because `feedEl.innerHTML = injectPromos(...)` destroys any live node moved into `feedEl`. A static `#frontline-row` skeleton left in the HTML also caused a permanent **empty "ghost"** section near the top because the string-based `loadFrontline()` no longer fills it. There must be **no** `#frontline-row`, `#feed-break-src`, or static "Where to go" / Trust / Community blocks in the page flow — only the JS-injected ones.
 
-**Correct pattern (enforced in production):** three breaks are woven INTO `#events-feed` at fixed event counts:
+**Correct pattern (enforced in production):** the breaks are woven INTO `#events-feed`:
 - **businesses** (`_frontlineHtml`, id `feed-break-biz`) → after **6** events
+- **category chips** (`_CATEGORY_HTML`, id `feed-break-categories`) → anchored directly after the businesses break (`_placeCategoryBreak`)
+- **trust + why Pulsefy** (`_TRUST_HTML` const, id `feed-break-trust`) → compact strip anchored directly under the businesses/category cluster (`_placeTrustBreak`), **not** at a fixed event count
 - **community** (`_communityHtml`, id `feed-break-community`) → after **12** events
-- **trust + why Pulsefy** (`_TRUST_HTML` const, id `feed-break-trust`) → after **18** events
 
 Mechanics:
 - Each section is a **plain string**, built when its data is ready (`loadFrontline`, `loadCommunityPosts`) or a constant (`_TRUST_HTML`).
 - `_placeBreak(id, html, afterCount, fallbackLast)`: queries `feedEl.querySelectorAll('.fc')`, inserts `html` via `insertAdjacentHTML('afterend')` after the Nth `.fc` card. **Idempotent** — if `#id` already exists it leaves it. `fallbackLast` (only true when `_feedFinal`, i.e. last page loaded) lets a break drop to the last card when there aren't enough events.
-- `_injectFeedBreaks(final)` calls `_placeBreak` for all three; `_ejectFeedBreaks()` removes all three by id (called before clearing the feed).
+- `_injectFeedBreaks(final)` calls `_placeBreak`/`_placeCategoryBreak`/`_placeTrustBreak` for all four; `_ejectFeedBreaks()` removes all four by id (called before clearing the feed).
 - Break content uses `.bc` / `.rd-why-card` / inline divs — **never `.fc`** — so the `.fc` index stays = event cards only.
-- `loadFeed` calls `_injectFeedBreaks(_feedFinal)` after page-1 render, after promos replace innerHTML, and after each infinite-scroll append (so trust@18 lands once enough events exist). `loadFrontline` / `loadCommunityPosts` also call it (race-safe).
+- `loadFeed` calls `_injectFeedBreaks(_feedFinal)` after page-1 render, after promos replace innerHTML, and after each infinite-scroll append. `loadFrontline` / `loadCommunityPosts` also call it (race-safe).
 - `featured-weekend` is the only remaining standalone hidden div (admin promo renderer finds it by id).
 
 ### Map quick-jump, style toggle, stacked-marker fan-out
