@@ -2487,16 +2487,10 @@ function _renderBanner(idx) {
 
 async function loadFrontline() {
   try {
-    const sb = getSB();
-    let bq = sb.from('businesses')
-      .select('id,name,category,suburb,city,lat,lon,rating,review_count,price_range,cover_image_url,is_frontline,frontline_rank,tagline')
-      .order('is_frontline', { ascending: false })
-      .order('rating', { ascending: false, nullsFirst: false })
-      .limit(6);
-    if (feedCity && feedCity !== 'all') bq = bq.ilike('city', `%${feedCity}%`);
+    const params = new URLSearchParams({ limit: 6 });
+    if (feedCity && feedCity !== 'all') params.set('city', feedCity);
     const _ba = new AbortController(); setTimeout(() => _ba.abort(), 8000);
-    const { data: rawBizs, error: bizErr } = await bq.abortSignal(_ba.signal);
-    if (bizErr) throw new Error(bizErr.message);
+    const { businesses: rawBizs } = await Api.get('/businesses?' + params, { signal: _ba.signal });
     const bizs = rawBizs || [];
     bizForMap = bizs;
     if (!bizs.length) return;
@@ -2889,12 +2883,12 @@ async function openBiz(bizId) {
 
   try {
     const sb = getSB();
-    const [{ data: b, error: bizErr }, { count: bizLikeCount }, bizLikedRes] = await Promise.all([
-      sb.from('businesses').select('*').eq('id', bizId).single(),
+    const [{ business: b }, { count: bizLikeCount }, bizLikedRes] = await Promise.all([
+      Api.get('/businesses/' + encodeURIComponent(bizId)).catch(() => ({})),
       sb.from('reactions').select('user_id', { count: 'exact', head: true }).eq('entity_id', bizId).eq('entity_type', 'businesses'),
       currentUser ? sb.from('reactions').select('user_id').eq('entity_id', bizId).eq('entity_type', 'businesses').eq('user_id', currentUser.id).maybeSingle() : Promise.resolve({ data: null }),
     ]);
-    if (bizErr || !b) throw new Error('Not found');
+    if (!b) throw new Error('Not found');
     const bizLiked = !!bizLikedRes.data;
 
     const emo  = ce(b.category);
@@ -6111,11 +6105,7 @@ async function openBizPage() {
   const grid = document.getElementById('bp-grid');
   if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--mu)">Loading…</div>';
   try {
-    const sb = getSB();
-    const { data: bizAll } = await sb.from('businesses')
-      .select('id,name,category,suburb,city,lat,lon,rating,review_count,price_range,cover_image_url,is_frontline,frontline_rank,tagline,description,phone,website,is_verified')
-      .order('is_frontline', { ascending: false })
-      .order('rating', { ascending: false, nullsFirst: false }).limit(50);
+    const { businesses: bizAll } = await Api.get('/businesses?show_all=true&limit=50');
     _bizPageData = bizAll || [];
     _renderBizPage();
   } catch(e) {
