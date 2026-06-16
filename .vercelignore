@@ -1,27 +1,18 @@
-# Root-level index.html backups — real landing page is apps/landing-page/index.html
-# If a root index.html exists it takes precedence over vercel.json rewrites for /
+# Guard: never deploy a root index.html — it shadows the /(.*) rewrite that
+# serves apps/landing-page/index.html for "/". (See CLAUDE.md deployment gotcha.)
 /index.html
-index.html.bak
-index.html.bak.*
-index.html.backup*
-index.html.bak_friend_fix
 
-# Other backup/junk files not needed for deployment
+# Backup files (future-proof guards — backups should never reach production)
 *.bak
 *.bak.*
-feeds.html.bak
-feeds.html.backup
-business-login.html.bak*
-deepseek-edits/
-pumlas pc first backup/
+*.backup
+*.backup.*
 
-# Dev files
-generate_handover.py
-apply_fix.py
-fix_notifications.sql
-fix_rls.sql
+# Dev-only folders not needed for deployment
+_archive/
+db/
+docs/
+scripts/
 supabase/
 .claude/
-Pulsify_Handover.pdf
-claude code ft supabase.md
-DEPLOYMENT_STATUS.md
+.idx/

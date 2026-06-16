@@ -171,15 +171,21 @@ Inspected `cjzewfvtdayjgjdpdmln` — coordinates were clean (no positive lats, n
 ### `ticket_tiers.is_free` / `sold_out` are GENERATED columns — never insert them
 `is_free` is `(price = 0)` and `sold_out` is `(capacity IS NOT NULL AND sold >= capacity)`, both `GENERATED ALWAYS`. Inserting an explicit value raises Postgres `428C9: cannot insert a non-DEFAULT value into column`. Both the organizer and business dashboards used to insert `is_free` into `ticket_tiers` inside a `.catch(()=>{})`, so paid events were saved with **zero tiers** and the event detail panel fell through to "Contact the organiser" instead of showing the Paystack buy flow. **Fix:** insert only `event_id, name, price, sort_order`; surface (don't swallow) the error. The buy flow in `index.html` `openEv()` keys entirely off `ticket_tiers` rows existing.
 
-### Home feed businesses ("Where to go") section — MUST use string injection
-**Do NOT use DOM-movement** to position the businesses break inside the events feed. The pattern `element.appendChild(src)` / `homeHi.appendChild(src)` was tried three times and broke each time because `feedEl.innerHTML = injectPromos(...)` destroys any live DOM node that was moved into `feedEl`, leaving `getElementById('feed-break-src')` returning null.
+### Home feed breaks (businesses / community / trust) — MUST use string injection
+**Do NOT use DOM-movement** and **never add a static skeleton placeholder** for these sections in the page HTML. DOM-movement (`appendChild`) broke 3× because `feedEl.innerHTML = injectPromos(...)` destroys any live node moved into `feedEl`. A static `#frontline-row` skeleton left in the HTML also caused a permanent **empty "ghost"** section near the top because the string-based `loadFrontline()` no longer fills it. There must be **no** `#frontline-row`, `#feed-break-src`, or static "Where to go" / Trust / Community blocks in the page flow — only the JS-injected ones.
 
-**Correct pattern (enforced in production):**
-- `_frontlineHtml`: a plain string, built by `loadFrontline()` after fetching biz data.
-- `_injectFeedBreak()`: calls `feedEl.querySelectorAll('.fc')`, grabs the 15th card (or last), and calls `anchor.insertAdjacentHTML('afterend', _frontlineHtml)`. Creates `#feed-break-inline` fresh each call.
-- `_ejectFeedBreak()`: does `document.getElementById('feed-break-inline')?.remove()`. Nothing else.
-- `loadFrontline()` must call `_injectFeedBreak()` after setting `_frontlineHtml` (handles the race where loadFeed finishes before loadFrontline).
-- `featured-weekend` and `community-pulse` are **standalone divs** in the HTML — never inside any moveable container. Their JS renderers (`renderFeaturedWeekend`, community-pulse handler) find them by ID regardless of feed state.
+**Correct pattern (enforced in production):** three breaks are woven INTO `#events-feed` at fixed event counts:
+- **businesses** (`_frontlineHtml`, id `feed-break-biz`) → after **6** events
+- **community** (`_communityHtml`, id `feed-break-community`) → after **12** events
+- **trust + why Pulsefy** (`_TRUST_HTML` const, id `feed-break-trust`) → after **18** events
+
+Mechanics:
+- Each section is a **plain string**, built when its data is ready (`loadFrontline`, `loadCommunityPosts`) or a constant (`_TRUST_HTML`).
+- `_placeBreak(id, html, afterCount, fallbackLast)`: queries `feedEl.querySelectorAll('.fc')`, inserts `html` via `insertAdjacentHTML('afterend')` after the Nth `.fc` card. **Idempotent** — if `#id` already exists it leaves it. `fallbackLast` (only true when `_feedFinal`, i.e. last page loaded) lets a break drop to the last card when there aren't enough events.
+- `_injectFeedBreaks(final)` calls `_placeBreak` for all three; `_ejectFeedBreaks()` removes all three by id (called before clearing the feed).
+- Break content uses `.bc` / `.rd-why-card` / inline divs — **never `.fc`** — so the `.fc` index stays = event cards only.
+- `loadFeed` calls `_injectFeedBreaks(_feedFinal)` after page-1 render, after promos replace innerHTML, and after each infinite-scroll append (so trust@18 lands once enough events exist). `loadFrontline` / `loadCommunityPosts` also call it (race-safe).
+- `featured-weekend` is the only remaining standalone hidden div (admin promo renderer finds it by id).
 
 ### Map quick-jump, style toggle, stacked-marker fan-out
 - **City jump** (`<select id="map-city-jump">` → `jumpToCity()`): flies to Durban/Joburg/Cape Town/Pretoria/Gqeberha; "All SA" resets `_mapFitDone=false` and re-fits to all markers. A manual jump sets `_mapFitDone=true` so the auto-fit doesn't fight it.
