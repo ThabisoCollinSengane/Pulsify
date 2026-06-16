@@ -86,7 +86,7 @@ module.exports = async (req, res) => {
       if (!term) return res.status(200).json({ results: [] });
 
       const { data, error } = await sb().from('events')
-        .select('id,name,venue_city,date_local,genre,image_url,is_free,price_min')
+        .select('id,name,venue_city,venue_name,date_local,time_local,genre,image_url,is_free,price_min,hype_score,like_count,comment_count,is_frontline,frontline_rank,source,organiser_name')
         .gte('date_local', today)
         .eq('is_active', true)
         .or(`name.ilike.%${term}%,venue_city.ilike.%${term}%,genre.ilike.%${term}%,venue_name.ilike.%${term}%`)
