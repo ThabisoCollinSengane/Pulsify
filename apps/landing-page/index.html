@@ -5103,18 +5103,8 @@ async function openProfile(userId) {
   try {
     const sb = getSB();
     if (!sb) throw new Error('Supabase not loaded');
-    const [{ data: profile, error: pErr }, { count: postsCnt }, { count: followersCnt }, { count: followingCnt }, { data: recent }] = await Promise.all([
-      sb.from('profiles').select('id,username,display_name,avatar_url,cover_url,role,bio,city,genres,social_links,is_verified').eq('id', userId).maybeSingle(),
-      sb.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', userId),
-      sb.from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', userId),
-      sb.from('follows').select('following_id', { count: 'exact', head: true }).eq('follower_id', userId),
-      sb.from('posts').select('id,image_url,caption,created_at,like_count,comment_count').eq('user_id', userId).order('created_at', { ascending: false }).limit(6),
-    ]);
-    if (pErr || !profile) throw new Error(pErr?.message || 'Profile not found');
-    const posts_count = postsCnt || 0;
-    const followers_count = followersCnt || 0;
-    const following_count = followingCnt || 0;
-    const recent_posts = recent || [];
+    const { profile, posts_count, followers_count, following_count, recent_posts } = await Api.get('/profiles/' + encodeURIComponent(userId));
+    if (!profile) throw new Error('Profile not found');
     let isFollowing = false;
     if (currentUser) {
       const { data: fw } = await sb.from('follows').select('follower_id').eq('follower_id', currentUser.id).eq('following_id', userId).maybeSingle();
@@ -5277,20 +5267,11 @@ async function openPost(postId) {
 
 /* Home-feed strip: public posts from organizer & business accounts */
 async function loadCommunityPosts() {
-  const sb = getSB(); if (!sb) return;
   try {
-    const { data: posts } = await sb.from('posts')
-      .select('id,user_id,caption,image_url,created_at,like_count,comment_count,post_type')
-      .in('post_type', ['organizer','business_update'])
-      .eq('visibility', 'public')
-      .order('created_at', { ascending: false })
-      .limit(12);
+    const { posts } = await Api.get('/posts?filter=organizers&limit=12');
     if (!posts || !posts.length) return;
-    const uids = [...new Set(posts.map(p => p.user_id).filter(Boolean))];
-    const { data: profs } = await sb.from('profiles').select('id,display_name,username,avatar_url,role').in('id', uids);
-    const pm = {}; (profs || []).forEach(p => { pm[p.id] = p; });
     const cardsHtml = posts.map(p => {
-      const a = pm[p.user_id] || {};
+      const a = p.profile || {};
       const img = firstImg(p.image_url);
       const name = x(a.display_name || a.username || 'Pulsefy');
       const badge = p.post_type === 'business_update' ? '🏪' : '🎪';
@@ -5372,10 +5353,7 @@ async function switchProfTab(tab, userId) {
 
 async function _renderProfPosts(userId, el) {
   try {
-    const sb = getSB();
-    const { data: posts } = await sb.from('posts')
-      .select('id,image_url,caption,created_at,like_count,comment_count')
-      .eq('user_id', userId).order('created_at', { ascending: false }).limit(18);
+    const { posts } = await Api.get('/posts?user_id=' + encodeURIComponent(userId) + '&limit=18');
     if (!posts || !posts.length) {
       el.innerHTML = '<div style="padding:28px;text-align:center;font-size:.78rem;color:var(--mu);border:1px dashed var(--border);border-radius:12px">No posts yet</div>';
       return;
@@ -5917,9 +5895,9 @@ async function initSupabaseSession() {
     } catch(_) {}
     // Load live profile stats (tickets + posts) from DB
     try {
-      const [{ count: ticketCount }, { count: postCount }] = await Promise.all([
+      const [{ count: ticketCount }, { total: postCount }] = await Promise.all([
         sb.from('bookings').select('id', { count: 'exact', head: true }).eq('user_id', session.user.id).eq('status', 'confirmed'),
-        sb.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', session.user.id),
+        Api.get('/posts?user_id=' + encodeURIComponent(session.user.id) + '&limit=1'),
       ]);
       const s1 = document.getElementById('ps-saved');
       const s2 = document.getElementById('ps-tickets');
