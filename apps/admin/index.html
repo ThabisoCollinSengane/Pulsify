@@ -1132,17 +1132,17 @@ function renderVerifList() {
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
         ${(v.face_scan_url || req.face_scan_url) ? `<div>
           <div style="font-size:.62rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Face Scan / Selfie</div>
-          <a href="${v.face_scan_url || req.face_scan_url}" target="_blank">
-            <img src="${v.face_scan_url || req.face_scan_url}" style="height:100px;border-radius:10px;object-fit:cover;border:1px solid var(--border);display:block;margin-bottom:4px" onerror="this.style.opacity='.3'" loading="lazy"/>
+          <a href="${esc(v.face_scan_url || req.face_scan_url)}" target="_blank">
+            <img src="${esc(v.face_scan_url || req.face_scan_url)}" style="height:100px;border-radius:10px;object-fit:cover;border:1px solid var(--border);display:block;margin-bottom:4px" onerror="this.style.opacity='.3'" loading="lazy"/>
           </a>
-          <a href="${v.face_scan_url || req.face_scan_url}" target="_blank" download style="font-size:.65rem;color:var(--or);text-decoration:none">📥 Download Selfie</a>
+          <a href="${esc(v.face_scan_url || req.face_scan_url)}" target="_blank" download style="font-size:.65rem;color:var(--or);text-decoration:none">📥 Download Selfie</a>
         </div>` : ''}
         ${(v.id_doc_url || req.id_doc_url) ? `<div>
           <div style="font-size:.62rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">ID Document</div>
-          <a href="${v.id_doc_url || req.id_doc_url}" target="_blank">
-            <img src="${v.id_doc_url || req.id_doc_url}" style="height:100px;border-radius:10px;object-fit:cover;border:1px solid var(--border);display:block;margin-bottom:4px" onerror="this.parentElement.insertAdjacentHTML('afterbegin','<div style=&quot;background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.3);border-radius:8px;padding:8px 12px;font-size:.74rem;margin-bottom:4px&quot;>📄 Non-image doc — use Download link below</div>');this.remove()" loading="lazy"/>
+          <a href="${esc(v.id_doc_url || req.id_doc_url)}" target="_blank">
+            <img src="${esc(v.id_doc_url || req.id_doc_url)}" style="height:100px;border-radius:10px;object-fit:cover;border:1px solid var(--border);display:block;margin-bottom:4px" onerror="this.parentElement.insertAdjacentHTML('afterbegin','<div style=&quot;background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.3);border-radius:8px;padding:8px 12px;font-size:.74rem;margin-bottom:4px&quot;>📄 Non-image doc — use Download link below</div>');this.remove()" loading="lazy"/>
           </a>
-          <a href="${v.id_doc_url || req.id_doc_url}" target="_blank" download style="font-size:.65rem;color:var(--or);text-decoration:none">📥 Download ID Doc</a>
+          <a href="${esc(v.id_doc_url || req.id_doc_url)}" target="_blank" download style="font-size:.65rem;color:var(--or);text-decoration:none">📥 Download ID Doc</a>
         </div>` : ''}
       </div>` : ''}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${v.verif_status === 'pending' ? '8px' : '0'}">
@@ -1853,7 +1853,7 @@ function openLeModal(ev) {
   const priceStr = ev.is_free ? 'Free entry' : ev.price_min ? `From R${ev.price_min}` : 'Price TBC';
   document.getElementById('le-modal-meta').innerHTML = `
     📅 ${dateStr}${timeStr?' · 🕐 '+timeStr:''}<br>
-    📍 ${ev.venue_name||''} ${ev.venue_city ? '· '+ev.venue_city : ''}<br>
+    📍 ${esc(ev.venue_name||'')} ${ev.venue_city ? '· '+esc(ev.venue_city) : ''}<br>
     🎟 ${priceStr}`;
   document.getElementById('le-modal-desc').textContent = ev.description || 'No description provided.';
   // Lead info
@@ -2758,7 +2758,7 @@ async function loadAdminSocialLinks() {
   if (!el) return;
   let current = {};
   try {
-    const token = localStorage.getItem('admin_token') || '';
+    const token = adminToken || '';
     const r = await fetch('/api/admin/app-settings', { headers: { Authorization: 'Bearer ' + token } });
     const d = await r.json();
     current = d.settings?.social_links || {};
@@ -2771,7 +2771,7 @@ async function loadAdminSocialLinks() {
 }
 
 async function saveAdminSocialLinks() {
-  const token = localStorage.getItem('admin_token') || '';
+  const token = adminToken || '';
   const links = {};
   _SOCIALS.forEach(s => { links[s.key] = (document.getElementById('asl-'+s.key)?.value||'').trim(); });
   const st = document.getElementById('admin-social-status');
