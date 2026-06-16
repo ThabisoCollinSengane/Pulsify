@@ -424,7 +424,7 @@ module.exports = async (req, res) => {
         { count: followingCount },
         { data: recentPosts },
       ] = await Promise.all([
-        sb().from('profiles').select('id,username,display_name,bio,avatar_url,city,province,role,is_verified,genres').eq('id', profId).single(),
+        sb().from('profiles').select('id,username,display_name,bio,avatar_url,cover_url,social_links,city,province,role,is_verified,genres').eq('id', profId).single(),
         sb().from('posts').select('id', { count: 'exact', head: true }).eq('user_id', profId).eq('visibility', 'public'),
         sb().from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', profId),
         sb().from('follows').select('following_id', { count: 'exact', head: true }).eq('follower_id', profId),
