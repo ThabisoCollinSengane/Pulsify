@@ -711,6 +711,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     <button id="map-loc-btn" onclick="goToMyLocation()" title="My Location" style="width:36px;height:36px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(0,229,255,.4);color:var(--cy);font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">📍</button>
     <button id="map-style-btn" onclick="toggleMapStyle()" title="Toggle map style" style="width:36px;height:36px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">🌗</button>
     <button onclick="snapMapBack()" title="Reset view" style="width:36px;height:36px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">⌂</button>
+    <button onclick="showNearbyEventsPanel()" title="Nearby events list" style="width:36px;height:36px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">☰</button>
   </div>
   <!-- Filter chips — floats over map, below header -->
   <div style="position:absolute;top:calc(var(--th) + var(--tk) + 56px);left:0;right:0;z-index:49;display:flex;gap:6px;padding:8px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;background:linear-gradient(180deg,rgba(5,8,15,.5) 0%,rgba(5,8,15,0) 100%);backdrop-filter:blur(4px)">
@@ -3596,6 +3597,50 @@ function showVenueEventsPanel(events, s) {
           <div style="color:var(--mu);font-size:.9rem;flex-shrink:0">›</div>
         </div>`;
       }).join('')}
+    </div>`;
+  panel.classList.add('open');
+}
+
+// Nearby-events list synced to the current map viewport. Filters eventsForMap
+// to whatever's currently in view (mirrors the marker-rendering filter), then
+// sorts by distance from the user (falls back to map-center distance when
+// geolocation hasn't been granted) so the list always matches what's on screen.
+function showNearbyEventsPanel() {
+  const panel = document.getElementById('map-panel');
+  const mp    = document.getElementById('mp-content');
+  if (!panel || !mp || !mapObj) return;
+  const b = mapObj.getBounds();
+  const center = mapObj.getCenter();
+  const refLat = userLat != null ? userLat : center.lat;
+  const refLon = userLon != null ? userLon : center.lng;
+  const visible = eventsForMap
+    .filter(e => e.venue_lat && e.venue_lon && b.contains([parseFloat(e.venue_lon), parseFloat(e.venue_lat)]))
+    .sort((a, b2) => _haversineKm(refLat, refLon, a.venue_lat, a.venue_lon) - _haversineKm(refLat, refLon, b2.venue_lat, b2.venue_lon));
+
+  mp.innerHTML = `
+    <div class="mp-hero-wrap" style="background:linear-gradient(135deg,rgba(0,229,255,.22),rgba(5,8,15,.96));min-height:70px">
+      <button class="mp-close" onclick="closeMapPanel()">✕</button>
+      <span style="position:absolute;top:10px;left:10px;padding:4px 10px;border-radius:50px;background:rgba(0,229,255,.25);border:1px solid rgba(0,229,255,.5);color:var(--cy);font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(6px)">☰ ${visible.length} Nearby</span>
+      <div style="position:absolute;bottom:12px;left:14px;right:44px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;line-height:1.1;letter-spacing:.02em;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.95)">In This View</div>
+      </div>
+    </div>
+    <div style="overflow-y:auto;max-height:380px;padding:4px 14px 16px">
+      ${visible.length ? visible.map(ev => {
+        const es = _ms(ev, 'event');
+        const price = ev.is_free ? '<span style="color:var(--li);font-size:.65rem;font-weight:700">FREE</span>' : ev.price_min ? `<span style="color:var(--li);font-size:.65rem;font-weight:700">From R${ev.price_min}</span>` : '';
+        const km = _haversineKm(refLat, refLon, ev.venue_lat, ev.venue_lon);
+        const dist = isFinite(km) ? `<span style="color:var(--mu);font-size:.65rem">${km < 1 ? Math.round(km*1000)+'m' : km.toFixed(1)+'km'}</span>` : '';
+        return `<div onclick="openEv('${escapeHtml(String(ev.id))}');closeMapPanel()" style="display:flex;gap:11px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;align-items:center">
+          ${ev.image_url ? `<img src="${escapeHtml(ev.image_url)}" style="width:52px;height:52px;border-radius:10px;object-fit:cover;flex-shrink:0" loading="lazy">` : `<div style="width:52px;height:52px;border-radius:10px;background:rgba(${es.sh},.18);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">${es.ico}</div>`}
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(ev.name||'')}</div>
+            <div style="font-size:.68rem;color:var(--mu);margin-top:2px">${ev.date_local?fdt(ev.date_local,ev.time_local):''}${ev.venue_name ? ' · '+escapeHtml(ev.venue_name) : ''}</div>
+            <div style="margin-top:2px;display:flex;gap:8px;align-items:center">${price}${dist}</div>
+          </div>
+          <div style="color:var(--mu);font-size:.9rem;flex-shrink:0">›</div>
+        </div>`;
+      }).join('') : '<div style="padding:24px 0;text-align:center;color:var(--mu);font-size:.78rem">No events in this view — pan or zoom out.</div>'}
     </div>`;
   panel.classList.add('open');
 }
