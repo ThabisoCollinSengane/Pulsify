@@ -1243,7 +1243,7 @@ function previewBizEvent() {
   const parts = [];
   if (date) parts.push('📅 ' + new Date(date).toLocaleDateString('en-ZA', { weekday:'short', day:'numeric', month:'short', year:'numeric' }));
   if (time) parts.push('🕐 ' + time.slice(0,5));
-  if (venue) parts.push('📍 ' + venue + (city ? ', ' + city : ''));
+  if (venue) parts.push('📍 ' + xe(venue) + (city ? ', ' + xe(city) : ''));
   document.getElementById('biz-ev-preview-meta').innerHTML = parts.join('<br>');
   openSheet('biz-ev-preview-sheet');
 }

@@ -1927,7 +1927,7 @@ async function submitEvent() {
         const gr = await fetch(`/api/geocode?venue=${encodeURIComponent(venue)}&city=${encodeURIComponent(city)}`);
         if (gr.ok) {
           const gd = await gr.json();
-          if (gd.lat && gd.lon) { evLat = gd.lat; evLon = gd.lon; locConfidence = 80; }
+          if (gd.lat && gd.lon && gd.lat >= -35 && gd.lat <= -22 && gd.lon >= 16 && gd.lon <= 33) { evLat = gd.lat; evLon = gd.lon; locConfidence = 80; }
         }
       } catch(_) {}
     }

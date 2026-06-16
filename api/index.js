@@ -931,7 +931,7 @@ module.exports = async (req, res) => {
       const b = req.body || {};
       const email    = (b.email || '').trim().toLowerCase();
       const password = b.password || '';
-      const name     = (b.business_name || b.display_name || '').trim();
+      const name     = (b.business_name || b.display_name || b.name || '').trim();
       const role     = b.role === 'organizer' ? 'organizer' : 'business';
 
       if (!email || !password || !name)
@@ -968,7 +968,7 @@ module.exports = async (req, res) => {
       await sb().from('businesses').upsert({
         owner_id:     uid,
         name:         name,
-        category:     b.category || null,
+        category:     b.category || b.type || null,
         city:         b.city     || null,
         province:     b.province || null,
         contact_email: email,
