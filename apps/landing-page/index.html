@@ -1445,6 +1445,7 @@ const PROV_CITY = {
 
 /* ── UTILS ── */
 function x(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+const escapeHtml = x;
 // Guard for image uploads — allowed types + 5MB cap. Server-side limits are
 // also enforced on the Supabase storage buckets (allowed_mime_types/file_size_limit).
 function validImageFile(file) {
@@ -2345,11 +2346,11 @@ function _renderBanner(idx) {
     ? `<div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:5px">${_banners.map((_,i)=>`<div style="width:6px;height:6px;border-radius:50%;background:${i===idx?'#fff':'rgba(255,255,255,.4)'}"></div>`).join('')}</div>`
     : '';
   wrap.onclick = b.target_url ? () => { if (b.target_url.startsWith('http')) window.open(b.target_url,'_blank'); else window.location.href = b.target_url; } : null;
-  wrap.innerHTML = `<div style="position:relative;height:80px;background:${b.bg_color||'#FF5C00'};${b.image_url?`background-image:url('${b.image_url}');background-size:cover;background-position:center`:''};border-radius:16px;overflow:hidden">
+  wrap.innerHTML = `<div style="position:relative;height:80px;background:${b.bg_color||'#FF5C00'};${b.image_url?`background-image:url('${x(b.image_url)}');background-size:cover;background-position:center`:''};border-radius:16px;overflow:hidden">
     <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.5) 0%,rgba(0,0,0,.1) 100%);display:flex;align-items:center;padding:0 16px;gap:12px">
       <div style="flex:1;min-width:0">
-        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:.88rem;color:#fff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.title||''}</div>
-        ${b.subtitle?`<div style="font-size:.72rem;color:rgba(255,255,255,.8);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.subtitle}</div>`:''}
+        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:.88rem;color:#fff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(b.title||'')}</div>
+        ${b.subtitle?`<div style="font-size:.72rem;color:rgba(255,255,255,.8);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(b.subtitle)}</div>`:''}
       </div>
       ${b.target_url?`<div style="font-size:.72rem;font-weight:700;color:#fff;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);border-radius:50px;padding:5px 12px;flex-shrink:0;backdrop-filter:blur(4px)">View →</div>`:''}
     </div>
@@ -4009,13 +4010,13 @@ function renderProfile() {
   const avEl  = document.getElementById('profile-av');
   const nmEl  = document.getElementById('profile-name');
   const subEl = document.getElementById('profile-sub');
-  if (avEl)  { if (prof?.avatar_url) { avEl.innerHTML = '<img src="'+prof.avatar_url+'" style="width:100%;height:100%;object-fit:cover"/>'; } else { avEl.textContent = name[0]?.toUpperCase() || '😊'; } }
+  if (avEl)  { if (prof?.avatar_url) { avEl.innerHTML = '<img src="'+x(prof.avatar_url)+'" style="width:100%;height:100%;object-fit:cover"/>'; } else { avEl.textContent = name[0]?.toUpperCase() || '😊'; } }
   if (nmEl)  nmEl.textContent  = name;
   if (subEl) subEl.textContent = handle;
 
   // Cover photo (gradient fallback stays via CSS when no cover_url)
   const coverEl = document.getElementById('profile-cover');
-  if (coverEl && prof?.cover_url) coverEl.style.backgroundImage = 'url("' + prof.cover_url + '")';
+  if (coverEl && prof?.cover_url) coverEl.style.backgroundImage = 'url("' + x(prof.cover_url) + '")';
 
   // Bio
   const bioEl = document.getElementById('profile-bio');
