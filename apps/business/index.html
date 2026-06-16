@@ -2519,8 +2519,16 @@ async function deleteMenuItem(id, btn) {
 // ════════════════════════════════════════════════════════════
 //  PICKUP HOURS
 // ════════════════════════════════════════════════════════════
-function renderHoursEditor() {
-  const hours = load('hours', DAYS.map(d => ({ day:d, open:d!=='Sunday', from:'10:00', to:'18:00' })));
+async function renderHoursEditor() {
+  const defHours = DAYS.map(d => ({ day:d, open:d!=='Sunday', from:'10:00', to:'18:00' }));
+  let hours = defHours;
+  try {
+    const r = await fetch('/api/businesses/' + getBizId());
+    if (r.ok) {
+      const { business } = await r.json();
+      if (Array.isArray(business?.hours) && business.hours.length) hours = business.hours;
+    }
+  } catch(_) {}
   document.getElementById('hours-editor').innerHTML = hours.map((h, i) => `
     <div class="hour-row">
       <span class="hour-day">${h.day.slice(0,3)}</span>
@@ -2539,9 +2547,18 @@ function toggleDay(i) {
   const isOn = tog.classList.toggle('on'); times.style.display = isOn ? 'flex' : 'none';
 }
 
-function saveHours() {
+async function saveHours() {
   const hours = DAYS.map((d, i) => ({ day:d, open:document.getElementById('htog-'+i).classList.contains('on'), from:document.getElementById('hfrom-'+i)?.value||'10:00', to:document.getElementById('hto-'+i)?.value||'18:00' }));
-  save('hours', hours); toast('Pickup hours saved ✅', 'ok');
+  const sb = getSB();
+  const { data: { session } } = sb ? await sb.auth.getSession() : { data: { session: null } };
+  if (!session) return toast('Session expired — please sign in again', 'err');
+  const r = await fetch('/api/businesses/' + getBizId(), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+    body: JSON.stringify({ hours }),
+  });
+  if (!r.ok) { const d = await r.json().catch(()=>({})); return toast('Could not save: ' + (d.error || 'unknown error'), 'err'); }
+  toast('Pickup hours saved ✅', 'ok');
 }
 
 // ════════════════════════════════════════════════════════════

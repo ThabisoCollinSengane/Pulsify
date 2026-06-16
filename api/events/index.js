@@ -262,6 +262,23 @@ module.exports = async (req, res) => {
       return res.status(200).json({ business: biz });
     }
 
+    /* ─── PATCH /businesses/:id (owner updates own listing) ── */
+    if (bizId && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { data: existing } = await sb().from('businesses').select('owner_id').eq('id', bizId).single();
+      if (!existing) return res.status(404).json({ error: 'Business not found' });
+      if (existing.owner_id !== auth.user.id) return res.status(403).json({ error: 'Not your business' });
+
+      const { hours } = req.body || {};
+      if (!Array.isArray(hours)) return res.status(400).json({ error: 'hours array required' });
+
+      const { error } = await sb().from('businesses').update({ hours }).eq('id', bizId);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ success: true });
+    }
+
     return res.status(404).json({ error: 'Not found' });
   } catch (e) {
     captureError(e, { url });
