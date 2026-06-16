@@ -2097,7 +2097,7 @@ function buildCard(ev, idx) {
         <div class="fp ${iF ? 'fr' : ''}">${pr}</div></div>
     </div>
     <div class="fd">
-      <div class="fm"><span class="fct">📍 ${x(ev.venue_city)}</span><span class="fdt"></span><span class="fda">${fdt(ev.date_local, ev.time_local)}</span>${social}</div>
+      <div class="fm"><span class="fct">📍 ${x(ev.venue_city)}</span><span class="fdt"></span>${_distBadge(ev) || `<span class="fda">${fdt(ev.date_local, ev.time_local)}</span>`}${social}</div>
       <div class="fv">${x(ev.venue_name || '')} · ${x(ev.genre || '')}</div>
     </div>
     <div class="fac" onclick="event.stopPropagation()">
@@ -2908,6 +2908,18 @@ function _haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
   const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
   return R * 2 * Math.asin(Math.sqrt(a));
+}
+
+// Distance-from-user badge for event cards. Empty unless the user has shared
+// their location and the event has valid coordinates.
+function _distBadge(ev) {
+  if (userLat == null || userLon == null) return '';
+  const lat = parseFloat(ev.venue_lat), lon = parseFloat(ev.venue_lon);
+  if (!lat || !lon) return '';
+  const km = _haversineKm(userLat, userLon, lat, lon);
+  if (!isFinite(km)) return '';
+  const label = km < 1 ? Math.round(km * 1000) + 'm' : (km < 10 ? km.toFixed(1) : Math.round(km)) + 'km';
+  return `<span class="fda" style="color:var(--li);font-weight:600">📍 ${label} away</span>`;
 }
 
 function toggleNearMe() {

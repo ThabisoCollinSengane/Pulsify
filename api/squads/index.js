@@ -1,7 +1,7 @@
-const { sb, sbAs, authUser, tokenFrom, CORS, verifyToken, rateLimited, captureError } = require('../shared');
+const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, rateLimited, captureError } = require('../shared');
 
 module.exports = async (req, res) => {
-  Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
+  Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (rateLimited(req, res, { limit: 100, windowMs: 60000 })) return;
 
