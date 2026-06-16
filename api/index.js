@@ -127,7 +127,7 @@ async function verifyToken(token) {
 }
 
 async function authUser(req) {
-  const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+  const token = tokenFrom(req);
   if (!token) return null;
   try {
     const userSb = createClient(SUPA_URL, SUPA_ANON,
@@ -341,7 +341,7 @@ module.exports = async (req, res) => {
 
     /* ─── POST /posts ─────────────────────────────────────── */
     if (url === '/posts' && req.method === 'POST') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -386,7 +386,7 @@ module.exports = async (req, res) => {
     /* ─── PATCH /posts/:id (edit own post) ────────────────── */
     const editPostId = url.match(/^\/posts\/([^/]+)$/)?.[1];
     if (editPostId && req.method === 'PATCH') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -409,7 +409,7 @@ module.exports = async (req, res) => {
 
     /* ─── DELETE /posts/:id (delete own post) ─────────────── */
     if (editPostId && req.method === 'DELETE') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -710,7 +710,7 @@ module.exports = async (req, res) => {
 
     /* ─── GET /user/bookings ──────────────────────────────── */
     if (url === '/user/bookings' && req.method === 'GET') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
       const { data, error } = await sb().from('bookings')
@@ -840,7 +840,7 @@ module.exports = async (req, res) => {
 
     /* ─── POST /auth/profile ──────────────────────────────── */
     if (url === '/auth/profile' && req.method === 'POST') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
       const userSb = createClient(SUPA_URL, SUPA_ANON);
@@ -894,7 +894,7 @@ module.exports = async (req, res) => {
 
     /* ─── PATCH /auth/profile ─────────────────────────────── */
     if (url === '/auth/profile' && req.method === 'PATCH') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
       const userSb = createClient(SUPA_URL, SUPA_ANON);
@@ -1013,7 +1013,7 @@ module.exports = async (req, res) => {
     /* ─── POST /events/:id/request-map ──────────────────── */
     const reqMapMatch = url.match(/^\/events\/([^/]+)\/request-map$/);
     if (reqMapMatch && req.method === 'POST') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+      const token = tokenFrom(req);
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -1043,7 +1043,7 @@ module.exports = async (req, res) => {
 
     /* ─── GET /notifications ──────────────────────────────── */
     if (url === '/notifications' && req.method === 'GET') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -1063,7 +1063,7 @@ module.exports = async (req, res) => {
 
     /* ─── GET /notifications/count ───────────────────────── */
     if (url === '/notifications/count' && req.method === 'GET') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -1079,7 +1079,7 @@ module.exports = async (req, res) => {
     /* ─── PATCH /notifications/:id/read ──────────────────── */
     const notifId = url.match(/^\/notifications\/([^/]+)\/read$/)?.[1];
     if (notifId && req.method === 'PATCH') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -1094,7 +1094,7 @@ module.exports = async (req, res) => {
 
     /* ─── POST /notifications/mark-all-read ──────────────── */
     if (url === '/notifications/mark-all-read' && req.method === 'POST') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -1170,7 +1170,7 @@ module.exports = async (req, res) => {
 
     /* ─── POST /follows ──────────────────────────────────── */
     if (url === '/follows' && req.method === 'POST') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -1196,7 +1196,7 @@ module.exports = async (req, res) => {
 
     /* ─── DELETE /follows ────────────────────────────────── */
     if (url === '/follows' && req.method === 'DELETE') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -1581,7 +1581,7 @@ module.exports = async (req, res) => {
 
     /* ─── POST /auth/ensure-business-profile ────────────────── */
     if (url === '/auth/ensure-business-profile' && req.method === 'POST') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       const user = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -1772,7 +1772,7 @@ module.exports = async (req, res) => {
 
     /* ─── POST /verify-request ────────────────────────────── */
     if (url === '/verify-request' && req.method === 'POST') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const token = tokenFrom(req);
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -2185,7 +2185,7 @@ module.exports = async (req, res) => {
 
     /* ─── POST /push/subscribe ──────────────────────────── */
     if (url === '/push/subscribe' && req.method === 'POST') {
-      const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+      const token = tokenFrom(req);
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
       const { subscription, city, genres } = req.body || {};
@@ -2280,7 +2280,7 @@ module.exports = async (req, res) => {
 
     /* ─── POST /promotions/create ────────────────────────── */
     if (url === '/promotions/create' && req.method === 'POST') {
-      const _promoToken = (req.headers.authorization || '').replace('Bearer ', '').trim();
+      const _promoToken = tokenFrom(req);
       const auth = await authUser(req);
       if (!auth) return res.status(401).json({ error: 'Unauthorized' });
       const { role } = auth.profile;
@@ -2454,7 +2454,7 @@ module.exports = async (req, res) => {
     if (reportPostMatch && req.method === 'POST') {
       const type   = reportPostMatch[1];
       const cfg    = REPORT_TABLES[type];
-      const token  = (req.headers.authorization || '').replace('Bearer ', '').trim();
+      const token = tokenFrom(req);
       const user   = token ? await verifyToken(token) : null;
       const body   = req.body || {};
       const targetId = body[cfg.idCol] ?? body.target_id ?? body.id;
