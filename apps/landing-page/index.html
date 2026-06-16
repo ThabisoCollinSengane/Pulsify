@@ -3753,7 +3753,7 @@ function goToMyLocation() {
   navigator.geolocation.getCurrentPosition(
     pos => {
       const { latitude: lat, longitude: lon } = pos.coords;
-      const inSA = lat >= -35 && lat <= -22 && lon >= 16 && lon <= 34;
+      const inSA = lat >= -35 && lat <= -22 && lon >= 16 && lon <= 33;
       if (btn) { btn.textContent = '📍'; btn.style.background = inSA ? 'rgba(0,229,255,.2)' : 'rgba(5,8,15,.7)'; btn.style.border = inSA ? '1px solid rgba(0,229,255,.9)' : '1px solid rgba(0,229,255,.4)'; }
       if (!inSA) { showToast('You appear to be outside South Africa'); return; }
       mapObj.flyTo({ center: [lon, lat], zoom: 13, duration: 1200, essential: true });

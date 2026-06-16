@@ -1410,6 +1410,7 @@ async function runBulkGeocode() {
 
   showMainMsg(`<span class="spinner"></span>Geocoding ${invalid.length} businesses…`, 'ok');
   let fixed = 0, failed = 0;
+  const snapshot = []; // { id, lat, lon } before each successful write, for rollback
 
   for (const biz of invalid) {
     const addr  = biz.address || biz.suburb || '';
@@ -1429,6 +1430,7 @@ async function runBulkGeocode() {
       if (lat < -35 || lat > -22 || lon < 16 || lon > 33) { failed++; continue; }
       const { error } = await sb.from('businesses').update({ lat, lon }).eq('id', biz.id);
       if (!error) {
+        snapshot.push({ id: biz.id, lat: biz.lat, lon: biz.lon });
         const idx = ALL_BIZ.findIndex(b => b.id === biz.id);
         if (idx > -1) { ALL_BIZ[idx].lat = lat; ALL_BIZ[idx].lon = lon; }
         fixed++;
@@ -1438,7 +1440,29 @@ async function runBulkGeocode() {
   }
 
   updateStats(); renderTable();
-  showMainMsg(`✅ Done. Fixed: ${fixed} · Failed: ${failed} (fix manually)`, fixed > 0 ? 'ok' : 'err');
+  _lastGeocodeSnapshot = snapshot;
+  const undoBtn = snapshot.length ? ` <button class="btn btn-sm" onclick="undoBulkGeocode()">↩ Undo</button>` : '';
+  showMainMsg(`✅ Done. Fixed: ${fixed} · Failed: ${failed} (fix manually)${undoBtn}`, fixed > 0 ? 'ok' : 'err');
+}
+
+let _lastGeocodeSnapshot = null;
+async function undoBulkGeocode() {
+  const snapshot = _lastGeocodeSnapshot;
+  if (!snapshot || !snapshot.length) return;
+  if (!confirm(`Revert ${snapshot.length} businesses to their coordinates before the last geocode run?`)) return;
+  showMainMsg(`<span class="spinner"></span>Reverting ${snapshot.length} businesses…`, 'ok');
+  let reverted = 0, failed = 0;
+  for (const s of snapshot) {
+    const { error } = await sb.from('businesses').update({ lat: s.lat, lon: s.lon }).eq('id', s.id);
+    if (!error) {
+      const idx = ALL_BIZ.findIndex(b => b.id === s.id);
+      if (idx > -1) { ALL_BIZ[idx].lat = s.lat; ALL_BIZ[idx].lon = s.lon; }
+      reverted++;
+    } else failed++;
+  }
+  updateStats(); renderTable();
+  _lastGeocodeSnapshot = null;
+  showMainMsg(`✅ Reverted ${reverted}/${snapshot.length}${failed ? ' · Failed: ' + failed : ''}`, failed ? 'err' : 'ok');
 }
 
 function showMainMsg(m, t) { const el=document.getElementById('msg-main'); el.innerHTML=m; el.className='msg show msg-'+(t==='err'?'err':'ok'); }
