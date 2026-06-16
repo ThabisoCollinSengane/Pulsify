@@ -25,17 +25,21 @@ module.exports = async (req, res) => {
       const from_date = q.from_date || today;
       const to_date   = q.to_date   || '';
 
-      let query = sb().from('events')
+      // events_ranked = events + a computed rank_score (hype + engagement +
+      // time-relevance). Ordering by it gives a smarter default feed than raw
+      // hype_score while keeping every existing filter (all events columns are
+      // exposed on the view).
+      let query = sb().from('events_ranked')
         .select(`id,name,date_local,time_local,venue_name,venue_city,venue_address,
           venue_lat,venue_lon,price_min,is_free,image_url,genre,hype_score,
           like_count,comment_count,is_frontline,frontline_rank,external_url,
           source,status,description,lineup,dress_code,age_restriction,
-          attendance_count,organiser_name,capacity,tickets_sold`, { count: 'exact' })
+          attendance_count,organiser_name,capacity,tickets_sold,rank_score`, { count: 'exact' })
         .gte('date_local', from_date)
         .eq('is_active', true)
         .not('status', 'in', '(cancelled,postponed)')
         .order('is_frontline',   { ascending: false })
-        .order('hype_score',     { ascending: false, nullsFirst: false })
+        .order('rank_score',     { ascending: false, nullsFirst: false })
         .order('date_local',     { ascending: true })
         .range(offset, offset + limit - 1);
 

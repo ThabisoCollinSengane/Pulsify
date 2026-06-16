@@ -2297,14 +2297,25 @@ async function submitOrgMenuItem() {
   const cat   = document.getElementById('org-mi-cat').value.trim() || 'General';
   if (!name) { toast('Enter an item name', 'err'); return; }
   if (isNaN(price) || price < 0) { toast('Enter a valid price', 'err'); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { toast('Please sign in first', 'err'); return; }
   const btn = document.getElementById('org-mi-save');
   btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Saving…';
-  const row = { business_id: currentUser.id, name, description: desc || null, price, category: cat, is_available: true };
-  let error;
-  if (id) ({ error } = await sb.from('menu_items').update(row).eq('id', id).eq('business_id', currentUser.id));
-  else    ({ error } = await sb.from('menu_items').insert(row));
+  // Route through the API so the free-tier item cap is enforced server-side
+  // (organizer pricelist items use business_id = the organizer's own user id).
+  const url = '/api/businesses/' + currentUser.id + '/menu-items' + (id ? '/' + id : '');
+  let err;
+  try {
+    const r = await fetch(url, {
+      method: id ? 'PATCH' : 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify({ name, description: desc || null, price, category: cat, is_available: true }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) err = d.message || d.error || 'Save failed';
+  } catch (e) { err = 'Network error'; }
   btn.disabled = false; btn.textContent = orig;
-  if (error) { toast('Save failed — ' + error.message, 'err'); return; }
+  if (err) { toast(err, 'err'); return; }
   toast(id ? 'Item updated' : 'Item added', 'ok');
   resetOrgMenuForm();
   loadOrgMenu();
@@ -2319,8 +2330,17 @@ async function deleteOrgMenuItem(id, btn) {
     return;
   }
   btn.textContent = '…';
-  const { error } = await sb.from('menu_items').delete().eq('id', id).eq('business_id', currentUser.id);
-  if (error) { toast('Delete failed', 'err'); btn.textContent = 'Delete'; return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { toast('Please sign in first', 'err'); btn.textContent = 'Delete'; return; }
+  let err;
+  try {
+    const r = await fetch('/api/businesses/' + currentUser.id + '/menu-items/' + id, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + session.access_token },
+    });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); err = d.error || 'Delete failed'; }
+  } catch (e) { err = 'Delete failed'; }
+  if (err) { toast(err, 'err'); btn.textContent = 'Delete'; return; }
   document.getElementById('org-mi-row-' + id)?.remove();
   _orgMenu = _orgMenu.filter(m => m.id !== id);
   toast('Item deleted', 'ok');
