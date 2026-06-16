@@ -5563,12 +5563,9 @@ async function renderPromoHome() {
 
 async function loadMyPromotions() {
   const list = document.getElementById('promo-mine-list'); if (!list) return;
-  const sb2 = getSB(); if (!sb2) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu);padding:14px 0">Sign in to view</div>'; return; }
-  const session = (await sb2.auth.getSession()).data.session;
-  if (!session) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu);padding:14px 0">Sign in to view</div>'; return; }
+  if (!currentUser) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu);padding:14px 0">Sign in to view</div>'; return; }
   try {
-    const r = await fetch(API + '/promotions/mine', { headers:{ 'Authorization': 'Bearer ' + session.access_token }});
-    const d = await safeJson(r);
+    const d = await Api.get('/promotions/mine', { auth: true });
     const promos = d.promotions || [];
     if (!promos.length) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu);padding:14px 0;text-align:center">No promotions yet — pick a template above to get started.</div>'; return; }
     list.innerHTML = promos.map(p => {
@@ -5589,14 +5586,11 @@ async function loadMyPromotions() {
 
 async function deleteMyPromo(id) {
   if (!confirm('Delete this promotion?')) return;
-  const sb2 = getSB(); if (!sb2) return;
-  const session = (await sb2.auth.getSession()).data.session;
-  if (!session) return;
+  if (!currentUser) return;
   try {
-    const r = await fetch(API + '/promotions/' + id, { method:'DELETE', headers:{ 'Authorization': 'Bearer ' + session.access_token }});
-    if (r.ok) { showToast('Deleted'); loadMyPromotions(); }
-    else { const d = await safeJson(r); showToast(d.error || 'Failed'); }
-  } catch(e) { showToast('Error: ' + e.message); }
+    await Api.del('/promotions/' + id, undefined, { auth: true });
+    showToast('Deleted'); loadMyPromotions();
+  } catch(e) { showToast(e.message || 'Failed'); }
 }
 
 function openPromoForm(templateId) {
@@ -5658,20 +5652,12 @@ async function submitPromo() {
   };
   const evIdEl = document.getElementById('pf-eventid');
   if (evIdEl && evIdEl.value.trim()) body.event_id = evIdEl.value.trim();
-  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
-  const session = (await sb2.auth.getSession()).data.session;
-  if (!session) { showToast('Sign in first'); return; }
+  if (!currentUser) { showToast('Sign in first'); return; }
   try {
-    const r = await fetch(API + '/promotions/create', {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token },
-      body: JSON.stringify(body)
-    });
-    const d = await safeJson(r);
-    if (!r.ok) { showToast(d.error || 'Failed'); return; }
+    const d = await Api.post('/promotions/create', body, { auth: true });
     showToast(d.auto_approved ? '🚀 Live in feed!' : '✅ Submitted for review');
     renderPromoHome();
-  } catch(e) { showToast('Error: ' + e.message); }
+  } catch(e) { showToast(e.message || 'Failed'); }
 }
 
 /* ══════════════════════════════════════════════════
@@ -5715,13 +5701,9 @@ function setAdminPromoFilter(f) { _adminPromoFilter = f; renderAdminPromos(); }
 
 async function loadTrustedSubmitters() {
   const list = document.getElementById('admin-trusted-list'); if (!list) return;
-  const sb2 = getSB(); if (!sb2) return;
-  const session = (await sb2.auth.getSession()).data?.session;
-  if (!session) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu)">Sign in</div>'; return; }
+  if (!currentUser) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu)">Sign in</div>'; return; }
   try {
-    const r = await fetch(API + '/admin/trusted-submitters', { headers:{ 'Authorization':'Bearer '+session.access_token }});
-    const d = await safeJson(r);
-    if (!r.ok) { list.innerHTML = '<div style="font-size:.78rem;color:var(--pk);padding:14px 0">'+(d.error||'Failed')+'</div>'; return; }
+    const d = await Api.get('/admin/trusted-submitters', { auth: true });
     const subs = d.submitters || [];
     if (!subs.length) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu);padding:24px 0;text-align:center">No business or organizer accounts yet.</div>'; return; }
     list.innerHTML = subs.map(s => {
@@ -5736,33 +5718,23 @@ async function loadTrustedSubmitters() {
         <button onclick="toggleTrusted('${x(s.id)}', ${on}, this)" style="background:${on?'rgba(198,255,74,.15)':'transparent'};border:1px solid ${on?'rgba(198,255,74,.4)':'var(--border2)'};color:${on?'var(--li)':'var(--mu2)'};font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;padding:6px 14px;border-radius:50px;cursor:pointer">${on?'✓ Trusted':'+ Trust'}</button>
       </div>`;
     }).join('');
-  } catch(e) { list.innerHTML = '<div style="font-size:.78rem;color:var(--pk);padding:14px 0">Network error</div>'; }
+  } catch(e) { list.innerHTML = '<div style="font-size:.78rem;color:var(--pk);padding:14px 0">'+(e.message||'Network error')+'</div>'; }
 }
 
 async function toggleTrusted(userId, currentlyOn, btn) {
-  const sb2 = getSB(); const session = (await sb2.auth.getSession()).data?.session;
-  if (!session) return;
+  if (!currentUser) return;
   btn.disabled = true;
   try {
-    const r = await fetch(API + '/admin/trusted-submitters/' + userId, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-      body: JSON.stringify({ is_trusted_submitter: !currentlyOn })
-    });
-    if (r.ok) { showToast(currentlyOn ? 'Trust removed' : '⭐ Account trusted'); loadTrustedSubmitters(); }
-    else { const d = await safeJson(r); showToast(d.error || 'Failed'); btn.disabled = false; }
-  } catch(e) { btn.disabled = false; showToast('Network error'); }
+    await Api.patch('/admin/trusted-submitters/' + userId, { is_trusted_submitter: !currentlyOn }, { auth: true });
+    showToast(currentlyOn ? 'Trust removed' : '⭐ Account trusted'); loadTrustedSubmitters();
+  } catch(e) { btn.disabled = false; showToast(e.message || 'Failed'); }
 }
 
 async function loadAdminPromos() {
   const list = document.getElementById('admin-promo-list'); if (!list) return;
-  const sb2 = getSB(); if (!sb2) return;
-  const session = (await sb2.auth.getSession()).data.session;
-  if (!session) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu)">Sign in</div>'; return; }
+  if (!currentUser) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu)">Sign in</div>'; return; }
   try {
-    const r = await fetch(API + '/admin/promotions?status=' + _adminPromoFilter, { headers:{ 'Authorization':'Bearer '+session.access_token }});
-    const d = await safeJson(r);
-    if (!r.ok) { list.innerHTML = '<div style="font-size:.78rem;color:var(--pk);padding:14px 0">'+(d.error||'Failed')+'</div>'; return; }
+    const d = await Api.get('/admin/promotions?status=' + _adminPromoFilter, { auth: true });
     const promos = d.promotions || [];
     if (!promos.length) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu);padding:24px 0;text-align:center">No promotions in this view.</div>'; return; }
     list.innerHTML = promos.map(p => `<div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px">
@@ -5783,35 +5755,26 @@ async function loadAdminPromos() {
 }
 
 async function approvePromo(id) {
-  const sb2 = getSB(); const session = (await sb2.auth.getSession()).data.session; if (!session) return;
+  if (!currentUser) return;
   try {
-    const r = await fetch(API + '/admin/promotions/' + id, {
-      method:'PATCH',
-      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token },
-      body: JSON.stringify({ is_active: true })
-    });
-    if (r.ok) { showToast('✅ Approved'); loadAdminPromos(); }
-    else { const d = await safeJson(r); showToast(d.error || 'Failed'); }
-  } catch(e) { showToast('Error: ' + e.message); }
+    await Api.patch('/admin/promotions/' + id, { is_active: true }, { auth: true });
+    showToast('✅ Approved'); loadAdminPromos();
+  } catch(e) { showToast(e.message || 'Failed'); }
 }
 async function unpublishPromo(id) {
-  const sb2 = getSB(); const session = (await sb2.auth.getSession()).data.session; if (!session) return;
+  if (!currentUser) return;
   try {
-    const r = await fetch(API + '/admin/promotions/' + id, {
-      method:'PATCH',
-      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token },
-      body: JSON.stringify({ is_active: false })
-    });
-    if (r.ok) { showToast('Unpublished'); loadAdminPromos(); }
-  } catch(e) { showToast('Error: ' + e.message); }
+    await Api.patch('/admin/promotions/' + id, { is_active: false }, { auth: true });
+    showToast('Unpublished'); loadAdminPromos();
+  } catch(e) { showToast(e.message || 'Failed'); }
 }
 async function rejectPromo(id) {
   if (!confirm('Reject and delete this promotion?')) return;
-  const sb2 = getSB(); const session = (await sb2.auth.getSession()).data.session; if (!session) return;
+  if (!currentUser) return;
   try {
-    const r = await fetch(API + '/admin/promotions/' + id, { method:'DELETE', headers:{ 'Authorization':'Bearer '+session.access_token }});
-    if (r.ok) { showToast('Rejected'); loadAdminPromos(); }
-  } catch(e) { showToast('Error: ' + e.message); }
+    await Api.del('/admin/promotions/' + id, undefined, { auth: true });
+    showToast('Rejected'); loadAdminPromos();
+  } catch(e) { showToast(e.message || 'Failed'); }
 }
 
 /* ── Supabase session sync on load ── */
