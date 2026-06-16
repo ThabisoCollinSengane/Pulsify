@@ -195,3 +195,49 @@ oversight) before this goes further into production hardening.
   known gaps — notably **server-side payment verification** (architecture
   priority #1) and **frontend API service layer** (#2), both of which
   intersect directly with what's documented above.
+
+---
+
+## 6. Code Review Findings
+
+A targeted correctness/security pass on the three dashboards and their
+backing API files, on top of the structural risks already listed above.
+Ranked most severe first.
+
+1. **`apps/organizer/index.html:~1929` — Geocoded event coordinates bypass SA-bounds validation.**
+   Manual lat/lon entry is validated against South Africa's bounds
+   (`evLatRaw >= -35 && evLatRaw <= -22`, line ~1892), but the auto-geocode
+   fallback a few lines later does not apply the same check:
+   ```js
+   if (gd.lat && gd.lon) { evLat = gd.lat; evLon = gd.lon; locConfidence = 80; }
+   ```
+   A venue/city string that geocodes outside SA (or a misbehaving
+   `/api/geocode` response) inserts an out-of-bounds event with no
+   server-side backstop catching it either. **Fix:** apply the same bounds
+   check to the geocoded result before assigning `evLat`/`evLon`.
+
+2. **`apps/admin/index.html:~1141-1143` — KYC document URL injected into `src`/`onerror` without escaping.**
+   ```html
+   <img src="${v.id_doc_url || req.id_doc_url}" ... onerror="..."/>
+   ```
+   If `id_doc_url` ever contains a raw quote character, it breaks out of the
+   `src` attribute and can inject arbitrary HTML/JS into the admin's
+   authenticated session. Risk is currently mitigated by document URLs
+   coming from Supabase Storage (which constrains the path format), but
+   there's no `esc()`/`xe()` call here the way other user-content rendering
+   in the same file uses — worth hardening defensively rather than relying
+   on upload-path constraints holding forever.
+
+3. **`apps/admin/index.html` — Several `.innerHTML` assignments render lead/event/error text without escaping**, e.g. the lead-event modal (event title/genre/venue fields) and `showMainMsg()`/`showEditMsg()`/`showUserMsg()` rendering server error strings directly. Since `scraped_leads` and `lead_events` are populated by web scrapers (untrusted external sources, per the lead-ingestion endpoint), a scraped lead/event with `<img src=x onerror=...>` in its name/title executes when an admin opens it. **Fix:** route all of these through the same escape helper already used elsewhere in the file (e.g. `esc()`).
+
+4. **`apps/business/index.html:~2056` and `:~1247` — Event venue/city strings rendered via `.innerHTML` without escaping**, same class of issue as #3 — a business or organizer-submitted venue name with HTML in it executes in any viewer's browser.
+
+5. **`apps/business/menu.html:~313,269` — Menu item price used in arithmetic/display without numeric coercion.** If `price` is ever persisted as a non-numeric string (no schema enforcement since this data lives in `localStorage`, not a typed DB column), `qty * item.price` silently becomes string concatenation (e.g. `"25" * 2` is fine, but `"25" + "0"` patterns elsewhere aren't) and checkout totals can be wrong without any error being raised.
+
+6. **`apps/business/login.html:~312` — Business registration has no duplicate-account guard.** `doRegister()` creates a new business profile without checking whether the email/owner already has one, so a user that double-clicks "Create Business Account" (or retries after a flaky network response) can end up with two business profiles, neither of which is obviously the "real" one in the dashboard.
+
+7. **`apps/admin/index.html` — Admin's social-links save/load (`loadAdminSocialLinks`/`saveAdminSocialLinks`, ~line 2761) reads the auth token from `localStorage.getItem('admin_token')`, while the rest of the page keeps the live session token in the in-memory `adminToken` variable set at login.** If those two ever diverge (token refreshed in-memory but not mirrored to localStorage, or localStorage cleared), the call silently 403s with no error shown to the admin — looks like a no-op save.
+
+8. **`api/squads/index.js:~101-105` — Accepting a squad invite has a check-then-act race.** The invite-status check, the member insert, and the `member_count` increment are three separate steps; two near-simultaneous accept requests for the same invite can both pass the status check before either deletes it, and `member_count` ends up incremented twice for one actual new member. Low likelihood (requires a literal double-tap or duplicate request), but worth a single `UPDATE ... WHERE status = 'pending'` style atomic guard if squads scale.
+
+**Not re-flagged here** (already documented above or in `CLAUDE.md`): wide-open CORS, disabled Paystack verification, `api/events/index.js:50` searching the wrong column, localStorage-only business data, the `ensure-business-profile` silent-failure risk, and bulk-geocode lacking rollback.
