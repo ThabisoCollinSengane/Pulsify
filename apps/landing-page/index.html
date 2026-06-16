@@ -1603,6 +1603,39 @@ function getSB() {
   return sbClient;
 }
 
+/* ── API SERVICE LAYER ──────────────────────────────────────
+   Single entry point for backend calls. Centralizes the base path,
+   auth-token attachment, JSON encoding and error handling that was
+   previously copy-pasted at every fetch site. Incremental migration:
+   core event + booking calls go through this first; other fetch sites
+   and direct getSB().from(...) calls fold in over time.
+     auth:false     → no Authorization header
+     auth:true      → attach token; throw if the user isn't signed in
+     auth:'optional'→ attach token only if a session exists (guest-friendly)
+   Throws on non-2xx with the server's { error } message, so callers
+   keep their existing try/catch. */
+const Api = {
+  async _req(method, path, { body, auth = false, signal } = {}) {
+    const headers = {};
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    if (auth) {
+      let token = '';
+      try { const { data: { session } } = await getSB().auth.getSession(); token = session?.access_token || ''; } catch (_) {}
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      else if (auth === true) throw new Error('Not signed in');
+    }
+    const res = await fetch(API + path, {
+      method, headers, signal,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error((data && data.error) || ('HTTP ' + res.status));
+    return data || {};
+  },
+  get(path, opts)        { return this._req('GET',  path, opts); },
+  post(path, body, opts) { return this._req('POST', path, { ...opts, body }); },
+};
+
 /* ── NAVIGATION ── */
 function showTab(name, _noPush) {
   sessionStorage.setItem('p_last_tab', name);
@@ -2407,9 +2440,7 @@ async function loadTonightRail() {
   if (!wrap || !row) return;
   try {
     const today = new Date().toISOString().split('T')[0];
-    const r = await fetch(`/api/events?from_date=${today}&to_date=${today}&limit=8&_t=${Date.now()}`);
-    if (!r.ok) return;
-    const events = (await r.json()).events || [];
+    const events = (await Api.get(`/events?from_date=${today}&to_date=${today}&limit=8&_t=${Date.now()}`)).events || [];
     if (!events.length) { wrap.style.display = 'none'; return; }   // never show an empty section
     row.innerHTML = events.map(buildTonightCard).join('');
     wrap.style.display = '';
@@ -2886,15 +2917,12 @@ async function submitPickupOrder(bizId) {
   if (!name || !phone) { showToast('Name and phone are required', 'err'); return; }
   const total = Object.values(_bizCart).reduce((s, i) => s + i.qty * i.price, 0);
   const items = Object.entries(_bizCart).filter(([, v]) => v.qty > 0).map(([id, v]) => ({ id, name: v.name, qty: v.qty, price: v.price }));
-  let token = '';
-  try { const sb2 = getSB(); const { data: { session } } = await sb2.auth.getSession(); token = session?.access_token || ''; } catch (_) {}
-  const res = await fetch('/api/pickup-orders', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-    body: JSON.stringify({ business_id: bizId || Object.values(_bizCart)[0]?.bizId, customer_name: name, customer_phone: phone, items, notes, pickup_time: time, total }),
-  });
-  const j = await res.json().catch(() => ({}));
-  if (!res.ok) { showToast(j.error || 'Order failed', 'err'); return; }
+  let j;
+  try {
+    j = await Api.post('/pickup-orders', {
+      business_id: bizId || Object.values(_bizCart)[0]?.bizId, customer_name: name, customer_phone: phone, items, notes, pickup_time: time, total,
+    }, { auth: 'optional' });
+  } catch (e) { showToast(e.message || 'Order failed', 'err'); return; }
   document.getElementById('pickup-form-overlay')?.remove();
   _bizCart = {};
   const bar = document.getElementById('biz-cart-bar');
@@ -3684,9 +3712,7 @@ async function _loadEventsByBounds() {
   // Skip if viewport is entirely outside SA
   if (parseFloat(bn) < -35 || parseFloat(bs2) > -22 || parseFloat(be) < 16 || parseFloat(bw) > 33) return;
   try {
-    const r = await fetch(`/api/events?bounds=${bw},${bs2},${be},${bn}&limit=50&_t=${Date.now()}`);
-    if (!r.ok) return;
-    const { events } = await r.json();
+    const { events } = await Api.get(`/events?bounds=${bw},${bs2},${be},${bn}&limit=50&_t=${Date.now()}`);
     if (!events?.length) return;
     const fresh = events.filter(ev => !eventsForMap.find(e2 => e2.id === ev.id));
     if (!fresh.length) return;
