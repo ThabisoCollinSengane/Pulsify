@@ -24,6 +24,26 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Content-Type,Authorization',
 };
 
+// Production CORS: reflect the request origin only when it's an allowed origin
+// (production domain, any *.vercel.app deploy/preview, or localhost for dev),
+// otherwise fall back to the canonical production origin. Same-origin app
+// traffic is unaffected — browsers don't enforce CORS on same-origin requests.
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://pulsefy.co.za,https://www.pulsefy.co.za')
+  .split(',').map(s => s.trim()).filter(Boolean);
+
+function corsHeaders(req) {
+  const origin = (req.headers.origin || '').trim();
+  const allowed = ALLOWED_ORIGINS.includes(origin)
+    || /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)
+    || /^http:\/\/localhost(:\d+)?$/i.test(origin);
+  return {
+    'Access-Control-Allow-Origin': allowed ? origin : ALLOWED_ORIGINS[0],
+    'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Vary': 'Origin',
+  };
+}
+
 function haverBox(lat, lon, km) {
   const R = 111, d = km / R, dl = km / (R * Math.cos(lat * Math.PI / 180));
   return { minLat: lat - d, maxLat: lat + d, minLon: lon - dl, maxLon: lon + dl };
@@ -106,4 +126,4 @@ function captureError(err, context) {
   } catch (e) { console.error('[error]', err?.message || err); }
 }
 
-module.exports = { sb, sbAs, tokenFrom, CORS, haverBox, verifyToken, authUser, logAdminAction, rateLimit, rateLimited, captureError };
+module.exports = { sb, sbAs, tokenFrom, CORS, corsHeaders, haverBox, verifyToken, authUser, logAdminAction, rateLimit, rateLimited, captureError };

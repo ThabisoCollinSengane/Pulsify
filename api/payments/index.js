@@ -1,9 +1,9 @@
 const crypto = require('crypto');
-const { sb, sbAs, authUser, tokenFrom, CORS, verifyToken, logAdminAction, rateLimited, captureError } = require('../shared');
+const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError } = require('../shared');
 const { sendPaymentConfirmEmail } = require('../email');
 
 module.exports = async (req, res) => {
-  Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
+  Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (rateLimited(req, res, { limit: 30, windowMs: 60000 })) return;
 

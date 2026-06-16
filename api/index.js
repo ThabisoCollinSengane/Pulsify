@@ -1,7 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 const { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail, sendTicketEmail } = require('./email');
-const { rateLimited, captureError } = require('./shared');
+const { rateLimited, captureError, corsHeaders } = require('./shared');
 
 const SUPA_URL  = process.env.SUPABASE_URL  || 'https://cjzewfvtdayjgjdpdmln.supabase.co';
 const SUPA_ANON = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
@@ -23,12 +23,6 @@ const sbAs = (token) => {
 };
 
 const tokenFrom = (req) => (req.headers.authorization || '').replace('Bearer ', '').trim();
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-};
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || '';
 const QR_SECRET       = process.env.QR_SECRET || 'pulsefy-qr-fallback-secret';
@@ -159,7 +153,7 @@ async function logAdminAction(adminId, adminName, actionType, targetId, targetNa
 }
 
 module.exports = async (req, res) => {
-  Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
+  Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (rateLimited(req, res, { limit: 100, windowMs: 60000 })) return;
 
