@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
 const SUPA_URL  = process.env.SUPABASE_URL  || 'https://cjzewfvtdayjgjdpdmln.supabase.co';
@@ -42,6 +43,21 @@ function corsHeaders(req) {
     'Access-Control-Allow-Headers': 'Content-Type,Authorization',
     'Vary': 'Origin',
   };
+}
+
+/* ─── QR ticket signing (HMAC-SHA256) ─────────────────────────
+   Single source of truth so the issuing endpoints (api/index.js,
+   api/payments) and the validating endpoint sign/verify with the
+   same secret. Never emit an unsigned/literal sentinel — a forged
+   QR must fail verification. */
+const QR_SECRET = process.env.QR_SECRET || 'pulsefy-qr-fallback-secret';
+
+function signQr(bookingRef, eventId) {
+  return crypto.createHmac('sha256', QR_SECRET).update(`${bookingRef}:${eventId}`).digest('hex').slice(0, 16);
+}
+
+function verifyQr(bookingRef, eventId, sig) {
+  return signQr(bookingRef, eventId) === sig;
 }
 
 function haverBox(lat, lon, km) {
@@ -126,4 +142,4 @@ function captureError(err, context) {
   } catch (e) { console.error('[error]', err?.message || err); }
 }
 
-module.exports = { sb, sbAs, tokenFrom, CORS, corsHeaders, haverBox, verifyToken, authUser, logAdminAction, rateLimit, rateLimited, captureError };
+module.exports = { sb, sbAs, tokenFrom, CORS, corsHeaders, haverBox, signQr, verifyQr, verifyToken, authUser, logAdminAction, rateLimit, rateLimited, captureError };

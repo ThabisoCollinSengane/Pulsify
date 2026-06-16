@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError } = require('../shared');
+const { sb, sbAs, authUser, tokenFrom, corsHeaders, signQr, verifyQr, verifyToken, logAdminAction, rateLimited, captureError } = require('../shared');
 const { sendPaymentConfirmEmail } = require('../email');
 
 module.exports = async (req, res) => {
@@ -42,7 +42,7 @@ module.exports = async (req, res) => {
         buyer_phone: buyer_phone || null,
         quantity:    qty, unit_price, commission, total_paid,
         status:      'confirmed', // Paystack disabled — auto-confirm all
-        qr_data:     `PULSIFY:${booking_ref}:${event_id}:VALID`,
+        qr_data:     `PULSIFY:${booking_ref}:${event_id}:${signQr(booking_ref, event_id)}`,
       }).select().single();
 
       if (bErr) return res.status(400).json({ error: bErr.message });
@@ -93,11 +93,15 @@ module.exports = async (req, res) => {
       if (!qr_data) return res.status(400).json({ error: 'qr_data required' });
 
       const parts = String(qr_data).split(':');
-      if (parts.length < 4 || parts[0] !== 'PULSIFY' || parts[3] !== 'VALID')
+      if (parts.length < 4 || parts[0] !== 'PULSIFY')
         return res.status(400).json({ error: 'Invalid QR code' });
 
       const booking_ref = parts[1];
       const event_id    = parts[2];
+      const qr_sig      = parts[3];
+
+      if (!verifyQr(booking_ref, event_id, qr_sig))
+        return res.status(400).json({ error: 'QR signature invalid' });
 
       const { data: booking } = await sb().from('bookings')
         .select('*,events(name,date_local,venue_name,organiser_id),ticket_tiers(name)')
