@@ -2428,13 +2428,7 @@ function handleSearch(val) {
   if (!val.trim()) return;
   searchTimer = setTimeout(async () => {
     try {
-      const sb = getSB();
-      const today = new Date().toISOString().split('T')[0];
-      const { data: results } = await sb.from('events')
-        .select('id,name,date_local,time_local,venue_name,venue_city,price_min,is_free,image_url,genre,hype_score,like_count,comment_count,is_frontline,frontline_rank,source,organiser_name')
-        .gte('date_local', today)
-        .or(`name.ilike.%${val}%,venue_city.ilike.%${val}%,genre.ilike.%${val}%,venue_name.ilike.%${val}%`)
-        .order('hype_score', { ascending: false, nullsFirst: false }).limit(20);
+      const { results } = await Api.get('/events/search?q=' + encodeURIComponent(val) + '&limit=20');
       if (results?.length) {
         document.getElementById('events-feed').innerHTML = results.map((ev, i) => buildCard(ev, i)).join('');
         document.getElementById('feed-lbl').textContent = '🔍 ' + results.length + ' results';
@@ -2623,12 +2617,7 @@ async function openEv(evId) {
     if (_cd && Date.now() - _cd.t < 60000) {
       ev = _cd.ev; tiers = _cd.tiers; photos = _cd.photos;
     } else {
-      const sb = getSB();
-      const [{ data: evDb }, { data: evTiers }, { data: evPhotos }] = await Promise.all([
-        sb.from('events').select('*').eq('id', evId).single(),
-        sb.from('ticket_tiers').select('*').eq('event_id', evId).order('sort_order'),
-        sb.from('event_photos').select('*').eq('event_id', evId).order('created_at', { ascending: false }).limit(12),
-      ]);
+      const { event: evDb, tiers: evTiers, photos: evPhotos } = await Api.get('/events/' + encodeURIComponent(evId)).catch(() => ({}));
       // Fall back to in-memory feed cache for Quicket events not yet seeded to DB
       ev = evDb || (eventsForMap || []).find(e => String(e.id) === String(evId));
       if (!ev) throw new Error('Not found');
