@@ -1639,9 +1639,10 @@ const Api = {
     if (!res.ok) throw new Error((data && data.error) || ('HTTP ' + res.status));
     return data || {};
   },
-  get(path, opts)        { return this._req('GET',    path, opts); },
-  post(path, body, opts) { return this._req('POST',   path, { ...opts, body }); },
-  del(path, body, opts)  { return this._req('DELETE', path, { ...opts, body }); },
+  get(path, opts)          { return this._req('GET',    path, opts); },
+  post(path, body, opts)   { return this._req('POST',   path, { ...opts, body }); },
+  patch(path, body, opts)  { return this._req('PATCH',  path, { ...opts, body }); },
+  del(path, body, opts)    { return this._req('DELETE', path, { ...opts, body }); },
 };
 
 /* ── NAVIGATION ── */
@@ -5431,11 +5432,9 @@ async function showTicketConfirm(booking) {
   } else if (currentUser) {
     // Squads not yet loaded — fetch silently so check-in bar can appear
     try {
-      const sb2 = getSB();
-      const session = sb2 ? (await sb2.auth.getSession()).data?.session : null;
-      if (session) {
-        const r = await fetch(API + '/squads', { headers: { Authorization: 'Bearer ' + session.access_token } }).catch(() => null);
-        if (r && r.ok) { const d = await safeJson(r); _mySquads = d.squads || []; }
+      if (currentUser) {
+        const d = await Api.get('/squads', { auth: true });
+        _mySquads = d.squads || [];
       }
     } catch(e) {}
     if (_mySquads.length) showSquadCheckinBar(evId);
@@ -6227,16 +6226,8 @@ async function loadSquads() {
   }
   if (workspace) workspace.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Loading…</div>';
   try {
-    const sb2 = getSB();
-    let session = null;
-    try { session = sb2 ? (await sb2.auth.getSession()).data?.session : null; } catch(e) {}
-    const headers = { 'Content-Type': 'application/json' };
-    if (session) headers['Authorization'] = 'Bearer ' + session.access_token;
-    const myRes = await fetch(API + '/squads', { headers }).catch(() => null);
     let mySquads = [];
-    if (myRes && myRes.ok) {
-      const d = await safeJson(myRes); mySquads = d.squads || [];
-    }
+    try { const d = await Api.get('/squads', { auth: 'optional' }); mySquads = d.squads || []; } catch(_) {}
     _mySquads = mySquads;
     renderSquadTabs(mySquads);
     loadInvites();
@@ -6271,12 +6262,7 @@ async function showSquadTab(squadId) {
   const workspace = document.getElementById('sq-workspace');
   if (workspace) workspace.innerHTML = '<div style="padding:20px;font-size:.78rem;color:var(--mu)">Loading…</div>';
   try {
-    const _sb2 = getSB();
-    const _sqSess = _sb2 ? (await _sb2.auth.getSession().catch(()=>({data:{}}))).data?.session : null;
-    const _sqHdrs = _sqSess?.access_token ? { 'Authorization': 'Bearer ' + _sqSess.access_token } : {};
-    const r = await fetch(API + '/squads/' + squadId, { headers: _sqHdrs });
-    if (!r.ok) throw new Error('Failed');
-    const detail = await safeJson(r);
+    const detail = await Api.get('/squads/' + squadId, { auth: 'optional' });
     renderSquadWorkspace(detail, workspace);
   } catch(e) {
     if (workspace) workspace.innerHTML = `<div style="padding:20px;text-align:center;color:var(--mu);font-size:.84rem">Failed to load.<br><button onclick="showSquadTab('${squadId}')" style="background:transparent;border:none;color:var(--or);cursor:pointer;font-family:'Syne',sans-serif;font-weight:700">Retry</button></div>`;
@@ -6342,20 +6328,14 @@ function renderSquadWorkspace(detail, container) {
 async function sqEditAbout(squadId, current) {
   const val = prompt('Squad description (shown to all members):', current || '');
   if (val === null) return;
-  const sb2 = getSB(); if (!sb2) return;
-  const session = (await sb2.auth.getSession()).data?.session;
-  if (!session) { showToast('Sign in first'); return; }
-  const r = await fetch(API + '/squads/' + squadId + '/about', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-    body: JSON.stringify({ description: val.trim() })
-  });
-  if (r.ok) {
+  if (!currentUser) { showToast('Sign in first'); return; }
+  try {
+    await Api.patch('/squads/' + squadId + '/about', { description: val.trim() }, { auth: true });
     showToast('✅ Description saved');
     const el = document.getElementById('sq-about-text');
     if (el) el.textContent = val.trim();
     _squadsLoaded = false;
-  } else { showToast('Could not save'); }
+  } catch(e) { showToast('Could not save'); }
 }
 
 function showSqTab(tab, squadId) {
@@ -6390,14 +6370,8 @@ const OUTING_ICONS = Object.fromEntries(OUTING_TYPES.map(t => [t.id, t.icon]));
 async function loadSquadPlans(squadId) {
   const pane = document.getElementById('sq-tab-plans'); if (!pane) return;
   pane.innerHTML = '<div style="padding:20px;font-size:.78rem;color:var(--mu)">Loading…</div>';
-  const sb2 = getSB(); let token = null;
-  if (sb2) { try { token = (await sb2.auth.getSession()).data?.session?.access_token; } catch(e){} }
-  const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = 'Bearer ' + token;
   try {
-    const r = await fetch(API + '/squads/' + squadId + '/plans', { headers });
-    if (!r.ok) { pane.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Could not load plans.</div>'; return; }
-    const { plans } = await safeJson(r);
+    const { plans } = await Api.get('/squads/' + squadId + '/plans', { auth: 'optional' });
     renderPlansList(pane, plans || [], squadId);
   } catch(e) { pane.innerHTML = '<div style="padding:16px;font-size:.78rem;color:var(--mu)">Could not load plans.</div>'; }
 }
@@ -6521,35 +6495,20 @@ async function submitPlan(squadId) {
   const event_id = document.getElementById('plan-event-id')?.value || null;
   if (!title) { showToast('Title is required'); return; }
   if (!plan_date) { showToast('Date is required'); return; }
-  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
-  const session = (await sb2.auth.getSession()).data?.session;
-  if (!session) { showToast('Sign in first'); return; }
+  if (!currentUser) { showToast('Sign in first'); return; }
   try {
-    const r = await fetch(API + '/squads/' + squadId + '/plans', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-      body: JSON.stringify({ title, plan_date, plan_time, location_name, notes, outing_type, budget_per_person, event_id })
-    });
-    const d = await safeJson(r);
-    if (!r.ok) { showToast(d.error || 'Could not save plan'); return; }
+    await Api.post('/squads/' + squadId + '/plans', { title, plan_date, plan_time, location_name, notes, outing_type, budget_per_person, event_id }, { auth: true });
     showToast('✅ Plan saved!');
     loadSquadPlans(squadId);
-  } catch(e) { showToast('Network error'); }
+  } catch(e) { showToast(e.message || 'Could not save plan'); }
 }
 
 async function rsvpPlan(squadId, planId, status) {
-  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
-  const session = (await sb2.auth.getSession()).data?.session;
-  if (!session) { showToast('Sign in first'); return; }
+  if (!currentUser) { showToast('Sign in first'); return; }
   try {
-    const r = await fetch(API + '/squads/' + squadId + '/plans/' + planId + '/rsvp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-      body: JSON.stringify({ status })
-    });
-    if (r.ok) loadSquadPlans(squadId);
-    else { const d = await safeJson(r); showToast(d.error || 'Could not RSVP'); }
-  } catch(e) { showToast('Network error'); }
+    await Api.post('/squads/' + squadId + '/plans/' + planId + '/rsvp', { status }, { auth: true });
+    loadSquadPlans(squadId);
+  } catch(e) { showToast(e.message || 'Could not RSVP'); }
 }
 
 async function loadSqChat(squadId) {
@@ -6731,12 +6690,8 @@ async function loadSqCalendar(squadId) {
   pane.innerHTML = '<div style="padding:20px;font-size:.78rem;color:var(--mu)">Loading…</div>';
   let plans = [];
   try {
-    const sb2 = getSB(); let token = null;
-    if (sb2) { try { token = (await sb2.auth.getSession()).data?.session?.access_token; } catch(e){} }
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = 'Bearer ' + token;
-    const r = await fetch(API + '/squads/' + squadId + '/plans', { headers });
-    if (r.ok) { const d = await safeJson(r); plans = d.plans || []; }
+    const d = await Api.get('/squads/' + squadId + '/plans', { auth: 'optional' });
+    plans = d.plans || [];
   } catch(e) {}
   const feedEvents = (window.eventsForMap || []).filter(e => e.date_local);
   // Build a quick-lookup registry for the "+ Plan" button
@@ -6854,13 +6809,9 @@ window.sqPlanFromEv = function(evId, squadId) {
 };
 
 async function loadInvites() {
-  const sb2 = getSB(); if (!sb2) return;
-  const session = (await sb2.auth.getSession()).data?.session;
-  if (!session) return;
+  if (!currentUser) return;
   try {
-    const r = await fetch(API + '/squads/invites', { headers: { 'Authorization': 'Bearer ' + session.access_token } });
-    if (!r.ok) return;
-    const { invites } = await safeJson(r);
+    const { invites } = await Api.get('/squads/invites', { auth: true });
     renderInvitesBanner(invites || []);
   } catch(e) {}
 }
@@ -6893,29 +6844,25 @@ function renderInvitesBanner(invites) {
 }
 
 async function acceptInvite(inviteId) {
-  const sb2 = getSB(); if (!sb2) return;
-  const session = (await sb2.auth.getSession()).data?.session; if (!session) return;
+  if (!currentUser) return;
   try {
-    const r = await fetch(API + '/squads/invites/' + inviteId + '/accept', { method: 'POST', headers: { 'Authorization': 'Bearer ' + session.access_token } });
-    if (r.ok) { showToast('✅ Joined squad!'); _squadsLoaded = false; loadSquads(); }
-    else { const d = await safeJson(r); showToast(d.error || 'Could not accept'); }
-  } catch(e) { showToast('Network error'); }
+    await Api.post('/squads/invites/' + inviteId + '/accept', undefined, { auth: true });
+    showToast('✅ Joined squad!'); _squadsLoaded = false; loadSquads();
+  } catch(e) { showToast(e.message || 'Could not accept'); }
 }
 
 async function rejectInvite(inviteId) {
-  const sb2 = getSB(); if (!sb2) return;
-  const session = (await sb2.auth.getSession()).data?.session; if (!session) return;
+  if (!currentUser) return;
   try {
-    await fetch(API + '/squads/invites/' + inviteId + '/reject', { method: 'POST', headers: { 'Authorization': 'Bearer ' + session.access_token } });
+    await Api.post('/squads/invites/' + inviteId + '/reject', undefined, { auth: true });
     const row = document.getElementById('inv-banner-' + inviteId); if (row) row.remove();
   } catch(e) {}
 }
 
 async function deleteInvite(inviteId) {
-  const sb2 = getSB(); if (!sb2) return;
-  const session = (await sb2.auth.getSession()).data?.session; if (!session) return;
+  if (!currentUser) return;
   try {
-    await fetch(API + '/squads/invites/' + inviteId + '/reject', { method: 'POST', headers: { 'Authorization': 'Bearer ' + session.access_token } });
+    await Api.post('/squads/invites/' + inviteId + '/reject', undefined, { auth: true });
     const row = document.getElementById('inv-banner-' + inviteId); if (row) row.remove();
   } catch(e) {}
 }
@@ -6945,15 +6892,10 @@ async function handleSquadInviteLink(squadId) {
     showTab('friends');
     setTimeout(async () => {
       try {
-        const r = await fetch(API + '/squads/' + encodeURIComponent(squadId), {
-          headers: { 'Authorization': 'Bearer ' + session.access_token }
-        });
-        if (r.ok) {
-          const detail = await safeJson(r);
-          if (detail && detail.squad) {
-            const el = document.getElementById('squad-content');
-            if (el) { renderSquadWorkspace(detail, el); }
-          }
+        const detail = await Api.get('/squads/' + encodeURIComponent(squadId), { auth: true });
+        if (detail && detail.squad) {
+          const el = document.getElementById('squad-content');
+          if (el) { renderSquadWorkspace(detail, el); }
         }
       } catch(e) {}
     }, 300);
@@ -6961,9 +6903,7 @@ async function handleSquadInviteLink(squadId) {
   }
   // Not logged in — show invite banner
   try {
-    const r = await fetch(API + '/squads/' + encodeURIComponent(squadId) + '/public');
-    if (!r.ok) return;
-    const sq = await r.json();
+    const sq = await Api.get('/squads/' + encodeURIComponent(squadId) + '/public');
     if (!sq || !sq.name) return;
     let banner = document.getElementById('sq-invite-link-banner');
     if (!banner) {
@@ -7068,17 +7008,9 @@ async function createSquad() {
   const desc = (document.getElementById('sq-new-desc')?.value || '').trim();
   const isPublic = document.getElementById('sq-new-public')?.checked ?? true;
   const templateType = document.getElementById('sq-new-template')?.value || 'general';
-  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
-  const session = (await sb2.auth.getSession()).data.session;
-  if (!session) { showToast('Sign in first'); return; }
+  if (!currentUser) { showToast('Sign in first'); return; }
   try {
-    const r = await fetch(API + '/squads', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-      body: JSON.stringify({ name, description: desc || null, is_public: isPublic, template_type: templateType })
-    });
-    const d = await safeJson(r);
-    if (!r.ok) { showToast(d.error || 'Failed to create'); return; }
+    await Api.post('/squads', { name, description: desc || null, is_public: isPublic, template_type: templateType }, { auth: true });
     showToast('🎉 Squad created!');
     const chip = document.getElementById('sq-chip-new');
     if (chip) chip.remove();
@@ -7106,33 +7038,19 @@ async function saveEventInfo(squadId) {
   if (!name) { showToast('Event name required'); return; }
   const date = document.getElementById('eif-date')?.value;
   const venue = (document.getElementById('eif-venue')?.value || '').trim();
-  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
-  const session = (await sb2.auth.getSession()).data.session;
-  if (!session) { showToast('Sign in first'); return; }
+  if (!currentUser) { showToast('Sign in first'); return; }
   try {
-    const r = await fetch(API + '/squads/' + squadId, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-      body: JSON.stringify({ template_config: { event_name: name, event_date: date || null, venue: venue || null } })
-    });
-    if (r.ok) { showToast('✅ Event info saved'); showSquadTab(squadId); }
-    else { const d = await safeJson(r); showToast(d.error || 'Failed'); }
-  } catch(e) { showToast('Error: ' + e.message); }
+    await Api.patch('/squads/' + squadId, { template_config: { event_name: name, event_date: date || null, venue: venue || null } }, { auth: true });
+    showToast('✅ Event info saved'); showSquadTab(squadId);
+  } catch(e) { showToast(e.message || 'Failed'); }
 }
 
 async function _patchSquadConfig(squadId, configPatch, okMsg) {
-  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return false; }
-  const session = (await sb2.auth.getSession()).data.session;
-  if (!session) { showToast('Sign in first'); return false; }
+  if (!currentUser) { showToast('Sign in first'); return false; }
   try {
-    const r = await fetch(API + '/squads/' + squadId, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-      body: JSON.stringify({ template_config: configPatch })
-    });
-    if (r.ok) { showToast(okMsg || '✅ Saved'); showSquadTab(squadId); return true; }
-    const d = await safeJson(r); showToast(d.error || 'Failed'); return false;
-  } catch(e) { showToast('Error: ' + e.message); return false; }
+    await Api.patch('/squads/' + squadId, { template_config: configPatch }, { auth: true });
+    showToast(okMsg || '✅ Saved'); showSquadTab(squadId); return true;
+  } catch(e) { showToast(e.message || 'Failed'); return false; }
 }
 
 function showBusinessTeamForm(squadId) {
@@ -7232,12 +7150,9 @@ async function uploadSquadAvatar(squadId, input) {
     const { error: upErr } = await sb.storage.from('avatars').upload(path, file, { upsert: true });
     if (upErr) return showToast('Upload failed: ' + upErr.message, 'err');
     const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(path);
-    const r = await fetch(API + '/squads/' + squadId, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-      body: JSON.stringify({ avatar_url: publicUrl })
-    });
-    if (!r.ok) { const d = await safeJson(r); return showToast(d.error || 'Could not save', 'err'); }
+    try {
+      await Api.patch('/squads/' + squadId, { avatar_url: publicUrl }, { auth: true });
+    } catch(e) { return showToast(e.message || 'Could not save', 'err'); }
     showToast('Squad photo updated! 🎉', 'ok');
     if (_sqCurrentSquad) _sqCurrentSquad.avatar_url = publicUrl;
     _squadsLoaded = false;
@@ -7248,16 +7163,9 @@ async function uploadSquadAvatar(squadId, input) {
 async function inviteToSquad(userId, btn) {
   if (!_inviteSquadId) return;
   btn.disabled = true; btn.textContent = '…';
-  const sb2 = getSB(); const session = (await sb2.auth.getSession()).data?.session;
-  if (!session) { showToast('Sign in first'); btn.disabled = false; btn.textContent = '＋ Invite'; return; }
+  if (!currentUser) { showToast('Sign in first'); btn.disabled = false; btn.textContent = '＋ Invite'; return; }
   try {
-    const r = await fetch(API + '/squads/' + _inviteSquadId + '/invite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-      body: JSON.stringify({ user_id: userId })
-    });
-    const d = await safeJson(r);
-    if (!r.ok) { showToast(d.error || 'Could not invite'); btn.disabled = false; btn.textContent = '＋ Invite'; return; }
+    const d = await Api.post('/squads/' + _inviteSquadId + '/invite', { user_id: userId }, { auth: true });
     if (d.status === 'already_member') {
       btn.textContent = '✓ Already in squad';
     } else if (d.status === 'already_invited') {
@@ -7273,42 +7181,29 @@ async function inviteToSquad(userId, btn) {
     _squadsLoaded = false;
   } catch(e) {
     btn.disabled = false; btn.textContent = '＋ Invite';
-    showToast('Network error');
+    showToast(e.message || 'Could not invite');
   }
 }
 
 async function joinSquad(squadId) {
-  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
-  const session = (await sb2.auth.getSession()).data.session;
-  if (!session) { showToast('Sign in first'); return; }
+  if (!currentUser) { showToast('Sign in first'); return; }
   try {
-    const r = await fetch(API + '/squads/' + squadId + '/join', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token }
-    });
-    const d = await safeJson(r);
-    if (!r.ok) { showToast(d.error || 'Failed to join'); return; }
+    await Api.post('/squads/' + squadId + '/join', undefined, { auth: true });
     showToast('🎉 Joined squad!');
     _squadsLoaded = false;
     showSquadTab(squadId);
-  } catch(e) { showToast('Error: ' + e.message); }
+  } catch(e) { showToast(e.message || 'Failed to join'); }
 }
 
 async function leaveSquad(squadId) {
   if (!confirm('Leave this squad?')) return;
-  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
-  const session = (await sb2.auth.getSession()).data.session;
-  if (!session) { showToast('Sign in first'); return; }
+  if (!currentUser) { showToast('Sign in first'); return; }
   try {
-    const r = await fetch(API + '/squads/' + squadId + '/leave', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token }
-    });
-    if (!r.ok) { const d = await safeJson(r); showToast(d.error || 'Failed'); return; }
+    await Api.post('/squads/' + squadId + '/leave', undefined, { auth: true });
     showToast('Left squad');
     _squadsLoaded = false;
     loadSquads();
-  } catch(e) { showToast('Error: ' + e.message); }
+  } catch(e) { showToast(e.message || 'Failed'); }
 }
 
 async function showSquadCheckinBar(eventId) {
@@ -7327,17 +7222,9 @@ async function showSquadCheckinBar(eventId) {
 async function doSquadCheckin(eventId) {
   const squadId = document.getElementById('sq-checkin-select')?.value;
   if (!squadId) return;
-  const sb2 = getSB(); if (!sb2) { showToast('Sign in first'); return; }
-  const session = (await sb2.auth.getSession()).data.session;
-  if (!session) { showToast('Sign in first'); return; }
+  if (!currentUser) { showToast('Sign in first'); return; }
   try {
-    const r = await fetch(API + '/squads/checkin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-      body: JSON.stringify({ squad_id: squadId, event_id: eventId || null })
-    });
-    const d = await safeJson(r);
-    if (!r.ok) { showToast(d.error || 'Failed'); return; }
+    await Api.post('/squads/checkin', { squad_id: squadId, event_id: eventId || null }, { auth: true });
     const sq = _mySquads.find(s => s.id === squadId);
     showToast('⚡ +20 pts added to ' + (sq?.name || 'your squad') + '!');
     const el = document.getElementById('tc-squad-checkin');
