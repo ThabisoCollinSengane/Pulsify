@@ -4665,10 +4665,7 @@ async function renderSquad() {
   }
 
   try {
-    const { data: { session } } = await sb.auth.getSession();
-    const token = session?.access_token;
-    const r = await fetch(API + '/suggestions?limit=20', { headers: token ? { 'Authorization': 'Bearer ' + token } : {} });
-    const { suggestions } = await safeJson(r);
+    const { suggestions } = await Api.get('/suggestions?limit=20', { auth: 'optional' });
     const list = suggestions || [];
     if (!list.length) {
       el.innerHTML = _whatsappInviteCard() + '<div style="padding:24px 16px;text-align:center;font-size:.78rem;color:var(--mu)"><div style="font-size:2rem;margin-bottom:6px">👋</div>No suggestions yet — add your genres &amp; city in <a href="/profile-settings" style="color:var(--or);font-weight:700">Profile Settings</a> so we can match you.</div>';
@@ -4936,20 +4933,16 @@ function _renderSocIcons(links) {
 }
 
 async function saveMySocialLinks() {
-  const token = localStorage.getItem('p_token');
-  if (!token) { showToast('Sign in first','err'); return; }
+  if (!currentUser) { showToast('Sign in first','err'); return; }
   const links = {};
   _SL_META.forEach(s => { links[s.key] = (document.getElementById('mysl-'+s.key)?.value||'').trim(); });
-  const r = await fetch('/api/profile/socials', {
-    method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-    body: JSON.stringify({ social_links: links })
-  });
-  if (r.ok) {
+  try {
+    await Api.patch('/profile/socials', { social_links: links }, { auth: true });
     showToast('Social links saved!','ok');
     // update localStorage
     try { const p=JSON.parse(localStorage.getItem('p_profile')||'{}'); p.social_links=links; localStorage.setItem('p_profile',JSON.stringify(p)); } catch(e){}
     const _ss = document.getElementById('my-social-sheet'); if (_ss) _ss.style.display = 'none';
-  } else { showToast('Save failed','err'); }
+  } catch(e) { showToast('Save failed','err'); }
 }
 
 /* ══════════════════════════════════════════════════
@@ -4964,8 +4957,7 @@ async function openFollowList(userId, type) {
   body.innerHTML = '<div style="padding:30px;text-align:center;color:var(--mu);font-size:.8rem">Loading…</div>';
   ov.style.display = 'flex';
   try {
-    const r = await fetch(API + '/profiles/' + encodeURIComponent(userId) + '/' + type);
-    const { users } = await safeJson(r);
+    const { users } = await Api.get('/profiles/' + encodeURIComponent(userId) + '/' + type);
     const list = users || [];
     if (!list.length) {
       body.innerHTML = `<div style="padding:30px;text-align:center;color:var(--mu);font-size:.8rem">${type === 'followers' ? 'No followers yet.' : 'Not following anyone yet.'}</div>`;
@@ -5496,18 +5488,12 @@ async function submitClaimForm() {
   btn.disabled = true; btn.textContent = 'Submitting…';
 
   try {
-    const r = await fetch('/api/claim-profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ business_id: _claimBizId, business_name: bizName, claimant_name: name, claimant_email: email, claimant_phone: phone, reason }),
-    });
-    const d = await r.json();
-    if (!r.ok) { setMsg(d.error || 'Submission failed. Try again.', 'err'); return; }
+    await Api.post('/claim-profile', { business_id: _claimBizId, business_name: bizName, claimant_name: name, claimant_email: email, claimant_phone: phone, reason });
     setMsg('✅ Claim submitted! We\'ll review and contact you within 1–3 business days.', 'ok');
     btn.textContent = 'Submitted ✓';
     setTimeout(closeClaimSheet, 3000);
   } catch(e) {
-    setMsg('Network error — please try again.', 'err');
+    setMsg(e.message || 'Network error — please try again.', 'err');
   } finally {
     if (btn.textContent !== 'Submitted ✓') { btn.disabled = false; btn.textContent = 'Submit Claim →'; }
   }
@@ -5855,21 +5841,17 @@ async function initSupabaseSession() {
           }
         }
         if (pending) {
+          let profile = pending;
           try {
-            const r = await fetch('/api/auth/profile', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
-              body: JSON.stringify({ profile: pending })
-            });
-            const d = await safeJson(r).catch(() => ({}));
-            const profile = d.profile || pending;
-            localStorage.setItem('p_user', JSON.stringify({
-              id: session.user.id, email: session.user.email,
-              display_name: profile.display_name || session.user.email?.split('@')[0],
-              role: profile.role || 'user'
-            }));
-            localStorage.setItem('p_profile', JSON.stringify(profile));
+            const d = await Api.post('/auth/profile', { profile: pending }, { auth: true });
+            profile = d.profile || pending;
           } catch(e) {}
+          localStorage.setItem('p_user', JSON.stringify({
+            id: session.user.id, email: session.user.email,
+            display_name: profile.display_name || session.user.email?.split('@')[0],
+            role: profile.role || 'user'
+          }));
+          localStorage.setItem('p_profile', JSON.stringify(profile));
           localStorage.removeItem('p_pending_profile');
           const role = pending.role || 'user';
           const dest = role === 'organizer' ? '/organizer' : role === 'business' ? '/business' : '/feeds';
