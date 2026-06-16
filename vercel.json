@@ -6,10 +6,12 @@
     "api/squads/index.js":             { "maxDuration": 30 },
     "api/admin/index.js":              { "maxDuration": 30 },
     "api/payments/index.js":           { "maxDuration": 30 },
-    "api/cron/squad-reminders.js":     { "maxDuration": 30 }
+    "api/cron/squad-reminders.js":     { "maxDuration": 30 },
+    "api/cron/event-cleanup.js":       { "maxDuration": 30 }
   },
   "crons": [
-    { "path": "/api/cron/squad-reminders", "schedule": "0 5 * * *" }
+    { "path": "/api/cron/squad-reminders", "schedule": "0 5 * * *" },
+    { "path": "/api/cron/event-cleanup",   "schedule": "0 4 * * *" }
   ],
   "rewrites": [
     { "source": "/api/events/search",      "destination": "/api/events" },
