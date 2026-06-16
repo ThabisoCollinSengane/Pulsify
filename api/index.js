@@ -413,6 +413,21 @@ module.exports = async (req, res) => {
       return res.status(200).json({ post, success: true });
     }
 
+    /* ─── DELETE /posts/:id (delete own post) ─────────────── */
+    if (editPostId && req.method === 'DELETE') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '');
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { data: existing } = await sb().from('posts').select('user_id').eq('id', editPostId).single();
+      if (!existing) return res.status(404).json({ error: 'Post not found' });
+      if (existing.user_id !== user.id) return res.status(403).json({ error: 'Not your post' });
+
+      const { error } = await sb().from('posts').delete().eq('id', editPostId);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ success: true });
+    }
+
     /* ─── GET /profiles/:id ───────────────────────────────── */
     const profId = url.match(/^\/profiles\/([^/]+)$/)?.[1];
     if (profId && req.method === 'GET') {
