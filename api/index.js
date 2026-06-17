@@ -667,61 +667,82 @@ module.exports = async (req, res) => {
     }
 
     /* ─── GET /ticket/confirm ─────────────────────────────── */
-    // Called by frontend after Paystack popup success callback
+    // Called by frontend after Paystack popup success callback.
+    // Server-side verification: the client is NEVER trusted to declare a
+    // payment good — we re-verify with Paystack and confirm the amount paid
+    // matches the booking total before flipping status to 'confirmed'.
     if (url === '/ticket/confirm' && req.method === 'GET') {
       const ref = q.ref || q.reference;
       if (!ref) return res.status(400).json({ error: 'ref required' });
 
-      // Verify with Paystack
-      let verified = false;
-      if (PAYSTACK_SECRET) {
-        try {
-          const vr = await paystackGet(`/transaction/verify/${encodeURIComponent(ref)}`);
-          verified = vr?.data?.status === 'success';
-        } catch(e) { console.error('[paystack/verify]', e.message); }
-      }
-      if (!verified) return res.status(400).json({ error: 'Payment not verified' });
-
-      // Confirm the booking
+      // Load the booking first — we need its expected amount to verify against.
       const { data: booking, error: bErr } = await sb().from('bookings')
-        .update({ status: 'confirmed' })
+        .select('*,events(name,date_local,venue_name,venue_city),ticket_tiers(name)')
+        .eq('booking_ref', ref).single();
+      if (bErr || !booking) return res.status(404).json({ error: 'Booking not found' });
+
+      // Idempotent: already confirmed → return it without re-charging logic.
+      if (booking.status === 'confirmed')
+        return res.status(200).json({ success: true, booking_ref: booking.booking_ref, qr_data: booking.qr_data, event_name: booking.events?.name, tier_name: booking.ticket_tiers?.name, quantity: booking.quantity, total_paid: booking.total_paid, buyer_name: booking.buyer_name, buyer_email: booking.buyer_email });
+      if (booking.status !== 'pending')
+        return res.status(400).json({ error: 'Booking is not payable' });
+
+      // Re-verify with Paystack (source of truth). No secret → payments off.
+      if (!PAYSTACK_SECRET) return res.status(503).json({ error: 'Payments not enabled' });
+      let pd = null;
+      try {
+        const vr = await paystackGet(`/transaction/verify/${encodeURIComponent(ref)}`);
+        pd = vr?.data || null;
+      } catch(e) { console.error('[paystack/verify]', e.message); }
+      if (!pd || pd.status !== 'success') return res.status(400).json({ error: 'Payment not verified' });
+
+      // Amount + currency must match what we asked for. Guards against a
+      // tampered client paying less than the ticket price.
+      const expectedKobo = Math.round((booking.total_paid || 0) * 100);
+      if (pd.currency !== 'ZAR' || (pd.amount || 0) < expectedKobo) {
+        console.error('[paystack/verify] amount mismatch', ref, pd.amount, expectedKobo, pd.currency);
+        return res.status(400).json({ error: 'Payment amount mismatch' });
+      }
+
+      // Confirm the booking (idempotent guard on status).
+      const { data: confirmed } = await sb().from('bookings')
+        .update({ status: 'confirmed', paystack_ref: pd.reference || ref })
         .eq('booking_ref', ref).eq('status', 'pending')
         .select('*,events(name,date_local,venue_name,venue_city),ticket_tiers(name)')
         .single();
-
-      if (bErr || !booking) {
-        // Already confirmed — just return success
-        const { data: existing } = await sb().from('bookings')
+      // Lost the idempotency race (webhook confirmed first) → return current state.
+      if (!confirmed) {
+        const { data: now } = await sb().from('bookings')
           .select('*,events(name,date_local,venue_name,venue_city),ticket_tiers(name)')
           .eq('booking_ref', ref).single();
-        if (existing) return res.status(200).json({ success: true, booking_ref: existing.booking_ref, qr_data: existing.qr_data, event_name: existing.events?.name, tier_name: existing.ticket_tiers?.name, quantity: existing.quantity, total_paid: existing.total_paid, buyer_name: existing.buyer_name, buyer_email: existing.buyer_email });
+        if (now) return res.status(200).json({ success: true, booking_ref: now.booking_ref, qr_data: now.qr_data, event_name: now.events?.name, tier_name: now.ticket_tiers?.name, quantity: now.quantity, total_paid: now.total_paid, buyer_name: now.buyer_name, buyer_email: now.buyer_email });
         return res.status(404).json({ error: 'Booking not found' });
       }
 
       // Send ticket email
-      sendTicketEmail(booking.buyer_email, booking.buyer_name, booking.events?.name, booking.events?.date_local, booking.events?.venue_name, booking.events?.venue_city, booking.booking_ref, booking.ticket_tiers?.name, booking.quantity, booking.total_paid, booking.unit_price === 0, booking.qr_data)
+      sendTicketEmail(confirmed.buyer_email, confirmed.buyer_name, confirmed.events?.name, confirmed.events?.date_local, confirmed.events?.venue_name, confirmed.events?.venue_city, confirmed.booking_ref, confirmed.ticket_tiers?.name, confirmed.quantity, confirmed.total_paid, confirmed.unit_price === 0, confirmed.qr_data)
         .catch(e => console.error('[email/ticket]', e.message));
 
-      if (booking.user_id) {
+      if (confirmed.user_id) {
         await sb().from('notifications').insert({
-          user_id: booking.user_id, type: 'ticket',
+          user_id: confirmed.user_id, type: 'ticket',
           from_display_name: 'Pulsefy',
-          entity_id: booking.event_id, entity_type: 'events',
-          message: `Your ticket for ${booking.events?.name} is confirmed! Ref: ${booking.booking_ref} · R${booking.total_paid}`,
-          data: { booking_ref: booking.booking_ref },
+          entity_id: confirmed.event_id, entity_type: 'events',
+          message: `Your ticket for ${confirmed.events?.name} is confirmed! Ref: ${confirmed.booking_ref} · R${confirmed.total_paid}`,
+          data: { booking_ref: confirmed.booking_ref },
         }).catch(() => {});
       }
 
       return res.status(200).json({
         success:     true,
-        booking_ref: booking.booking_ref,
-        qr_data:     booking.qr_data,
-        event_name:  booking.events?.name,
-        tier_name:   booking.ticket_tiers?.name,
-        quantity:    booking.quantity,
-        total_paid:  booking.total_paid,
-        buyer_name:  booking.buyer_name,
-        buyer_email: booking.buyer_email,
+        booking_ref: confirmed.booking_ref,
+        qr_data:     confirmed.qr_data,
+        event_name:  confirmed.events?.name,
+        tier_name:   confirmed.ticket_tiers?.name,
+        quantity:    confirmed.quantity,
+        total_paid:  confirmed.total_paid,
+        buyer_name:  confirmed.buyer_name,
+        buyer_email: confirmed.buyer_email,
       });
     }
 
@@ -811,22 +832,31 @@ module.exports = async (req, res) => {
       if (sig !== hash) return res.status(401).json({ error: 'Invalid signature' });
 
       if (req.body?.event === 'charge.success') {
-        const ref    = req.body.data?.reference;
-        const meta   = req.body.data?.metadata || {};
+        const pdata  = req.body.data || {};
+        const ref    = pdata.reference;
+        const meta   = pdata.metadata || {};
         const userId = meta.user_id || null;
 
-        // Confirm booking (match by id OR booking_ref)
+        // Load the pending booking (by id or ref) so we can verify the amount
+        // Paystack actually charged before confirming — same guard as
+        // /ticket/confirm, since the webhook is the async source of truth.
+        let pq = sb().from('bookings')
+          .select('*,events(name,date_local,venue_name,venue_city),ticket_tiers(name)');
+        pq = meta.booking_id ? pq.eq('id', meta.booking_id) : pq.eq('booking_ref', ref);
+        const { data: pend } = await pq.single();
+
         let confirmedBooking = null;
-        if (meta.booking_id) {
-          const { data: b } = await sb().from('bookings')
-            .update({ status: 'confirmed' }).eq('id', meta.booking_id).eq('status', 'pending')
-            .select('*,events(name,date_local,venue_name,venue_city),ticket_tiers(name)').single();
-          confirmedBooking = b;
-        } else if (ref) {
-          const { data: b } = await sb().from('bookings')
-            .update({ status: 'confirmed' }).eq('booking_ref', ref).eq('status', 'pending')
-            .select('*,events(name,date_local,venue_name,venue_city),ticket_tiers(name)').single();
-          confirmedBooking = b;
+        if (pend && pend.status === 'pending') {
+          const expectedKobo = Math.round((pend.total_paid || 0) * 100);
+          if (pdata.currency === 'ZAR' && (pdata.amount || 0) >= expectedKobo) {
+            const { data: b } = await sb().from('bookings')
+              .update({ status: 'confirmed', paystack_ref: ref })
+              .eq('id', pend.id).eq('status', 'pending')
+              .select('*,events(name,date_local,venue_name,venue_city),ticket_tiers(name)').single();
+            confirmedBooking = b;
+          } else {
+            console.error('[paystack/webhook] amount mismatch', ref, pdata.amount, expectedKobo, pdata.currency);
+          }
         }
 
         if (confirmedBooking) {
@@ -847,9 +877,9 @@ module.exports = async (req, res) => {
           await sb().from('payments').upsert({
             user_id: userId, reference: ref, type: meta.type || 'ticket',
             entity_id: meta.booking_id || meta.entity_id || null,
-            amount: req.body.data?.amount || 0, status: 'success',
+            amount: pdata.amount || 0, status: 'success',
             completed_at: new Date().toISOString(),
-            metadata: { paystack: req.body.data },
+            metadata: { paystack: pdata },
           }, { onConflict: 'reference' }).catch(() => {});
         }
       }

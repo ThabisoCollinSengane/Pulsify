@@ -228,9 +228,14 @@ Tracked work from the security, architecture and map briefs. Tackle in order:
 - [ ] **Paystack go-live** — provide live keys before payment-verify can be enabled
 
 ### C. Architecture (do FIRST — `pulsefy_architecture_1.txt`)
-- [ ] **Server-side payment verification (#3 / arch §3,§7,§10)** — Paystack is currently
-      DISABLED; bookings auto-confirm. Build verify flow (Client→API→create booking
-      pending→Paystack verify→confirm) BEFORE taking real money. **Highest priority.**
+- [x] **Server-side payment verification (#3 / arch §3,§7,§10)** — paid flow is
+      Client→`/ticket/init` (pending booking, server-computed amount)→Paystack→
+      `/ticket/confirm` + `/paystack/webhook`. **Both now re-verify with Paystack
+      AND assert `currency==='ZAR'` and `amount >= total_paid*100`** before flipping
+      status to `confirmed` (guards client amount-tampering). Idempotent on
+      `status='pending'`. Only remaining step is **YOU**: set live Paystack keys
+      (`PAYSTACK_SECRET_KEY` / `PAYSTACK_PUBLIC_KEY`) + point the webhook at
+      `/api/paystack/webhook`. Free tickets still auto-confirm via `/ticket/purchase`.
 - [ ] **Frontend API service layer (arch §2)** — wrap `/api/*` + Supabase calls in one
       `Api` module; stop scattering direct DB calls through the 7,200-line index.html.
       (Incremental: migrate core event/booking calls first.)
