@@ -1,7 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 const { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail, sendTicketEmail } = require('./email');
-const { rateLimited, captureError, corsHeaders, signQr, verifyQr, validate } = require('./shared');
+const { rateLimited, captureError, corsHeaders, signQr, verifyQr, validate, flagEnabled } = require('./shared');
 
 const SUPA_URL  = process.env.SUPABASE_URL  || 'https://cjzewfvtdayjgjdpdmln.supabase.co';
 const SUPA_ANON = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
@@ -615,6 +615,7 @@ module.exports = async (req, res) => {
       const total_paid = +(subtotal + commission + psf).toFixed(2);
 
       if (unit_price === 0) return res.status(400).json({ error: 'Use /ticket/purchase for free tickets' });
+      if (!await flagEnabled('paystack_live')) return res.status(503).json({ error: 'Paid tickets are not yet enabled — check back soon.' });
 
       const booking_ref = `PKF-${Date.now()}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
       const qr_sig      = signQr(booking_ref, event_id);
