@@ -1929,15 +1929,12 @@ function _placeTrustBreak(final) {
   cards[Math.min(6, cards.length) - 1].insertAdjacentHTML('afterend', _TRUST_HTML);
 }
 
-// Businesses now lead the feed: prepend the "Spots near you" rail above the
-// first event card (string-injected, idempotent — never a static block).
-function _placeBizBreak() {
+// Businesses appear after the 3rd event card — visible near the top but
+// events lead the feed (string-injected, idempotent — never a static block).
+function _placeBizBreak(final) {
   if (!_frontlineHtml) return;
-  const feedEl = document.getElementById('events-feed');
-  if (!feedEl || document.getElementById('feed-break-biz')) return;
-  const firstCard = feedEl.querySelector('.fc');
-  if (!firstCard) return; // wait for events to render
-  firstCard.insertAdjacentHTML('beforebegin', _frontlineHtml);
+  if (document.getElementById('feed-break-biz')) return;
+  _placeBreak('feed-break-biz', _frontlineHtml, 3, final);
 }
 
 // Lightweight 200px static-map strip that opens the live map tab. Centred on
@@ -1984,7 +1981,7 @@ function _placeBreak(id, html, afterCount, fallbackLast) {
   cards[idx - 1].insertAdjacentHTML('afterend', html);
 }
 function _injectFeedBreaks(final) {
-  _placeBizBreak();              // businesses → top of feed
+  _placeBizBreak(final);         // businesses → after 3 events
   _placeMapBreak(final);         // map preview → after 4 events
   _placeCategoryBreak(final);    // categories → after 6 events
   _placeTrustBreak(final);       // trust strip → directly under categories
