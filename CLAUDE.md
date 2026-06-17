@@ -189,6 +189,9 @@ Mechanics:
 - `loadFeed` calls `_injectFeedBreaks(_feedFinal)` after page-1 render, after promos replace innerHTML, and after each infinite-scroll append. `loadFrontline` / `loadCommunityPosts` also call it (race-safe).
 - `featured-weekend` is the only remaining standalone hidden div (admin promo renderer finds it by id).
 
+### Vibes row (Phase 2 — UX layer over genres, not a new feature)
+A static `#vibe-chip-row` (5 pills: Party/Chill/Luxury/Social/Cultural) sits in the home header directly under the Quick Actions row — **static markup, NOT a woven feed-break**. It's a fast "decide what to do" layer on top of the existing genre system. `browseVibe(vibe, btn)` maps the vibe to a set of real genre tokens via `VIBE_MAP` and sets `feedGenre` to the comma-joined list, which `loadFeed` passes straight through (CAT_MAP miss → `[feedGenre]` fallback) to the events API as `genre=a,b,c`. **No new backend, no DB column.** Re-tapping the active vibe toggles back to all. Selecting a vibe clears the genre-chip highlight (and vice versa) so the two rows never show conflicting active states. The genre chips (`feed-break-categories`) remain the deeper dive-in layer woven after 6 events. **`luxury` has no DB flag** — it's a best-effort proxy (`nightlife,festival,food`) until a real `is_premium` tag exists on events/businesses.
+
 ### Map quick-jump, style toggle, stacked-marker fan-out
 - **City jump** (`<select id="map-city-jump">` → `jumpToCity()`): flies to Durban/Joburg/Cape Town/Pretoria/Gqeberha; "All SA" resets `_mapFitDone=false` and re-fits to all markers. A manual jump sets `_mapFitDone=true` so the auto-fit doesn't fight it.
 - **Auto-jump on feed filter:** `showTab('map')` maps `feedCity`/`feedProvince` via `_cityKeyFromName()` and focuses the map there on open. First-open uses `_pendingCityJump` (applied in the `load` handler since init is async).
