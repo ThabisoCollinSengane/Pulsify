@@ -1047,17 +1047,24 @@ module.exports = async (req, res) => {
         paystack_business_name:  name,
       });
 
-      // Upsert into businesses table
-      await sb().from('businesses').upsert({
-        owner_id:     uid,
-        name:         name,
-        category:     b.category || b.type || null,
-        city:         b.city     || null,
-        province:     b.province || null,
-        contact_email: email,
-        contact_phone: b.phone   || null,
-        is_verified:  false,
-      }); // fire-and-forget
+      // Insert into businesses table. Column names must match the live
+      // schema (email/phone, not contact_email/contact_phone) and category
+      // is NOT NULL — a missing one breaks the row, so default it.
+      if (role === 'business') {
+        const { error: bizErr } = await sb().from('businesses').insert({
+          owner_id:  uid,
+          name,
+          category:  b.category || b.type || 'other',
+          city:      b.city     || null,
+          province:  b.province || null,
+          suburb:    b.suburb   || null,
+          address:   b.address  || null,
+          email,
+          phone:     b.phone    || null,
+          is_verified: false,
+        });
+        if (bizErr) console.error('[register-business] biz insert failed:', bizErr.message);
+      }
 
       // Auto-create Paystack subaccount if bank details provided
       let subCode = null;
