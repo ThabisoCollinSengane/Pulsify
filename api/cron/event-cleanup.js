@@ -26,7 +26,17 @@ module.exports = async (req, res) => {
 
     if (error) return res.status(400).json({ error: error.message });
 
-    return res.status(200).json({ ok: true, deactivated: data?.length || 0 });
+    // Map-data hygiene (#11): null out-of-SA-bounds event coords + dedupe venues.
+    // Runs in one DB transaction via the cleanup_map_data() function.
+    const { data: clean, error: cleanErr } = await sb().rpc('cleanup_map_data');
+    if (cleanErr) console.error('[event-cleanup] cleanup_map_data failed:', cleanErr.message);
+
+    return res.status(200).json({
+      ok: true,
+      deactivated: data?.length || 0,
+      coords_repaired: clean?.coords_repaired ?? null,
+      venues_merged:   clean?.venues_merged   ?? null,
+    });
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }

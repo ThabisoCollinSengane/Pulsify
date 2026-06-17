@@ -268,8 +268,11 @@ Tracked work from the security, architecture and map briefs. Tackle in order:
 - [~] **User-location intelligence (#10)** — `toggleNearMe()` geolocation auto-centre +
       proximity ranking + distance badges exist. Remaining: auto-prompt/centre on
       first map open without a tap.
-- [~] **Data cleaning (#11)** — `api/cron/event-cleanup.js` auto-deactivates past
-      events daily (4am cron). Remaining: dedupe venues; flag/repair bad coords.
+- [x] **Data cleaning (#11)** — daily 4am cron (`api/cron/event-cleanup.js`):
+      deactivates past events, then calls `cleanup_map_data()`
+      (`db/cleanup_map_data_fn.sql`) to null out-of-SA-bounds event coords and
+      dedupe venues by normalized (name, city) — repointing `events.venue_id` to
+      the best survivor (verified / confidence / oldest) before deleting losers.
 
 ### E. Other deferred (from security audit)
 - [ ] RLS: scope `leads` + `profile_claims` permissive policies (need usage review)
