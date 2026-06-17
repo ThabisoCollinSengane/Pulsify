@@ -246,7 +246,12 @@ Tracked work from the security, architecture and map briefs. Tackle in order:
 
 ### D. Map (do AFTER architecture — `pulsefy_map_fixes.txt`)
 - [x] **Venues table (#1)** — `public.venues`, SA-bounds trigger, location_confidence, venue_id FK + back-fill — PR #23
-- [ ] **Auto-geocoding (#2)** — Mapbox Geocoding primary; store name+address → generate+validate lat/lng.
+- [x] **Auto-geocoding (#2)** — `geocodeSA()` (api/shared.js) is now **Mapbox primary,
+      Nominatim fallback**, both SA-bounds validated. Events auto-geocode on
+      create/edit (api/events) → `location_confidence` 80. Self-registered
+      businesses still don't geocode (their `businesses` upsert in
+      `/auth/register-business` is broken — writes `contact_email`/`contact_phone`
+      which aren't columns; fix that before adding a biz geocode hook).
 - [x] **Coordinate validation (#3)** — SA-bounds DB trigger; client also validates before rendering — PR #23
 - [x] **`location_confidence` field (#4)** — 100 verified / 80 geocoded / 50 manual / 0 unknown — PR #23
 - [x] **Group events by venue (#5)** — one marker per venue; count badge; multi-event venue panel — PR #23
