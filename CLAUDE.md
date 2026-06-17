@@ -281,7 +281,10 @@ Tracked work from the security, architecture and map briefs. Tackle in order:
       client touches either table directly (lead-gen uses `scraped_leads` via the API;
       claims are service-role only), so dropped all permissive policies — RLS on, 0
       policies, service_role unaffected. `db/scope_leads_profile_claims_rls.sql`.
-- [ ] Move `pg_trgm` extension out of `public` schema (low risk)
+- [x] **Move `pg_trgm` extension out of `public` schema** — relocated to the
+      `extensions` schema (`db/move_pg_trgm_to_extensions_schema.sql`). Safe: no
+      trigram indexes, no user functions call its operators, `extensions` is
+      already in the search_path. Clears linter 0014 (extension_in_public).
 - [x] **#15 Engagement-based `hype_score`** — `event_likes` table + `trg_like_count` trigger
       (keeps `events.like_count` live); RLS policies on `event_attendances` so RSVP writes
       land; `POST /events/:id/like` + `POST /events/:id/rsvp` toggle endpoints in
