@@ -232,6 +232,25 @@ function validate(req, res, spec) {
   return r.value;
 }
 
+/* ─── Feature flags ───────────────────────────────────────────
+   DB-backed toggle table. Short in-process cache (30s) so a flag
+   check doesn't add a DB round-trip to every request. Cache is
+   per warm serverless instance — not globally consistent, but good
+   enough for gradual rollouts. Defaults to false on any error so
+   flags fail closed (feature off) rather than open. */
+const _flagCache = new Map(); // key → { enabled, exp }
+async function flagEnabled(key) {
+  const now = Date.now();
+  const hit = _flagCache.get(key);
+  if (hit && now < hit.exp) return hit.enabled;
+  try {
+    const { data } = await sb().from('feature_flags').select('enabled').eq('key', key).maybeSingle();
+    const enabled = data?.enabled ?? false;
+    _flagCache.set(key, { enabled, exp: now + 30000 });
+    return enabled;
+  } catch (_) { return false; }
+}
+
 /* ─── Error monitoring (Sentry, optional) ─────────────────────
    Inert unless SENTRY_DSN is set in the environment. */
 let _sentry = null, _sentryInit = false;
@@ -244,4 +263,4 @@ function captureError(err, context) {
   } catch (e) { console.error('[error]', err?.message || err); }
 }
 
-module.exports = { sb, sbAs, tokenFrom, CORS, corsHeaders, haverBox, geocodeSA, signQr, verifyQr, verifyToken, authUser, logAdminAction, rateLimit, rateLimited, captureError, validateBody, validate };
+module.exports = { sb, sbAs, tokenFrom, CORS, corsHeaders, haverBox, geocodeSA, signQr, verifyQr, verifyToken, authUser, logAdminAction, rateLimit, rateLimited, captureError, validateBody, validate, flagEnabled };

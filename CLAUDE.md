@@ -288,4 +288,8 @@ Tracked work from the security, architecture and map briefs. Tackle in order:
       `api/events/index.js`; `toggleEvLike`/`rsvpEv`/`_loadEvInteractionState` wired into
       event detail panel (`index.html`). `recompute_hype_scores()` cron (6am) now has real
       inputs: likes × 2 + comments × 3 + attendances, floor 20 / cap 100.
-- [ ] #13 Feature-flag system (DB-backed) to toggle features safely
+- [x] **#13 Feature-flag system** — `feature_flags` table (key/enabled/rollout/notes) with
+      SELECT-only RLS for anon/authenticated; `flagEnabled(key)` helper in `shared.js`
+      (30s in-process cache, fails-closed on error). First gate: `paystack_live` flag in
+      `/ticket/init` blocks paid ticket init when false. Flip to true once live Paystack
+      keys are set. `db/feature_flags_fn.sql`.
