@@ -153,6 +153,62 @@ function rateLimited(req, res, opts) {
   return true;
 }
 
+/* ─── Request body validation ─────────────────────────────────
+   Tiny declarative validator so endpoints stop hand-rolling inline
+   `if (!x) return 400` checks. Spec is { field: rule } where rule =
+   { type, required, default, min, max, minLen, maxLen, enum }.
+   type ∈ 'string' | 'int' | 'number' | 'email' | 'bool' (default 'string').
+   Returns { ok, errors, value } — value holds trimmed/coerced/defaulted
+   fields. Empty string / null / undefined count as "missing". */
+function validateBody(body, spec) {
+  const src = body || {};
+  const value = {}, errors = [];
+  for (const [key, rule] of Object.entries(spec)) {
+    const raw = src[key];
+    if (raw === undefined || raw === null || raw === '') {
+      if (rule.default !== undefined) value[key] = rule.default;
+      else if (rule.required)         errors.push(`${key} is required`);
+      continue;
+    }
+    switch (rule.type) {
+      case 'int':
+      case 'number': {
+        const n = rule.type === 'int' ? parseInt(raw, 10) : Number(raw);
+        if (Number.isNaN(n))                              { errors.push(`${key} must be a ${rule.type === 'int' ? 'whole number' : 'number'}`); break; }
+        if (rule.min !== undefined && n < rule.min)       { errors.push(`${key} must be at least ${rule.min}`); break; }
+        if (rule.max !== undefined && n > rule.max)       { errors.push(`${key} must be at most ${rule.max}`); break; }
+        value[key] = n; break;
+      }
+      case 'email': {
+        const s = String(raw).trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) { errors.push(`${key} must be a valid email`); break; }
+        value[key] = s.slice(0, rule.maxLen || 254); break;
+      }
+      case 'bool':
+        value[key] = raw === true || raw === 'true' || raw === 1 || raw === '1';
+        break;
+      default: { // 'string'
+        let s = String(raw).trim();
+        if (rule.enum && !rule.enum.includes(s)) { errors.push(`${key} must be one of: ${rule.enum.join(', ')}`); break; }
+        if (rule.minLen && s.length < rule.minLen) { errors.push(`${key} must be at least ${rule.minLen} characters`); break; }
+        if (rule.maxLen) s = s.slice(0, rule.maxLen);
+        value[key] = s; break;
+      }
+    }
+  }
+  return { ok: errors.length === 0, errors, value };
+}
+
+// Validate req.body against spec; on failure writes a 400 and returns null.
+// On success returns the coerced value object. Usage:
+//   const v = validate(req, res, { event_id: { required: true } });
+//   if (!v) return;            // 400 already sent
+function validate(req, res, spec) {
+  const r = validateBody(req.body, spec);
+  if (!r.ok) { res.status(400).json({ error: r.errors[0], errors: r.errors }); return null; }
+  return r.value;
+}
+
 /* ─── Error monitoring (Sentry, optional) ─────────────────────
    Inert unless SENTRY_DSN is set in the environment. */
 let _sentry = null, _sentryInit = false;
@@ -165,4 +221,4 @@ function captureError(err, context) {
   } catch (e) { console.error('[error]', err?.message || err); }
 }
 
-module.exports = { sb, sbAs, tokenFrom, CORS, corsHeaders, haverBox, geocodeSA, signQr, verifyQr, verifyToken, authUser, logAdminAction, rateLimit, rateLimited, captureError };
+module.exports = { sb, sbAs, tokenFrom, CORS, corsHeaders, haverBox, geocodeSA, signQr, verifyQr, verifyToken, authUser, logAdminAction, rateLimit, rateLimited, captureError, validateBody, validate };

@@ -1,7 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 const { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail, sendTicketEmail } = require('./email');
-const { rateLimited, captureError, corsHeaders, signQr, verifyQr } = require('./shared');
+const { rateLimited, captureError, corsHeaders, signQr, verifyQr, validate } = require('./shared');
 
 const SUPA_URL  = process.env.SUPABASE_URL  || 'https://cjzewfvtdayjgjdpdmln.supabase.co';
 const SUPA_ANON = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
@@ -509,20 +509,26 @@ module.exports = async (req, res) => {
 
     /* ─── POST /ticket/purchase ───────────────────────────── */
     if (url === '/ticket/purchase' && req.method === 'POST') {
-      const body = req.body || {};
-      const { event_id, tier_id, quantity = 1, buyer_name, buyer_email, buyer_phone } = body;
-
-      if (!event_id || !buyer_name || !buyer_email)
-        return res.status(400).json({ error: 'event_id, buyer_name and buyer_email required' });
+      const v = validate(req, res, {
+        event_id:    { required: true, maxLen: 64 },
+        tier_id:     { maxLen: 64 },
+        quantity:    { type: 'int', min: 1, max: 10, default: 1 },
+        buyer_name:  { required: true, maxLen: 120 },
+        buyer_email: { type: 'email', required: true },
+        buyer_phone: { maxLen: 32 },
+        user_id:     { maxLen: 64 },
+      });
+      if (!v) return;
+      const { event_id, tier_id, buyer_name, buyer_email, buyer_phone } = v;
 
       const [{ data: ev }, { data: tier }] = await Promise.all([
-        sb().from('events').select('name,commission_rate').eq('id', event_id).single(),
+        sb().from('events').select('name,date_local,venue_name,venue_city,commission_rate').eq('id', event_id).single(),
         tier_id ? sb().from('ticket_tiers').select('*').eq('id', tier_id).single() : { data: null },
       ]);
 
       if (!ev) return res.status(404).json({ error: 'Event not found' });
 
-      const qty         = Math.max(1, parseInt(quantity));
+      const qty         = v.quantity;
       const unit_price  = tier?.price || 0;
       const subtotal    = unit_price * qty;
       const commission  = unit_price > 0 ? +(subtotal * 0.08).toFixed(2) : 0;
@@ -541,7 +547,7 @@ module.exports = async (req, res) => {
         status:      'confirmed',
         qr_data,
         qr_token:    qr_sig,
-        user_id:     body.user_id || null,
+        user_id:     v.user_id || null,
       }).select().single();
 
       if (bErr) return res.status(400).json({ error: bErr.message });
@@ -551,7 +557,7 @@ module.exports = async (req, res) => {
         .catch(e => console.error('[email/ticket]', e.message));
 
       // Notify the buyer if they're a registered user
-      const { user_id } = body;
+      const user_id = v.user_id;
       if (user_id) {
         await sb().from('notifications').insert({
           user_id, type: 'ticket',
@@ -582,11 +588,17 @@ module.exports = async (req, res) => {
     /* ─── POST /ticket/init ───────────────────────────────── */
     // For paid tickets: creates pending booking + initialises Paystack transaction with split
     if (url === '/ticket/init' && req.method === 'POST') {
-      const body = req.body || {};
-      const { event_id, tier_id, quantity = 1, buyer_name, buyer_email, buyer_phone, user_id: uid } = body;
-
-      if (!event_id || !buyer_name || !buyer_email)
-        return res.status(400).json({ error: 'event_id, buyer_name and buyer_email required' });
+      const v = validate(req, res, {
+        event_id:    { required: true, maxLen: 64 },
+        tier_id:     { maxLen: 64 },
+        quantity:    { type: 'int', min: 1, max: 10, default: 1 },
+        buyer_name:  { required: true, maxLen: 120 },
+        buyer_email: { type: 'email', required: true },
+        buyer_phone: { maxLen: 32 },
+        user_id:     { maxLen: 64 },
+      });
+      if (!v) return;
+      const { event_id, tier_id, buyer_name, buyer_email, buyer_phone, user_id: uid } = v;
 
       const [{ data: ev }, { data: tier }] = await Promise.all([
         sb().from('events').select('id,name,date_local,time_local,venue_name,venue_city,organiser_id').eq('id', event_id).single(),
@@ -595,7 +607,7 @@ module.exports = async (req, res) => {
 
       if (!ev) return res.status(404).json({ error: 'Event not found' });
 
-      const qty        = Math.max(1, parseInt(quantity));
+      const qty        = v.quantity;
       const unit_price = tier?.price || 0;
       const subtotal   = unit_price * qty;
       const commission = unit_price > 0 ? +(subtotal * 0.08).toFixed(2) : 0;
