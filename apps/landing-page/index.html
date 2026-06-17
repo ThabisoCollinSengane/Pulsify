@@ -3011,14 +3011,8 @@ async function initPay(evId) {
     showToast('Preparing checkout…');
     let initData;
     try {
-      const ir = await fetch(API + '/ticket/init', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event_id: evId, tier_id: selTier?.id || null, quantity: selQty, buyer_name: name, buyer_email: email, user_id: currentUser?.id || null }),
-      });
-      initData = await safeJson(ir);
-      if (!ir.ok) return showToast(initData.error || 'Payment initiation failed', 'err');
-    } catch(e) { return showToast('Payment error — try again', 'err'); }
+      initData = await Api.post('/ticket/init', { event_id: evId, tier_id: selTier?.id || null, quantity: selQty, buyer_name: name, buyer_email: email, user_id: currentUser?.id || null });
+    } catch(e) { return showToast(e.message || 'Payment error — try again', 'err'); }
 
     PaystackPop.setup({
       key:      _paystackPK,
@@ -3045,13 +3039,7 @@ async function initPay(evId) {
   // Free ticket — book directly
   showToast('Processing…');
   try {
-    const res  = await fetch(API + '/ticket/purchase', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event_id: evId, tier_id: selTier?.id || null, quantity: selQty, buyer_name: name, buyer_email: email, user_id: currentUser?.id || null }),
-    });
-    const data = await safeJson(res);
-    if (!res.ok) throw new Error(data.error);
+    const data = await Api.post('/ticket/purchase', { event_id: evId, tier_id: selTier?.id || null, quantity: selQty, buyer_name: name, buyer_email: email, user_id: currentUser?.id || null });
     showTicketConfirm({ ...data, quantity: selQty });
     if (currentUser) {
       const sb = getSB();
