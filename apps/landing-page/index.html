@@ -2019,11 +2019,9 @@ async function loadFeed(resetPage = false, append = false) {
     if (feedTo)   params.set('to_date', feedTo);
     const _abort = new AbortController();
     const _timer = setTimeout(() => _abort.abort(), 8000);
-    const resp = await fetch('/api/events?' + params, { signal: _abort.signal });
+    const json = await Api.get('/events?' + params, { signal: _abort.signal });
     clearTimeout(_timer);
     if (myReq !== _feedReqId) return;
-    if (!resp.ok) throw new Error('API ' + resp.status);
-    const json = await resp.json();
     const events = _proximityRank(json.events || []);
     const count  = json.total  || events.length;
     feedTotalPages = json.total_pages || Math.ceil(count / limit) || 1;
@@ -3024,9 +3022,7 @@ async function initPay(evId) {
       callback: async function(psRes) {
         showToast('Confirming your ticket…');
         try {
-          const cr = await fetch(API + '/ticket/confirm?ref=' + encodeURIComponent(psRes.reference));
-          const cd = await safeJson(cr);
-          if (!cr.ok) return showToast(cd.error || 'Check My Tickets tab — booking may be confirmed shortly', 'err');
+          const cd = await Api.get('/ticket/confirm?ref=' + encodeURIComponent(psRes.reference));
           showTicketConfirm({ ...cd, quantity: initData.quantity, event_name: initData.event_name, tier_name: initData.tier_name });
           renderBookings();
         } catch(e) { showToast('Check My Tickets tab — your booking may already be confirmed', 'err'); }
@@ -6374,9 +6370,9 @@ function _renderBizPage() {
    REPORT — events, businesses, posts
 ══════════════════════════════════════════════════ */
 const REPORT_CFG = {
-  event:    { title: '🚩 Report Event',    endpoint: '/api/report-event',    idKey: 'event_id',    nameKey: 'event_name'    },
-  business: { title: '🚩 Report Business', endpoint: '/api/report-business', idKey: 'business_id', nameKey: 'business_name' },
-  post:     { title: '🚩 Report Post',     endpoint: '/api/report-post',     idKey: 'post_id',     nameKey: 'post_caption'  },
+  event:    { title: '🚩 Report Event',    endpoint: '/report-event',    idKey: 'event_id',    nameKey: 'event_name'    },
+  business: { title: '🚩 Report Business', endpoint: '/report-business', idKey: 'business_id', nameKey: 'business_name' },
+  post:     { title: '🚩 Report Post',     endpoint: '/report-post',     idKey: 'post_id',     nameKey: 'post_caption'  },
 };
 let _reportType = null, _reportTargetId = null, _reportTargetName = null;
 
@@ -6415,14 +6411,10 @@ async function submitReport() {
   const btn = document.getElementById('report-submit-btn');
   btn.disabled = true; btn.textContent = 'Sending…';
   try {
-    const { data: { session } } = await getSB().auth.getSession();
-    const headers = { 'Content-Type': 'application/json' };
-    if (session) headers['Authorization'] = 'Bearer ' + session.access_token;
     const body = { reason, detail: detail || null };
     body[cfg.idKey]   = _reportTargetId;
     body[cfg.nameKey] = _reportTargetName;
-    const r = await fetch(cfg.endpoint, { method: 'POST', headers, body: JSON.stringify(body) });
-    if (!r.ok) throw new Error((await safeJson(r)).error || 'Failed');
+    await Api.post(cfg.endpoint, body, { auth: 'optional' });
     msg.style.cssText = 'display:block;background:rgba(198,255,74,.1);color:#C6FF4A;padding:10px 12px;border-radius:10px;font-size:.8rem;margin-bottom:12px';
     msg.textContent = '✅ Report submitted. Our team will review it shortly.';
     btn.textContent = 'Reported';
@@ -6878,9 +6870,7 @@ async function loadSquadDeals(squadId) {
   pane.innerHTML = '<div style="padding:20px;font-size:.78rem;color:var(--mu)">Loading deals…</div>';
   try {
     const city = _sqCurrentSquad?.location_city || '';
-    const url = '/api/squad-promos' + (city ? '?city=' + encodeURIComponent(city) : '');
-    const r = await fetch(url);
-    const j = await r.json();
+    const j = await Api.get('/squad-promos' + (city ? '?city=' + encodeURIComponent(city) : ''));
     const promos = j.promos || [];
     if (!promos.length) {
       pane.innerHTML = `<div style="padding:28px 16px;text-align:center">
