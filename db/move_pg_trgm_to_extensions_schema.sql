@@ -1,0 +1,21 @@
+-- Move the pg_trgm extension out of the `public` schema (security-audit §E).
+--
+-- Why: Supabase's database linter flags user-installable extensions living in
+-- `public` (lint 0014 extension_in_public) — they widen the surface of the
+-- PostgREST-exposed `public` schema. pg_trgm belongs in the dedicated
+-- `extensions` schema (which Supabase creates and already puts in the
+-- postgres / supabase_admin search_paths).
+--
+-- Safety review before moving (all confirmed empty / resolvable):
+--   * No trigram indexes exist (no gin_trgm_ops / gist_trgm_ops in use).
+--   * No user-defined functions call similarity()/word_similarity()/show_trgm()
+--     — the only matches were pg_trgm's OWN functions, which move with it.
+--   * No non-extension pg_depend rows reference the extension.
+--   * `extensions` schema already exists and is in the relevant search_paths,
+--     so the extension's functions stay resolvable (verified:
+--     extensions.similarity('pulsify','pulsfy') = 0.5 after the move).
+--
+-- Applied to production via the Supabase migration
+-- `move_pg_trgm_to_extensions_schema`.
+
+ALTER EXTENSION pg_trgm SET SCHEMA extensions;
