@@ -1,6 +1,6 @@
 const crypto = require('crypto');
-const { sb, sbAs, authUser, tokenFrom, corsHeaders, signQr, verifyQr, verifyToken, logAdminAction, rateLimited, captureError } = require('../shared');
-const { sendPaymentConfirmEmail } = require('../email');
+const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError } = require('../shared');
+const { sendPaymentConfirmEmail, sendTicketEmail } = require('../email');
 
 module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
@@ -12,66 +12,8 @@ module.exports = async (req, res) => {
 
   try {
 
-    /* ─── POST /ticket/purchase ───────────────────────────── */
-    if (url === '/ticket/purchase' && req.method === 'POST') {
-      const body = req.body || {};
-      const { event_id, tier_id, quantity = 1, buyer_name, buyer_email, buyer_phone } = body;
-
-      if (!event_id || !buyer_name || !buyer_email)
-        return res.status(400).json({ error: 'event_id, buyer_name and buyer_email required' });
-
-      const [{ data: ev }, { data: tier }] = await Promise.all([
-        sb().from('events').select('name,commission_rate').eq('id', event_id).single(),
-        tier_id ? sb().from('ticket_tiers').select('*').eq('id', tier_id).single() : { data: null },
-      ]);
-
-      if (!ev) return res.status(404).json({ error: 'Event not found' });
-
-      const qty         = Math.max(1, parseInt(quantity));
-      const unit_price  = tier?.price || 0;
-      const subtotal    = unit_price * qty;
-      const commission  = unit_price > 0 ? +(subtotal * 0.08).toFixed(2) : 0;
-      const psf         = unit_price > 0 ? +(subtotal * 0.015 + 1.5).toFixed(2) : 0;
-      const total_paid  = +(subtotal + commission + psf).toFixed(2);
-      const booking_ref = `PKF-${Date.now()}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
-
-      const { data: booking, error: bErr } = await sb().from('bookings').insert({
-        booking_ref, event_id,
-        tier_id:     tier_id || null,
-        buyer_name,  buyer_email,
-        buyer_phone: buyer_phone || null,
-        quantity:    qty, unit_price, commission, total_paid,
-        status:      'confirmed', // Paystack disabled — auto-confirm all
-        qr_data:     `PULSIFY:${booking_ref}:${event_id}:${signQr(booking_ref, event_id)}`,
-      }).select().single();
-
-      if (bErr) return res.status(400).json({ error: bErr.message });
-
-      // Notify the buyer if they're a registered user
-      const { user_id } = body;
-      if (user_id) {
-        await sb().from('notifications').insert({
-          user_id, type: 'ticket',
-          from_display_name: 'Pulsefy',
-          entity_id: event_id, entity_type: 'events',
-          message: `Your ticket for ${ev.name} is confirmed! Ref: ${booking_ref}${unit_price > 0 ? ` · R${total_paid.toFixed(2)}` : ' · FREE'}`,
-          data: { booking_ref, tier_name: tier?.name || null },
-        }).catch(() => {});
-      }
-
-      return res.status(200).json({
-        success:     true,
-        booking_ref,
-        total_paid,
-        buyer_email,
-        buyer_name,
-        is_free:     unit_price === 0,
-        qr_data:     booking.qr_data,
-        event_name:  ev.name,
-        tier_name:   tier?.name || null,
-        quantity:    qty,
-      });
-    }
+    /* /ticket/purchase lives in api/index.js (see vercel.json rewrite:
+       /api/ticket/* → /api). Don't re-add it here. */
 
     /* ─── GET /booking/:ref ───────────────────────────────── */
     const bookRef = url.match(/^\/booking\/([^/]+)$/)?.[1];
@@ -83,60 +25,15 @@ module.exports = async (req, res) => {
       return res.status(200).json({ booking: data });
     }
 
-    /* ─── POST /validate-ticket ──────────────────────────── */
-    if (url === '/validate-ticket' && req.method === 'POST') {
-      const auth = await authUser(req);
-      if (!auth) return res.status(401).json({ error: 'Unauthorized' });
-      const { user, profile } = auth;
+    /* /validate-ticket lives in api/index.js (see vercel.json rewrite:
+       /api/validate-ticket → /api). Don't re-add it here. */
 
-      const { qr_data } = req.body || {};
-      if (!qr_data) return res.status(400).json({ error: 'qr_data required' });
-
-      const parts = String(qr_data).split(':');
-      if (parts.length < 4 || parts[0] !== 'PULSIFY')
-        return res.status(400).json({ error: 'Invalid QR code' });
-
-      const booking_ref = parts[1];
-      const event_id    = parts[2];
-      const qr_sig      = parts[3];
-
-      if (!verifyQr(booking_ref, event_id, qr_sig))
-        return res.status(400).json({ error: 'QR signature invalid' });
-
-      const { data: booking } = await sb().from('bookings')
-        .select('*,events(name,date_local,venue_name,organiser_id),ticket_tiers(name)')
-        .eq('booking_ref', booking_ref).maybeSingle();
-
-      if (!booking)                         return res.status(404).json({ error: 'Ticket not found' });
-      if (booking.status !== 'confirmed')   return res.status(400).json({ error: 'Ticket is not confirmed' });
-      if (booking.event_id !== event_id)    return res.status(400).json({ error: 'QR data mismatch' });
-      if (profile.role === 'organizer' && booking.events?.organiser_id !== user.id)
-        return res.status(403).json({ error: "This ticket is for a different organizer's event" });
-
-      if (booking.checked_in)
-        return res.status(409).json({
-          error: 'Already checked in',
-          checked_in_at: booking.checked_in_at,
-          booking: { buyer_name: booking.buyer_name, booking_ref: booking.booking_ref },
-        });
-
-      await sb().from('bookings')
-        .update({ checked_in: true, checked_in_at: new Date().toISOString() })
-        .eq('id', booking.id);
-
-      return res.status(200).json({
-        success:     true,
-        booking_ref: booking.booking_ref,
-        buyer_name:  booking.buyer_name,
-        buyer_email: booking.buyer_email,
-        quantity:    booking.quantity,
-        tier_name:   booking.ticket_tiers?.name  || null,
-        event_name:  booking.events?.name        || null,
-        event_date:  booking.events?.date_local  || null,
-      });
-    }
-
-    /* ─── POST /paystack/webhook ──────────────────────────── */
+    /* ─── POST /paystack/webhook ──────────────────────────────
+       Async source of truth for paid tickets. Before flipping a
+       booking to confirmed we re-verify the amount Paystack actually
+       charged (currency ZAR + amount ≥ expected kobo) so a tampered
+       client amount can't confirm a booking. Idempotent on
+       status='pending'. */
     if (url === '/paystack/webhook' && req.method === 'POST') {
       const sig  = req.headers['x-paystack-signature'] || '';
       const hash = crypto.createHmac('sha512', process.env.PAYSTACK_SECRET_KEY || '')
@@ -144,20 +41,53 @@ module.exports = async (req, res) => {
       if (sig !== hash) return res.status(401).json({ error: 'Invalid signature' });
 
       if (req.body?.event === 'charge.success') {
-        const ref    = req.body.data?.reference;
-        const meta   = req.body.data?.metadata || {};
+        const pdata  = req.body.data || {};
+        const ref    = pdata.reference;
+        const meta   = pdata.metadata || {};
         const userId = meta.user_id || null;
-        if (meta.booking_id) {
-          await sb().from('bookings').update({ status: 'confirmed' }).eq('id', meta.booking_id);
+
+        // Load the pending booking (by id or ref) to verify the charged amount.
+        let pq = sb().from('bookings')
+          .select('*,events(name,date_local,venue_name,venue_city),ticket_tiers(name)');
+        pq = meta.booking_id ? pq.eq('id', meta.booking_id) : pq.eq('booking_ref', ref);
+        const { data: pend } = await pq.maybeSingle();
+
+        let confirmedBooking = null;
+        if (pend && pend.status === 'pending') {
+          const expectedKobo = Math.round((pend.total_paid || 0) * 100);
+          if (pdata.currency === 'ZAR' && (pdata.amount || 0) >= expectedKobo) {
+            const { data: b, error: cErr } = await sb().from('bookings')
+              .update({ status: 'confirmed', paystack_ref: ref })
+              .eq('id', pend.id).eq('status', 'pending')
+              .select('*,events(name,date_local,venue_name,venue_city),ticket_tiers(name)').single();
+            if (cErr) console.error('[paystack/webhook] confirm write failed:', cErr.message);
+            confirmedBooking = b;
+          } else {
+            console.error('[paystack/webhook] amount mismatch', ref, pdata.amount, expectedKobo, pdata.currency);
+          }
         }
+
+        if (confirmedBooking) {
+          sendTicketEmail(confirmedBooking.buyer_email, confirmedBooking.buyer_name, confirmedBooking.events?.name, confirmedBooking.events?.date_local, confirmedBooking.events?.venue_name, confirmedBooking.events?.venue_city, confirmedBooking.booking_ref, confirmedBooking.ticket_tiers?.name, confirmedBooking.quantity, confirmedBooking.total_paid, confirmedBooking.unit_price === 0, confirmedBooking.qr_data)
+            .catch(e => console.error('[email/ticket/webhook]', e.message));
+          if (userId) {
+            await sb().from('notifications').insert({
+              user_id: userId, type: 'ticket', from_display_name: 'Pulsefy',
+              entity_id: confirmedBooking.event_id, entity_type: 'events',
+              message: `Your ticket for ${confirmedBooking.events?.name} is confirmed! Ref: ${confirmedBooking.booking_ref}`,
+              data: { booking_ref: confirmedBooking.booking_ref },
+            }).catch(() => {});
+          }
+        }
+
         if (userId && ref) {
           await sb().from('payments').upsert({
             user_id: userId, reference: ref, type: meta.type || 'ticket',
             entity_id: meta.booking_id || meta.entity_id || null,
-            amount: req.body.data?.amount || 0, status: 'success',
+            amount: pdata.amount || 0, status: 'success',
             completed_at: new Date().toISOString(),
-            metadata: { paystack: req.body.data },
-          }, { onConflict: 'reference' });
+            metadata: { paystack: pdata },
+          }, { onConflict: 'reference' }).catch(() => {});
         }
       }
       return res.status(200).json({ received: true });
@@ -183,6 +113,17 @@ module.exports = async (req, res) => {
       if (id_doc_url)    updatePayload.id_doc_url    = id_doc_url;
 
       const { error } = await sb().from('profiles').update(updatePayload).eq('id', user.id);
+      if (error) {
+        console.error('[verify-request] profiles update failed:', error.message);
+        return res.status(500).json({ error: 'Could not submit verification — please try again.' });
+      }
+
+      // Audit trail: upsert KYC document records
+      const kycRows = [];
+      const extractPath = (u) => { try { return u.split('/verification-docs/')[1].split('?')[0]; } catch { return u; } };
+      if (face_scan_url) kycRows.push({ user_id: user.id, file_type: 'face_scan', storage_path: extractPath(face_scan_url), mime_type: 'image/jpeg' });
+      if (id_doc_url)    kycRows.push({ user_id: user.id, file_type: 'id_doc',    storage_path: extractPath(id_doc_url)    });
+      if (kycRows.length) await sb().from('kyc_documents').upsert(kycRows, { onConflict: 'user_id,file_type,storage_path' }).catch(() => {});
 
       // Notify admin about new verification request
       const { data: admins } = await sb().from('profiles').select('id').eq('role', 'admin');
@@ -198,7 +139,6 @@ module.exports = async (req, res) => {
         });
       }
 
-      if (error) console.warn('[verify-request] profiles update failed:', error.message);
       return res.status(200).json({ success: true, status: 'pending' });
     }
 
@@ -257,7 +197,8 @@ module.exports = async (req, res) => {
 
       if (newStatus === 'success') {
         if (['subscription_organizer','subscription_business'].includes(payment.type)) {
-          await sb().from('profiles').update({ subscription_type: 'premium' }).eq('id', user.id);
+          const { error: subErr } = await sb().from('profiles').update({ subscription_type: 'premium' }).eq('id', user.id);
+          if (subErr) console.error('[payments/verify] subscription upgrade failed:', user.id, subErr.message);
         }
         await sb().from('notifications').insert({
           user_id: user.id, type: 'payment', from_user_id: user.id, from_display_name: 'Pulsefy',
@@ -292,7 +233,8 @@ module.exports = async (req, res) => {
         }).eq('id', payment.id);
 
         if (['subscription_organizer','subscription_business'].includes(payment.type)) {
-          await sb().from('profiles').update({ subscription_type: 'premium' }).eq('id', payment.user_id);
+          const { error: subErr } = await sb().from('profiles').update({ subscription_type: 'premium' }).eq('id', payment.user_id);
+          if (subErr) console.error('[payments/webhook] subscription upgrade failed:', payment.user_id, subErr.message);
         }
         await sb().from('notifications').insert({
           user_id: payment.user_id, type: 'payment', from_user_id: payment.user_id, from_display_name: 'Pulsefy',
