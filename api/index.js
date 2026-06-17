@@ -944,13 +944,17 @@ module.exports = async (req, res) => {
     /* ─── POST /auth/register-business ───────────────────── */
     if (url === '/auth/register-business' && req.method === 'POST') {
       const b = req.body || {};
-      const email    = (b.email || '').trim().toLowerCase();
+      // Shared validator rejects malformed emails before we create an auth
+      // user (public, unauthenticated endpoint — validate at the door).
+      const v = validate(req, res, { email: { type: 'email', required: true } });
+      if (!v) return;
+      const email    = v.email.toLowerCase();
       const password = b.password || '';
       const name     = (b.business_name || b.display_name || b.name || '').trim();
       const role     = b.role === 'organizer' ? 'organizer' : 'business';
 
-      if (!email || !password || !name)
-        return res.status(400).json({ error: 'email, password and business_name are required' });
+      if (!password || !name)
+        return res.status(400).json({ error: 'password and business_name are required' });
 
       // Block obvious duplicates: same business name in the same city, or same phone number already on file
       const dupCity = (b.city || '').trim();
