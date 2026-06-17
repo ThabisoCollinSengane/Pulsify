@@ -60,27 +60,50 @@ function verifyQr(bookingRef, eventId, sig) {
   return signQr(bookingRef, eventId) === sig;
 }
 
-/* ─── Geocoding (Nominatim / OpenStreetMap) ───────────────────
-   Free, keyless geocoder (mirrors the admin dashboard's client-side
-   usage). Restricted to South Africa and validated against SA bounds
+/* ─── Geocoding (Mapbox primary, Nominatim fallback) ──────────
+   Restricted to South Africa and validated against SA bounds
    (lat -35..-22, lon 16..33) so a bad lookup can never persist an
-   off-map coordinate. Returns { lat, lon } or null. One lookup per
-   call — callers must respect Nominatim's ~1 req/sec policy if batching. */
-async function geocodeSA(query) {
-  const q = (query || '').trim();
-  if (!q) return null;
+   off-map coordinate. Returns { lat, lon } or null. Mapbox gives
+   better POI/address coverage; Nominatim is the keyless fallback.
+   One lookup per call — respect Nominatim's ~1 req/sec if batching. */
+const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN || 'pk.eyJ1IjoidGhhY29sbGluMiIsImEiOiJjbW51Mm95cHEwYm8xMnJyMXEzaXgxMDBmIn0.nF80wBOn-jxhjpAIus9anw';
+
+function inSABounds(lat, lon) {
+  return !isNaN(lat) && !isNaN(lon) && lat >= -35 && lat <= -22 && lon >= 16 && lon <= 33;
+}
+
+async function geocodeMapbox(query) {
+  if (!MAPBOX_TOKEN) return null;
+  try {
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`
+      + `?access_token=${MAPBOX_TOKEN}&country=za&types=poi,address,place&limit=1`;
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const d = await r.json().catch(() => null);
+    const center = d?.features?.[0]?.center;
+    if (!Array.isArray(center)) return null;
+    const lon = Number(center[0]), lat = Number(center[1]);
+    return inSABounds(lat, lon) ? { lat, lon } : null;
+  } catch (_) { return null; }
+}
+
+async function geocodeNominatim(query) {
   try {
     const r = await fetch('https://nominatim.openstreetmap.org/search?' + new URLSearchParams({
-      q, format: 'json', limit: '1', countrycodes: 'za',
+      q: query, format: 'json', limit: '1', countrycodes: 'za',
     }), { headers: { 'User-Agent': 'Pulsefy/2.0 (https://pulsefy.co.za)' } });
     if (!r.ok) return null;
     const results = await r.json().catch(() => []);
     if (!Array.isArray(results) || !results.length) return null;
     const lat = parseFloat(results[0].lat), lon = parseFloat(results[0].lon);
-    if (isNaN(lat) || isNaN(lon)) return null;
-    if (lat < -35 || lat > -22 || lon < 16 || lon > 33) return null; // SA bounds
-    return { lat, lon };
+    return inSABounds(lat, lon) ? { lat, lon } : null;
   } catch (_) { return null; }
+}
+
+async function geocodeSA(query) {
+  const q = (query || '').trim();
+  if (!q) return null;
+  return (await geocodeMapbox(q)) || (await geocodeNominatim(q));
 }
 
 function haverBox(lat, lon, km) {
