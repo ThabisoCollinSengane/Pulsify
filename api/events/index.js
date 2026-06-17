@@ -361,6 +361,46 @@ module.exports = async (req, res) => {
       return res.status(200).json({ success: true });
     }
 
+    /* ─── POST /events/:id/like (toggle) ────────────────── */
+    const likeEvId = url.match(/^\/events\/([^/]+)\/like$/)?.[1];
+    if (likeEvId && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Sign in to like events' });
+
+      const { data: existing } = await sb()
+        .from('event_likes').select('user_id')
+        .eq('user_id', auth.user.id).eq('event_id', likeEvId).maybeSingle();
+
+      if (existing) {
+        await sb().from('event_likes').delete().eq('user_id', auth.user.id).eq('event_id', likeEvId);
+      } else {
+        const { error: insErr } = await sb().from('event_likes').insert({ user_id: auth.user.id, event_id: likeEvId });
+        if (insErr) return res.status(400).json({ error: insErr.message });
+      }
+      const { data: ev } = await sb().from('events').select('like_count').eq('id', likeEvId).single();
+      return res.status(200).json({ liked: !existing, like_count: ev?.like_count ?? 0 });
+    }
+
+    /* ─── POST /events/:id/rsvp (toggle) ────────────────── */
+    const rsvpEvId = url.match(/^\/events\/([^/]+)\/rsvp$/)?.[1];
+    if (rsvpEvId && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Sign in to RSVP' });
+
+      const { data: existing } = await sb()
+        .from('event_attendances').select('user_id')
+        .eq('user_id', auth.user.id).eq('event_id', rsvpEvId).maybeSingle();
+
+      if (existing) {
+        await sb().from('event_attendances').delete().eq('user_id', auth.user.id).eq('event_id', rsvpEvId);
+      } else {
+        const { error: insErr } = await sb().from('event_attendances').insert({ user_id: auth.user.id, event_id: rsvpEvId, status: 'going' });
+        if (insErr) return res.status(400).json({ error: insErr.message });
+      }
+      const { data: ev } = await sb().from('events').select('attendance_count').eq('id', rsvpEvId).single();
+      return res.status(200).json({ going: !existing, attendance_count: ev?.attendance_count ?? 0 });
+    }
+
     return res.status(404).json({ error: 'Not found' });
   } catch (e) {
     captureError(e, { url });

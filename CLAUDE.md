@@ -277,5 +277,10 @@ Tracked work from the security, architecture and map briefs. Tackle in order:
 ### E. Other deferred (from security audit)
 - [ ] RLS: scope `leads` + `profile_claims` permissive policies (need usage review)
 - [ ] Move `pg_trgm` extension out of `public` schema (low risk)
-- [ ] #15 Engagement-based `hype_score` (compute from likes/views, not seeded)
+- [x] **#15 Engagement-based `hype_score`** — `event_likes` table + `trg_like_count` trigger
+      (keeps `events.like_count` live); RLS policies on `event_attendances` so RSVP writes
+      land; `POST /events/:id/like` + `POST /events/:id/rsvp` toggle endpoints in
+      `api/events/index.js`; `toggleEvLike`/`rsvpEv`/`_loadEvInteractionState` wired into
+      event detail panel (`index.html`). `recompute_hype_scores()` cron (6am) now has real
+      inputs: likes × 2 + comments × 3 + attendances, floor 20 / cap 100.
 - [ ] #13 Feature-flag system (DB-backed) to toggle features safely

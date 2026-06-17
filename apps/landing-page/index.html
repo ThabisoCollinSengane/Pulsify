@@ -2836,10 +2836,10 @@ async function openEv(evId) {
         </div>
       </div>
       <div class="rx">
-        <button class="rb" onclick="this.classList.toggle('act');this.querySelector('.ri').textContent=this.classList.contains('act')?'❤️':'🤍'"><span class="ri">🤍</span><span class="rl">${fn(lc)}</span></button>
+        <button class="rb" id="ev-like-btn" onclick="toggleEvLike('${x(ev.id)}',this)"><span class="ri">🤍</span><span class="rl" id="ev-like-count">${fn(lc)}</span></button>
         <button class="rb" onclick="openComments('${x(ev.id)}','${x(ev.name)}')"><span class="ri">💬</span><span class="rl">${fn(cc)}</span></button>
         <button class="rb" onclick="this.classList.toggle('act')"><span class="ri">🔥</span><span class="rl">${fn(Math.round(lc * .6))}</span></button>
-        <button class="rb" onclick="this.classList.toggle('act');showToast('RSVP confirmed! See you there 🎉','ok')"><span class="ri">${iF ? '✅' : '🎟'}</span><span class="rl">${fn(ev.attendance_count || 0)}</span></button>
+        <button class="rb" id="ev-rsvp-btn" onclick="rsvpEv('${x(ev.id)}',this)"><span class="ri">${iF ? '✅' : '🎟'}</span><span class="rl" id="ev-rsvp-count">${fn(ev.attendance_count || 0)}</span></button>
         <button class="rb" onclick="toggleSave('ev','${x(ev.id)}',this)"><span class="ri">${savedEv.includes(ev.id) ? '🔖' : '🏷'}</span><span class="rl">Save</span></button>
         <button class="rb" onclick="shareIt('${x(ev.name)}')"><span class="ri">🔗</span><span class="rl">Share</span></button>
         <button class="rb" onclick="openReportModal('${x(ev.id)}','${x(ev.name).replace(/'/g,'\\\'')}')"><span class="ri">🚩</span><span class="rl">Report</span></button>
@@ -2873,9 +2873,43 @@ async function openEv(evId) {
 
     triggerRev();
     loadSimilarEvents(ev);
+    if (currentUser) _loadEvInteractionState(ev.id);
   } catch(err) {
     document.getElementById('ev-detail').innerHTML = `<div style="padding:40px;text-align:center;color:var(--mu)">Could not load event. <button onclick="goBack()" style="color:var(--or);background:none;border:none;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700">Go back</button></div>`;
   }
+}
+
+async function toggleEvLike(evId, btn) {
+  if (!currentUser) { showToast('Sign in to like events'); return; }
+  try {
+    const { liked, like_count } = await Api.post('/events/' + evId + '/like', {}, { auth: true });
+    btn.classList.toggle('act', liked);
+    btn.querySelector('.ri').textContent = liked ? '❤️' : '🤍';
+    const c = btn.querySelector('.rl'); if (c) c.textContent = fn(like_count);
+  } catch(e) { showToast(e.message || 'Could not like event'); }
+}
+
+async function rsvpEv(evId, btn) {
+  if (!currentUser) { showToast('Sign in to RSVP'); return; }
+  try {
+    const { going, attendance_count } = await Api.post('/events/' + evId + '/rsvp', {}, { auth: true });
+    btn.classList.toggle('act', going);
+    const c = btn.querySelector('.rl'); if (c) c.textContent = fn(attendance_count);
+    showToast(going ? 'RSVP confirmed! See you there 🎉' : 'RSVP cancelled', going ? 'ok' : '');
+  } catch(e) { showToast(e.message || 'Could not RSVP'); }
+}
+
+async function _loadEvInteractionState(evId) {
+  const uid = currentUser?.id; if (!uid) return;
+  const sb = getSB(); if (!sb) return;
+  const [{ data: likeRow }, { data: rsvpRow }] = await Promise.all([
+    sb.from('event_likes').select('user_id').eq('user_id', uid).eq('event_id', evId).maybeSingle(),
+    sb.from('event_attendances').select('user_id').eq('user_id', uid).eq('event_id', evId).maybeSingle(),
+  ]);
+  const likeBtn = document.getElementById('ev-like-btn');
+  if (likeBtn && likeRow) { likeBtn.classList.add('act'); likeBtn.querySelector('.ri').textContent = '❤️'; }
+  const rsvpBtn = document.getElementById('ev-rsvp-btn');
+  if (rsvpBtn && rsvpRow) rsvpBtn.classList.add('act');
 }
 
 // Contextual "more like this" strip in the event detail panel — events sharing
