@@ -282,6 +282,31 @@ module.exports = async (req, res) => {
       });
     }
 
+    /* ─── GET /deals ──────────────────────────────────────── */
+    if (url === '/deals' && req.method === 'GET') {
+      const limit       = Math.min(20, parseInt(q.limit || '12'));
+      const business_id = q.business_id || '';
+      const event_id    = q.event_id    || '';
+      const now         = new Date().toISOString();
+
+      let query = sb().from('deals')
+        .select(`id,title,description,type,discount_percent,price,
+          valid_from,valid_until,is_featured,business_id,event_id,
+          businesses(id,name,suburb,city,lat,lon,cover_image_url,category)`)
+        .eq('is_active', true)
+        .or(`valid_until.is.null,valid_until.gte.${now}`)
+        .order('is_featured', { ascending: false })
+        .order('discount_percent', { ascending: false, nullsFirst: false })
+        .limit(limit);
+
+      if (business_id) query = query.eq('business_id', business_id);
+      if (event_id)    query = query.eq('event_id', event_id);
+
+      const { data, error } = await query;
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ deals: data || [] });
+    }
+
     /* ─── GET /businesses/:id ─────────────────────────────── */
     const bizId = url.match(/^\/businesses\/([^/]+)$/)?.[1];
     if (bizId && req.method === 'GET') {

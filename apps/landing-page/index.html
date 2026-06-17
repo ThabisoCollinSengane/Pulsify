@@ -147,6 +147,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .vibe-chip{flex-shrink:0;height:44px;box-sizing:border-box;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:999px;border:1px solid var(--border);background:rgba(168,108,255,.06);font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;color:var(--mu);cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:border-color .18s,background .18s,color .18s}
 .vibe-chip .ve{font-size:1.05rem;line-height:1}
 .vibe-chip.active{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.12);box-shadow:0 0 12px rgba(255,92,0,.25)}
+/* ── Deal cards ── */
+.deal-card{flex-shrink:0;width:260px;height:120px;border-radius:16px;overflow:hidden;position:relative;cursor:pointer;border:1px solid rgba(232,255,0,.28);box-shadow:0 6px 20px rgba(0,0,0,.28),0 0 14px rgba(232,255,0,.12);display:flex;flex-direction:column;justify-content:flex-end;background:rgba(22,20,10,.92)}
+.deal-badge{position:absolute;top:9px;left:9px;background:#e8ff00;color:#111;font-family:'Syne',sans-serif;font-size:.52rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:50px}
+.deal-pct{position:absolute;top:8px;right:10px;font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:#e8ff00;line-height:1}
+.deal-body{position:relative;z-index:1;padding:8px 10px}
+.deal-title{font-family:'Syne',sans-serif;font-weight:800;font-size:.78rem;color:#fff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.deal-sub{font-size:.64rem;color:rgba(255,255,255,.7);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.deal-bg{position:absolute;inset:0;object-fit:cover;width:100%;height:100%;opacity:.28}
 .feed-pill{position:fixed;top:calc(var(--th) + var(--tk) + 8px);left:50%;transform:translateX(-50%);z-index:50;background:var(--surf);border:1px solid var(--border2);border-radius:50px;padding:8px 18px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--tx);box-shadow:0 4px 16px rgba(0,0,0,.35);white-space:nowrap;display:none}
 .sl{display:flex;align-items:center;justify-content:space-between;padding:18px 16px 8px;font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--mu)}
 .sl a{color:var(--or);font-size:.64rem;letter-spacing:.04em;cursor:pointer;text-decoration:none}
@@ -1854,6 +1862,7 @@ let _feedLoadingMore = false;
    break fall back to the last card when there aren't enough events. */
 let _frontlineHtml = '';   // businesses
 let _communityHtml = '';   // community posts
+let _dealsHtml     = '';   // deals
 let _feedFinal     = false; // true once the last feed page has loaded
 
 const _CATEGORY_HTML = `<div id="feed-break-categories">
@@ -1959,6 +1968,10 @@ function _placeMapBreak(final) {
   if (document.getElementById('feed-break-map')) return;
   _placeBreak('feed-break-map', _mapPreviewHtml(), 4, final);
 }
+function _placeDealsBreak(final) {
+  if (document.getElementById('feed-break-deals')) return;
+  _placeBreak('feed-break-deals', _dealsHtml, 9, final);
+}
 
 function _placeBreak(id, html, afterCount, fallbackLast) {
   if (!html) return;
@@ -1975,10 +1988,11 @@ function _injectFeedBreaks(final) {
   _placeMapBreak(final);         // map preview → after 4 events
   _placeCategoryBreak(final);    // categories → after 6 events
   _placeTrustBreak(final);       // trust strip → directly under categories
+  _placeDealsBreak(final);       // deals → after 9 events
   _placeBreak('feed-break-community', _communityHtml, 12, final);
 }
 function _ejectFeedBreaks() {
-  ['feed-break-biz', 'feed-break-map', 'feed-break-categories', 'feed-break-community', 'feed-break-trust']
+  ['feed-break-biz', 'feed-break-map', 'feed-break-categories', 'feed-break-trust', 'feed-break-deals', 'feed-break-community']
     .forEach(id => document.getElementById(id)?.remove());
 }
 
@@ -2610,6 +2624,57 @@ function buildBizCard(b) {
       <div class="bf"><span class="brat">${b.rating ? '★' + b.rating : 'New'}</span><span class="bpr">${b.price_range || ''}</span></div>
     </div>
   </div>`;
+}
+
+/* ══ DEALS ══ */
+// Rank deals client-side: discount(0.4) + proximity(0.4) + featured(0.2).
+// deal.distance must be pre-computed from the business's lat/lon.
+function _scoreDeal(deal) {
+  const disc  = Math.min(100, parseFloat(deal.discount_percent) || 0) / 100;
+  const prox  = isFinite(deal.distance) ? 1 / (1 + deal.distance) : 0.5;
+  const pop   = deal.is_featured ? 1 : 0;
+  return disc * 0.4 + prox * 0.4 + pop * 0.2;
+}
+
+function _buildDealCard(d) {
+  const biz   = d.businesses || {};
+  const pct   = d.discount_percent ? Math.round(d.discount_percent) + '% OFF' : '';
+  const label = d.type === 'discount' ? '🏷 Deal' : d.type === 'bundle' ? '🎁 Bundle' : d.type === 'happy_hour' ? '⏰ Happy Hour' : '⭐ Perk';
+  const bg    = biz.cover_image_url ? `<img class="deal-bg" src="${x(iU(biz.cover_image_url, 400))}" loading="lazy" onerror="this.remove()"/>` : '';
+  const sub   = [biz.name, biz.suburb || biz.city].filter(Boolean).join(' · ');
+  return `<div class="deal-card" onclick="openBiz('${x(biz.id || '')}')">
+    ${bg}
+    <div style="position:absolute;inset:0;background:linear-gradient(0deg,rgba(8,6,4,.92) 0%,rgba(8,6,4,.35) 60%,transparent 100%)"></div>
+    <span class="deal-badge">${label}</span>
+    ${pct ? `<span class="deal-pct">${pct}</span>` : ''}
+    <div class="deal-body">
+      <div class="deal-title">${x(d.title)}</div>
+      <div class="deal-sub">${x(sub)}</div>
+    </div>
+  </div>`;
+}
+
+async function loadDeals() {
+  try {
+    const params = new URLSearchParams({ limit: 10 });
+    const { deals: raw } = await Api.get('/deals?' + params);
+    if (!raw || !raw.length) return;
+    // attach client-side distance from business lat/lon
+    const scored = raw.map(d => {
+      const biz = d.businesses || {};
+      const lat = parseFloat(biz.lat), lon = parseFloat(biz.lon);
+      const dist = (userLat != null && userLon != null && lat && lon)
+        ? _haversineKm(userLat, userLon, lat, lon) : Infinity;
+      return { d: { ...d, distance: dist }, score: _scoreDeal({ ...d, distance: dist }) };
+    }).sort((a, b) => b.score - a.score).map(s => s.d);
+    _dealsHtml = `<div id="feed-break-deals">
+      <div class="sl" style="margin-top:6px"><span>🏷 Deals &amp; Offers</span><a onclick="browseVibe('social',null);return false" style="cursor:pointer">See more →</a></div>
+      <div class="hs">${scored.map(_buildDealCard).join('')}</div>
+    </div>`;
+    _injectFeedBreaks(_feedFinal);
+  } catch(e) {
+    console.warn('[Deals]', e.message);
+  }
 }
 
 /* ══ HAPPENING TONIGHT rail — auto, hidden when empty ══ */
@@ -6123,6 +6188,7 @@ window.addEventListener('DOMContentLoaded', () => {
   loadTrendingRail();
   _startFeedFreshness();
   loadFrontline();
+  loadDeals();
   loadPromoBanners();
   loadCommunityPosts();
   // When the page is restored from the back-forward cache (e.g. pressing back
