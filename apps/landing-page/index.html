@@ -3928,6 +3928,10 @@ function placeMapMarkers() {
   _markersVisible = null;
   _toggleMapMarkersForZoom();
 
+  // Forced heatmap view: markers are rebuilt visible here, so re-hide them
+  // (panning fires moveend → placeMapMarkers) to keep the pure-density view.
+  if (_heatmapForced) mapMarkers.forEach(m => { m.getElement().style.display = 'none'; });
+
   const cntEl = document.getElementById('map-cnt');
   if (cntEl) cntEl.textContent = mapMarkers.length;
 
