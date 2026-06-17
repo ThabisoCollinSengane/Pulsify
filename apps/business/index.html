@@ -397,9 +397,37 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <!-- ══ SQUAD DEALS ══ -->
 <div class="panel" id="tab-sqpromos">
   <div class="sec-head">
-    <div><div class="sec-title">Squad Deals</div><div class="sec-sub">Create group deals for squads</div></div>
+    <div><div class="sec-title">Deals &amp; Offers</div><div class="sec-sub">Discovery offers + squad group deals</div></div>
   </div>
   <div style="padding:0 14px 80px">
+
+    <!-- ══ Discovery Offer (Phase 3 deals — instant, shows in the main feed) ══ -->
+    <div style="background:rgba(232,255,0,.05);border:1px solid rgba(232,255,0,.22);border-radius:14px;padding:14px;margin-bottom:20px">
+      <div style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800;margin-bottom:3px">🏷 Create a Discovery Offer</div>
+      <div style="font-size:.72rem;color:var(--mu);margin-bottom:12px;line-height:1.5">Shows instantly in the main Pulsefy discovery feed — discounts, bundles, perks &amp; happy-hour specials. No approval needed.</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">
+        <div onclick="setOfferType('discount',this)" id="ot-discount" class="otype otype-on" style="background:rgba(232,255,0,.1);border:1.5px solid rgba(232,255,0,.4);border-radius:11px;padding:9px 4px;text-align:center;cursor:pointer"><div style="font-size:1.15rem">🏷</div><div style="font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;margin-top:2px">Discount</div></div>
+        <div onclick="setOfferType('bundle',this)" id="ot-bundle" class="otype" style="background:var(--surf);border:1.5px solid var(--border);border-radius:11px;padding:9px 4px;text-align:center;cursor:pointer"><div style="font-size:1.15rem">🎁</div><div style="font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;margin-top:2px">Bundle</div></div>
+        <div onclick="setOfferType('perk',this)" id="ot-perk" class="otype" style="background:var(--surf);border:1.5px solid var(--border);border-radius:11px;padding:9px 4px;text-align:center;cursor:pointer"><div style="font-size:1.15rem">⭐</div><div style="font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;margin-top:2px">Perk</div></div>
+        <div onclick="setOfferType('happy_hour',this)" id="ot-happy_hour" class="otype" style="background:var(--surf);border:1.5px solid var(--border);border-radius:11px;padding:9px 4px;text-align:center;cursor:pointer"><div style="font-size:1.15rem">⏰</div><div style="font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;margin-top:2px">Happy Hour</div></div>
+      </div>
+      <input class="ff" type="text" id="off-title" placeholder="Offer title e.g. 20% off entry *"/>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <input class="ff" type="number" id="off-pct" placeholder="% off" min="0" max="100" style="margin-bottom:0"/>
+        <input class="ff" type="number" id="off-price" placeholder="Price R (bundle)" min="0" style="margin-bottom:0"/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <input class="ff" type="date" id="off-from" style="margin-bottom:0"/>
+        <input class="ff" type="date" id="off-until" style="margin-bottom:0"/>
+      </div>
+      <textarea class="ff" id="off-desc" placeholder="Describe the offer…" rows="2" style="resize:none"></textarea>
+      <button class="btn" id="off-btn" onclick="submitDiscoveryOffer()" style="width:100%;background:#e8ff00;color:#111;padding:13px;border-radius:12px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800;cursor:pointer;border:none">Publish Offer 🏷</button>
+      <div style="font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin:18px 0 10px">My Offers</div>
+      <div id="my-offers-list"></div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin:0 0 18px"></div>
+    <div style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800;margin-bottom:6px">👥 Squad Deals</div>
     <div style="font-size:.78rem;color:var(--mu);margin-bottom:14px;line-height:1.6">Attract groups to your venue with squad-exclusive deals. Admin reviews all deals before they appear in squad feeds.</div>
 
     <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">⚡ Quick-Start Templates</div>
@@ -1344,7 +1372,7 @@ function showTab(name, _noPush) {
   if (name === 'analytics') renderAnalytics();
   if (name === 'promote')   loadBizPromotions();
   if (name === 'events')    loadDiscoverEvents();
-  if (name === 'sqpromos')  loadMyBizSquadPromos();
+  if (name === 'sqpromos') { loadMyOffers(); loadMyBizSquadPromos(); }
   if (name === 'profile')   renderBizFAQ();
   if (name === 'profile')   loadBizSocialLinks();
   if (name === 'profile')   loadBizLocationStatus();
@@ -3141,6 +3169,97 @@ async function submitBizSquadPromo() {
     toast(e.message || 'Error submitting deal');
   }
   btn.disabled = false; btn.textContent = 'Submit Deal for Approval 🎁';
+}
+
+/* ══ Discovery Offers (Phase 3 deals — write straight to public.deals) ══ */
+let _offerType = 'discount';
+function setOfferType(type, el) {
+  _offerType = type;
+  document.querySelectorAll('.otype').forEach(o => {
+    o.style.background = 'var(--surf)';
+    o.style.borderColor = 'var(--border)';
+  });
+  if (el) { el.style.background = 'rgba(232,255,0,.1)'; el.style.borderColor = 'rgba(232,255,0,.4)'; }
+}
+
+async function submitDiscoveryOffer() {
+  const btn = document.getElementById('off-btn');
+  const title = document.getElementById('off-title')?.value?.trim();
+  if (!title) { toast('Offer title is required'); return; }
+  const sb = getSB(); if (!sb) { toast('Not initialised'); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { toast('Please sign in again'); return; }
+  btn.disabled = true; btn.textContent = 'Publishing…';
+  const pct   = document.getElementById('off-pct')?.value;
+  const price = document.getElementById('off-price')?.value;
+  const from  = document.getElementById('off-from')?.value;
+  const until = document.getElementById('off-until')?.value;
+  const row = {
+    business_id: session.user.id,
+    title,
+    description: document.getElementById('off-desc')?.value?.trim() || null,
+    type: _offerType,
+    discount_percent: pct ? parseFloat(pct) : null,
+    price: price ? parseFloat(price) : null,
+    valid_from: from || null,
+    valid_until: until || null,
+  };
+  try {
+    const { error } = await sb.from('deals').insert(row);
+    if (error) throw error;
+    toast('Offer published — live in the feed ✅');
+    ['off-title','off-pct','off-price','off-from','off-until','off-desc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    loadMyOffers();
+  } catch(e) {
+    toast(e.message || 'Error publishing offer');
+  }
+  btn.disabled = false; btn.textContent = 'Publish Offer 🏷';
+}
+
+const OFFER_ICONS = { discount: '🏷', bundle: '🎁', perk: '⭐', happy_hour: '⏰' };
+async function loadMyOffers() {
+  const el = document.getElementById('my-offers-list');
+  if (!el) return;
+  const sb = getSB(); if (!sb) return;
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+  el.innerHTML = '<div style="color:var(--mu);font-size:.8rem;padding:8px 0">Loading…</div>';
+  const { data, error } = await sb.from('deals')
+    .select('id,title,type,discount_percent,price,valid_until,is_active,is_featured')
+    .eq('business_id', session.user.id)
+    .order('created_at', { ascending: false });
+  if (error) { el.innerHTML = ''; return; }
+  const offers = data || [];
+  if (!offers.length) { el.innerHTML = '<div style="color:var(--mu);font-size:.78rem;padding:8px 0;text-align:center">No offers yet. Create one above!</div>'; return; }
+  const now = Date.now();
+  el.innerHTML = offers.map(o => {
+    const expired = o.valid_until && new Date(o.valid_until).getTime() < now;
+    const status = !o.is_active ? '⏸ Paused' : expired ? '⌛ Expired' : '✅ Live';
+    const color  = !o.is_active ? '#999' : expired ? '#FFC800' : '#C6FF4A';
+    const meta = [
+      o.discount_percent ? Math.round(o.discount_percent) + '% off' : '',
+      o.price ? 'R' + o.price : '',
+      o.valid_until ? 'until ' + _esc(o.valid_until) : '',
+    ].filter(Boolean).join(' · ');
+    return `<div style="background:var(--surf2);border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:9px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:1.1rem">${OFFER_ICONS[o.type]||'🏷'}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_esc(o.title)}</div>
+        ${meta?`<div style="font-size:.68rem;color:var(--mu2)">${meta}</div>`:''}
+      </div>
+      <span style="font-size:.6rem;font-family:'Syne',sans-serif;font-weight:700;color:${color};white-space:nowrap">${status}</span>
+      <span onclick="deleteOffer('${o.id}')" style="font-size:.95rem;cursor:pointer;opacity:.6;padding:0 2px" title="Delete">🗑</span>
+    </div>`;
+  }).join('');
+}
+
+async function deleteOffer(id) {
+  if (!confirm('Delete this offer?')) return;
+  const sb = getSB(); if (!sb) return;
+  const { error } = await sb.from('deals').delete().eq('id', id);
+  if (error) { toast(error.message || 'Could not delete'); return; }
+  toast('Offer deleted');
+  loadMyOffers();
 }
 
 function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
