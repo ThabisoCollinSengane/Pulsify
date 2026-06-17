@@ -257,10 +257,19 @@ Tracked work from the security, architecture and map briefs. Tackle in order:
 - [x] **Group events by venue (#5)** — one marker per venue; count badge; multi-event venue panel — PR #23
 - [x] **Load events by map bounds (#6)** — `GET /events?bounds=w,s,e,n`; debounced moveend — PR #23
 - [x] **Render only visible markers / limit at low zoom (#7)** — clustering already in place (unchanged)
-- [ ] **Heatmap view toggle (#8)** — red/purple/blue activity (heatmap layer already exists).
-- [ ] **Nearby-events panel (#9)** — list synced to viewport.
-- [ ] **User-location intelligence (#10)** — auto-centre + prioritise nearby (toggle exists).
-- [ ] **Data cleaning (#11)** — auto-remove expired events; dedupe venues; flag bad coords.
+- [x] **Heatmap view toggle (#8)** — 🔥 `toggleHeatmapView()` forces the `spots-heat`
+      density layer at all zooms, hides clusters/markers. Fixed a leak where
+      `placeMapMarkers()` (on every pan/moveend) rebuilt markers visible over the
+      forced view — PR #74.
+- [x] **Nearby-events panel (#9)** — ☰ `showNearbyEventsPanel()` lists `eventsForMap`
+      filtered to the current viewport bounds, sorted by distance from the user
+      (map-center fallback). `#map-panel` is a full-screen modal, so the snapshot
+      taken on open IS the synced view (you can't pan behind it).
+- [~] **User-location intelligence (#10)** — `toggleNearMe()` geolocation auto-centre +
+      proximity ranking + distance badges exist. Remaining: auto-prompt/centre on
+      first map open without a tap.
+- [~] **Data cleaning (#11)** — `api/cron/event-cleanup.js` auto-deactivates past
+      events daily (4am cron). Remaining: dedupe venues; flag/repair bad coords.
 
 ### E. Other deferred (from security audit)
 - [ ] RLS: scope `leads` + `profile_claims` permissive policies (need usage review)
