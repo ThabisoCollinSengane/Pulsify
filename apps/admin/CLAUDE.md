@@ -31,13 +31,13 @@
 ## Business featured placement
 - Admins can manually set `is_frontline = true` and adjust `frontline_rank` for premium businesses (or as part of subscription).
 
-## To be built
-- [ ] Subscription column in `profiles`.
-- [ ] Pending events pagination/approval.
-- [ ] Manual override for free/premium status.
-- [ ] Log of admin actions.
-- [ ] Banner CRUD UI.
-- [ ] Push notification composer.
+## Built (shipped)
+- [x] Subscription column in `profiles`.
+- [x] Pending events approval (Events tab → pending filter + Approve/Reject).
+- [x] Manual override for free/premium status (`setSubscription`).
+- [x] Log of admin actions (`logAdminAction`).
+- [x] Banner CRUD UI (Banners tab).
+- [x] Push notification composer (Notify tab → `sendAdminNotification`).
 
 ## Hard rules
 - Only users with `role = 'admin'` can access.

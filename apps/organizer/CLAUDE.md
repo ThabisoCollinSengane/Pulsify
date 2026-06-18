@@ -30,12 +30,12 @@
 - Camera access, QR parsing, API call to mark ticket as `checked_in = true`.
 - Endpoint: `POST /api/validate-ticket` with QR data.
 
-## To be built
-- [ ] Subscription field in profiles (`subscription_type`)
-- [ ] `approved` column in `events` table
-- [ ] Admin approval UI
-- [ ] Post limit enforcement
-- [ ] QR scanner view
+## Built (shipped)
+- [x] Subscription field in profiles (`subscription_type`)
+- [x] `approved` column in `events` table
+- [x] Admin approval UI
+- [x] Post limit enforcement (5/month free — `api/index.js`, organizer banner + counter)
+- [x] QR scanner view (Scan tab → `validate-ticket`)
 
 ## Hard rules
 - Role must be `organizer` in `profiles`.
