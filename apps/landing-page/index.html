@@ -641,7 +641,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     </div>
 
     <!-- ══ EVENTS ══ -->
-    <div class="sl"><span id="feed-lbl">🔥 Upcoming Events</span><a href="/map">View Map →</a></div>
+    <div class="sl"><span id="feed-lbl">🔥 Upcoming Events</span><a id="feed-refresh-btn" onclick="refreshFeed(this);return false" style="cursor:pointer">↻ Refresh</a></div>
     <div id="events-feed"></div>
     <div class="pg" id="feed-pg" style="display:none">
       <button class="pb" id="pg-prev" onclick="changePage(-1)" disabled>← Prev</button>
@@ -682,6 +682,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   </div>
   <div class="sl"><span id="disc-biz-hdr">📍 Places near you</span><a href="/map">View map →</a></div>
   <div class="hs" id="disc-biz-row"></div>
+  <!-- Squad Deals: group offers featured in discovery (mid-feed, never at top) -->
+  <div id="disc-squad-wrap" style="display:none">
+    <div class="sl"><span>🎁 Squad Deals</span><a onclick="openSocialSheet('squads');return false" style="cursor:pointer">Open Squads →</a></div>
+    <div class="hs" id="disc-squad-row"></div>
+  </div>
   <div class="sl"><span>🎉 Events</span><a onclick="openFAQ()" style="cursor:pointer">❓ Help & FAQ</a></div>
   <div class="cr" id="disc-genre-row">
     <button class="chip active" onclick="setDiscGenre(this,'all')">✦ All</button>
@@ -2392,6 +2397,18 @@ function _applyNewEvents() {
   if (sc) sc.scrollTo({ top: 0, behavior: 'smooth' });
   loadFeed(true);
 }
+// Explicit refresh control — works on any device (the pull-to-refresh gesture
+// is touch-only and easy to miss). Re-fetches page 1 with a fresh cache-buster.
+function refreshFeed(btn) {
+  if (btn) { btn.textContent = '↻ Refreshing…'; btn.style.pointerEvents = 'none'; }
+  const sc = document.querySelector('#tab-home .hi');
+  if (sc) sc.scrollTo({ top: 0, behavior: 'smooth' });
+  const pill = document.getElementById('feed-new-pill');
+  if (pill) pill.style.display = 'none';
+  loadFeed(true).finally(() => {
+    if (btn) { btn.textContent = '↻ Refresh'; btn.style.pointerEvents = ''; }
+  });
+}
 function _initPullToRefresh(sc) {
   let startY = 0, dragging = false;
   const pill = document.getElementById('feed-refresh-pill');
@@ -3437,7 +3454,41 @@ async function loadDiscover(cat, append) {
       lm.innerHTML = `<button onclick="_discLoadMore()" style="background:var(--surf);border:1px solid var(--border);color:var(--tx);font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;padding:10px 28px;border-radius:50px;cursor:pointer">Load more</button>`;
       de.appendChild(lm);
     }
+    if (!append) loadDiscoverSquadDeals(); // mid-feed squad deals strip (own request)
   } catch(e) {}
+}
+
+// Squad Deals woven into Discover (group offers an admin featured for discovery).
+// Compact horizontal strip placed mid-feed between Places and Events.
+async function loadDiscoverSquadDeals() {
+  const wrap = document.getElementById('disc-squad-wrap');
+  const row  = document.getElementById('disc-squad-row');
+  if (!wrap || !row) return;
+  try {
+    const city = (!nearMeActive && feedCity && feedCity !== 'all') ? feedCity : '';
+    const j = await Api.get('/squad-promos?highlight=1' + (city ? '&city=' + encodeURIComponent(city) : ''));
+    const promos = j.promos || [];
+    if (!promos.length) { wrap.style.display = 'none'; return; }
+    row.innerHTML = promos.map(p => {
+      const meta = SQ_DEAL_META[p.deal_type] || SQ_DEAL_META.food;
+      const benefit = p.total_price
+        ? `R${p.total_price} for ${p.squad_min}–${p.squad_max}`
+        : `Free for groups of ${p.squad_min}+`;
+      return `<div onclick="openSocialSheet('squads')" style="width:230px;flex-shrink:0;background:var(--surf);border:1px solid ${meta.border};border-radius:16px;overflow:hidden;cursor:pointer">
+        <div style="background:${meta.bg};border-bottom:1px solid ${meta.border};padding:8px 12px;display:flex;align-items:center;gap:7px">
+          <span style="font-size:1rem">${meta.icon}</span>
+          <span style="font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:${meta.color}">${meta.label}</span>
+        </div>
+        <div style="padding:11px 12px">
+          <div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:800;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(p.title)}</div>
+          <div style="font-size:.7rem;color:var(--mu2);margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📍 ${x(p.venue_name)}${p.location_city ? ' · ' + x(p.location_city) : ''}</div>
+          <div style="font-size:.7rem;color:var(--tx);margin-bottom:9px">👥 ${x(benefit)}</div>
+          <div style="text-align:center;padding:7px;background:linear-gradient(135deg,#B026FF,#FF5C00);border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700">Open in Squad →</div>
+        </div>
+      </div>`;
+    }).join('');
+    wrap.style.display = 'block';
+  } catch(e) { wrap.style.display = 'none'; }
 }
 function _discLoadMore() {
   _discPage++;
@@ -5457,7 +5508,7 @@ async function openPost(postId) {
       </div>
       <div style="flex:1;min-width:0">
         <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">${name}</div>
-        ${post.caption ? `<div style="font-size:.82rem;color:var(--mu2);line-height:1.45;margin-top:2px">${x(post.caption)}</div>` : ''}
+        ${post.caption ? `<div style="font-size:.82rem;color:var(--mu2);line-height:1.45;margin-top:2px;white-space:pre-wrap;word-break:break-word">${x(post.caption)}</div>` : ''}
         <div style="font-size:.62rem;color:var(--mu);margin-top:3px">${timeAgoShort(post.created_at)}</div>
       </div>
     </div>
