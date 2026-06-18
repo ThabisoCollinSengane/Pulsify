@@ -1379,6 +1379,7 @@ let mapObj         = null;
 let mapMarkers     = [];
 let _mapFitDone    = false; // true after first fit; reset when user explicitly opens map tab
 let _pendingCityJump = null; // city key to fly to once the map finishes its first load
+let _mapAutoLocateDone = false; // auto-centre on user location once per session
 let selTier        = null;
 let selQty         = 1;
 let activeEvId     = null;
@@ -1682,6 +1683,7 @@ function showTab(name, _noPush) {
       ensurePoisForMap();
       if (typeof placeMapMarkers === 'function') placeMapMarkers();
       if (cityKey) jumpToCity(cityKey);
+      _autoLocateOnce();
     }
   }
 }
@@ -3541,6 +3543,7 @@ function initMap() {
     if (_pendingCityJump) { jumpToCity(_pendingCityJump); _pendingCityJump = null; }
     setTimeout(_toggleMapMarkersForZoom, 400); // second call after fitBounds animation settles
     hideMapSplash();
+    setTimeout(_autoLocateOnce, 800); // auto-centre on user after map settles
   });
 
   // If the map fails to load (bad token, network, domain restriction) — show error instead of infinite splash
@@ -4194,7 +4197,13 @@ function showLocationHelp(retryFn) {
   document.body.appendChild(ov);
 }
 
-function goToMyLocation() {
+function _autoLocateOnce() {
+  if (_mapAutoLocateDone || window._myLocMarker) return;
+  _mapAutoLocateDone = true;
+  goToMyLocation(true); // silent: no help sheet on denial
+}
+
+function goToMyLocation(silent) {
   if (!mapObj) return;
   // Toggle: if YOU marker is already showing, remove it and reset button
   if (window._myLocMarker) {
@@ -4230,7 +4239,7 @@ function goToMyLocation() {
     },
     err => {
       if (btn) { btn.textContent = '📍'; btn.style.background = 'rgba(5,8,15,.7)'; }
-      showLocationHelp(goToMyLocation);
+      if (!silent) showLocationHelp(goToMyLocation);
     },
     { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
   );
