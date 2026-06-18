@@ -51,6 +51,11 @@ function corsHeaders(req) {
    same secret. Never emit an unsigned/literal sentinel — a forged
    QR must fail verification. */
 const QR_SECRET = process.env.QR_SECRET || 'pulsefy-qr-fallback-secret';
+if (!process.env.QR_SECRET) {
+  // The fallback is in source control — anyone could forge a valid ticket QR.
+  // Set QR_SECRET (a long random string) in the Vercel env to close this.
+  console.warn('[security] QR_SECRET is not set — using the in-source fallback. Ticket QR codes are forgeable until QR_SECRET is configured.');
+}
 
 function signQr(bookingRef, eventId) {
   return crypto.createHmac('sha256', QR_SECRET).update(`${bookingRef}:${eventId}`).digest('hex').slice(0, 16);
