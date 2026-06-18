@@ -1132,17 +1132,17 @@ function renderVerifList() {
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
         ${(v.face_scan_url || req.face_scan_url) ? `<div>
           <div style="font-size:.62rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Face Scan / Selfie</div>
-          <a href="${esc(v.face_scan_url || req.face_scan_url)}" target="_blank">
-            <img src="${esc(v.face_scan_url || req.face_scan_url)}" style="height:100px;border-radius:10px;object-fit:cover;border:1px solid var(--border);display:block;margin-bottom:4px" onerror="this.style.opacity='.3'" loading="lazy"/>
+          <a href="${esc(safeUrl(v.face_scan_url || req.face_scan_url))}" target="_blank">
+            <img src="${esc(safeUrl(v.face_scan_url || req.face_scan_url))}" style="height:100px;border-radius:10px;object-fit:cover;border:1px solid var(--border);display:block;margin-bottom:4px" onerror="this.style.opacity='.3'" loading="lazy"/>
           </a>
-          <a href="${esc(v.face_scan_url || req.face_scan_url)}" target="_blank" download style="font-size:.65rem;color:var(--or);text-decoration:none">📥 Download Selfie</a>
+          <a href="${esc(safeUrl(v.face_scan_url || req.face_scan_url))}" target="_blank" download style="font-size:.65rem;color:var(--or);text-decoration:none">📥 Download Selfie</a>
         </div>` : ''}
         ${(v.id_doc_url || req.id_doc_url) ? `<div>
           <div style="font-size:.62rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">ID Document</div>
-          <a href="${esc(v.id_doc_url || req.id_doc_url)}" target="_blank">
-            <img src="${esc(v.id_doc_url || req.id_doc_url)}" style="height:100px;border-radius:10px;object-fit:cover;border:1px solid var(--border);display:block;margin-bottom:4px" onerror="this.parentElement.insertAdjacentHTML('afterbegin','<div style=&quot;background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.3);border-radius:8px;padding:8px 12px;font-size:.74rem;margin-bottom:4px&quot;>📄 Non-image doc — use Download link below</div>');this.remove()" loading="lazy"/>
+          <a href="${esc(safeUrl(v.id_doc_url || req.id_doc_url))}" target="_blank">
+            <img src="${esc(safeUrl(v.id_doc_url || req.id_doc_url))}" style="height:100px;border-radius:10px;object-fit:cover;border:1px solid var(--border);display:block;margin-bottom:4px" onerror="this.parentElement.insertAdjacentHTML('afterbegin','<div style=&quot;background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.3);border-radius:8px;padding:8px 12px;font-size:.74rem;margin-bottom:4px&quot;>📄 Non-image doc — use Download link below</div>');this.remove()" loading="lazy"/>
           </a>
-          <a href="${esc(v.id_doc_url || req.id_doc_url)}" target="_blank" download style="font-size:.65rem;color:var(--or);text-decoration:none">📥 Download ID Doc</a>
+          <a href="${esc(safeUrl(v.id_doc_url || req.id_doc_url))}" target="_blank" download style="font-size:.65rem;color:var(--or);text-decoration:none">📥 Download ID Doc</a>
         </div>` : ''}
       </div>` : ''}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${v.verif_status === 'pending' ? '8px' : '0'}">
@@ -1284,6 +1284,10 @@ function renderTable() {
 }
 
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// Block javascript:/data: URIs in DB-sourced hrefs/srcs — only allow http(s), mailto, tel, root-relative.
+function safeUrl(u) { const s = String(u||'').trim(); return /^(https?:\/\/|mailto:|tel:|\/)/i.test(s) ? s : '#'; }
+// Escape a value for a single-quoted JS string sitting inside a double-quoted HTML attribute (onclick="fn('...')").
+function jsAttr(s) { return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/[\r\n\u2028\u2029]/g,' '); }
 
 async function toggleFeatured(id, current) {
   const updates = current ? { is_frontline: false, frontline_rank: null } : { is_frontline: true, frontline_rank: 1 };
@@ -1570,7 +1574,7 @@ function renderUsersTable() {
           }
           <button class="btn btn-cy" style="padding:5px 10px;font-size:.68rem" onclick="showTrialModal('${u.id}')">⏰ Trial</button>
           <button class="btn btn-surf" style="padding:5px 10px;font-size:.68rem" onclick="showRoleModal('${u.id}')">👤 Role</button>
-          <button class="btn btn-surf" style="padding:5px 10px;font-size:.68rem" onclick="viewUserNotifications('${u.id}','${esc(u.display_name||u.email||'User')}')">📬 Notifs</button>
+          <button class="btn btn-surf" style="padding:5px 10px;font-size:.68rem" onclick="viewUserNotifications('${u.id}','${jsAttr(u.display_name||u.email||'User')}')">📬 Notifs</button>
         </div>
       </td>
     </tr>`;
@@ -1754,7 +1758,7 @@ function renderLeadsTable(leads) {
     const contact = [l.phone, l.email].filter(Boolean).join(' · ') || '—';
     const socials = [
       l.instagram ? `<a href="https://instagram.com/${esc(l.instagram.replace('@',''))}" target="_blank" style="color:var(--pk)">IG</a>` : '',
-      l.website   ? `<a href="${esc(l.website)}" target="_blank" style="color:var(--pk)">Web</a>` : '',
+      l.website   ? `<a href="${esc(safeUrl(l.website))}" target="_blank" style="color:var(--pk)">Web</a>` : '',
     ].filter(Boolean).join(' ');
     return `<tr>
       <td style="font-weight:600">${esc(l.name || '—')}${socials ? ' ' + socials : ''}</td>
@@ -1767,7 +1771,7 @@ function renderLeadsTable(leads) {
         <div class="user-actions">
           <button class="btn btn-li" style="padding:5px 10px;font-size:.68rem" onclick="advanceLead('${l.id}','${LEAD_STATUS_NEXT[l.status] || 'contacted'}')">→ ${LEAD_STATUS_LABELS[LEAD_STATUS_NEXT[l.status] || 'contacted']}</button>
           ${l.status !== 'ignored' ? `<button class="btn btn-pk" style="padding:5px 10px;font-size:.68rem" onclick="advanceLead('${l.id}','ignored')">🚫</button>` : ''}
-          <button class="btn btn-or" style="padding:5px 10px;font-size:.68rem" onclick="quickAddEvent('${l.id}','${esc(l.name||'')}')">🎟 +Event</button>
+          <button class="btn btn-or" style="padding:5px 10px;font-size:.68rem" onclick="quickAddEvent('${l.id}','${jsAttr(l.name||'')}')">🎟 +Event</button>
           ${l.email ? `<a class="btn" style="padding:5px 10px;font-size:.68rem;background:rgba(0,180,255,.12);border:1px solid rgba(0,180,255,.3);color:#00B4FF;border-radius:6px;text-decoration:none" href="mailto:${esc(l.email)}?subject=Partnership%20with%20Pulsefy&body=Hi%20${encodeURIComponent(l.name||'there')}%2C%0A%0AWe%20noticed%20your%20business%20on%20our%20platform%20and%20would%20love%20to%20connect.%0A%0AKind%20regards%2C%0APulsefy%20Team">✉️ Email</a>` : ''}
           ${l.phone ? `<a class="btn" style="padding:5px 10px;font-size:.68rem;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);color:#25D366;border-radius:6px;text-decoration:none" href="https://wa.me/${encodeURIComponent((l.phone||'').replace(/\D/g,''))}?text=${encodeURIComponent("Hi "+( l.name||"there")+", we'd love to feature your business on Pulsefy — SA's top events & nightlife app. Interested in a free listing? 🎯")}" target="_blank">💬 WhatsApp</a>` : ''}
         </div>
@@ -1846,7 +1850,7 @@ function renderLeadEvents(events) {
     const lead = ev.scraped_leads || {};
     const dateStr = ev.event_date ? new Date(ev.event_date + 'T00:00:00').toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'}) : 'TBC';
     return `<div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start">
-      ${ev.image_url ? `<img src="${esc(ev.image_url)}" style="width:64px;height:64px;border-radius:10px;object-fit:cover;flex-shrink:0"/>` : `<div style="width:64px;height:64px;border-radius:10px;background:rgba(255,92,0,.15);display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0">🎟</div>`}
+      ${ev.image_url ? `<img src="${esc(safeUrl(ev.image_url))}" style="width:64px;height:64px;border-radius:10px;object-fit:cover;flex-shrink:0"/>` : `<div style="width:64px;height:64px;border-radius:10px;background:rgba(255,92,0,.15);display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0">🎟</div>`}
       <div style="flex:1;min-width:0">
         <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(ev.title)}</div>
         <div style="font-size:.72rem;color:var(--mu);margin-top:2px">📅 ${dateStr} &nbsp;·&nbsp; 📍 ${esc(ev.venue_city||'TBC')} &nbsp;·&nbsp; 🎵 ${esc(ev.genre||'—')}</div>
@@ -1883,9 +1887,9 @@ function openLeModal(ev) {
   // Lead info
   const lead = ev.scraped_leads || {};
   const socials = [
-    lead.instagram ? `<a href="https://instagram.com/${lead.instagram.replace('@','')}" target="_blank" style="color:var(--pk)">📸 Instagram</a>` : '',
-    lead.facebook  ? `<a href="${esc(lead.facebook)}" target="_blank" style="color:var(--cy)">👤 Facebook</a>` : '',
-    lead.website   ? `<a href="${esc(lead.website)}" target="_blank" style="color:var(--or)">🌐 Website</a>` : '',
+    lead.instagram ? `<a href="https://instagram.com/${esc(lead.instagram.replace('@',''))}" target="_blank" style="color:var(--pk)">📸 Instagram</a>` : '',
+    lead.facebook  ? `<a href="${esc(safeUrl(lead.facebook))}" target="_blank" style="color:var(--cy)">👤 Facebook</a>` : '',
+    lead.website   ? `<a href="${esc(safeUrl(lead.website))}" target="_blank" style="color:var(--or)">🌐 Website</a>` : '',
   ].filter(Boolean).join(' &nbsp; ');
   document.getElementById('le-modal-lead-body').innerHTML = `
     <strong>${esc(lead.name||ev.organiser_name||'—')}</strong>${lead.category ? ' · '+esc(lead.category) : ''}${lead.city?' · '+esc(lead.city):''}<br>
@@ -1893,7 +1897,7 @@ function openLeModal(ev) {
     ${socials ? '<br>'+socials : ''}`;
   // Source URL
   document.getElementById('le-modal-source').innerHTML = ev.source_url
-    ? `<a href="${esc(ev.source_url)}" target="_blank" style="font-size:.76rem;color:var(--cy)">🔗 View original source →</a>` : '';
+    ? `<a href="${esc(safeUrl(ev.source_url))}" target="_blank" style="font-size:.76rem;color:var(--cy)">🔗 View original source →</a>` : '';
   // Actions visibility
   const actions = document.getElementById('le-modal-actions');
   actions.style.display = ev.status === 'pending' ? 'flex' : 'none';
@@ -2214,7 +2218,7 @@ async function loadBanners() {
         : '<span style="background:rgba(90,88,112,.2);color:var(--mu);padding:2px 8px;border-radius:50px;font-size:.65rem;font-weight:700">PAUSED</span>';
       return `
       <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px">
-        <div style="width:48px;height:48px;border-radius:10px;background:${esc(b.bg_color)};flex-shrink:0;${b.image_url ? `background-image:url('${esc(b.image_url)}');background-size:cover;` : ''}"></div>
+        <div style="width:48px;height:48px;border-radius:10px;background:${esc(b.bg_color)};flex-shrink:0;${b.image_url ? `background-image:url('${esc(safeUrl(b.image_url)).replace(/'/g,'%27')}');background-size:cover;` : ''}"></div>
         <div style="flex:1;min-width:0">
           <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;margin-bottom:2px">${esc(b.title)} ${badge}</div>
           ${b.subtitle ? `<div style="font-size:.74rem;color:var(--mu2);margin-bottom:2px">${esc(b.subtitle)}</div>` : ''}
@@ -2620,7 +2624,7 @@ async function loadAdminPromos() {
     el.innerHTML = promos.map(p => `
       <div style="background:var(--surf);border:1px solid var(--border2);border-radius:14px;margin-bottom:12px;overflow:hidden">
         <div style="display:flex;gap:12px;padding:14px">
-          ${p.image_url ? `<img src="${escHtml(p.image_url)}" style="width:64px;height:64px;border-radius:10px;object-fit:cover;flex-shrink:0" onerror="this.style.display='none'"/>` : ''}
+          ${p.image_url ? `<img src="${esc(safeUrl(p.image_url))}" style="width:64px;height:64px;border-radius:10px;object-fit:cover;flex-shrink:0" onerror="this.style.display='none'"/>` : ''}
           <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px">
               <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem">${escHtml(p.title)}</div>
@@ -2809,7 +2813,7 @@ async function loadAdminSocialLinks() {
   el.innerHTML = _SOCIALS.map(s => `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
       <div style="width:34px;height:34px;border-radius:50%;background:${s.bg};border:1.5px solid ${s.border};display:flex;align-items:center;justify-content:center;color:${s.color};flex-shrink:0">${_SOCIAL_SVGS[s.key]}</div>
-      <input id="asl-${s.key}" style="flex:1;background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:9px 12px;color:#fff;font-size:.8rem;outline:none" placeholder="${s.ph}" value="${current[s.key]||''}"/>
+      <input id="asl-${s.key}" style="flex:1;background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:9px 12px;color:#fff;font-size:.8rem;outline:none" placeholder="${s.ph}" value="${esc(current[s.key]||'')}"/>
     </div>`).join('');
 }
 
