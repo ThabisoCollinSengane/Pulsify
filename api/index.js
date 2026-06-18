@@ -1618,17 +1618,27 @@ module.exports = async (req, res) => {
         if (createError) throw createError;
         profile = newProfile;
 
-        const { data: bizCheck } = await supabase.from('businesses').select('id').eq('id', profile.id).maybeSingle();
-        if (!bizCheck) {
-          await supabase.from('businesses').insert({ id: profile.id, owner_id: profile.id, name: bizName, category: 'other', is_active: true });
-        }
-
         // Non-blocking welcome email for new business accounts
         sendWelcomeEmail(user.email, bizName).catch(e => console.error('[email/welcome-biz]', e.message));
       } else if (!['business', 'admin', 'organizer'].includes(profile.role)) {
         const { data: updatedProfile, error: updateError } = await supabase.from('profiles').update({ role: 'business' }).eq('id', user.id).select().single();
         if (updateError) throw updateError;
         profile = updatedProfile;
+      }
+
+      // Ensure a businesses row exists for business-role profiles. RLS on
+      // pickup_orders/menu_items keys off businesses.owner_id = auth.uid(),
+      // so a business owner with no row sees no orders and can't manage their
+      // menu. This self-heals pre-existing profiles, not just brand-new ones.
+      if (profile.role === 'business') {
+        const { data: bizRow } = await supabase.from('businesses').select('id').eq('owner_id', user.id).maybeSingle();
+        if (!bizRow) {
+          await supabase.from('businesses').insert({
+            id: profile.id, owner_id: profile.id,
+            name: profile.display_name || user.email.split('@')[0] || 'Business',
+            category: 'other', is_active: true,
+          });
+        }
       }
       return res.status(200).json({ profile });
     }
