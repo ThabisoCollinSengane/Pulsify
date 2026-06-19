@@ -862,7 +862,7 @@ module.exports = async (req, res) => {
       if (!lead_id || !due_date) return res.status(400).json({ error: 'lead_id and due_date required' });
       const { data, error } = await sb().from('lead_followups').insert({ lead_id, due_date, note: note || null }).select().single();
       if (error) return res.status(400).json({ error: error.message });
-      await sb().from('lead_activities').insert({ lead_id, type: 'follow_up_scheduled', summary: `Follow-up scheduled for ${due_date}${note ? ': ' + note.slice(0, 80) : ''}`, data: { due_date, note } }).catch(() => {});
+      try { await sb().from('lead_activities').insert({ lead_id, type: 'follow_up_scheduled', summary: `Follow-up scheduled for ${due_date}${note ? ': ' + note.slice(0, 80) : ''}`, data: { due_date, note } }); } catch {}
       return res.status(201).json({ followup: data });
     }
 
@@ -874,7 +874,7 @@ module.exports = async (req, res) => {
       const { data, error } = await sb().from('lead_followups').update({ completed: true }).eq('id', followupIdMatch[1]).select().single();
       if (error) return res.status(400).json({ error: error.message });
       if (data?.lead_id) {
-        await sb().from('lead_activities').insert({ lead_id: data.lead_id, type: 'follow_up_completed', summary: `Follow-up completed (was due ${data.due_date})`, data: { followup_id: data.id } }).catch(() => {});
+        try { await sb().from('lead_activities').insert({ lead_id: data.lead_id, type: 'follow_up_completed', summary: `Follow-up completed (was due ${data.due_date})`, data: { followup_id: data.id } }); } catch {}
       }
       return res.status(200).json({ followup: data });
     }
