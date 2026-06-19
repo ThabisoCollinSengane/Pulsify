@@ -1,5 +1,5 @@
 const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError } = require('../shared');
-const { sendVerifApprovedEmail, sendVerifRejectedEmail } = require('../email');
+const { sendVerifApprovedEmail, sendVerifRejectedEmail, sendLeadEmail, SMTP_CONFIGURED } = require('../email');
 
 module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
@@ -822,30 +822,23 @@ module.exports = async (req, res) => {
       const { lead_ids, subject, body: emailBody } = req.body || {};
       if (!lead_ids?.length || !subject || !emailBody) return res.status(400).json({ error: 'lead_ids, subject, body required' });
 
-      const RESEND_KEY = process.env.RESEND_API_KEY;
-      if (!RESEND_KEY) return res.status(200).json({ sent: 0, skipped: lead_ids.length, warning: 'RESEND_API_KEY not configured — email sending is disabled. Set the env var to enable.' });
+      if (!SMTP_CONFIGURED) return res.status(200).json({ sent: 0, skipped: lead_ids.length, warning: 'SMTP not configured — email sending is disabled. Set SMTP_HOST / SMTP_PASS to enable.' });
 
       const { data: leads } = await sb().from('scraped_leads').select('id,name,email,city').in('id', lead_ids);
       let sent = 0, skipped = 0;
       const acts = [];
+      const sentIds = [];
 
       for (const lead of (leads || [])) {
         const sub  = subject.replace(/\{\{name\}\}/g, lead.name).replace(/\{\{business_name\}\}/g, lead.name).replace(/\{\{city\}\}/g, lead.city || '');
         const bod  = emailBody.replace(/\{\{name\}\}/g, lead.name).replace(/\{\{business_name\}\}/g, lead.name).replace(/\{\{city\}\}/g, lead.city || '');
         if (!lead.email) { skipped++; acts.push({ lead_id: lead.id, type: 'email_sent', summary: `Email skipped — no address`, data: { subject: sub } }); continue; }
-        try {
-          const r = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${RESEND_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ from: 'Pulsefy <hello@pulsefy.co.za>', to: [lead.email], subject: sub, text: bod }),
-          });
-          if (r.ok) { sent++; acts.push({ lead_id: lead.id, type: 'email_sent', summary: `Email sent: ${sub}`, data: { subject: sub, to: lead.email } }); }
-          else { skipped++; acts.push({ lead_id: lead.id, type: 'email_sent', summary: `Email failed (Resend error)`, data: { subject: sub } }); }
-        } catch { skipped++; acts.push({ lead_id: lead.id, type: 'email_sent', summary: `Email failed (network)`, data: { subject: sub } }); }
+        const ok = await sendLeadEmail(lead.email, sub, bod);
+        if (ok) { sent++; sentIds.push(lead.id); acts.push({ lead_id: lead.id, type: 'email_sent', summary: `Email sent: ${sub}`, data: { subject: sub, to: lead.email } }); }
+        else { skipped++; acts.push({ lead_id: lead.id, type: 'email_sent', summary: `Email failed (SMTP error)`, data: { subject: sub } }); }
       }
 
       if (acts.length) await sb().from('lead_activities').insert(acts);
-      const sentIds = (leads || []).filter(l => l.email).map(l => l.id);
       if (sentIds.length) await sb().from('scraped_leads').update({ status: 'contacted', updated_at: new Date().toISOString() }).in('id', sentIds);
 
       return res.status(200).json({ sent, skipped });

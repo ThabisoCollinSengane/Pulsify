@@ -255,4 +255,36 @@ async function sendTicketEmail(to, buyerName, eventName, eventDate, venueName, v
   await send(to, `🎟 Your ticket for ${eventName}`, ticketHtml(buyerName, eventName, eventDate, venueName, venueCity, bookingRef, tierName, quantity, totalPaid, isFree, qrData));
 }
 
-module.exports = { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail, sendTicketEmail };
+// ─── Lead outreach email (CRM bulk send) ──────────────────────────────────────
+function escapeHtml(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function leadHtml(bodyText) {
+  const safe = escapeHtml(bodyText).replace(/\n/g, '<br/>');
+  return layout(`
+    ${card(`
+      <p style="margin:0;font-size:15px;color:#d0d0d0;line-height:1.7">${safe}</p>
+      ${btn(APP_URL, 'Visit Pulsefy →')}
+    `)}
+  `);
+}
+
+// Returns true if actually dispatched, false if SMTP unconfigured or send failed.
+async function sendLeadEmail(to, subject, bodyText) {
+  if (!SMTP_HOST || !SMTP_PASS) {
+    console.log('[email/lead] SMTP not configured — skipping:', subject, '->', to);
+    return false;
+  }
+  try {
+    await transport().sendMail({ from: `${FROM_NAME} <${FROM_ADDR}>`, to, subject, html: leadHtml(bodyText) });
+    console.log('[email/lead] sent:', subject, '->', to);
+    return true;
+  } catch (e) {
+    console.error('[email/lead] failed:', e.message);
+    return false;
+  }
+}
+
+const SMTP_CONFIGURED = !!(SMTP_HOST && SMTP_PASS);
+
+module.exports = { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail, sendTicketEmail, sendLeadEmail, SMTP_CONFIGURED };
