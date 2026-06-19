@@ -3064,8 +3064,10 @@ module.exports = async (req, res) => {
       const city = (q.city || '').toLowerCase();
       // ?highlight=1 → only deals an admin has featured for the public Discover feed
       const highlightOnly = q.highlight === '1' || q.highlight === 'true';
+      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
       let query = sb().from('squad_promos')
-        .select('*').eq('approved', true).eq('is_active', true);
+        .select('*').eq('approved', true).eq('is_active', true)
+        .or(`valid_to.is.null,valid_to.gte.${today}`);
       if (highlightOnly) query = query.eq('highlight_in_discovery', true);
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) return res.status(400).json({ error: error.message });
