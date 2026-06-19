@@ -3062,13 +3062,18 @@ module.exports = async (req, res) => {
     /* ─── GET /squad-promos ──────────────────────────────── */
     if (url === '/squad-promos' && req.method === 'GET') {
       const city = (q.city || '').toLowerCase();
-      const { data, error } = await sb().from('squad_promos')
-        .select('*').eq('approved', true).eq('is_active', true)
-        .order('created_at', { ascending: false });
+      // ?highlight=1 → only deals an admin has featured for the public Discover feed
+      const highlightOnly = q.highlight === '1' || q.highlight === 'true';
+      let query = sb().from('squad_promos')
+        .select('*').eq('approved', true).eq('is_active', true);
+      if (highlightOnly) query = query.eq('highlight_in_discovery', true);
+      const { data, error } = await query.order('created_at', { ascending: false });
       if (error) return res.status(400).json({ error: error.message });
-      const promos = city
+      let promos = city
         ? (data || []).filter(p => !p.location_city || p.location_city.toLowerCase().includes(city) || city.includes(p.location_city.toLowerCase()))
         : (data || []);
+      // Discover feed shows a compact strip — cap at 5 per the placement rules
+      if (highlightOnly) promos = promos.slice(0, 5);
       return res.status(200).json({ promos });
     }
 
@@ -3111,15 +3116,17 @@ module.exports = async (req, res) => {
       return res.status(200).json({ promos: data || [] });
     }
 
-    /* ─── PATCH /squad-promos/:id/approve|reject ─────────── */
-    const sqPromoAction = url.match(/^\/squad-promos\/([^/]+)\/(approve|reject)$/);
+    /* ─── PATCH /squad-promos/:id/approve|reject|feature|unfeature ─── */
+    const sqPromoAction = url.match(/^\/squad-promos\/([^/]+)\/(approve|reject|feature|unfeature)$/);
     if (sqPromoAction && req.method === 'PATCH') {
       const auth = await authUser(req);
       if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
       const [, promoId, action] = sqPromoAction;
-      const updates = action === 'approve'
-        ? { approved: true, rejected: false }
-        : { approved: false, rejected: true, reject_reason: req.body?.reason || null };
+      const updates =
+        action === 'approve'   ? { approved: true, rejected: false } :
+        action === 'reject'    ? { approved: false, rejected: true, reject_reason: req.body?.reason || null } :
+        action === 'feature'   ? { highlight_in_discovery: true } :
+                                 { highlight_in_discovery: false };
       const { data, error } = await sb().from('squad_promos').update(updates).eq('id', promoId).select().single();
       if (error) return res.status(400).json({ error: error.message });
       return res.status(200).json({ promo: data });

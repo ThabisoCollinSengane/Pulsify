@@ -3022,6 +3022,7 @@ async function loadAdminSquadPromos() {
           <button onclick="adminSqpApprove('${escHtml(p.id)}')" style="flex:1;background:rgba(198,255,74,.12);border:1px solid rgba(198,255,74,.3);color:#C6FF4A;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;padding:9px;border-radius:10px;cursor:pointer">✅ Approve</button>
           <button onclick="adminSqpReject('${escHtml(p.id)}')" style="flex:1;background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);color:#FF2D78;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;padding:9px;border-radius:10px;cursor:pointer">❌ Reject</button>
         </div>` : ''}
+        ${p.approved && !p.rejected ? `<button onclick="adminSqpFeature('${escHtml(p.id)}',${p.highlight_in_discovery ? 'false' : 'true'})" style="width:100%;background:${p.highlight_in_discovery ? 'rgba(0,229,255,.12)' : 'rgba(255,255,255,.04)'};border:1px solid ${p.highlight_in_discovery ? 'rgba(0,229,255,.35)' : 'var(--border)'};color:${p.highlight_in_discovery ? '#00E5FF' : 'var(--mu2)'};font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;padding:9px;border-radius:10px;cursor:pointer">${p.highlight_in_discovery ? '⭐ Featured in Discover — tap to remove' : '☆ Feature in Discover feed'}</button>` : ''}
       </div>`;
     }).join('');
   } catch(e) {
@@ -3051,6 +3052,17 @@ async function adminSqpReject(promoId) {
   const msgEl2 = document.getElementById('msg-squad-promos');
   if (r.ok) { if (msgEl2) { msgEl2.textContent = 'Squad deal rejected'; msgEl2.className = 'msg ok'; setTimeout(() => { msgEl2.textContent=''; }, 3000); } loadAdminSquadPromos(); }
   else { const j = await r.json(); if (msgEl2) { msgEl2.textContent = 'Error: ' + (j.error || 'Failed'); msgEl2.className = 'msg err'; } }
+}
+
+// Toggle whether an approved squad deal is surfaced in the public Discover feed.
+async function adminSqpFeature(promoId, on) {
+  const token = (await sb.auth.getSession()).data.session?.access_token || '';
+  const r = await fetch('/api/squad-promos/' + promoId + '/' + (on ? 'feature' : 'unfeature'), {
+    method: 'PATCH', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+  });
+  const msgEl = document.getElementById('msg-squad-promos');
+  if (r.ok) { if (msgEl) { msgEl.textContent = on ? 'Featured in Discover ⭐' : 'Removed from Discover'; msgEl.className = 'msg ok'; setTimeout(() => { msgEl.textContent=''; }, 3000); } loadAdminSquadPromos(); }
+  else { const j = await r.json(); if (msgEl) { msgEl.textContent = 'Error: ' + (j.error || 'Failed'); msgEl.className = 'msg err'; } }
 }
 </script>
 </body>
