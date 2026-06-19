@@ -1,5 +1,5 @@
 const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError } = require('../shared');
-const { sendVerifApprovedEmail, sendVerifRejectedEmail } = require('../email');
+const { sendVerifApprovedEmail, sendVerifRejectedEmail, sendLeadEmail, SMTP_CONFIGURED } = require('../email');
 
 module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
@@ -120,6 +120,17 @@ module.exports = async (req, res) => {
         .update(updates).eq('id', leadId).select().single();
 
       if (error) return res.status(400).json({ error: error.message });
+
+      // Auto-log status changes and note additions to activity timeline
+      if (status !== undefined) {
+        sb().from('lead_activities').insert({ lead_id: leadId, type: 'status_changed', summary: `Status → ${status}`, data: { status } }).then(() => {}).catch(() => {});
+      }
+      if (Array.isArray(notes) && notes.length > 0) {
+        const last = notes[notes.length - 1];
+        const text = (last?.text || String(last)).slice(0, 120);
+        sb().from('lead_activities').insert({ lead_id: leadId, type: 'note_added', summary: `Note: ${text}`, data: { note: last } }).then(() => {}).catch(() => {});
+      }
+
       return res.status(200).json({ lead: data, success: true });
     }
 
@@ -801,6 +812,125 @@ module.exports = async (req, res) => {
         .select().single();
       if (error) return res.status(400).json({ error: error.message });
       return res.status(200).json({ setting: data });
+    }
+
+    /* ─── POST /leads/bulk-email ─── Resend batch (inert without key) ─── */
+    if (url === '/leads/bulk-email' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+
+      const { lead_ids, subject, body: emailBody } = req.body || {};
+      if (!lead_ids?.length || !subject || !emailBody) return res.status(400).json({ error: 'lead_ids, subject, body required' });
+
+      if (!SMTP_CONFIGURED) return res.status(200).json({ sent: 0, skipped: lead_ids.length, warning: 'SMTP not configured — email sending is disabled. Set SMTP_HOST / SMTP_PASS to enable.' });
+
+      const { data: leads } = await sb().from('scraped_leads').select('id,name,email,city').in('id', lead_ids);
+      let sent = 0, skipped = 0;
+      const acts = [];
+      const sentIds = [];
+
+      for (const lead of (leads || [])) {
+        const sub  = subject.replace(/\{\{name\}\}/g, lead.name).replace(/\{\{business_name\}\}/g, lead.name).replace(/\{\{city\}\}/g, lead.city || '');
+        const bod  = emailBody.replace(/\{\{name\}\}/g, lead.name).replace(/\{\{business_name\}\}/g, lead.name).replace(/\{\{city\}\}/g, lead.city || '');
+        if (!lead.email) { skipped++; acts.push({ lead_id: lead.id, type: 'email_sent', summary: `Email skipped — no address`, data: { subject: sub } }); continue; }
+        const ok = await sendLeadEmail(lead.email, sub, bod);
+        if (ok) { sent++; sentIds.push(lead.id); acts.push({ lead_id: lead.id, type: 'email_sent', summary: `Email sent: ${sub}`, data: { subject: sub, to: lead.email } }); }
+        else { skipped++; acts.push({ lead_id: lead.id, type: 'email_sent', summary: `Email failed (SMTP error)`, data: { subject: sub } }); }
+      }
+
+      if (acts.length) await sb().from('lead_activities').insert(acts);
+      if (sentIds.length) await sb().from('scraped_leads').update({ status: 'contacted', updated_at: new Date().toISOString() }).in('id', sentIds);
+
+      return res.status(200).json({ sent, skipped });
+    }
+
+    /* ─── GET /leads/followups ─── all pending follow-ups ─────────── */
+    if (url === '/leads/followups' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const { data, error } = await sb().from('lead_followups')
+        .select('*, scraped_leads(id, name, city)').eq('completed', false).order('due_date', { ascending: true });
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ followups: data || [] });
+    }
+
+    /* ─── POST /leads/follow-up ─── schedule follow-up ────────────── */
+    if (url === '/leads/follow-up' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const { lead_id, due_date, note } = req.body || {};
+      if (!lead_id || !due_date) return res.status(400).json({ error: 'lead_id and due_date required' });
+      const { data, error } = await sb().from('lead_followups').insert({ lead_id, due_date, note: note || null }).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      await sb().from('lead_activities').insert({ lead_id, type: 'follow_up_scheduled', summary: `Follow-up scheduled for ${due_date}${note ? ': ' + note.slice(0, 80) : ''}`, data: { due_date, note } }).catch(() => {});
+      return res.status(201).json({ followup: data });
+    }
+
+    /* ─── PATCH /leads/followups/:id ─── mark complete ─────────────── */
+    const followupIdMatch = url.match(/^\/leads\/followups\/([^/]+)$/);
+    if (followupIdMatch && req.method === 'PATCH') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const { data, error } = await sb().from('lead_followups').update({ completed: true }).eq('id', followupIdMatch[1]).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      if (data?.lead_id) {
+        await sb().from('lead_activities').insert({ lead_id: data.lead_id, type: 'follow_up_completed', summary: `Follow-up completed (was due ${data.due_date})`, data: { followup_id: data.id } }).catch(() => {});
+      }
+      return res.status(200).json({ followup: data });
+    }
+
+    /* ─── GET /leads/:id/activity ─── activity timeline ──────────── */
+    const leadActivityMatch = url.match(/^\/leads\/([^/]+)\/activity$/);
+    if (leadActivityMatch && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const { data, error } = await sb().from('lead_activities')
+        .select('*').eq('lead_id', leadActivityMatch[1]).order('created_at', { ascending: false }).limit(50);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ activities: data || [] });
+    }
+
+    /* ─── POST /leads/:id/activity ─── log manual activity ─────────── */
+    if (leadActivityMatch && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const { type, summary, data: actData } = req.body || {};
+      if (!type) return res.status(400).json({ error: 'type required' });
+      const { data, error } = await sb().from('lead_activities').insert({ lead_id: leadActivityMatch[1], type, summary: summary || null, data: actData || {} }).select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(201).json({ activity: data });
+    }
+
+    /* ─── GET /admin/email-templates ─── list saved templates ─────── */
+    if (url === '/admin/email-templates' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const { data, error } = await sb().from('email_templates').select('*').order('created_at', { ascending: true });
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ templates: data || [] });
+    }
+
+    /* ─── POST /admin/email-templates ─── create or update template ── */
+    if (url === '/admin/email-templates' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const { key, name, subject, body: tplBody } = req.body || {};
+      if (!key || !name || !subject || !tplBody) return res.status(400).json({ error: 'key, name, subject, body required' });
+      const { data, error } = await sb().from('email_templates')
+        .upsert({ key, name, subject, body: tplBody, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+        .select().single();
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ template: data });
+    }
+
+    /* ─── DELETE /admin/email-templates/:id ─── delete template ───── */
+    const emailTplMatch = url.match(/^\/admin\/email-templates\/([^/]+)$/);
+    if (emailTplMatch && req.method === 'DELETE') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const { error } = await sb().from('email_templates').delete().eq('id', emailTplMatch[1]);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ success: true });
     }
 
     return res.status(404).json({ error: 'Not found' });

@@ -4,94 +4,127 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
-<title>Lead Management — Pulsefy</title>
+<title>Lead CRM — Pulsefy</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--pu:#B026FF;--te:#00D4AA;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0}
-html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
-body{padding:20px;padding-top:80px}
-.tb{position:fixed;top:0;left:0;right:0;height:58px;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:rgba(5,8,15,.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{padding-top:58px}
+/* topbar */
+.tb{position:fixed;top:0;left:0;right:0;height:58px;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:rgba(5,8,15,.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
 .logo{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:.06em;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--tx)}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--or);box-shadow:0 0 10px var(--or);animation:p 2s ease-in-out infinite}
 @keyframes p{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}
-.back{display:flex;align-items:center;gap:5px;background:transparent;border:none;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer}
-.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;cursor:pointer}
-.stat-card{background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:16px 12px;text-align:center;transition:border-color .2s,transform .1s}
-.stat-card:hover{border-color:var(--or);transform:scale(1.02)}
+.back{background:transparent;border:none;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer}
+/* bulk action bar */
+.bulk-bar{position:sticky;top:58px;z-index:100;background:rgba(176,38,255,.15);border-bottom:1px solid rgba(176,38,255,.3);padding:10px 20px;display:flex;align-items:center;gap:12px;display:none}
+.bulk-bar.show{display:flex}
+.bulk-count{font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;color:var(--pu);flex:1}
+.bulk-btn{background:transparent;border:1px solid var(--border2);color:var(--mu2);padding:6px 14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;transition:all .2s}
+.bulk-btn:hover{border-color:var(--pu);color:var(--pu)}
+.bulk-btn.primary{background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none}
+/* stats row */
+.main-wrap{max-width:1600px;margin:0 auto;padding:20px}
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px}
+.stat-card{background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px 10px;text-align:center;cursor:pointer;transition:border-color .2s}
+.stat-card:hover{border-color:var(--or)}
 .stat-card.active{border-color:var(--or);background:rgba(255,92,0,.05)}
-.stat-num{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--or);line-height:1}
-.stat-label{font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-top:4px}
-.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center}
-.filter-group{display:flex;align-items:center;gap:8px;background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:5px 12px}
-.filter-group label{font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu2)}
-.filter-select,.filter-input{background:transparent;border:none;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.8rem;outline:none;padding:6px 0}
-.search-input{flex:1;min-width:200px;background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:8px 16px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.8rem;outline:none}
-.search-input:focus{border-color:var(--or)}
-.btn-primary{background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:8px 20px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer}
-.btn-sec{background:transparent;border:1px solid var(--border2);color:var(--mu2);padding:8px 20px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer}
-.btn-sec:active{border-color:var(--or);color:var(--or)}
-.leads-table{width:100%;border-collapse:collapse;background:var(--surf);border-radius:16px;overflow:hidden}
-.leads-table th{text-align:left;padding:14px 12px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);border-bottom:1px solid var(--border)}
-.leads-table td{padding:12px;border-bottom:1px solid var(--border);font-size:.8rem;vertical-align:middle}
-.leads-table tr:last-child td{border-bottom:none}
-.leads-table tr:hover{background:rgba(255,255,255,.02)}
-.status-badge{display:inline-block;padding:4px 10px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700}
-.status-new{background:rgba(0,229,255,.1);color:var(--cy);border:1px solid rgba(0,229,255,.25)}
-.status-contacted{background:rgba(255,92,0,.1);color:var(--or);border:1px solid rgba(255,92,0,.25)}
-.status-converted{background:rgba(198,255,74,.08);color:var(--li);border:1px solid rgba(198,255,74,.2)}
-.status-ignored{background:rgba(255,45,120,.08);color:var(--pk);border:1px solid rgba(255,45,120,.2)}
-.category-badge{display:inline-block;padding:2px 8px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700}
-.category-business{background:rgba(255,92,0,.12);color:var(--or);border:1px solid rgba(255,92,0,.25)}
-.category-organizer{background:rgba(176,38,255,.12);color:var(--pu);border:1px solid rgba(176,38,255,.25)}
-.source-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700}
-.source-fb{background:#1877F2;color:#fff}
-.source-ig{background:#E4405F;color:#fff}
-.source-tt{background:#000;color:#fff;border:1px solid #333}
-.source-link{text-decoration:none}
-.contact-icons{display:flex;gap:8px;flex-wrap:wrap}
-.contact-icon{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--surf2);border:1px solid var(--border2);color:var(--mu);text-decoration:none;font-size:.9rem;transition:all .2s}
-.contact-icon.active{background:rgba(255,92,0,.15);border-color:var(--or);color:var(--or)}
-.contact-icon.active:hover{transform:scale(1.1);background:var(--or);color:#fff}
-.contact-icon.inactive{opacity:.35;cursor:default}
-.action-buttons{display:flex;gap:6px}
-.action-btn{background:transparent;border:none;color:var(--mu);cursor:pointer;font-size:1rem;padding:4px;transition:color .2s}
-.action-btn:hover{color:var(--or)}
-.pagination{display:flex;justify-content:center;gap:10px;margin-top:24px;padding:16px}
-.pagination button{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer}
-.pagination button:disabled{opacity:.3;cursor:not-allowed}
-.pagination .active{background:var(--or);border-color:var(--or)}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(14px);z-index:1000;display:none;align-items:center;justify-content:center}
-.modal-overlay.open{display:flex}
-.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:20px;width:90%;max-width:700px;max-height:85vh;overflow-y:auto}
-.modal-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border)}
-.modal-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem}
-.modal-close{background:transparent;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer}
-.modal-body{padding:20px}
-.detail-row{margin-bottom:16px}
-.detail-label{font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:4px}
-.detail-value{font-size:.9rem;color:var(--tx);word-break:break-word}
-.detail-value a{color:var(--or);text-decoration:none}
-.notes-section{margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
-.notes-list{max-height:200px;overflow-y:auto;margin-bottom:12px}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;color:var(--or);line-height:1}
+.stat-label{font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-top:3px}
+/* top toolbar */
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+.search-inp{flex:1;min-width:180px;background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:8px 16px;color:var(--tx);font-size:.82rem;outline:none}
+.search-inp:focus{border-color:var(--or)}
+.filter-select{background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:7px 14px;color:var(--tx);font-size:.78rem;outline:none;cursor:pointer}
+.btn-sm{background:transparent;border:1px solid var(--border2);color:var(--mu2);padding:7px 16px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer}
+.btn-sm:hover{border-color:var(--or);color:var(--or)}
+.btn-primary{background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:8px 18px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer}
+/* kanban */
+.kanban{display:grid;grid-template-columns:repeat(4,minmax(260px,1fr));gap:14px;align-items:start;overflow-x:auto;padding-bottom:20px}
+.kb-col{background:var(--surf);border:1px solid var(--border);border-radius:16px;min-height:300px}
+.kb-col-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 14px 10px;border-bottom:1px solid var(--border)}
+.kb-col-title{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mu2)}
+.kb-badge{background:var(--surf2);border-radius:50px;padding:2px 8px;font-family:'Bebas Neue',sans-serif;font-size:.85rem;color:var(--or)}
+.kb-cards{padding:10px;display:flex;flex-direction:column;gap:8px;min-height:200px}
+/* lead card */
+.kb-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;cursor:pointer;transition:border-color .2s,transform .1s;position:relative}
+.kb-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.kb-card.selected{border-color:var(--pu);background:rgba(176,38,255,.06)}
+.kb-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.kb-check{width:16px;height:16px;accent-color:var(--pu);cursor:pointer}
+.kb-src{font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:50px}
+.src-fb{background:#1877F2;color:#fff}.src-ig{background:#E4405F;color:#fff}
+.src-tt{background:#222;color:#fff}.src-osm{background:rgba(0,212,170,.15);color:var(--te);border:1px solid rgba(0,212,170,.3)}.src-google{background:rgba(66,133,244,.15);color:#4285F4;border:1px solid rgba(66,133,244,.3)}.src-manual{background:var(--surf2);color:var(--mu2);border:1px solid var(--border)}
+.kb-name{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kb-city{font-size:.72rem;color:var(--mu);margin-bottom:6px}
+.kb-followers{font-size:.68rem;color:var(--cy);margin-bottom:6px}
+.kb-actions{display:flex;gap:6px;margin-top:8px}
+.kb-act{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--surf);border:1px solid var(--border);text-decoration:none;font-size:.85rem;transition:all .2s;cursor:pointer}
+.kb-act:hover{border-color:var(--or);background:rgba(255,92,0,.1)}
+.kb-act.dim{opacity:.3;pointer-events:none}
+.kb-load-more{width:100%;background:transparent;border:none;color:var(--mu);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer;padding:10px;text-align:center}
+.kb-load-more:hover{color:var(--or)}
+.kb-empty{padding:20px;text-align:center;color:var(--mu);font-size:.78rem}
+/* modal */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(14px);z-index:500;display:none;align-items:center;justify-content:center}
+.modal-ov.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:20px;width:94%;max-width:640px;max-height:88vh;overflow-y:auto;display:flex;flex-direction:column}
+.modal-hdr{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:1.4rem}
+.modal-close{background:none;border:none;color:var(--mu2);font-size:1.2rem;cursor:pointer}
+.modal-body{padding:20px;flex:1}
+.modal-ftr{display:flex;gap:10px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--border)}
+/* tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px}
+.tab-btn{background:none;border:none;color:var(--mu);font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;padding:8px 14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;letter-spacing:.05em}
+.tab-btn.active{color:var(--or);border-bottom-color:var(--or)}
+.tab-pane{display:none}.tab-pane.active{display:block}
+/* detail fields */
+.dl{margin-bottom:14px}
+.dl-label{font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:3px}
+.dl-val{font-size:.88rem;word-break:break-word}
+.dl-val a{color:var(--or);text-decoration:none}
+.status-sel{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.82rem;margin-right:8px}
+/* notes */
 .note-item{background:var(--surf);border-radius:10px;padding:10px 12px;margin-bottom:8px}
-.note-text{font-size:.8rem;margin-bottom:4px}
-.note-meta{font-size:.65rem;color:var(--mu)}
-.note-input{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:10px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.8rem;resize:vertical;margin-bottom:10px}
-.status-select{background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.8rem;margin-right:10px}
-.modal-footer{display:flex;gap:10px;justify-content:flex-end;padding:16px 20px;border-top:1px solid var(--border)}
-.template-buttons{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-.template-btn{background:var(--surf2);border:1px solid var(--border);border-radius:50px;padding:6px 14px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu2);cursor:pointer;transition:all .2s}
-.template-btn.active{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.1)}
-.email-subject{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.8rem;margin-bottom:10px}
-.email-body{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.8rem;min-height:180px;resize:vertical}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 22px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--tx);z-index:1100;opacity:0;transition:all .3s;pointer-events:none}
-.toast.show{opacity:1}
-.toast.ok{border-color:rgba(198,255,74,.4);color:var(--li)}
-.loading{text-align:center;padding:40px;color:var(--mu)}
-/* ── auth gate ── */
-.auth-gate{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center;padding:24px}
+.note-text{font-size:.8rem;margin-bottom:3px}
+.note-meta{font-size:.63rem;color:var(--mu)}
+.txt-area{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:10px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.8rem;resize:vertical;margin-bottom:10px;outline:none}
+.txt-area:focus{border-color:var(--or)}
+/* activity */
+.act-item{display:flex;gap:10px;margin-bottom:14px;align-items:flex-start}
+.act-icon{width:28px;height:28px;border-radius:50%;background:var(--surf);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.78rem;flex-shrink:0;margin-top:2px}
+.act-body{}
+.act-sum{font-size:.8rem;color:var(--tx)}
+.act-time{font-size:.65rem;color:var(--mu);margin-top:2px}
+.act-empty{color:var(--mu);font-size:.8rem;padding:10px 0}
+/* follow-ups */
+.fu-item{display:flex;align-items:center;gap:10px;background:var(--surf);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.fu-date{font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--cy);white-space:nowrap}
+.fu-note{flex:1;font-size:.78rem;color:var(--tx)}
+.fu-done{background:none;border:1px solid rgba(198,255,74,.3);color:var(--li);padding:4px 10px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;cursor:pointer}
+.fu-done:hover{background:rgba(198,255,74,.1)}
+.fu-due-inp{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.82rem;margin-bottom:10px;outline:none}
+.fu-due-inp:focus{border-color:var(--or)}
+/* email modal */
+.email-subject-inp{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.82rem;margin-bottom:10px;outline:none}
+.email-subject-inp:focus{border-color:var(--or)}
+.tpl-btns{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.tpl-btn{background:var(--surf2);border:1px solid var(--border);border-radius:50px;padding:5px 14px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu2);cursor:pointer;transition:all .2s}
+.tpl-btn.active{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.08)}
+.merge-hint{font-size:.68rem;color:var(--mu);margin-bottom:12px}
+.wa-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto}
+.wa-row{display:flex;align-items:center;gap:10px;background:var(--surf);border-radius:10px;padding:10px 12px}
+.wa-name{flex:1;font-size:.82rem}
+.wa-btn{background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.35);color:#25D366;padding:5px 12px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer;text-decoration:none}
+.wa-no-phone{font-size:.7rem;color:var(--mu)}
+/* toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 22px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--tx);z-index:1000;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}.toast.ok{border-color:rgba(198,255,74,.4);color:var(--li)}
+/* auth gate */
+.auth-gate{position:fixed;inset:0;background:var(--bg);z-index:900;display:flex;align-items:center;justify-content:center;padding:24px}
 .auth-card{width:100%;max-width:380px;background:var(--bg2);border:1px solid var(--border2);border-radius:22px;padding:28px 24px 32px}
 .auth-logo{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.06em;display:flex;align-items:center;gap:8px;margin-bottom:4px;color:var(--tx)}
 .auth-sub{font-size:.78rem;color:var(--mu);margin-bottom:24px}
@@ -110,7 +143,6 @@ body{padding:20px;padding-top:80px}
 .auth-err.show{display:block}
 .google-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#3c4043;border:1px solid #dadce0;border-radius:50px;padding:11px 16px;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;transition:box-shadow .2s;margin-bottom:14px}
 .google-btn:hover{box-shadow:0 2px 8px rgba(0,0,0,.25)}
-.google-btn:active{opacity:.9}
 .google-icon{width:18px;height:18px;flex-shrink:0}
 .or-divider{display:flex;align-items:center;gap:10px;color:var(--mu);font-size:.7rem;margin:6px 0 14px;font-family:'Syne',sans-serif;letter-spacing:.15em}
 .or-divider::before,.or-divider::after{content:'';flex:1;height:1px;background:var(--border)}
@@ -120,119 +152,153 @@ body{padding:20px;padding-top:80px}
 
 <div class="tb">
   <a href="/" class="logo"><span class="dot"></span>PULSEFY</a>
-  <button class="back" onclick="window.location.href='/admin'">← Back to Dashboard</button>
+  <button class="back" onclick="window.location.href='/admin'">← Dashboard</button>
 </div>
 
-<div style="max-width:1400px;margin:0 auto">
-  <h1 style="font-family:'Bebas Neue',sans-serif;font-size:2.2rem;margin-bottom:8px">📋 Lead Management</h1>
-  <p style="color:var(--mu2);margin-bottom:24px">Manage event organisers and businesses discovered through web scraping. Track outreach and conversions.</p>
+<!-- Bulk action bar -->
+<div class="bulk-bar" id="bulk-bar">
+  <span class="bulk-count" id="bulk-count">0 selected</span>
+  <button class="bulk-btn primary" onclick="openBulkEmail()">📧 Send Bulk Email</button>
+  <button class="bulk-btn" onclick="openBulkWhatsApp()">💬 WhatsApp All</button>
+  <button class="bulk-btn" onclick="clearSelection()">✕ Clear</button>
+</div>
 
-  <!-- Stats Cards (clickable) -->
+<div class="main-wrap">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+    <div>
+      <h1 style="font-family:'Bebas Neue',sans-serif;font-size:2rem;line-height:1">📋 Lead CRM</h1>
+      <p style="color:var(--mu2);font-size:.8rem;margin-top:3px">Kanban pipeline · bulk outreach · activity timeline</p>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-sm" onclick="exportToCSV()">📎 Export CSV</button>
+      <button class="btn-sm" onclick="openScrapeModal()">🔍 Scrape OSM</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
   <div class="stats-row" id="stats-row">
-    <div class="stat-card" data-status="all" onclick="filterByStatus('all')"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Total Leads</div></div>
-    <div class="stat-card" data-status="new" onclick="filterByStatus('new')"><div class="stat-num" id="stat-new">0</div><div class="stat-label">New</div></div>
-    <div class="stat-card" data-status="contacted" onclick="filterByStatus('contacted')"><div class="stat-num" id="stat-contacted">0</div><div class="stat-label">Contacted</div></div>
-    <div class="stat-card" data-status="converted" onclick="filterByStatus('converted')"><div class="stat-num" id="stat-converted">0</div><div class="stat-label">Converted</div></div>
-    <div class="stat-card" data-status="ignored" onclick="filterByStatus('ignored')"><div class="stat-num" id="stat-ignored">0</div><div class="stat-label">Ignored</div></div>
+    <div class="stat-card active" data-col="all" onclick="filterStatus('all')"><div class="stat-num" id="sn-total">0</div><div class="stat-label">Total</div></div>
+    <div class="stat-card" data-col="new" onclick="filterStatus('new')"><div class="stat-num" id="sn-new">0</div><div class="stat-label">New</div></div>
+    <div class="stat-card" data-col="contacted" onclick="filterStatus('contacted')"><div class="stat-num" id="sn-contacted">0</div><div class="stat-label">Contacted</div></div>
+    <div class="stat-card" data-col="converted" onclick="filterStatus('converted')"><div class="stat-num" id="sn-converted">0</div><div class="stat-label">Converted</div></div>
+    <div class="stat-card" data-col="ignored" onclick="filterStatus('ignored')"><div class="stat-num" id="sn-ignored">0</div><div class="stat-label">Ignored</div></div>
   </div>
 
-  <!-- Filters -->
-  <div class="filters">
-    <div class="filter-group">
-      <label>Province</label>
-      <select id="filter-province" class="filter-select" onchange="applyFiltersAndReload()">
-        <option value="all">All</option>
-        <option value="KZN">KwaZulu-Natal</option>
-        <option value="GP">Gauteng</option>
-        <option value="WC">Western Cape</option>
-        <option value="EC">Eastern Cape</option>
-        <option value="MP">Mpumalanga</option>
-        <option value="LP">Limpopo</option>
-        <option value="NW">North West</option>
-        <option value="FS">Free State</option>
-        <option value="NC">Northern Cape</option>
-        <option value="other">Other / Unknown</option>
-      </select>
-    </div>
-    <div class="filter-group">
-      <label>Category</label>
-      <select id="filter-category" class="filter-select" onchange="applyFiltersAndReload()">
-        <option value="all">All</option>
-        <option value="business">Business</option>
-        <option value="organizer">Event Organizer</option>
-      </select>
-    </div>
-    <div class="filter-group">
-      <label>Source</label>
-      <select id="filter-source" class="filter-select" onchange="applyFiltersAndReload()">
-        <option value="all">All</option>
-        <option value="facebook">Facebook</option>
-        <option value="instagram">Instagram</option>
-        <option value="tiktok">TikTok</option>
-        <option value="manual">Manual</option>
-      </select>
-    </div>
-    <input type="text" id="search-input" class="search-input" placeholder="🔍 Search by organiser, event, or location..." onkeyup="handleSearch()"/>
-    <button class="btn-primary" onclick="exportToCSV()">📎 Export CSV</button>
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <input type="text" id="srch" class="search-inp" placeholder="🔍 Search name, city, email…" oninput="schedSearch()"/>
+    <select id="flt-province" class="filter-select" onchange="reloadKanban()">
+      <option value="all">All Provinces</option>
+      <option value="KZN">KwaZulu-Natal</option>
+      <option value="GP">Gauteng</option>
+      <option value="WC">Western Cape</option>
+      <option value="EC">Eastern Cape</option>
+      <option value="NC">Northern Cape</option>
+    </select>
+    <select id="flt-category" class="filter-select" onchange="reloadKanban()">
+      <option value="all">All Categories</option>
+      <option value="business">Business</option>
+      <option value="organizer">Organizer</option>
+    </select>
+    <select id="flt-source" class="filter-select" onchange="reloadKanban()">
+      <option value="all">All Sources</option>
+      <option value="osm">OSM</option>
+      <option value="google">Google</option>
+      <option value="instagram">Instagram</option>
+      <option value="facebook">Facebook</option>
+      <option value="tiktok">TikTok</option>
+      <option value="manual">Manual</option>
+    </select>
   </div>
 
-  <!-- Leads Table -->
-  <div id="leads-container">
-    <div class="loading">Loading leads...</div>
+  <!-- Kanban board -->
+  <div class="kanban" id="kanban">
+    <div class="kb-col" id="col-new"><div class="kb-col-hdr"><span class="kb-col-title">🔵 New</span><span class="kb-badge" id="cnt-new">0</span></div><div class="kb-cards" id="cards-new"><div class="kb-empty">Loading…</div></div></div>
+    <div class="kb-col" id="col-contacted"><div class="kb-col-hdr"><span class="kb-col-title">🟠 Contacted</span><span class="kb-badge" id="cnt-contacted">0</span></div><div class="kb-cards" id="cards-contacted"></div></div>
+    <div class="kb-col" id="col-converted"><div class="kb-col-hdr"><span class="kb-col-title">🟢 Converted</span><span class="kb-badge" id="cnt-converted">0</span></div><div class="kb-cards" id="cards-converted"></div></div>
+    <div class="kb-col" id="col-ignored"><div class="kb-col-hdr"><span class="kb-col-title">⚫ Ignored</span><span class="kb-badge" id="cnt-ignored">0</span></div><div class="kb-cards" id="cards-ignored"></div></div>
   </div>
-
-  <!-- Pagination -->
-  <div class="pagination" id="pagination"></div>
 </div>
 
-<!-- Lead Detail Modal (with email templates) -->
-<div class="modal-overlay" id="lead-modal" onclick="if(event.target===this)closeModal()">
+<!-- Lead detail modal -->
+<div class="modal-ov" id="lead-modal" onclick="if(event.target===this)closeModal('lead-modal')">
   <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title" id="modal-title">Lead Details</span>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <div class="modal-body" id="modal-body"></div>
-    <div class="modal-footer">
-      <button class="btn-sec" onclick="closeModal()">Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- Email Composition Modal -->
-<div class="modal-overlay" id="email-modal" onclick="if(event.target===this)closeEmailModal()">
-  <div class="modal" style="max-width:600px">
-    <div class="modal-header">
-      <span class="modal-title">📧 Send Email</span>
-      <button class="modal-close" onclick="closeEmailModal()">✕</button>
+    <div class="modal-hdr">
+      <span class="modal-title" id="modal-title">Lead</span>
+      <button class="modal-close" onclick="closeModal('lead-modal')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="detail-label">Recipient</div>
-      <div class="detail-value" id="email-recipient" style="margin-bottom:12px"></div>
-      
-      <div class="detail-label">Template</div>
-      <div class="template-buttons" id="template-buttons"></div>
-      
-      <div class="detail-label">Subject</div>
-      <input type="text" id="email-subject" class="email-subject" placeholder="Subject line"/>
-      
-      <div class="detail-label">Message</div>
-      <textarea id="email-body" class="email-body" placeholder="Write your message here..."></textarea>
+      <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('details')">Details</button>
+        <button class="tab-btn" onclick="showTab('notes')">Notes</button>
+        <button class="tab-btn" onclick="showTab('activity')">Activity</button>
+        <button class="tab-btn" onclick="showTab('followups')">Follow-ups</button>
+      </div>
+      <div class="tab-pane active" id="tab-details"></div>
+      <div class="tab-pane" id="tab-notes"></div>
+      <div class="tab-pane" id="tab-activity"><div class="act-empty">Loading…</div></div>
+      <div class="tab-pane" id="tab-followups"><div class="act-empty">Loading…</div></div>
     </div>
-    <div class="modal-footer">
-      <button class="btn-sec" onclick="closeEmailModal()">Cancel</button>
-      <button class="btn-primary" onclick="sendEmailFromModal()">Send Email ✉️</button>
+    <div class="modal-ftr">
+      <button class="btn-sm" onclick="closeModal('lead-modal')">Close</button>
+      <button class="btn-primary" onclick="openEmailForActive()">✉️ Send Email</button>
+      <button class="btn-primary" style="background:linear-gradient(135deg,#25D366,#128C7E)" onclick="openWaForActive()">💬 WhatsApp</button>
     </div>
   </div>
 </div>
 
-<!-- Auth Gate -->
+<!-- Bulk / Single Email modal -->
+<div class="modal-ov" id="email-modal" onclick="if(event.target===this)closeModal('email-modal')">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-hdr">
+      <span class="modal-title" id="email-modal-title">📧 Send Email</span>
+      <button class="modal-close" onclick="closeModal('email-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="dl-label" style="margin-bottom:6px">Recipients</div>
+      <div id="email-recipients" style="font-size:.8rem;color:var(--mu2);margin-bottom:14px;max-height:80px;overflow-y:auto"></div>
+      <div class="dl-label" style="margin-bottom:6px">Template</div>
+      <div class="tpl-btns" id="tpl-btns"></div>
+      <div class="merge-hint">Merge vars: <code>{{name}}</code> <code>{{business_name}}</code> <code>{{city}}</code></div>
+      <div class="dl-label" style="margin-bottom:6px">Subject</div>
+      <input type="text" id="email-subject" class="email-subject-inp" placeholder="Subject"/>
+      <div class="dl-label" style="margin-bottom:6px">Message</div>
+      <textarea id="email-body" class="txt-area" style="min-height:180px" placeholder="Write your message…"></textarea>
+      <div style="margin-top:10px">
+        <button class="btn-sm" onclick="saveTplModal()">💾 Save as template</button>
+      </div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn-sm" onclick="closeModal('email-modal')">Cancel</button>
+      <button class="btn-primary" onclick="sendEmail()">Send ✉️</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk WhatsApp modal -->
+<div class="modal-ov" id="wa-modal" onclick="if(event.target===this)closeModal('wa-modal')">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-hdr">
+      <span class="modal-title">💬 WhatsApp Outreach</span>
+      <button class="modal-close" onclick="closeModal('wa-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.8rem;color:var(--mu2);margin-bottom:12px">Click each button to open WhatsApp with a pre-filled message.</p>
+      <div class="dl-label" style="margin-bottom:8px">Message</div>
+      <textarea id="wa-msg" class="txt-area" rows="4">Hi {{name}}, I came across your page and thought Pulsefy would be a great fit. It's SA's fastest-growing event platform — free to list. Interested?</textarea>
+      <div class="wa-list" id="wa-list"></div>
+    </div>
+    <div class="modal-ftr"><button class="btn-sm" onclick="closeModal('wa-modal')">Close</button></div>
+  </div>
+</div>
+
+<!-- Auth gate -->
 <div class="auth-gate" id="auth-gate">
   <div class="auth-card">
     <div class="auth-logo"><span class="dot"></span>PULSEFY</div>
     <div class="auth-sub">Admin Access</div>
     <div class="auth-title">Sign In</div>
-    <div class="auth-desc">Lead Management is restricted to authorised team members.</div>
+    <div class="auth-desc">Lead CRM is restricted to authorised team members.</div>
     <div class="auth-err" id="auth-err"></div>
     <button class="google-btn" onclick="signInWithGoogle()">
       <svg class="google-icon" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
@@ -258,335 +324,412 @@ const SUPA_URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
 const sbAuth = supabase.createClient(SUPA_URL, SUPA_KEY);
 
-let currentPage = 1;
-let currentStatus = 'all';
-let searchTimer = null;
-let activeLead = null;
+const COLS = ['new','contacted','converted','ignored'];
+const COL_OFFSETS = { new: 0, contacted: 0, converted: 0, ignored: 0 };
+const COL_LIMIT = 30;
+let _cache = {};        // id → lead
+let _selected = new Set();
+let _activeLead = null;
+let _templates = [];
+let _searchTimer = null;
+let _statusFilter = 'all';
 
-function getToken() {
-  return localStorage.getItem('p_token') || sessionStorage.getItem('p_token') || '';
+function getToken() { return localStorage.getItem('p_token') || sessionStorage.getItem('p_token') || ''; }
+function authHeaders() {
+  const t = getToken();
+  return t ? { 'Content-Type':'application/json', 'Authorization':`Bearer ${t}` }
+           : { 'Content-Type':'application/json' };
 }
+async function safeJson(r) { try { const t = await r.text(); return t ? JSON.parse(t) : {}; } catch { return {}; } }
 
-// ── Auth gate ────────────────────────────────────────────────────────────────
+// ── Auth ─────────────────────────────────────────────────────────────────────
 function togglePw() {
-  const inp = document.getElementById('auth-pw');
-  const btn = document.querySelector('.pw-eye');
-  inp.type = inp.type === 'password' ? 'text' : 'password';
-  btn.textContent = inp.type === 'password' ? 'SHOW' : 'HIDE';
+  const i = document.getElementById('auth-pw'); const b = document.querySelector('.pw-eye');
+  i.type = i.type === 'password' ? 'text' : 'password'; b.textContent = i.type === 'password' ? 'SHOW' : 'HIDE';
 }
-
 async function doSignIn() {
   const email = document.getElementById('auth-email').value.trim();
   const pw    = document.getElementById('auth-pw').value;
-  const errEl = document.getElementById('auth-err');
-  const btn   = document.getElementById('auth-btn');
-  errEl.className = 'auth-err';
-  if (!email || !pw) { errEl.textContent = 'Email and password required.'; errEl.className = 'auth-err show'; return; }
+  const err   = document.getElementById('auth-err'); const btn = document.getElementById('auth-btn');
+  err.className = 'auth-err';
+  if (!email || !pw) { err.textContent = 'Email and password required.'; err.className = 'auth-err show'; return; }
   btn.disabled = true; btn.textContent = 'Signing in…';
   try {
     const { data, error } = await sbAuth.auth.signInWithPassword({ email, password: pw });
-    if (error || !data.session) {
-      errEl.textContent = error?.message || 'Sign in failed.';
-      errEl.className = 'auth-err show';
-      btn.disabled = false; btn.textContent = 'Sign In →';
-      return;
-    }
+    if (error || !data.session) { err.textContent = error?.message || 'Sign in failed.'; err.className = 'auth-err show'; btn.disabled = false; btn.textContent = 'Sign In →'; return; }
     localStorage.setItem('p_token', data.session.access_token);
     document.getElementById('auth-gate').style.display = 'none';
-    loadLeads();
-  } catch(e) {
-    errEl.textContent = 'Network error. Try again.';
-    errEl.className = 'auth-err show';
-    btn.disabled = false; btn.textContent = 'Sign In →';
-  }
+    init();
+  } catch(e) { err.textContent = 'Network error.'; err.className = 'auth-err show'; btn.disabled = false; btn.textContent = 'Sign In →'; }
 }
-
 async function signInWithGoogle() {
-  const errEl = document.getElementById('auth-err');
-  try {
-    const { error } = await sbAuth.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin + '/leads' }
-    });
-    if (error) { errEl.textContent = error.message; errEl.className = 'auth-err show'; }
-  } catch(e) {
-    errEl.textContent = 'Google sign-in failed: ' + e.message;
-    errEl.className = 'auth-err show';
-  }
+  const { error } = await sbAuth.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: window.location.origin+'/leads' }});
+  if (error) { const e=document.getElementById('auth-err'); e.textContent=error.message; e.className='auth-err show'; }
 }
-
 async function checkAuth() {
   const { data: { session } } = await sbAuth.auth.getSession();
   if (session?.access_token) {
     localStorage.setItem('p_token', session.access_token);
     document.getElementById('auth-gate').style.display = 'none';
-    loadLeads();
-    return;
+    init();
+  } else {
+    localStorage.removeItem('p_token'); sessionStorage.removeItem('p_token');
   }
-  // No live Supabase session — clear stale token, force sign-in
-  localStorage.removeItem('p_token');
-  sessionStorage.removeItem('p_token');
 }
 checkAuth();
 
-async function safeJson(r) { try { const t = await r.text(); return t ? JSON.parse(t) : {}; } catch(e) { return {}; } }
-
-function authHeaders() {
-  const t = getToken();
-  return t ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` }
-           : { 'Content-Type': 'application/json' };
+// ── Init ─────────────────────────────────────────────────────────────────────
+async function init() {
+  await loadTemplates();
+  reloadKanban();
 }
 
-function toast(msg, ok = true) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'toast show ' + (ok ? 'ok' : '');
-  setTimeout(() => { el.className = 'toast'; }, 2800);
+// ── Templates ─────────────────────────────────────────────────────────────────
+async function loadTemplates() {
+  const r = await fetch(`${API}/admin/email-templates`, { headers: authHeaders() });
+  if (r.ok) { const j = await safeJson(r); _templates = j.templates || []; }
 }
 
-function filterByStatus(status) {
-  currentStatus = status;
-  currentPage   = 1;
-  document.querySelectorAll('.stat-card').forEach(c => c.classList.toggle('active', c.dataset.status === status));
-  loadLeads();
+// ── Kanban ───────────────────────────────────────────────────────────────────
+function reloadKanban() {
+  COLS.forEach(s => { COL_OFFSETS[s] = 0; document.getElementById('cards-'+s).innerHTML = '<div class="kb-empty">Loading…</div>'; });
+  clearSelection();
+  Promise.all(COLS.map(s => loadCol(s, true))).then(updateStatsFromCache);
 }
 
-function applyFiltersAndReload() {
-  currentPage = 1;
-  loadLeads();
-}
+async function loadCol(status, replace = false) {
+  const prov = document.getElementById('flt-province').value;
+  const cat  = document.getElementById('flt-category').value;
+  const src  = document.getElementById('flt-source').value;
+  const srch = document.getElementById('srch').value.trim();
+  const params = new URLSearchParams({ page: Math.floor(COL_OFFSETS[status]/COL_LIMIT)+1, limit: COL_LIMIT, status });
+  if (prov && prov !== 'all') params.append('province', prov);
+  if (cat  && cat  !== 'all') params.append('category', cat);
+  if (src  && src  !== 'all') params.append('source', src);
+  if (srch) params.append('search', srch);
 
-function handleSearch() {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => { currentPage = 1; loadLeads(); }, 400);
-}
+  const r = await fetch(`${API}/leads?${params}`, { headers: authHeaders() });
+  if (!r.ok) { document.getElementById('cards-'+status).innerHTML = '<div class="kb-empty">Error loading</div>'; return; }
+  const { leads, total, stats } = await safeJson(r);
 
-function buildParams() {
-  const p = new URLSearchParams();
-  p.set('page',     currentPage);
-  p.set('limit',    '20');
-  if (currentStatus && currentStatus !== 'all') p.set('status', currentStatus);
-  const prov = document.getElementById('filter-province').value;
-  const cat  = document.getElementById('filter-category').value;
-  const src  = document.getElementById('filter-source').value;
-  const srch = document.getElementById('search-input').value.trim();
-  if (prov && prov !== 'all') p.set('province', prov);
-  if (cat  && cat  !== 'all') p.set('category', cat);
-  if (src  && src  !== 'all') p.set('source',   src);
-  if (srch) p.set('search', srch);
-  return p.toString();
-}
+  if (stats) updateStats(stats);
+  (leads || []).forEach(l => { _cache[l.id] = l; });
 
-async function loadLeads() {
-  document.getElementById('leads-container').innerHTML = '<div class="loading">Loading leads…</div>';
-  try {
-    const limit = 20;
-    const offset = (currentPage - 1) * limit;
-    const params = new URLSearchParams({ page: currentPage, limit, status: currentStatus || 'all' });
-    const prov = document.getElementById('filter-province').value;
-    const cat  = document.getElementById('filter-category').value;
-    const src  = document.getElementById('filter-source').value;
-    const srch = document.getElementById('search-input').value.trim();
-    if (prov && prov !== 'all') params.append('province', prov);
-    if (cat  && cat  !== 'all') params.append('category', cat);
-    if (src  && src  !== 'all') params.append('source', src);
-    if (srch) params.append('search', srch);
+  const container = document.getElementById('cards-'+status);
+  const html = (leads || []).map(cardHtml).join('');
+  if (replace) container.innerHTML = html || '<div class="kb-empty">No leads</div>';
+  else container.innerHTML = container.innerHTML.replace(/<button[^>]*kb-load-more[^>]*>.*?<\/button>/s,'') + html;
 
-    const r = await fetch(`/api/leads?${params}`, { headers: authHeaders() });
-    if (!r.ok) {
-      const errText = await r.text();
-      document.getElementById('leads-container').innerHTML = `<div class="loading">API ${r.status}: ${errText}</div>`;
-      return;
-    }
-    const { leads, total, stats } = await safeJson(r);
-    updateStats(stats || { total: 0, new: 0, contacted: 0, converted: 0, ignored: 0 });
-    renderTable(leads || []);
-    renderPagination(total || 0, limit);
-  } catch (e) {
-    document.getElementById('leads-container').innerHTML = `<div class="loading">Failed to load leads: ${e.message}</div>`;
+  // "Load more" button
+  const shown = COL_OFFSETS[status] + (leads||[]).length;
+  if (shown < (total||0)) {
+    container.insertAdjacentHTML('beforeend', `<button class="kb-load-more" onclick="loadMoreCol('${status}')">Load ${Math.min(COL_LIMIT,(total||0)-shown)} more ↓</button>`);
   }
+  document.getElementById('cnt-'+status).textContent = total || 0;
+}
+
+async function loadMoreCol(status) {
+  COL_OFFSETS[status] += COL_LIMIT;
+  await loadCol(status, false);
 }
 
 function updateStats(s) {
-  document.getElementById('stat-total').textContent     = s.total     || 0;
-  document.getElementById('stat-new').textContent       = s.new       || 0;
-  document.getElementById('stat-contacted').textContent = s.contacted || 0;
-  document.getElementById('stat-converted').textContent = s.converted || 0;
-  document.getElementById('stat-ignored').textContent   = s.ignored   || 0;
+  document.getElementById('sn-total').textContent     = s.total || 0;
+  document.getElementById('sn-new').textContent       = s.new || 0;
+  document.getElementById('sn-contacted').textContent = s.contacted || 0;
+  document.getElementById('sn-converted').textContent = s.converted || 0;
+  document.getElementById('sn-ignored').textContent   = s.ignored || 0;
 }
+function updateStatsFromCache() {}
 
-function sourceBadge(src) {
-  const map = { facebook: ['source-fb','FB'], instagram: ['source-ig','IG'], tiktok: ['source-tt','TT'], manual: ['','Manual'] };
-  const [cls, label] = map[src] || ['','?'];
-  return `<span class="source-badge ${cls}">${label}</span>`;
-}
-
-function contactIcons(lead) {
-  const items = [
-    { icon: '✉️', href: lead.email    ? `mailto:${lead.email}`    : null, title: 'Email' },
-    { icon: '📞', href: lead.phone    ? `tel:${lead.phone}`       : null, title: 'Phone' },
-    { icon: '🌐', href: lead.website  || null,                             title: 'Website' },
-    { icon: '📸', href: lead.instagram ? `https://instagram.com/${lead.instagram.replace('@','')}` : null, title: 'Instagram' },
-    { icon: '📘', href: lead.facebook || null,                             title: 'Facebook' },
-  ];
-  return items.map(i => i.href
-    ? `<a class="contact-icon active" href="${i.href}" target="_blank" title="${i.title}">${i.icon}</a>`
-    : `<span class="contact-icon inactive" title="No ${i.title}">${i.icon}</span>`
-  ).join('');
-}
-
-function renderTable(leads) {
-  if (!leads.length) {
-    document.getElementById('leads-container').innerHTML = '<div class="loading">No leads found</div>';
-    return;
+function filterStatus(s) {
+  _statusFilter = s;
+  document.querySelectorAll('.stat-card').forEach(c => c.classList.toggle('active', c.dataset.col === s));
+  const kanban = document.getElementById('kanban');
+  if (s === 'all') {
+    COLS.forEach(col => document.getElementById('col-'+col).style.display = '');
+  } else {
+    COLS.forEach(col => document.getElementById('col-'+col).style.display = col === s ? '' : 'none');
   }
-  const rows = leads.map(l => `
-    <tr>
-      <td><strong>${escHtml(l.name)}</strong>${l.city ? `<br><small style="color:var(--mu)">${escHtml(l.city)}</small>` : ''}</td>
-      <td><span class="category-badge category-${l.category||'organizer'}">${l.category||'organizer'}</span></td>
-      <td>${l.province ? escHtml(l.province) : '<span style="color:var(--mu)">—</span>'}</td>
-      <td>${sourceBadge(l.source||'manual')}</td>
-      <td><span class="status-badge status-${l.status||'new'}">${l.status||'new'}</span></td>
-      <td><div class="contact-icons">${contactIcons(l)}</div></td>
-      <td>
-        <div class="action-buttons">
-          <button class="action-btn" onclick="openLead('${l.id}')" title="View details">👁</button>
-          <button class="action-btn" onclick="openEmail('${l.id}')" title="Send email">✉️</button>
-        </div>
-      </td>
-    </tr>`).join('');
-
-  document.getElementById('leads-container').innerHTML = `
-    <table class="leads-table">
-      <thead><tr>
-        <th>Name / City</th><th>Category</th><th>Province</th>
-        <th>Source</th><th>Status</th><th>Contact</th><th>Actions</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
-
-  // cache leads for modal
-  window._leadsCache = Object.fromEntries(leads.map(l => [l.id, l]));
 }
 
-function renderPagination(total, limit) {
-  const pages = Math.ceil(total / limit);
-  if (pages <= 1) { document.getElementById('pagination').innerHTML = ''; return; }
-  let html = `<button ${currentPage===1?'disabled':''} onclick="goPage(${currentPage-1})">← Prev</button>`;
-  for (let i = 1; i <= pages; i++) {
-    if (pages > 7 && Math.abs(i - currentPage) > 2 && i !== 1 && i !== pages) { if (i === 2 || i === pages-1) html += '<span style="padding:8px">…</span>'; continue; }
-    html += `<button class="${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
-  }
-  html += `<button ${currentPage===pages?'disabled':''} onclick="goPage(${currentPage+1})">Next →</button>`;
-  document.getElementById('pagination').innerHTML = html;
+function schedSearch() {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(reloadKanban, 420);
 }
 
-function goPage(p) { currentPage = p; loadLeads(); window.scrollTo(0,0); }
+function srcClass(src) {
+  const m = { facebook:'src-fb', instagram:'src-ig', tiktok:'src-tt', osm:'src-osm', google:'src-google', manual:'src-manual' };
+  return m[src] || 'src-manual';
+}
+function srcLabel(src) {
+  const m = { facebook:'FB', instagram:'IG', tiktok:'TT', osm:'OSM', google:'G', manual:'Manual' };
+  return m[src] || src || '?';
+}
+function fmtNum(n) { return n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n); }
 
-function escHtml(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function cardHtml(l) {
+  const ig  = l.instagram ? `https://instagram.com/${l.instagram.replace('@','')}` : null;
+  const wa  = l.phone ? `https://wa.me/${l.phone.replace(/\D/g,'')}` : null;
+  return `<div class="kb-card" data-id="${l.id}" onclick="openLead('${l.id}')">
+    <div class="kb-card-top">
+      <input type="checkbox" class="kb-check" data-id="${l.id}" onclick="event.stopPropagation()" onchange="toggleSelect('${l.id}',this.checked)"/>
+      <span class="kb-src ${srcClass(l.source)}">${srcLabel(l.source)}</span>
+    </div>
+    <div class="kb-name" title="${escH(l.name)}">${escH(l.name)}</div>
+    ${l.city ? `<div class="kb-city">${escH(l.city)}${l.province ? ', '+escH(l.province) : ''}</div>` : ''}
+    ${l.follower_count ? `<div class="kb-followers">👥 ${fmtNum(l.follower_count)}</div>` : ''}
+    <div class="kb-actions">
+      ${l.email ? `<a class="kb-act" href="mailto:${escH(l.email)}" onclick="event.stopPropagation()" title="Email">✉️</a>` : `<span class="kb-act dim">✉️</span>`}
+      ${wa ? `<a class="kb-act" href="${wa}" target="_blank" onclick="event.stopPropagation();logWa('${l.id}')" title="WhatsApp">💬</a>` : `<span class="kb-act dim">💬</span>`}
+      ${ig ? `<a class="kb-act" href="${ig}" target="_blank" onclick="event.stopPropagation()" title="Instagram">📸</a>` : `<span class="kb-act dim">📸</span>`}
+    </div>
+  </div>`;
 }
 
-// ── Lead detail modal ────────────────────────────────────────────────────────
+// ── Selection ─────────────────────────────────────────────────────────────────
+function toggleSelect(id, checked) {
+  checked ? _selected.add(id) : _selected.delete(id);
+  document.querySelector(`.kb-card[data-id="${id}"]`)?.classList.toggle('selected', checked);
+  const bar = document.getElementById('bulk-bar');
+  bar.classList.toggle('show', _selected.size > 0);
+  document.getElementById('bulk-count').textContent = `${_selected.size} selected`;
+}
+function clearSelection() {
+  _selected.clear();
+  document.querySelectorAll('.kb-card.selected').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.kb-check').forEach(c => c.checked = false);
+  document.getElementById('bulk-bar').classList.remove('show');
+}
+
+// ── Lead Detail Modal ─────────────────────────────────────────────────────────
 function openLead(id) {
-  const l = (window._leadsCache||{})[id];
-  if (!l) return;
-  activeLead = l;
+  const l = _cache[id]; if (!l) return;
+  _activeLead = l;
   document.getElementById('modal-title').textContent = l.name;
-  const notes = Array.isArray(l.notes) ? l.notes : [];
-  document.getElementById('modal-body').innerHTML = `
-    <div class="detail-row"><div class="detail-label">Category</div><div class="detail-value">${escHtml(l.category||'—')}</div></div>
-    <div class="detail-row"><div class="detail-label">Province / City</div><div class="detail-value">${escHtml([l.province,l.city].filter(Boolean).join(', ')||'—')}</div></div>
-    <div class="detail-row"><div class="detail-label">Source</div><div class="detail-value">${sourceBadge(l.source||'manual')}</div></div>
-    <div class="detail-row"><div class="detail-label">Status</div><div class="detail-value">
-      <select class="status-select" id="modal-status-select" onchange="updateStatus('${l.id}',this.value)">
-        ${['new','contacted','converted','ignored'].map(s=>`<option value="${s}"${l.status===s?' selected':''}>${s}</option>`).join('')}
-      </select>
-    </div></div>
-    ${l.email    ? `<div class="detail-row"><div class="detail-label">Email</div><div class="detail-value"><a href="mailto:${escHtml(l.email)}">${escHtml(l.email)}</a></div></div>` : ''}
-    ${l.phone    ? `<div class="detail-row"><div class="detail-label">Phone</div><div class="detail-value"><a href="tel:${escHtml(l.phone)}">${escHtml(l.phone)}</a></div></div>` : ''}
-    ${l.website  ? `<div class="detail-row"><div class="detail-label">Website</div><div class="detail-value"><a href="${escHtml(l.website)}" target="_blank">${escHtml(l.website)}</a></div></div>` : ''}
-    ${l.instagram? `<div class="detail-row"><div class="detail-label">Instagram</div><div class="detail-value"><a href="https://instagram.com/${escHtml(l.instagram.replace('@',''))}" target="_blank">@${escHtml(l.instagram.replace('@',''))}</a></div></div>` : ''}
-    ${l.description ? `<div class="detail-row"><div class="detail-label">Description</div><div class="detail-value">${escHtml(l.description)}</div></div>` : ''}
-    <div class="notes-section">
-      <div class="detail-label" style="margin-bottom:10px">Notes (${notes.length})</div>
-      <div class="notes-list" id="notes-list">
-        ${notes.map(n=>`<div class="note-item"><div class="note-text">${escHtml(n.text||n)}</div><div class="note-meta">${n.date||''}</div></div>`).join('')}
-      </div>
-      <textarea class="note-input" id="note-input" placeholder="Add a note…" rows="3"></textarea>
-      <button class="btn-primary" onclick="addNote('${l.id}')">Add Note</button>
-    </div>`;
+  showTab('details');
   document.getElementById('lead-modal').classList.add('open');
 }
 
-function closeModal() { document.getElementById('lead-modal').classList.remove('open'); activeLead = null; }
+function showTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.textContent.trim().toLowerCase().startsWith(name)));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === 'tab-'+name));
+  if (name === 'details') renderDetails();
+  else if (name === 'notes') renderNotes();
+  else if (name === 'activity') loadActivity();
+  else if (name === 'followups') loadFollowups();
+}
 
+function renderDetails() {
+  const l = _activeLead; if (!l) return;
+  document.getElementById('tab-details').innerHTML = `
+    <div class="dl"><div class="dl-label">Status</div><div class="dl-val">
+      <select class="status-sel" onchange="updateStatus('${l.id}',this.value)">
+        ${['new','contacted','converted','ignored'].map(s=>`<option${l.status===s?' selected':''}>${s}</option>`).join('')}
+      </select>
+    </div></div>
+    <div class="dl"><div class="dl-label">Category</div><div class="dl-val">${escH(l.category||'—')}</div></div>
+    <div class="dl"><div class="dl-label">Location</div><div class="dl-val">${escH([l.city,l.province].filter(Boolean).join(', ')||'—')}</div></div>
+    <div class="dl"><div class="dl-label">Source</div><div class="dl-val"><span class="kb-src ${srcClass(l.source)}">${srcLabel(l.source)}</span></div></div>
+    ${l.email    ? `<div class="dl"><div class="dl-label">Email</div><div class="dl-val"><a href="mailto:${escH(l.email)}">${escH(l.email)}</a></div></div>` : ''}
+    ${l.phone    ? `<div class="dl"><div class="dl-label">Phone</div><div class="dl-val"><a href="tel:${escH(l.phone)}">${escH(l.phone)}</a></div></div>` : ''}
+    ${l.website  ? `<div class="dl"><div class="dl-label">Website</div><div class="dl-val"><a href="${escH(l.website)}" target="_blank">${escH(l.website)}</a></div></div>` : ''}
+    ${l.instagram? `<div class="dl"><div class="dl-label">Instagram</div><div class="dl-val"><a href="https://instagram.com/${escH(l.instagram.replace('@',''))}" target="_blank">@${escH(l.instagram.replace('@',''))}</a></div></div>` : ''}
+    ${l.facebook ? `<div class="dl"><div class="dl-label">Facebook</div><div class="dl-val"><a href="${escH(l.facebook)}" target="_blank">${escH(l.facebook)}</a></div></div>` : ''}
+    ${l.follower_count ? `<div class="dl"><div class="dl-label">Followers</div><div class="dl-val">👥 ${fmtNum(l.follower_count)}</div></div>` : ''}
+    ${l.description ? `<div class="dl"><div class="dl-label">Description</div><div class="dl-val">${escH(l.description)}</div></div>` : ''}`;
+}
+
+function renderNotes() {
+  const l = _activeLead; if (!l) return;
+  const notes = Array.isArray(l.notes) ? l.notes : [];
+  document.getElementById('tab-notes').innerHTML = `
+    <div id="notes-list">${notes.map(n=>`<div class="note-item"><div class="note-text">${escH(n.text||n)}</div><div class="note-meta">${n.date||''}</div></div>`).join('') || '<div class="act-empty">No notes yet</div>'}</div>
+    <textarea class="txt-area" id="note-inp" placeholder="Add a note…" rows="3"></textarea>
+    <button class="btn-primary" onclick="addNote('${l.id}')">Add Note</button>`;
+}
+
+async function loadActivity() {
+  const l = _activeLead; if (!l) return;
+  document.getElementById('tab-activity').innerHTML = '<div class="act-empty">Loading…</div>';
+  const r = await fetch(`${API}/leads/${l.id}/activity`, { headers: authHeaders() });
+  if (!r.ok) { document.getElementById('tab-activity').innerHTML = '<div class="act-empty">Failed to load</div>'; return; }
+  const { activities } = await safeJson(r);
+  const icons = { email_sent:'✉️', whatsapp_sent:'💬', status_changed:'🔄', note_added:'📝', follow_up_scheduled:'📅', follow_up_completed:'✅', event_created:'🎉' };
+  const html = (activities||[]).map(a => `<div class="act-item">
+    <div class="act-icon">${icons[a.type]||'📌'}</div>
+    <div class="act-body"><div class="act-sum">${escH(a.summary||a.type)}</div><div class="act-time">${fmtDate(a.created_at)}</div></div>
+  </div>`).join('');
+  document.getElementById('tab-activity').innerHTML = html || '<div class="act-empty">No activity yet</div>';
+}
+
+async function loadFollowups() {
+  const l = _activeLead; if (!l) return;
+  const r = await fetch(`${API}/leads/followups`, { headers: authHeaders() });
+  if (!r.ok) { document.getElementById('tab-followups').innerHTML = '<div class="act-empty">Failed to load</div>'; return; }
+  const { followups } = await safeJson(r);
+  const mine = (followups||[]).filter(f => f.lead_id === l.id);
+  const listHtml = mine.map(f => `<div class="fu-item" id="fu-${f.id}">
+    <div class="fu-date">📅 ${f.due_date}</div>
+    <div class="fu-note">${escH(f.note||'Follow-up')}</div>
+    <button class="fu-done" onclick="markFuDone('${f.id}')">Done ✓</button>
+  </div>`).join('') || '<div class="act-empty" style="margin-bottom:14px">No pending follow-ups</div>';
+
+  document.getElementById('tab-followups').innerHTML = listHtml + `
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <div class="dl-label" style="margin-bottom:6px">Schedule Follow-up</div>
+      <input type="date" id="fu-date" class="fu-due-inp" min="${new Date().toISOString().slice(0,10)}"/>
+      <textarea class="txt-area" id="fu-note" placeholder="What to follow up on…" rows="2"></textarea>
+      <button class="btn-primary" onclick="scheduleFollowup('${l.id}')">Schedule 📅</button>
+    </div>`;
+}
+
+async function scheduleFollowup(leadId) {
+  const due  = document.getElementById('fu-date').value;
+  const note = document.getElementById('fu-note').value.trim();
+  if (!due) { toast('Pick a date', false); return; }
+  const r = await fetch(`${API}/leads/follow-up`, { method:'POST', headers:authHeaders(), body:JSON.stringify({ lead_id:leadId, due_date:due, note:note||null }) });
+  if (r.ok) { toast('Follow-up scheduled ✓'); loadFollowups(); }
+  else { const e=await r.text(); toast('Error: '+e, false); }
+}
+
+async function markFuDone(fuId) {
+  const r = await fetch(`${API}/leads/followups/${fuId}`, { method:'PATCH', headers:authHeaders(), body:'{}' });
+  if (r.ok) { toast('Done!'); document.getElementById('fu-'+fuId)?.remove(); }
+  else toast('Error', false);
+}
+
+// ── Status update ─────────────────────────────────────────────────────────────
 async function updateStatus(id, status) {
-  const r = await fetch(`/api/leads/${id}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ status }) });
-  if (r.ok) { toast('Status updated'); if (window._leadsCache?.[id]) window._leadsCache[id].status = status; loadLeads(); }
-  else { const err = await r.text(); toast('Failed to update status: ' + err, false); }
+  const r = await fetch(`${API}/leads/${id}`, { method:'PATCH', headers:authHeaders(), body:JSON.stringify({ status }) });
+  if (r.ok) {
+    toast('Status updated');
+    if (_cache[id]) _cache[id].status = status;
+    if (_activeLead?.id === id) _activeLead.status = status;
+    reloadKanban();
+  } else { toast('Error: '+(await r.text()), false); }
 }
 
 async function addNote(id) {
-  const text = document.getElementById('note-input').value.trim();
-  if (!text) return;
-  const lead  = (window._leadsCache||{})[id];
-  const notes = Array.isArray(lead?.notes) ? lead.notes : [];
-  notes.push({ text, date: new Date().toLocaleDateString() });
-  const r = await fetch(`/api/leads/${id}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ notes }) });
-  if (r.ok) { toast('Note added'); document.getElementById('note-input').value = ''; openLead(id); }
-  else { const err = await r.text(); toast('Failed to save note: ' + err, false); }
+  const text = document.getElementById('note-inp').value.trim(); if (!text) return;
+  const l = _cache[id]; const notes = Array.isArray(l?.notes) ? [...l.notes] : [];
+  notes.push({ text, date: new Date().toLocaleDateString('en-ZA') });
+  const r = await fetch(`${API}/leads/${id}`, { method:'PATCH', headers:authHeaders(), body:JSON.stringify({ notes }) });
+  if (r.ok) { toast('Note added'); if (_cache[id]) { _cache[id].notes = notes; _activeLead = _cache[id]; } renderNotes(); }
+  else toast('Error', false);
 }
 
-// ── Email modal ──────────────────────────────────────────────────────────────
-const TEMPLATES = {
-  intro:   { subject: 'Join Pulsefy — Free Listing for SA Events & Businesses', body: `Hi {name},\n\nI came across your page and thought Pulsefy would be a great fit for you.\n\nPulsefy is South Africa's fastest-growing event discovery platform. We're offering free listings to event organisers and businesses in our launch phase.\n\nInterested? I'd love to set you up in under 5 minutes.\n\nBest,\nThe Pulsefy Team\nhttps://pulsefy-blue.vercel.app` },
-  followup:{ subject: 'Following up — Pulsefy listing for {name}', body: `Hi {name},\n\nJust following up on my previous message about Pulsefy. We're growing fast across KZN, Gauteng, and the Western Cape and I'd love to get you on the platform.\n\nNo cost, no commitment — just more visibility for your events.\n\nLet me know if you have any questions.\n\nBest,\nThe Pulsefy Team` },
-  convert: { subject: 'Your Pulsefy account is ready, {name}!', body: `Hi {name},\n\nGreat news — your Pulsefy listing is ready to go live.\n\nHead to https://pulsefy-blue.vercel.app and create your account to get started. Once you're in, your profile will be visible to thousands of event-goers across South Africa.\n\nWelcome aboard!\n\nThe Pulsefy Team` },
-};
-
-function openEmail(id) {
-  const l = (window._leadsCache||{})[id];
-  if (!l) return;
-  activeLead = l;
-  document.getElementById('email-recipient').textContent = [l.name, l.email].filter(Boolean).join(' — ');
-  const tbWrap = document.getElementById('template-buttons');
-  tbWrap.innerHTML = Object.keys(TEMPLATES).map(k =>
-    `<button class="template-btn" onclick="applyTemplate('${k}')">${k.charAt(0).toUpperCase()+k.slice(1)}</button>`
-  ).join('');
-  applyTemplate('intro');
+// ── Email ─────────────────────────────────────────────────────────────────────
+function openEmailForActive() {
+  if (!_activeLead) return;
+  _selected.clear(); _selected.add(_activeLead.id);
+  openBulkEmail();
+}
+function openBulkEmail() {
+  const ids = [..._selected];
+  const leads = ids.map(id => _cache[id]).filter(Boolean);
+  document.getElementById('email-modal-title').textContent = ids.length === 1 ? `📧 Email — ${leads[0]?.name||''}` : `📧 Bulk Email (${ids.length})`;
+  document.getElementById('email-recipients').innerHTML = leads.map(l => `<span style="display:inline-block;background:var(--surf);border-radius:50px;padding:2px 10px;margin:2px;font-size:.72rem">${escH(l.name)}${l.email ? '' : ' <span style="color:var(--pk)">no email</span>'}</span>`).join('');
+  renderTemplateButtons();
+  if (_templates.length) applyTemplate(_templates[0].key);
+  else { document.getElementById('email-subject').value = ''; document.getElementById('email-body').value = ''; }
   document.getElementById('email-modal').classList.add('open');
 }
-
-function closeEmailModal() { document.getElementById('email-modal').classList.remove('open'); }
-
+function renderTemplateButtons() {
+  document.getElementById('tpl-btns').innerHTML = _templates.map(t =>
+    `<button class="tpl-btn" onclick="applyTemplate('${t.key}')">${escH(t.name)}</button>`
+  ).join('');
+}
 function applyTemplate(key) {
-  document.querySelectorAll('.template-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase() === key));
-  const t = TEMPLATES[key];
-  if (!t) return;
-  const name = activeLead?.name || '';
-  document.getElementById('email-subject').value = t.subject.replace(/{name}/g, name);
-  document.getElementById('email-body').value    = t.body.replace(/{name}/g, name);
+  const t = _templates.find(t => t.key === key); if (!t) return;
+  document.querySelectorAll('.tpl-btn').forEach(b => b.classList.toggle('active', b.textContent.trim() === t.name));
+  const l = _activeLead || (_selected.size === 1 ? _cache[[..._selected][0]] : null);
+  const fill = s => s.replace(/\{\{name\}\}/g, l?.name||'').replace(/\{\{business_name\}\}/g, l?.name||'').replace(/\{\{city\}\}/g, l?.city||'');
+  document.getElementById('email-subject').value = fill(t.subject);
+  document.getElementById('email-body').value    = fill(t.body);
+}
+async function sendEmail() {
+  const ids = [..._selected];
+  if (!ids.length) { toast('No leads selected', false); return; }
+  const subject = document.getElementById('email-subject').value.trim();
+  const body    = document.getElementById('email-body').value.trim();
+  if (!subject || !body) { toast('Subject and message required', false); return; }
+  const r = await fetch(`${API}/leads/bulk-email`, { method:'POST', headers:authHeaders(), body:JSON.stringify({ lead_ids:ids, subject, body }) });
+  const j = await safeJson(r);
+  if (r.ok) {
+    if (j.warning) toast('⚠️ '+j.warning, false);
+    else toast(`Sent ${j.sent} · Skipped ${j.skipped}`);
+    closeModal('email-modal'); clearSelection(); reloadKanban();
+  } else toast('Error: '+(j.error||'send failed'), false);
+}
+async function saveTplModal() {
+  const subject = document.getElementById('email-subject').value.trim();
+  const body    = document.getElementById('email-body').value.trim();
+  const key     = 'custom_' + Date.now();
+  const name    = prompt('Template name?'); if (!name) return;
+  const r = await fetch(`${API}/admin/email-templates`, { method:'POST', headers:authHeaders(), body:JSON.stringify({ key, name, subject, body }) });
+  if (r.ok) { toast('Template saved'); await loadTemplates(); renderTemplateButtons(); }
+  else toast('Error saving template', false);
 }
 
-function sendEmailFromModal() {
-  const to      = activeLead?.email;
-  const subject = encodeURIComponent(document.getElementById('email-subject').value);
-  const body    = encodeURIComponent(document.getElementById('email-body').value);
-  if (to) { window.open(`mailto:${to}?subject=${subject}&body=${body}`, '_blank'); }
-  else    { window.open(`mailto:?subject=${subject}&body=${body}`, '_blank'); }
-  closeEmailModal();
-  if (activeLead) updateStatus(activeLead.id, 'contacted');
+// ── WhatsApp ──────────────────────────────────────────────────────────────────
+function openWaForActive() {
+  if (!_activeLead) return;
+  _selected.clear(); _selected.add(_activeLead.id);
+  openBulkWhatsApp();
+}
+function openBulkWhatsApp() {
+  const leads = [..._selected].map(id => _cache[id]).filter(Boolean);
+  const msgTpl = document.getElementById('wa-msg').value || 'Hi {{name}}, I came across your page and thought Pulsefy would be a great fit. It\'s SA\'s fastest-growing event platform — free to list. Interested?';
+  document.getElementById('wa-list').innerHTML = leads.map(l => {
+    const phone = l.phone?.replace(/\D/g,'');
+    const msg   = encodeURIComponent(msgTpl.replace(/\{\{name\}\}/g, l.name).replace(/\{\{city\}\}/g, l.city||''));
+    return `<div class="wa-row">
+      <div class="wa-name">${escH(l.name)}${l.city ? `<br><small style="color:var(--mu)">${escH(l.city)}</small>` : ''}</div>
+      ${phone ? `<a class="wa-btn" href="https://wa.me/${phone}?text=${msg}" target="_blank" onclick="logWa('${l.id}')">Open WhatsApp</a>`
+              : `<span class="wa-no-phone">No phone number</span>`}
+    </div>`;
+  }).join('');
+  document.getElementById('wa-modal').classList.add('open');
+}
+async function logWa(leadId) {
+  fetch(`${API}/leads/${leadId}/activity`, { method:'POST', headers:authHeaders(), body:JSON.stringify({ type:'whatsapp_sent', summary:'WhatsApp message opened' }) }).catch(()=>{});
 }
 
+// ── Scrape modal (simple trigger) ─────────────────────────────────────────────
+async function openScrapeModal() {
+  const cities = prompt('Scrape OSM cities (comma-separated):', 'Durban,Johannesburg'); if (!cities) return;
+  const r = await fetch(`${API}/admin/scrape?cities=${encodeURIComponent(cities)}`, { method:'POST', headers:authHeaders() });
+  const j = await safeJson(r);
+  if (r.ok) { toast(`Scraped: ${j.inserted} new, ${j.skipped} skipped`); reloadKanban(); }
+  else toast('Scrape error: '+(j.error||''), false);
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
 function exportToCSV() {
-  const leads = Object.values(window._leadsCache || {});
-  if (!leads.length) { toast('No leads to export', false); return; }
+  const leads = Object.values(_cache);
+  if (!leads.length) { toast('Load leads first', false); return; }
   const cols = ['name','category','province','city','email','phone','website','instagram','facebook','source','status'];
   const rows = [cols.join(','), ...leads.map(l => cols.map(c => `"${(l[c]||'').toString().replace(/"/g,'""')}"`).join(','))];
-  const blob = new Blob([rows.join('\n')], { type:'text/csv' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = `pulsefy-leads-${new Date().toISOString().split('T')[0]}.csv`; a.click();
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.join('\n')], { type:'text/csv' }));
+  a.download = `pulsefy-leads-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  if (id === 'lead-modal') _activeLead = null;
+}
+function toast(msg, ok=true) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast show' + (ok ? ' ok' : '');
+  setTimeout(() => { el.className = 'toast'; }, 3000);
+}
+function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtDate(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return d.toLocaleDateString('en-ZA',{day:'numeric',month:'short'}) + ' ' + d.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});
 }
 </script>
 </body>
