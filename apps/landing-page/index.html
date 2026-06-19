@@ -3474,16 +3474,17 @@ async function loadDiscoverSquadDeals() {
       const benefit = p.total_price
         ? `R${p.total_price} for ${p.squad_min}–${p.squad_max}`
         : `Free for groups of ${p.squad_min}+`;
-      return `<div onclick="openSocialSheet('squads')" style="width:230px;flex-shrink:0;background:var(--surf);border:1px solid ${meta.border};border-radius:16px;overflow:hidden;cursor:pointer">
+      return `<div onclick="openDealDetail('${x(p.id)}')" style="width:230px;flex-shrink:0;background:var(--surf);border:1px solid ${meta.border};border-radius:16px;overflow:hidden;cursor:pointer">
         <div style="background:${meta.bg};border-bottom:1px solid ${meta.border};padding:8px 12px;display:flex;align-items:center;gap:7px">
           <span style="font-size:1rem">${meta.icon}</span>
           <span style="font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:${meta.color}">${meta.label}</span>
         </div>
         <div style="padding:11px 12px">
-          <div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:800;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(p.title)}</div>
-          <div style="font-size:.7rem;color:var(--mu2);margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📍 ${x(p.venue_name)}${p.location_city ? ' · ' + x(p.location_city) : ''}</div>
-          <div style="font-size:.7rem;color:var(--tx);margin-bottom:9px">👥 ${x(benefit)}</div>
-          <div style="text-align:center;padding:7px;background:linear-gradient(135deg,#B026FF,#FF5C00);border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700">Open in Squad →</div>
+          <div style="font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(p.title)}</div>
+          <div style="font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:900;line-height:1;color:${p.total_price ? 'var(--or)' : '#C6FF4A'};margin-bottom:3px">${p.total_price ? `R${p.total_price}` : 'FREE'}</div>
+          <div style="font-size:.62rem;color:var(--mu);margin-bottom:7px">${x(benefit)}</div>
+          <div style="font-size:.62rem;color:var(--mu2);margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📍 ${x(p.venue_name)}${p.location_city ? ' · ' + x(p.location_city) : ''}</div>
+          <div style="text-align:center;padding:7px;background:linear-gradient(135deg,#B026FF,#FF5C00);border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700">View Deal →</div>
         </div>
       </div>`;
     }).join('');
@@ -6610,19 +6611,19 @@ function renderSquadWorkspace(detail, container) {
         ? `<button onclick="sqEditAbout('${x(squad.id)}','')" style="width:100%;background:var(--surf);border:1.5px dashed var(--border);border-radius:10px;padding:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;margin-bottom:12px">+ Add squad description</button>`
         : ''}
     <div style="display:flex;gap:5px;margin-bottom:14px">
-      <button id="sqt-plans" onclick="showSqTab('plans','${x(squad.id)}')" style="flex:1;padding:8px 2px;background:rgba(255,92,0,.15);border:1.5px solid rgba(255,92,0,.35);border-radius:10px;color:var(--or);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer">📅 Plans</button>
-      <button id="sqt-calendar" onclick="showSqTab('calendar','${x(squad.id)}')" style="flex:1;padding:8px 2px;background:transparent;border:1.5px solid var(--border);border-radius:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer">🗓 Calendar</button>
+      <button id="sqt-deals" onclick="showSqTab('deals','${x(squad.id)}')" style="flex:1;padding:8px 2px;background:rgba(255,92,0,.15);border:1.5px solid rgba(255,92,0,.35);border-radius:10px;color:var(--or);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer">🔥 Deals</button>
+      <button id="sqt-plans" onclick="showSqTab('plans','${x(squad.id)}')" style="flex:1;padding:8px 2px;background:transparent;border:1.5px solid var(--border);border-radius:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer">📅 Plans</button>
+      <button id="sqt-calendar" onclick="showSqTab('calendar','${x(squad.id)}')" style="flex:1;padding:8px 2px;background:transparent;border:1.5px solid var(--border);border-radius:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer">🗓 Cal</button>
       <button id="sqt-chat" onclick="showSqTab('chat','${x(squad.id)}')" style="flex:1;padding:8px 2px;background:transparent;border:1.5px solid var(--border);border-radius:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer">💬 Chat</button>
       <button id="sqt-members" onclick="showSqTab('members','${x(squad.id)}')" style="flex:1;padding:8px 2px;background:transparent;border:1.5px solid var(--border);border-radius:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer">👥 Members</button>
-      <button id="sqt-deals" onclick="showSqTab('deals','${x(squad.id)}')" style="flex:1;padding:8px 2px;background:transparent;border:1.5px solid var(--border);border-radius:10px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer">🔥 Deals</button>
     </div>
-    <div id="sq-tab-plans"></div>
+    <div id="sq-tab-deals"></div>
+    <div id="sq-tab-plans" style="display:none"></div>
     <div id="sq-tab-calendar" style="display:none"></div>
     <div id="sq-tab-chat" style="display:none"></div>
-    <div id="sq-tab-members" style="display:none"></div>
-    <div id="sq-tab-deals" style="display:none"></div>`;
+    <div id="sq-tab-members" style="display:none"></div>`;
 
-  loadSquadPlans(squad.id);
+  loadSquadDeals(squad.id);
 }
 
 async function sqEditAbout(squadId, current) {
@@ -6940,35 +6941,26 @@ async function loadSquadDeals(squadId) {
       </div>`;
       return;
     }
-    pane.innerHTML = `
-      <div style="font-size:.7rem;color:var(--mu);padding:8px 0 12px;line-height:1.5">🔥 Exclusive deals for your squad. Show this screen at the venue.</div>
-      ${promos.map(p => {
+    pane.innerHTML = promos.map(p => {
         const meta = SQ_DEAL_META[p.deal_type] || SQ_DEAL_META.food;
-        const price = p.total_price ? `<span style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800;color:var(--or)">R${p.total_price}</span><span style="font-size:.66rem;color:var(--mu);margin-left:2px">total</span>` : `<span style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800;color:#C6FF4A">Free</span>`;
-        return `<div style="background:var(--surf);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin-bottom:14px">
+        const dealVal = p.total_price ? `R${p.total_price}` : 'FREE';
+        const dealSub = p.total_price ? `total · ${p.squad_min}–${p.squad_max} people` : `for groups of ${p.squad_min}+`;
+        const dealColor = p.total_price ? 'var(--or)' : '#C6FF4A';
+        const loc = [p.venue_name, p.location_city, p.valid_days].filter(Boolean).join(' · ');
+        return `<div onclick="openDealDetail('${x(p.id)}')" style="background:var(--surf);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin-bottom:14px;cursor:pointer">
           <div style="background:${meta.bg};border-bottom:1px solid ${meta.border};padding:10px 14px;display:flex;align-items:center;gap:8px">
             <span style="font-size:1.1rem">${meta.icon}</span>
             <span style="font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:${meta.color}">${meta.label}</span>
           </div>
-          <div style="padding:14px">
-            <div style="font-family:'Syne',sans-serif;font-size:.98rem;font-weight:800;margin-bottom:4px">${x(p.title)}</div>
-            <div style="font-size:.76rem;color:var(--mu2);margin-bottom:10px">${x(p.venue_name)}${p.location_city ? ' · ' + x(p.location_city) : ''}</div>
-            ${p.description ? `<div style="font-size:.78rem;color:var(--mu2);line-height:1.5;margin-bottom:10px">${x(p.description)}</div>` : ''}
-            <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px">
-              <div style="display:flex;align-items:center;gap:5px">
-                <span style="font-size:.9rem">👥</span>
-                <span style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700">${p.squad_min}–${p.squad_max} people</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:5px">
-                <span style="font-size:.9rem">💰</span>
-                <div>${price}</div>
-              </div>
-              ${p.valid_days ? `<div style="display:flex;align-items:center;gap:5px"><span style="font-size:.9rem">📅</span><span style="font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700">${x(p.valid_days)}</span></div>` : ''}
-            </div>
-            <button style="width:100%;padding:12px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer;letter-spacing:.02em" onclick="sqJoinDeal('${x(p.id)}','${x(p.title)}','${x(p.venue_name)}')">👥 Join This Deal</button>
+          <div style="padding:16px">
+            <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;margin-bottom:8px">${x(p.title)}</div>
+            <div style="font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:900;line-height:1;color:${dealColor};margin-bottom:4px">${dealVal}</div>
+            <div style="font-size:.72rem;color:var(--mu);margin-bottom:10px">${dealSub}</div>
+            <div style="font-size:.72rem;color:var(--mu2);margin-bottom:14px">📍 ${x(loc)}</div>
+            <div style="text-align:center;padding:10px;background:linear-gradient(135deg,#B026FF,#FF5C00);border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">View Deal →</div>
           </div>
         </div>`;
-      }).join('')}`;
+      }).join('');
   } catch(e) {
     pane.innerHTML = '<div style="padding:20px;font-size:.78rem;color:var(--mu)">Could not load deals</div>';
   }
@@ -6981,6 +6973,69 @@ function sqJoinDeal(dealId, title, venue) {
   } else if (navigator.clipboard) {
     navigator.clipboard.writeText(msg).then(() => showToast && showToast('Deal link copied! Share with your squad 🎁'));
   }
+}
+
+async function openDealDetail(promoId) {
+  const ov = document.getElementById('social-sheet-ov');
+  if (!ov || ov.style.display === 'none') openSocialSheet('squads');
+  const ws = document.getElementById('sq-workspace');
+  if (!ws) return;
+  ws.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu);font-size:.78rem">Loading deal…</div>';
+  try {
+    const j = await Api.get('/squad-promos');
+    const p = (j.promos || []).find(d => d.id === promoId);
+    if (!p) { ws.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Deal not found</div>'; return; }
+    const meta = SQ_DEAL_META[p.deal_type] || SQ_DEAL_META.food;
+    const dealVal = p.total_price ? `R${p.total_price}` : 'FREE';
+    const dealSub = p.total_price ? `total for ${p.squad_min}–${p.squad_max} people` : `for groups of ${p.squad_min}+`;
+    const dealColor = p.total_price ? 'var(--or)' : '#C6FF4A';
+    const membersHtml = (_sqCurrentMembers || []).slice(0, 5).map(m => {
+      const pr = m.profiles || {}; const ini = (pr.display_name || '?')[0].toUpperCase();
+      return pr.avatar_url
+        ? `<img src="${x(pr.avatar_url)}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid var(--bg2);margin-left:-8px"/>`
+        : `<div style="width:32px;height:32px;border-radius:50%;background:rgba(255,92,0,.15);display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;border:2px solid var(--bg2);margin-left:-8px">${ini}</div>`;
+    }).join('');
+    const overflow = Math.max(0, (_sqCurrentMembers || []).length - 5);
+    const memberCount = _sqCurrentSquad ? (_sqCurrentSquad.member_count || _sqCurrentMembers.length) : 0;
+    ws.innerHTML = `
+      <button onclick="_sqBackFromDetail()" style="background:none;border:none;color:var(--mu);font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;padding:0 0 16px;display:flex;align-items:center;gap:5px">‹ Back to Deals</button>
+      <div style="background:${meta.bg};border:1px solid ${meta.border};border-radius:50px;display:inline-flex;align-items:center;gap:6px;padding:6px 14px;margin-bottom:12px">
+        <span style="font-size:.9rem">${meta.icon}</span>
+        <span style="font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:${meta.color}">${meta.label}</span>
+      </div>
+      <div style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;margin-bottom:16px;line-height:1.3">${x(p.title)}</div>
+      <div style="font-family:'Syne',sans-serif;font-size:2.2rem;font-weight:900;line-height:1;color:${dealColor};margin-bottom:6px">${dealVal}</div>
+      <div style="font-size:.76rem;color:var(--mu);margin-bottom:20px">${dealSub}</div>
+      <div style="font-size:.78rem;color:var(--mu2);margin-bottom:${p.description ? '12px' : '20px'};display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <span>📍 ${x(p.venue_name)}${p.location_city ? ' · ' + x(p.location_city) : ''}</span>
+        ${p.valid_days ? `<span style="color:var(--border2)">·</span><span>📅 ${x(p.valid_days)}</span>` : ''}
+        <span style="color:var(--border2)">·</span><span>👥 ${p.squad_min}–${p.squad_max} people</span>
+      </div>
+      ${p.description ? `<div style="font-size:.8rem;color:var(--mu2);line-height:1.6;margin-bottom:20px;padding:12px;background:var(--surf);border:1px solid var(--border);border-radius:10px">${x(p.description)}</div>` : ''}
+      ${_sqCurrentSquad ? `<div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:24px">
+        <div style="font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:8px">Your Squad</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="display:flex;padding-left:8px">${membersHtml}${overflow > 0 ? `<div style="width:32px;height:32px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:700;border:2px solid var(--bg2);margin-left:-8px">+${overflow}</div>` : ''}</div>
+          <span style="font-size:.76rem;color:var(--mu2)">${memberCount} member${memberCount !== 1 ? 's' : ''} · ${x(_sqCurrentSquad.name)}</span>
+        </div>
+      </div>` : ''}
+      <div style="position:sticky;bottom:0;background:linear-gradient(to top,var(--bg2) 75%,transparent);padding:16px 0 4px">
+        <button onclick="_sqJoinFromDetail('${x(p.id)}','${x(p.title)}','${x(p.venue_name)}')" style="width:100%;padding:14px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer">👥 Join Squad to Claim</button>
+      </div>`;
+  } catch(e) {
+    ws.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Could not load deal</div>';
+  }
+}
+
+function _sqBackFromDetail() {
+  const ws = document.getElementById('sq-workspace');
+  if (!ws || !_sqCurrentSquad) return;
+  renderSquadWorkspace({ squad: _sqCurrentSquad, members: _sqCurrentMembers, isMember: _sqCurrentIsMember }, ws);
+  showSqTab('deals', _sqCurrentSquad.id);
+}
+
+function _sqJoinFromDetail(dealId, title, venue) {
+  sqJoinDeal(dealId, title, venue);
 }
 
 async function loadSqCalendar(squadId) {
