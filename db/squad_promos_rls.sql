@@ -5,6 +5,12 @@
 GRANT SELECT ON public.squad_promos TO anon, authenticated;
 GRANT INSERT, UPDATE ON public.squad_promos TO authenticated;
 
+-- service_role needs the table-level GRANT too. rolbypassrls only bypasses RLS,
+-- NOT the ACL check — without this the admin API (sb() = service key) hits
+-- "permission denied for table squad_promos" before any RLS policy is evaluated.
+-- This table was created without Supabase's default service_role grants.
+GRANT ALL ON public.squad_promos TO service_role;
+
 -- Public can read approved, active deals
 CREATE POLICY "public read approved squad_promos"
   ON public.squad_promos FOR SELECT
