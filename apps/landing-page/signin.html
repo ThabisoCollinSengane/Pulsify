@@ -332,7 +332,7 @@ async function handleForgot() {
     return showErr('Please wait ' + wait + 's before requesting another reset email.');
   }
   _forgotAt = now + 60000;
-  const { error } = await sb.auth.resetPasswordForEmail(em, { redirectTo: window.location.origin + '/reset-password' });
+  const { error } = await sb.auth.resetPasswordForEmail(em, { redirectTo: 'https://pulsefy.co.za/reset-password' });
   if (error) {
     _forgotAt = 0;
     const msg = (error.message || '').toLowerCase();

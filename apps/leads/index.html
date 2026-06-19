@@ -285,7 +285,7 @@ body{padding-top:58px}
     <div class="modal-body">
       <p style="font-size:.8rem;color:var(--mu2);margin-bottom:12px">Click each button to open WhatsApp with a pre-filled message.</p>
       <div class="dl-label" style="margin-bottom:8px">Message</div>
-      <textarea id="wa-msg" class="txt-area" rows="4">Hi {{name}}, I came across your page and thought Pulsefy would be a great fit. It's SA's fastest-growing event platform — free to list. Interested?</textarea>
+      <textarea id="wa-msg" class="txt-area" rows="4"></textarea>
       <div class="wa-list" id="wa-list"></div>
     </div>
     <div class="modal-ftr"><button class="btn-sm" onclick="closeModal('wa-modal')">Close</button></div>
@@ -678,9 +678,12 @@ function openWaForActive() {
   _selected.clear(); _selected.add(_activeLead.id);
   openBulkWhatsApp();
 }
+const WA_DEFAULT = "Hi {{name}}, I came across your page and thought Pulsefy would be a great fit. It's SA's fastest-growing event platform — free to list. Interested?";
 function openBulkWhatsApp() {
   const leads = [..._selected].map(id => _cache[id]).filter(Boolean);
-  const msgTpl = document.getElementById('wa-msg').value || 'Hi {{name}}, I came across your page and thought Pulsefy would be a great fit. It\'s SA\'s fastest-growing event platform — free to list. Interested?';
+  const waEl = document.getElementById('wa-msg');
+  if (!waEl.value.trim()) waEl.value = WA_DEFAULT;
+  const msgTpl = waEl.value;
   document.getElementById('wa-list').innerHTML = leads.map(l => {
     const phone = l.phone?.replace(/\D/g,'');
     const msg   = encodeURIComponent(msgTpl.replace(/\{\{name\}\}/g, l.name).replace(/\{\{city\}\}/g, l.city||''));
