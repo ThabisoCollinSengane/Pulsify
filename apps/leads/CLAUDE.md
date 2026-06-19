@@ -1,34 +1,41 @@
-# Leads Dashboard – Pulsify
+# Leads Dashboard — Pulsify
 
 ## Files
-- `index.html` – displays scraped leads (organisers, businesses).
+- `index.html` — admin lead triage UI (593 lines).
+- `leads.html` — legacy alternate view; largely superseded by `index.html`.
 
-## API requirements (missing)
-- `GET /api/leads` – list leads (admin only)
-- `GET /api/leads/stats` – counts by status
-- `PATCH /api/leads/:id` – update status/notes
-- `POST /api/leads/email/:id` – send claim email
+## Routing
+All `/api/leads/*` and `/api/admin/*` requests are served by **`api/admin/index.js`**
+(via `vercel.json` rewrites). Identical-looking lead/scrape handlers in `api/index.js`
+(~lines 1299–1507, ~2017) are dead code — never reached.
 
-## Current state
-- Frontend `index.html` expects these endpoints, but they are **not yet merged** into `api/index.js`.
-- The file `leads-api-routes.js` contains all the code. It must be inserted before the 404 handler in `api/index.js`.
+## API endpoints (all in `api/admin/index.js`)
+| Method | Path | Notes |
+|---|---|---|
+| `POST` | `/api/leads/ingest` | Bulk insert via `x-ingest-key` header |
+| `GET` | `/api/leads` | List + filter; returns status `stats` |
+| `PATCH` | `/api/leads/:id` | Update `status` / `notes` |
+| `GET` | `/api/leads/:id/events` | Lead_event drafts for a lead |
+| `POST` | `/api/leads/:id/events` | Create a lead_event draft |
+| `GET` | `/api/admin/lead-events` | All drafts (joins scraped_leads) |
+| `PATCH` | `/api/admin/lead-events/:id` | `action: approve\|reject`; approve upserts into `events` |
+| `POST` | `/api/admin/scrape` | On-demand OSM Overpass scraper |
 
 ## Database
-- Table: `scraped_leads` (already created via `schema_additions.sql`).
-- RLS policies: must allow authenticated users (admin) to read/write.
+- `scraped_leads` — prospects. Schema: `db/scraped_leads_schema.sql`.
+- `lead_events` — event drafts. Schema: `db/lead_events_schema.sql`.
+- `profile_claims` — "claim this business" form submissions. Schema: `db/profile_claims_schema.sql`.
 
-## Next step for Claude
-Merge `leads-api-routes.js` into `api/index.js` (copy the routes exactly, before the `return res.status(404)` line).
+## Permissions
+All three tables: `service_role` = ALL, `authenticated` = admin-policy-gated,
+`anon` = blocked. Grant file: `db/grant_leads_tables_service_role.sql`.
 
-## Lead sources
-- Apify (Instagram/TikTok/Facebook)
-- Twitter scraper (GitHub Actions)
-- Manual upload (via admin)
-
-## Email claim flow
-- When a lead has an email, a claim link is sent via Resend.
-- Organiser clicks link, verifies ownership (email code or social post), then converts lead to real event.
-- Converted leads appear in both leads dashboard (as converted) and admin panel (as pending events if free).
+## Known gaps / deferred
+- Email claim-link flow (Resend `POST /api/leads/email/:id`) is NOT implemented.
+- OSM scraper city boxes are hardcoded in `api/admin/index.js`.
+- Dead duplicate handlers in `api/index.js` should be removed.
+- Legacy `leads` table (1 row, no policies) is unused — safe to drop.
 
 ## Hard rules
 - Only admin users can access (frontend and API both enforce role check).
+- Edit lead endpoints in `api/admin/index.js`, NOT `api/index.js`.
