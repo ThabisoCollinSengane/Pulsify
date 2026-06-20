@@ -9,6 +9,12 @@ const FROM_ADDR = SMTP_USER;
 const APP_URL   = process.env.APP_URL || 'https://pulsify.vercel.app';
 const YEAR      = new Date().getFullYear();
 
+// Resend is preferred when configured — cPanel/shared-host SMTP silently drops
+// mail (accepts the handshake, never delivers). Resend with a verified domain
+// delivers reliably. Falls back to SMTP only if RESEND_API_KEY is absent.
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const RESEND_FROM    = process.env.RESEND_FROM || `${FROM_NAME} <${FROM_ADDR}>`;
+
 function transport() {
   return nodemailer.createTransport({
     host:   SMTP_HOST,
@@ -18,6 +24,40 @@ function transport() {
     tls:    { rejectUnauthorized: false },
   });
 }
+
+// Single delivery path for every email. Returns true only if the provider
+// actually accepted the message (Resend 2xx, or SMTP without throwing).
+async function deliver(to, subject, html) {
+  if (RESEND_API_KEY) {
+    try {
+      const r = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: RESEND_FROM, to: [to], subject, html }),
+      });
+      if (r.ok) { console.log('[email] resend sent:', subject, '->', to); return true; }
+      console.error('[email] resend rejected:', r.status, await r.text());
+      return false;
+    } catch (e) {
+      console.error('[email] resend error:', e.message);
+      return false;
+    }
+  }
+  if (SMTP_HOST && SMTP_PASS) {
+    try {
+      await transport().sendMail({ from: `${FROM_NAME} <${FROM_ADDR}>`, to, subject, html });
+      console.log('[email] smtp sent:', subject, '->', to);
+      return true;
+    } catch (e) {
+      console.error('[email] smtp failed:', e.message);
+      return false;
+    }
+  }
+  console.log('[email] no provider configured — skipping:', subject, '->', to);
+  return false;
+}
+
+const EMAIL_CONFIGURED = !!(RESEND_API_KEY || (SMTP_HOST && SMTP_PASS));
 
 // ─── Base layout ──────────────────────────────────────────────────────────────
 function layout(body) {
@@ -151,16 +191,7 @@ function verifRejectedHtml(displayName, notes) {
 
 // ─── Send helper ──────────────────────────────────────────────────────────────
 async function send(to, subject, html) {
-  if (!SMTP_HOST || !SMTP_PASS) {
-    console.log('[email] SMTP not configured — skipping:', subject, '->', to);
-    return;
-  }
-  try {
-    await transport().sendMail({ from: `${FROM_NAME} <${FROM_ADDR}>`, to, subject, html });
-    console.log('[email] sent:', subject, '->', to);
-  } catch (e) {
-    console.error('[email] failed:', e.message);
-  }
+  await deliver(to, subject, html);
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -269,22 +300,9 @@ function leadHtml(bodyText) {
   `);
 }
 
-// Returns true if actually dispatched, false if SMTP unconfigured or send failed.
+// Returns true only if the provider accepted the message, false otherwise.
 async function sendLeadEmail(to, subject, bodyText) {
-  if (!SMTP_HOST || !SMTP_PASS) {
-    console.log('[email/lead] SMTP not configured — skipping:', subject, '->', to);
-    return false;
-  }
-  try {
-    await transport().sendMail({ from: `${FROM_NAME} <${FROM_ADDR}>`, to, subject, html: leadHtml(bodyText) });
-    console.log('[email/lead] sent:', subject, '->', to);
-    return true;
-  } catch (e) {
-    console.error('[email/lead] failed:', e.message);
-    return false;
-  }
+  return deliver(to, subject, leadHtml(bodyText));
 }
 
-const SMTP_CONFIGURED = !!(SMTP_HOST && SMTP_PASS);
-
-module.exports = { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail, sendTicketEmail, sendLeadEmail, SMTP_CONFIGURED };
+module.exports = { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail, sendTicketEmail, sendLeadEmail, EMAIL_CONFIGURED };
