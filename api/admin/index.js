@@ -1,5 +1,5 @@
 const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError } = require('../shared');
-const { sendVerifApprovedEmail, sendVerifRejectedEmail, sendLeadEmail, SMTP_CONFIGURED } = require('../email');
+const { sendVerifApprovedEmail, sendVerifRejectedEmail, sendLeadEmail, EMAIL_CONFIGURED } = require('../email');
 
 module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
@@ -822,7 +822,7 @@ module.exports = async (req, res) => {
       const { lead_ids, subject, body: emailBody } = req.body || {};
       if (!lead_ids?.length || !subject || !emailBody) return res.status(400).json({ error: 'lead_ids, subject, body required' });
 
-      if (!SMTP_CONFIGURED) return res.status(200).json({ sent: 0, skipped: lead_ids.length, warning: 'SMTP not configured — email sending is disabled. Set SMTP_HOST / SMTP_PASS to enable.' });
+      if (!EMAIL_CONFIGURED) return res.status(200).json({ sent: 0, skipped: lead_ids.length, warning: 'No email provider configured — set RESEND_API_KEY (preferred) or SMTP_HOST / SMTP_PASS to enable.' });
 
       const { data: leads } = await sb().from('scraped_leads').select('id,name,email,city').in('id', lead_ids);
       let sent = 0, skipped = 0;
