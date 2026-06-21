@@ -18,9 +18,17 @@
       "command": "npx",
       "args": ["-y", "@browserbasehq/mcp-server-browserbase"],
       "env": {
-        "BROWSERBASE_API_KEY": "${BROWSERBASE_API_KEY}",
+        "BROWSERBASE_API_KEY": "bb_live_r_GGfR4qZpsFIxsYIObYUdAVGC4",
         "BROWSERBASE_PROJECT_ID": "${BROWSERBASE_PROJECT_ID}"
       }
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
     }
   }
 }
