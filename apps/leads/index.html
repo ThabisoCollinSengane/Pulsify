@@ -253,8 +253,12 @@ body{padding-top:58px}
 <!-- Bulk / Single Email modal -->
 <div class="modal-ov" id="email-modal" onclick="if(event.target===this)closeModal('email-modal')">
   <div class="modal" style="max-width:620px">
-    <div class="modal-hdr">
-      <span class="modal-title" id="email-modal-title">📧 Send Email</span>
+    <!-- branded gradient header -->
+    <div style="background:linear-gradient(135deg,#B026FF 0%,#FF5C00 100%);border-radius:20px 20px 0 0;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.05em;color:#fff" id="email-modal-title">📧 Send Email</div>
+        <div style="font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.7);margin-top:2px">Pulsefy Lead Outreach</div>
+      </div>
       <button class="modal-close" onclick="closeModal('email-modal')">✕</button>
     </div>
     <div class="modal-body">
@@ -262,6 +266,12 @@ body{padding-top:58px}
       <div id="email-recipients" style="font-size:.8rem;color:var(--mu2);margin-bottom:14px;max-height:80px;overflow-y:auto"></div>
       <div class="dl-label" style="margin-bottom:6px">Template</div>
       <div class="tpl-btns" id="tpl-btns"></div>
+      <!-- quick-fill pitches -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="tpl-btn" style="background:rgba(176,38,255,.1);border-color:rgba(176,38,255,.3);color:#c060ff" onclick="quickFill('intro')">✨ Intro pitch</button>
+        <button class="tpl-btn" style="background:rgba(255,92,0,.08);border-color:rgba(255,92,0,.25);color:#ff7020" onclick="quickFill('follow')">🔄 Follow-up</button>
+        <button class="tpl-btn" style="background:rgba(198,255,74,.06);border-color:rgba(198,255,74,.2);color:#c6ff4a" onclick="quickFill('kzn')">📍 KZN specific</button>
+      </div>
       <div class="merge-hint">Merge vars: <code>{{name}}</code> <code>{{business_name}}</code> <code>{{city}}</code></div>
       <div class="dl-label" style="margin-bottom:6px">Subject</div>
       <input type="text" id="email-subject" class="email-subject-inp" placeholder="Subject"/>
@@ -689,6 +699,29 @@ async function sendEmail() {
     closeModal('email-modal'); clearSelection(); reloadKanban();
   } else toast('Error: '+(j.error||'send failed'), false);
 }
+const QUICK_FILLS = {
+  intro: {
+    subject: '{{name}} — List your events on Pulsefy for free',
+    body: `Hi {{name}},\n\nI came across your page and wanted to reach out personally — Pulsefy is South Africa's fastest-growing event discovery platform, and we'd love to feature you.\n\nListing is completely free and takes less than 5 minutes. You get:\n✅ A branded profile on Pulsefy\n📍 Discovery by thousands of locals in {{city}}\n🎟 Built-in ticket sales (we only earn when you earn)\n\nWould love to have {{name}} on the platform — happy to help set it up.\n\nBest,\nThabiso — Pulsefy Team`,
+  },
+  follow: {
+    subject: 'Following up — Pulsefy for {{name}}',
+    body: `Hi {{name}},\n\nJust following up on my earlier message. We're actively onboarding event organisers and businesses in {{city}} this month and would love to include you.\n\nNo obligation — it's free to list and you stay in full control of your events.\n\nLet me know if you have any questions!\n\nBest,\nThabiso — Pulsefy Team`,
+  },
+  kzn: {
+    subject: 'KZN events are exploding on Pulsefy — join {{name}}',
+    body: `Hi {{name}},\n\nEvents in KwaZulu-Natal are booming on Pulsefy right now — Durban, Umhlanga, and surrounding areas are our fastest-growing markets.\n\nWe're looking for organisers and venues in {{city}} to feature this season. Listing is free, and with our built-in social sharing and map discovery, your events get seen by the right crowd.\n\nInterested? I can have your page live within the hour.\n\nBest,\nThabiso — Pulsefy Team`,
+  },
+};
+function quickFill(key) {
+  const t = QUICK_FILLS[key]; if (!t) return;
+  const l = _activeLead || (_selected.size === 1 ? _cache[[..._selected][0]] : null);
+  const fill = s => s.replace(/\{\{name\}\}/g, l?.name||'').replace(/\{\{business_name\}\}/g, l?.name||'').replace(/\{\{city\}\}/g, l?.city||'your area');
+  document.getElementById('email-subject').value = fill(t.subject);
+  document.getElementById('email-body').value    = fill(t.body);
+  document.querySelectorAll('.tpl-btn').forEach(b => b.classList.remove('active'));
+}
+
 async function saveTplModal() {
   const subject = document.getElementById('email-subject').value.trim();
   const body    = document.getElementById('email-body').value.trim();
@@ -728,7 +761,7 @@ async function logWa(leadId) {
 
 // ── Scrape modal (simple trigger) ─────────────────────────────────────────────
 async function openScrapeModal() {
-  const cities = prompt('Scrape OSM cities (comma-separated):', 'Durban,Johannesburg'); if (!cities) return;
+  const cities = prompt('Scrape OSM cities (comma-separated):', 'Durban,Umhlanga,Ballito,Pinetown,Amanzimtoti,Pietermaritzburg'); if (!cities) return;
   const r = await fetch(`${API}/admin/scrape?cities=${encodeURIComponent(cities)}`, { method:'POST', headers:authHeaders() });
   const j = await safeJson(r);
   if (r.ok) { toast(`Scraped: ${j.inserted} new, ${j.skipped} skipped`); reloadKanban(); }

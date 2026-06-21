@@ -319,12 +319,67 @@ function escapeHtml(s) {
 }
 function leadHtml(bodyText) {
   const safe = escapeHtml(bodyText).replace(/\n/g, '<br/>');
-  return layout(`
-    ${card(`
-      <p style="margin:0;font-size:15px;color:#d0d0d0;line-height:1.7">${safe}</p>
-      ${btn(APP_URL, 'Visit Pulsefy →')}
-    `)}
-  `);
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Pulsefy</title>
+</head>
+<body style="margin:0;padding:0;background:#0d0d0d;font-family:Arial,Helvetica,sans-serif;color:#ffffff">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0d0d0d;padding:40px 16px">
+  <tr><td align="center">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px">
+
+      <!-- GRADIENT HEADER BANNER -->
+      <tr><td style="background:linear-gradient(135deg,#B026FF 0%,#FF5C00 100%);border-radius:20px 20px 0 0;padding:26px 32px 24px">
+        <span style="font-size:28px;font-weight:900;letter-spacing:-1px;color:#fff">◉ PULSEFY</span><br/>
+        <span style="font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.78)">South Africa's Event &amp; Entertainment Platform</span>
+      </td></tr>
+
+      <!-- BODY CARD -->
+      <tr><td style="background:#1a1a1a;border-left:1px solid #2a2a2a;border-right:1px solid #2a2a2a;border-bottom:1px solid #2a2a2a;border-radius:0 0 20px 20px;padding:28px 32px 32px">
+        <p style="margin:0 0 24px;font-size:15px;color:#d0d0d0;line-height:1.8">${safe}</p>
+
+        <!-- 3 benefit cards -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px">
+          <tr>
+            <td width="33%" style="padding:14px 12px;background:rgba(176,38,255,.12);border:1px solid rgba(176,38,255,.3);border-radius:12px;text-align:center">
+              <div style="font-size:22px;line-height:1;margin-bottom:6px">🆓</div>
+              <div style="font-size:11px;font-weight:700;color:#c060ff;text-transform:uppercase;letter-spacing:.08em">List Free</div>
+            </td>
+            <td width="6" style="min-width:6px"></td>
+            <td width="33%" style="padding:14px 12px;background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.25);border-radius:12px;text-align:center">
+              <div style="font-size:22px;line-height:1;margin-bottom:6px">📍</div>
+              <div style="font-size:11px;font-weight:700;color:#ff7020;text-transform:uppercase;letter-spacing:.08em">Reach KZN</div>
+            </td>
+            <td width="6" style="min-width:6px"></td>
+            <td width="33%" style="padding:14px 12px;background:rgba(198,255,74,.07);border:1px solid rgba(198,255,74,.2);border-radius:12px;text-align:center">
+              <div style="font-size:22px;line-height:1;margin-bottom:6px">🎟️</div>
+              <div style="font-size:11px;font-weight:700;color:#c6ff4a;text-transform:uppercase;letter-spacing:.08em">Sell Tickets</div>
+            </td>
+          </tr>
+        </table>
+
+        <table cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="background:linear-gradient(135deg,#B026FF,#FF5C00);border-radius:50px;padding:0">
+            <a href="${APP_URL}/?utm_source=crm&utm_medium=email" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:50px;font-family:Arial,Helvetica,sans-serif">Join Pulsefy Free →</a>
+          </td></tr>
+        </table>
+      </td></tr>
+
+      <tr><td height="20"></td></tr>
+      <!-- FOOTER -->
+      <tr><td style="text-align:center;font-size:11px;color:#4a4a4a;line-height:1.8">
+        <p style="margin:0">© ${YEAR} Pulsefy · South Africa 🇿🇦</p>
+        <p style="margin:4px 0 0"><a href="${APP_URL}" style="color:#4a4a4a;text-decoration:underline">pulsefy.co.za</a></p>
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
 }
 
 // Returns true only if the provider accepted the message, false otherwise.
