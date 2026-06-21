@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const crypto     = require('crypto');
 
 const SMTP_HOST = process.env.SMTP_HOST;
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '465');
@@ -7,6 +8,8 @@ const SMTP_PASS = process.env.SMTP_PASS;
 const FROM_NAME = 'Pulsefy';
 const FROM_ADDR = SMTP_USER;
 const APP_URL   = process.env.APP_URL || 'https://pulsify.vercel.app';
+const PUBLIC_URL = process.env.PUBLIC_URL || 'https://pulsefy.co.za';
+const REPLY_TO   = process.env.REPLY_TO || 'hello@pulsefy.co.za';
 const YEAR      = new Date().getFullYear();
 
 // Resend is preferred when configured — cPanel/shared-host SMTP silently drops
@@ -14,6 +17,26 @@ const YEAR      = new Date().getFullYear();
 // delivers reliably. Falls back to SMTP only if RESEND_API_KEY is absent.
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const RESEND_FROM    = process.env.RESEND_FROM || `${FROM_NAME} <${FROM_ADDR}>`;
+
+// One-click unsubscribe token — HMAC of the lowercased email so the unsubscribe
+// endpoint can verify the link without a DB lookup. Shared with api/admin.
+const UNSUB_SECRET = process.env.UNSUB_SECRET || RESEND_API_KEY || 'pulsefy-unsub-fallback';
+function unsubToken(email) {
+  return crypto.createHmac('sha256', UNSUB_SECRET).update(String(email || '').toLowerCase()).digest('hex').slice(0, 24);
+}
+function unsubUrl(email) {
+  return `${PUBLIC_URL}/api/unsubscribe?e=${encodeURIComponent(email)}&t=${unsubToken(email)}`;
+}
+// List-Unsubscribe headers — marketing email ONLY. Gmail/Outlook surface a
+// native "Unsubscribe" link and trust the sender far more, which keeps mail
+// out of spam. Never add these to transactional mail (tickets/password/orders).
+function marketingHeaders(email) {
+  const url = unsubUrl(email);
+  return {
+    'List-Unsubscribe': `<${url}>, <mailto:unsubscribe@pulsefy.co.za?subject=unsubscribe>`,
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+  };
+}
 
 function transport() {
   return nodemailer.createTransport({
@@ -27,13 +50,17 @@ function transport() {
 
 // Single delivery path for every email. Returns true only if the provider
 // actually accepted the message (Resend 2xx, or SMTP without throwing).
-async function deliver(to, subject, html) {
+// opts: { headers?: object, replyTo?: string }
+async function deliver(to, subject, html, opts = {}) {
+  const { headers, replyTo = REPLY_TO } = opts;
   if (RESEND_API_KEY) {
     try {
+      const payload = { from: RESEND_FROM, to: [to], subject, html, reply_to: replyTo };
+      if (headers && Object.keys(headers).length) payload.headers = headers;
       const r = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: RESEND_FROM, to: [to], subject, html }),
+        body: JSON.stringify(payload),
       });
       if (r.ok) { console.log('[email] resend sent:', subject, '->', to); return true; }
       console.error('[email] resend rejected:', r.status, await r.text());
@@ -45,7 +72,7 @@ async function deliver(to, subject, html) {
   }
   if (SMTP_HOST && SMTP_PASS) {
     try {
-      await transport().sendMail({ from: `${FROM_NAME} <${FROM_ADDR}>`, to, subject, html });
+      await transport().sendMail({ from: `${FROM_NAME} <${FROM_ADDR}>`, to, subject, html, replyTo, headers });
       console.log('[email] smtp sent:', subject, '->', to);
       return true;
     } catch (e) {
@@ -302,7 +329,76 @@ function leadHtml(bodyText) {
 
 // Returns true only if the provider accepted the message, false otherwise.
 async function sendLeadEmail(to, subject, bodyText) {
-  return deliver(to, subject, leadHtml(bodyText));
+  // Lead/CRM outreach is marketing — include one-click unsubscribe.
+  return deliver(to, subject, leadHtml(bodyText), { headers: marketingHeaders(to) });
 }
 
-module.exports = { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail, sendTicketEmail, sendLeadEmail, EMAIL_CONFIGURED };
+// ─── Food / pickup order confirmation ─────────────────────────────────────────
+function orderHtml(customerName, businessName, orderRef, items, total, pickupTime) {
+  const rows = (Array.isArray(items) ? items : []).map(it => {
+    const name = escapeHtml(it.name || it.title || 'Item');
+    const qty  = it.qty || it.quantity || 1;
+    const price = it.price != null ? `R${Number(it.price).toFixed(2)}` : '';
+    return `<tr>
+      <td style="font-size:13px;color:#fff;padding:6px 0">${name} × ${qty}</td>
+      <td align="right" style="font-size:13px;color:#a0a0a0;padding:6px 0">${price}</td>
+    </tr>`;
+  }).join('');
+  return layout(`
+    ${card(`
+      <p style="font-size:36px;margin:0 0 12px">🍔</p>
+      <h1 style="margin:0 0 6px;font-size:22px;font-weight:800;color:#ffffff">Order confirmed!</h1>
+      <p style="margin:0 0 20px;font-size:14px;color:#a0a0a0">Hi ${escapeHtml(customerName) || 'there'}, your order at <strong style="color:#fff">${escapeHtml(businessName) || 'the venue'}</strong> is in.</p>
+
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;background:rgba(255,92,0,.07);border:1px solid rgba(255,92,0,.25);border-radius:12px;padding:16px">
+        <tr><td style="padding:4px 0">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            ${rows}
+            <tr><td colspan="2" style="border-top:1px solid #2a2a2a;padding-top:10px"></td></tr>
+            <tr>
+              <td style="font-size:14px;font-weight:700;color:#fff;padding-top:6px">Total</td>
+              <td align="right" style="font-size:16px;font-weight:800;color:#C6FF4A;padding-top:6px">R${Number(total || 0).toFixed(2)}</td>
+            </tr>
+            ${pickupTime ? `<tr><td style="font-size:12px;color:#707070;padding-top:8px">⏰ Pickup</td><td align="right" style="font-size:13px;font-weight:700;color:#fff;padding-top:8px">${escapeHtml(pickupTime)}</td></tr>` : ''}
+            <tr><td style="font-size:12px;color:#707070;padding-top:8px">🔖 Ref</td><td align="right" style="font-size:13px;font-weight:700;color:#FF5C00;font-family:monospace;padding-top:8px">${escapeHtml(orderRef)}</td></tr>
+          </table>
+        </td></tr>
+      </table>
+      <p style="font-size:13px;color:#a0a0a0;margin:0 0 4px;text-align:center">Show this reference when you collect your order.</p>
+      ${btn(APP_URL + '/?tab=tickets', 'View My Orders →')}
+    `)}
+  `);
+}
+
+async function sendOrderEmail(to, customerName, businessName, orderRef, items, total, pickupTime) {
+  return deliver(to, `🍔 Order confirmed — ${businessName || 'Pulsefy'} (${orderRef})`,
+    orderHtml(customerName, businessName, orderRef, items, total, pickupTime));
+}
+
+// ─── Marketing blast (promotions / trending events) ───────────────────────────
+function marketingBodyHtml(headline, bodyText, ctaLabel, ctaUrl, unsub) {
+  const safe = escapeHtml(bodyText).replace(/\n/g, '<br/>');
+  return layout(`
+    ${card(`
+      ${headline ? `<h1 style="margin:0 0 14px;font-size:22px;font-weight:800;color:#ffffff;line-height:1.3">${escapeHtml(headline)}</h1>` : ''}
+      <p style="margin:0;font-size:15px;color:#d0d0d0;line-height:1.7">${safe}</p>
+      ${ctaUrl ? btn(ctaUrl, ctaLabel || 'Open Pulsefy →') : btn(APP_URL, 'Open Pulsefy →')}
+    `)}
+    <tr><td style="padding-top:16px;text-align:center;font-size:11px;color:#4a4a4a">
+      <a href="${unsub}" style="color:#707070;text-decoration:underline">Unsubscribe from Pulsefy promotional emails</a>
+    </td></tr>
+  `);
+}
+
+// Marketing email — always carries one-click unsubscribe headers + an in-body
+// unsubscribe link (POPIA). Returns true only if the provider accepted it.
+async function sendMarketingEmail(to, subject, headline, bodyText, ctaLabel, ctaUrl) {
+  const html = marketingBodyHtml(headline, bodyText, ctaLabel, ctaUrl, unsubUrl(to));
+  return deliver(to, subject, html, { headers: marketingHeaders(to) });
+}
+
+module.exports = {
+  sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail,
+  sendPaymentConfirmEmail, sendTicketEmail, sendLeadEmail,
+  sendOrderEmail, sendMarketingEmail, unsubToken, EMAIL_CONFIGURED,
+};

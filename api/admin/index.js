@@ -1,5 +1,5 @@
 const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError } = require('../shared');
-const { sendVerifApprovedEmail, sendVerifRejectedEmail, sendLeadEmail, EMAIL_CONFIGURED } = require('../email');
+const { sendVerifApprovedEmail, sendVerifRejectedEmail, sendLeadEmail, sendMarketingEmail, EMAIL_CONFIGURED } = require('../email');
 
 module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
@@ -931,6 +931,76 @@ module.exports = async (req, res) => {
       const { error } = await sb().from('email_templates').delete().eq('id', emailTplMatch[1]);
       if (error) return res.status(400).json({ error: error.message });
       return res.status(200).json({ success: true });
+    }
+
+    /* ─── GET /admin/email-status ── is Resend (or SMTP) configured? ─ */
+    if (url === '/admin/email-status' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const hasResend = !!process.env.RESEND_API_KEY;
+      const hasSmtp   = !!(process.env.SMTP_HOST && process.env.SMTP_PASS);
+      return res.status(200).json({
+        configured: EMAIL_CONFIGURED,
+        provider: hasResend ? 'resend' : hasSmtp ? 'smtp' : 'none',
+        from: process.env.RESEND_FROM || process.env.SMTP_USER || null,
+      });
+    }
+
+    /* ─── POST /admin/test-email ── send a test to verify delivery ──── */
+    if (url === '/admin/test-email' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      if (!EMAIL_CONFIGURED) return res.status(400).json({ error: 'No email provider configured. Add RESEND_API_KEY to Vercel environment variables.' });
+      const to = req.body?.to || auth.user.email;
+      const ok = await sendLeadEmail(to, '✅ Pulsefy email test', `Hi! This is a test email from Pulsefy confirming your email delivery is working. Sent at ${new Date().toISOString()}.`);
+      if (!ok) return res.status(500).json({ error: 'Delivery failed — check Vercel function logs for details.' });
+      return res.status(200).json({ sent: true, to });
+    }
+
+    /* ─── GET /admin/marketing-audience ── opted-in count + breakdown ─ */
+    if (url === '/admin/marketing-audience' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const city = (req.query?.city || '').trim();
+      let qy = sb().from('profiles').select('id', { count: 'exact', head: true })
+        .eq('marketing_opt_in', true).not('email', 'is', null);
+      if (city && city !== 'all') qy = qy.ilike('city', `%${city}%`);
+      const { count, error } = await qy;
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ audience: count || 0 });
+    }
+
+    /* ─── POST /admin/marketing-blast ── email opted-in subscribers ─── */
+    if (url === '/admin/marketing-blast' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      if (!EMAIL_CONFIGURED) return res.status(400).json({ error: 'No email provider configured. Add RESEND_API_KEY to Vercel.' });
+
+      const { subject, headline, message, cta_label, cta_url, city } = req.body || {};
+      if (!subject || !message) return res.status(400).json({ error: 'subject and message are required' });
+
+      let qy = sb().from('profiles').select('email, display_name')
+        .eq('marketing_opt_in', true).not('email', 'is', null);
+      if (city && city !== 'all') qy = qy.ilike('city', `%${city}%`);
+      const { data: recipients, error } = await qy;
+      if (error) return res.status(400).json({ error: error.message });
+      if (!recipients?.length) return res.status(200).json({ sent: 0, skipped: 0, warning: 'No opted-in subscribers match this audience.' });
+
+      // Send sequentially with a tiny gap — keeps within Resend rate limits and
+      // the 30s function budget for realistic SA list sizes.
+      let sent = 0, skipped = 0;
+      const seen = new Set();
+      for (const r of recipients) {
+        const to = (r.email || '').trim().toLowerCase();
+        if (!to || seen.has(to)) { skipped++; continue; }
+        seen.add(to);
+        const name = (r.display_name || '').split(' ')[0];
+        const body = name ? `Hi ${name},\n\n${message}` : message;
+        const ok = await sendMarketingEmail(to, subject, headline || '', body, cta_label || null, cta_url || null);
+        ok ? sent++ : skipped++;
+      }
+      await logAdminAction(auth.user.id, auth.profile.display_name || 'Admin', 'marketing_blast', '', subject, { sent, skipped, city: city || 'all' });
+      return res.status(200).json({ sent, skipped, audience: recipients.length });
     }
 
     return res.status(404).json({ error: 'Not found' });

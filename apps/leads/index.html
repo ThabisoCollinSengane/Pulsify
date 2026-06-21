@@ -163,6 +163,9 @@ body{padding-top:58px}
   <button class="bulk-btn" onclick="clearSelection()">✕ Clear</button>
 </div>
 
+<!-- Email status banner (hidden until checkEmailStatus() runs) -->
+<div id="email-status-banner" style="display:none"></div>
+
 <div class="main-wrap">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
     <div>
@@ -380,8 +383,32 @@ checkAuth();
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
+  checkEmailStatus();
   await loadTemplates();
   reloadKanban();
+}
+
+async function checkEmailStatus() {
+  const banner = document.getElementById('email-status-banner');
+  if (!banner) return;
+  try {
+    const r = await fetch(`${API}/admin/email-status`, { headers: authHeaders() });
+    if (!r.ok) return;
+    const { configured, provider, from } = await r.json();
+    if (configured) {
+      banner.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 20px;background:rgba(198,255,74,.07);border-bottom:1px solid rgba(198,255,74,.2);font-family:\'Syne\',sans-serif;font-size:.75rem;font-weight:700;color:#C6FF4A';
+      banner.innerHTML = `<span>✅ Email delivery active</span><span style="font-weight:400;color:rgba(198,255,74,.6)">${provider === 'resend' ? 'Resend' : 'SMTP'} · sending from ${from || 'unknown'}</span><button onclick="sendTestEmail()" style="margin-left:auto;background:rgba(198,255,74,.12);border:1px solid rgba(198,255,74,.3);color:#C6FF4A;padding:4px 14px;border-radius:50px;font-family:\'Syne\',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">Send Test →</button>`;
+    } else {
+      banner.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 20px;background:rgba(255,45,120,.07);border-bottom:1px solid rgba(255,45,120,.2);font-family:\'Syne\',sans-serif;font-size:.75rem;font-weight:700;color:#FF2D78';
+      banner.innerHTML = `<span>⚠️ Email not configured</span><span style="font-weight:400;color:rgba(255,45,120,.7)">Add RESEND_API_KEY to Vercel env vars — bulk email is disabled until then.</span>`;
+    }
+  } catch(e) {}
+}
+
+async function sendTestEmail() {
+  const r = await fetch(`${API}/admin/test-email`, { method: 'POST', headers: authHeaders() });
+  const j = await r.json();
+  showToast(r.ok ? `✅ Test email sent to ${j.to}` : `❌ ${j.error}`, r.ok ? 'ok' : 'err');
 }
 
 // ── Templates ─────────────────────────────────────────────────────────────────
