@@ -268,6 +268,11 @@ select.inp option{background:#1C1140}
       </div>
     </div>
     <div class="section-label" style="margin-top:16px">My Events</div>
+    <div id="org-events-filter-pills" style="display:flex;gap:8px;padding:8px 0 10px">
+      <button id="org-ev-pill-upcoming" onclick="loadMyEvents('upcoming')" style="font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;padding:5px 14px;border-radius:50px;border:1px solid var(--pu);background:rgba(176,38,255,.25);color:var(--pu);cursor:pointer">Upcoming</button>
+      <button id="org-ev-pill-past"     onclick="loadMyEvents('past')"     style="font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;padding:5px 14px;border-radius:50px;border:1px solid var(--border);background:transparent;color:var(--mu);cursor:pointer">Past</button>
+      <button id="org-ev-pill-all"      onclick="loadMyEvents('all')"      style="font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;padding:5px 14px;border-radius:50px;border:1px solid var(--border);background:transparent;color:var(--mu);cursor:pointer">All</button>
+    </div>
     <div id="my-events-list" class="card"><div class="empty">Loading…</div></div>
   </div>
 
@@ -541,6 +546,21 @@ select.inp option{background:#1C1140}
             <button class="btn-sec" id="org-payment-btn" style="padding:6px 12px;font-size:.72rem" onclick="openOrgSheet('org-payment-sheet')">Add →</button>
           </div>
           <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Add bank account to receive payouts from ticket sales.</div>
+        </div>
+
+        <!-- Payout Account -->
+        <div class="setting-card">
+          <div class="setting-card-row">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="setting-card-icon" style="background:linear-gradient(135deg,rgba(110,255,71,.15),rgba(0,229,255,.1));border:1px solid rgba(110,255,71,.25)">💰</div>
+              <div>
+                <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Payout Account</div>
+                <div id="org-payout-status" style="font-size:.68rem;color:var(--mu)">Loading…</div>
+              </div>
+            </div>
+            <button class="btn-sec" id="org-payout-btn" style="padding:6px 12px;font-size:.72rem" onclick="openOrgSheet('org-payment-sheet')">Set Up →</button>
+          </div>
+          <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Required to receive payouts from events and orders.</div>
         </div>
 
         <!-- Social Links -->
@@ -1041,6 +1061,24 @@ async function loadOrgSettingsStatus() {
       if (pm.bank && btn) btn.textContent = 'Edit →';
     }
   } catch(e) {}
+}
+
+// ── Org Payout Account Status ────────────────────────────────
+async function loadOrgPayoutStatus() {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return;
+    const { data: prof } = await sb.from('profiles').select('paystack_subaccount_code').eq('id', session.user.id).single();
+    const el  = document.getElementById('org-payout-status');
+    const btn = document.getElementById('org-payout-btn');
+    if (prof?.paystack_subaccount_code) {
+      if (el)  { el.textContent = '✅ Subaccount linked'; el.style.color = 'var(--li)'; }
+      if (btn)   btn.style.display = 'none';
+    } else {
+      if (el)  { el.textContent = '⚠️ Set up your payout account to receive payments'; el.style.color = 'var(--mu)'; }
+      if (btn)   btn.style.display = '';
+    }
+  } catch(e) { console.warn('[loadOrgPayoutStatus]', e); }
 }
 
 // ── Org Verification — face scan + ID doc ────────────────────
@@ -2054,14 +2092,34 @@ async function submitEvent() {
 }
 
 const _evMap = {};
-async function loadMyEvents() {
+async function loadMyEvents(filter = 'upcoming') {
+  // Update active pill
+  ['upcoming','past','all'].forEach(f => {
+    const pill = document.getElementById('org-ev-pill-' + f);
+    if (!pill) return;
+    if (f === filter) {
+      pill.style.background = 'rgba(176,38,255,.25)';
+      pill.style.borderColor = 'var(--pu)';
+      pill.style.color = 'var(--pu)';
+    } else {
+      pill.style.background = 'transparent';
+      pill.style.borderColor = 'var(--border)';
+      pill.style.color = 'var(--mu)';
+    }
+  });
   const el = document.getElementById('my-events-list');
   if (!el || !currentUser) return;
   try {
-    const { data: evs } = await sb.from('events').select('id,name,date_local,time_local,venue_name,venue_city,genre,description,image_url,approved,is_active,venue_lat,venue_lon').eq('organiser_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
-    if (!evs?.length) { el.innerHTML = '<div class="empty">No events yet. Create your first above!</div>'; return; }
-    evs.forEach(e => { _evMap[e.id] = e; });
-    el.innerHTML = evs.map(e => {
+    const { data: evs } = await sb.from('events').select('id,name,date_local,time_local,venue_name,venue_city,genre,description,image_url,approved,is_active,venue_lat,venue_lon').eq('organiser_id', currentUser.id).order('created_at', { ascending: false }).limit(50);
+    const today = new Date().toISOString().split('T')[0];
+    const filtered = !evs ? [] : evs.filter(e => {
+      if (filter === 'upcoming') return (e.date_local || '') >= today;
+      if (filter === 'past')     return (e.date_local || '') < today;
+      return true;
+    });
+    if (!filtered.length) { el.innerHTML = '<div class="empty">' + (filter === 'past' ? 'No past events.' : 'No upcoming events. Create your first above!') + '</div>'; return; }
+    filtered.forEach(e => { _evMap[e.id] = e; });
+    el.innerHTML = filtered.map(e => {
       const badge = e.approved
         ? `<span style="background:rgba(0,229,100,.12);color:#00e564;border:1px solid rgba(0,229,100,.3);border-radius:20px;padding:2px 8px;font-size:.65rem;font-weight:700">✅ Live</span>`
         : `<span style="background:rgba(255,180,0,.1);color:#FFB400;border:1px solid rgba(255,180,0,.25);border-radius:20px;padding:2px 8px;font-size:.65rem;font-weight:700">⏳ Under review</span>`;
@@ -2965,6 +3023,7 @@ fillCityDatalist();
 
 renderOrgFAQ();
 loadOrgSettingsStatus();
+loadOrgPayoutStatus();
 loadOrgSocialLinks();
 history.replaceState({ pane: 'pane-post' }, '');
 init().then(() => { initNotifBell(); loadMyEvents(); });

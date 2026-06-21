@@ -268,6 +268,11 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <div><div class="sec-title">Your Events</div><div class="sec-sub">Visible on the Pulsefy home feed</div></div>
     <button class="btn-primary" onclick="openSheet('event-sheet')">+ Event</button>
   </div>
+  <div id="events-filter-pills" style="display:flex;gap:8px;padding:0 0 12px">
+    <button id="ev-pill-upcoming" onclick="renderEvents('upcoming')" style="font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;padding:5px 14px;border-radius:50px;border:1px solid var(--pu);background:rgba(176,38,255,.25);color:var(--pu);cursor:pointer">Upcoming</button>
+    <button id="ev-pill-past"     onclick="renderEvents('past')"     style="font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;padding:5px 14px;border-radius:50px;border:1px solid var(--border);background:transparent;color:var(--mu);cursor:pointer">Past</button>
+    <button id="ev-pill-all"      onclick="renderEvents('all')"      style="font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;padding:5px 14px;border-radius:50px;border:1px solid var(--border);background:transparent;color:var(--mu);cursor:pointer">All</button>
+  </div>
   <div id="events-list"></div>
 
   <div class="sec-head" style="margin-top:24px">
@@ -581,6 +586,21 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
         <button class="btn-sec" id="biz-payment-btn" style="padding:6px 12px;font-size:.72rem" onclick="openSheet('payment-sheet')">Add →</button>
       </div>
       <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Add your bank account to receive payouts from orders and bookings.</div>
+    </div>
+
+    <!-- Payout Account -->
+    <div class="setting-card">
+      <div class="setting-card-row">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="setting-card-icon" style="background:linear-gradient(135deg,rgba(110,255,71,.15),rgba(0,229,255,.1));border:1px solid rgba(110,255,71,.25)">💰</div>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Payout Account</div>
+            <div id="biz-payout-status" style="font-size:.68rem;color:var(--mu)">Loading…</div>
+          </div>
+        </div>
+        <button class="btn-sec" id="biz-payout-btn" style="padding:6px 12px;font-size:.72rem" onclick="openSheet('payment-sheet')">Set Up →</button>
+      </div>
+      <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Required to receive payouts from events and orders.</div>
     </div>
 
     <!-- Social Links -->
@@ -1040,6 +1060,25 @@ async function loadVerifStatus() {
   }
 }
 
+// ── Payout Account Status ────────────────────────────────────
+async function loadPayoutStatus() {
+  try {
+    const sb2 = getSB(); if (!sb2) return;
+    const { data: { session } } = await sb2.auth.getSession();
+    if (!session) return;
+    const { data: prof } = await sb2.from('profiles').select('paystack_subaccount_code').eq('id', session.user.id).single();
+    const el  = document.getElementById('biz-payout-status');
+    const btn = document.getElementById('biz-payout-btn');
+    if (prof?.paystack_subaccount_code) {
+      if (el)  { el.textContent = '✅ Subaccount linked'; el.style.color = 'var(--li)'; }
+      if (btn)   btn.style.display = 'none';
+    } else {
+      if (el)  { el.textContent = '⚠️ Set up your payout account to receive payments'; el.style.color = 'var(--mu)'; }
+      if (btn)   btn.style.display = '';
+    }
+  } catch(e) { console.warn('[loadPayoutStatus]', e); }
+}
+
 // ── Business face scan + ID doc ──────────────────────────────
 let _vfFaceScanBlob = null;
 let _vfIdDocFile    = null;
@@ -1354,6 +1393,7 @@ function initDashboard() {
   renderProfile();
   renderBizFAQ();
   loadVerifStatus();
+  loadPayoutStatus();
   renderHomeOrdersPreview();
   const url = `${location.origin}/business-menu?id=${getBizId()}`;
   document.getElementById('menu-url-display').textContent = url;
@@ -1647,23 +1687,35 @@ async function renderStats() {
   const today   = new Date().toISOString().split('T')[0];
   const todayRevenue = ORDERS.filter(o => o.status !== 'cancelled' && (o.created_at||'').startsWith(today)).reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
   const pending = ORDERS.filter(o => o.status === 'pending').length;
-  let postsCnt = 0, eventsCnt = 0, followersCnt = 0;
+  let postsCnt = 0, eventsCnt = 0, followersCnt = 0, menuCnt = 0;
   try {
     const sb2 = getSB();
     if (sb2) {
       const { data: { session } } = await sb2.auth.getSession();
       if (session) {
-        const [{ count: pc }, { count: ec }, { count: fc }] = await Promise.all([
+        // Look up the business id for this owner first
+        const { data: biz, error: bizErr } = await sb2.from('businesses').select('id').eq('owner_id', session.user.id).single();
+        if (bizErr) console.error('[renderStats] businesses lookup:', bizErr);
+        const bizId = biz?.id;
+        const queries = [
           sb2.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', session.user.id),
           sb2.from('events').select('id', { count: 'exact', head: true }).eq('organiser_id', session.user.id),
           sb2.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', session.user.id),
-        ]);
-        postsCnt = pc || 0; eventsCnt = ec || 0; followersCnt = fc || 0;
+          bizId
+            ? sb2.from('menu_items').select('id', { count: 'exact', head: true }).eq('business_id', bizId)
+            : Promise.resolve({ count: 0 }),
+        ];
+        const [{ count: pc, error: pe }, { count: ec, error: ee }, { count: fc, error: fe }, { count: mc, error: me }] = await Promise.all(queries);
+        if (pe) console.error('[renderStats] posts:', pe);
+        if (ee) console.error('[renderStats] events:', ee);
+        if (fe) console.error('[renderStats] follows:', fe);
+        if (me) console.error('[renderStats] menu_items:', me);
+        postsCnt = pc || 0; eventsCnt = ec || 0; followersCnt = fc || 0; menuCnt = mc || 0;
       }
     }
-  } catch(_) {}
+  } catch(err) { console.error('[renderStats]', err); }
   document.getElementById('stats-row').innerHTML =
-    stat(postsCnt, 'Posts', '', 'posts') + stat(eventsCnt, 'Events', '', 'events') +
+    stat(menuCnt, 'Menu Items', '', 'menu') + stat(postsCnt, 'Posts', '', 'posts') + stat(eventsCnt, 'Events', '', 'events') +
     stat(pending, 'Pending', 'var(--pk)', 'orders') + stat('R' + todayRevenue.toFixed(0), 'Revenue', 'var(--li)', 'analytics') +
     `<div class="stat-card" onclick="openBizFollowersSheet()" style="cursor:pointer"><div class="stat-num">${followersCnt}</div><div class="stat-lbl">Followers</div></div>`;
 }
@@ -2057,7 +2109,21 @@ async function deletePost(id, isSupa, btn) {
 // ════════════════════════════════════════════════════════════
 //  EVENTS — synced to shared business_events for index.html
 // ════════════════════════════════════════════════════════════
-async function renderEvents() {
+async function renderEvents(filter = 'upcoming') {
+  // Update active pill
+  ['upcoming','past','all'].forEach(f => {
+    const pill = document.getElementById('ev-pill-' + f);
+    if (!pill) return;
+    if (f === filter) {
+      pill.style.background = 'rgba(176,38,255,.25)';
+      pill.style.borderColor = 'var(--pu)';
+      pill.style.color = 'var(--pu)';
+    } else {
+      pill.style.background = 'transparent';
+      pill.style.borderColor = 'var(--border)';
+      pill.style.color = 'var(--mu)';
+    }
+  });
   const el = document.getElementById('events-list');
   el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--mu)">Loading…</div>';
   const sb2 = getSB();
@@ -2071,8 +2137,14 @@ async function renderEvents() {
       .order('date_local', { ascending: false })
       .limit(50);
     if (error) throw error;
-    if (!evs || !evs.length) { el.innerHTML = emptyState('🎉', 'No events yet', 'Create your first event. It will appear on the Pulsefy home feed for all users to discover.'); return; }
-    el.innerHTML = evs.map(ev => {
+    const today = new Date().toISOString().split('T')[0];
+    const filtered = !evs ? [] : evs.filter(ev => {
+      if (filter === 'upcoming') return (ev.date_local || '') >= today;
+      if (filter === 'past')     return (ev.date_local || '') < today;
+      return true;
+    });
+    if (!filtered.length) { el.innerHTML = emptyState('🎉', filter === 'past' ? 'No past events' : 'No upcoming events', 'Create your first event. It will appear on the Pulsefy home feed for all users to discover.'); return; }
+    el.innerHTML = filtered.map(ev => {
       const emo = GENRE_EMOJI[(ev.genre || '').toLowerCase()] || '🎉';
       const approvalBadge = ev.approved
         ? `<span style="background:rgba(0,229,100,.12);color:#00e564;border:1px solid rgba(0,229,100,.3);border-radius:20px;padding:2px 8px;font-size:.6rem;font-weight:700">✅ Live</span>`
