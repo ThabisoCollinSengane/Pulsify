@@ -4600,9 +4600,9 @@ function renderProfile() {
     window.location.href = '/signin';
   };
 
-  // Top-right button → Me (profile tab)
+  // Top-right button → community feeds
   const ab = document.getElementById('auth-btn');
-  if (ab) { ab.textContent = 'Me'; ab.onclick = () => showTab('me'); }
+  if (ab) { ab.textContent = 'Feed'; ab.onclick = () => window.location.href = '/feeds'; }
 
   // Role-gated menu items
   const role = (prof?.role || sess?.role || 'user');
@@ -5510,7 +5510,7 @@ async function openPost(postId) {
         </div>
         <div style="flex:1;min-width:0;background:var(--surf);border-radius:12px;padding:8px 10px">
           <div style="font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;color:var(--tx);margin-bottom:2px">${x(cp.display_name||'User')}</div>
-          <div style="font-size:.8rem;color:var(--mu2);line-height:1.4">${x(c.body||'')}</div>
+          <div style="font-size:.8rem;color:var(--mu2);line-height:1.4;white-space:pre-wrap;word-break:break-word">${x(c.body||'')}</div>
           <div style="font-size:.6rem;color:var(--mu);margin-top:3px">${timeAgoShort(c.created_at)}</div>
         </div>
       </div>`;
@@ -6166,7 +6166,7 @@ async function initSupabaseSession() {
       localStorage.setItem('p_token', session.access_token);
     }
     const btn = document.getElementById('auth-btn');
-    if (btn) { btn.textContent='Me'; btn.onclick=()=>showTab('me'); }
+    if (btn) { btn.textContent='Feed'; btn.onclick=()=>{ window.location.href='/feeds'; }; }
     currentUser = session.user;
     // Sync saved items from DB so they survive across devices/sessions
     try {
@@ -6235,7 +6235,7 @@ async function initSupabaseSession() {
           localStorage.setItem('p_profile', JSON.stringify(profile));
           localStorage.removeItem('p_pending_profile');
           const role = pending.role || 'user';
-          const dest = role === 'organizer' ? '/organizer' : role === 'business' ? '/business' : '/feeds';
+          const dest = role === 'organizer' ? '/organizer' : role === 'business' ? '/business' : '/';
           window.location.href = dest;
           return;
         }
@@ -6269,7 +6269,7 @@ document.addEventListener('DOMContentLoaded', initSupabaseSession);
     var s = JSON.parse(localStorage.getItem('p_user'));
     if (s && s.id) {
       var btn = document.getElementById('auth-btn');
-      if (btn) { btn.textContent = 'Me'; btn.onclick = function(){ showTab('me'); }; }
+      if (btn) { btn.textContent = 'Feed'; btn.onclick = function(){ window.location.href='/feeds'; }; }
     }
   } catch(e) {}
 })();
