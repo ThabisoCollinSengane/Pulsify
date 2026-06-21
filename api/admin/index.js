@@ -430,25 +430,49 @@ module.exports = async (req, res) => {
 
       // Venue type queries for OSM Overpass
       const VENUE_TYPES = [
-        { filter: '["amenity"="nightclub"]',  category: 'club',        label: 'Club/Nightclub' },
-        { filter: '["amenity"="bar"]',         category: 'bar',         label: 'Bar/Tavern' },
+        { filter: '["amenity"="nightclub"]',    category: 'club',         label: 'Club/Nightclub' },
+        { filter: '["amenity"="bar"]',           category: 'bar',          label: 'Bar/Tavern' },
         { filter: '["amenity"="restaurant"]["cuisine"~"braai|shisa|grill|south_african|african",i]', category: 'shisanyama', label: 'Shisanyama/Braai' },
-        { filter: '["tourism"="guest_house"]', category: 'bnb',         label: 'Guest House/BnB' },
-        { filter: '["tourism"="hostel"]',      category: 'bnb',         label: 'Hostel' },
-        { filter: '["tourism"="hotel"]',       category: 'hotel',       label: 'Hotel' },
-        { filter: '["amenity"="events_venue"]',category: 'venue',       label: 'Events Venue' },
-        { filter: '["leisure"="dance"]',        category: 'dance_venue', label: 'Dance Venue' },
+        { filter: '["tourism"="guest_house"]',   category: 'bnb',          label: 'Guest House/BnB' },
+        { filter: '["tourism"="hostel"]',        category: 'bnb',          label: 'Hostel' },
+        { filter: '["tourism"="hotel"]',         category: 'hotel',        label: 'Hotel' },
+        { filter: '["amenity"="events_venue"]',  category: 'organizer',    label: 'Events Venue' },
+        { filter: '["leisure"="dance"]',          category: 'organizer',    label: 'Dance Venue' },
+        { filter: '["amenity"="conference_centre"]', category: 'organizer', label: 'Conference Centre' },
+        { filter: '["amenity"="community_centre"]',  category: 'organizer', label: 'Community Hall' },
+        { filter: '["amenity"="theatre"]',           category: 'organizer', label: 'Theatre' },
+        { filter: '["amenity"="arts_centre"]',        category: 'organizer', label: 'Arts Centre' },
+        { filter: '["amenity"="music_venue"]',        category: 'organizer', label: 'Music Venue' },
+        { filter: '["leisure"="stadium"]',            category: 'organizer', label: 'Stadium' },
+        { filter: '["leisure"="sports_centre"]',      category: 'organizer', label: 'Sports Centre' },
       ];
 
       // Bounding boxes: [south, west, north, east]
       const CITY_BOXES = {
-        'Durban':         '-30.1,30.7,-29.6,31.2',
-        'Johannesburg':   '-26.4,27.8,-25.9,28.3',
-        'Cape Town':      '-34.2,18.3,-33.7,18.7',
-        'Pretoria':       '-25.9,28.0,-25.6,28.4',
-        'Sandton':        '-26.2,28.0,-26.0,28.2',
-        'KwaMashu':       '-29.8,30.9,-29.7,31.0',
-        'Umlazi':         '-29.97,30.87,-29.87,30.97',
+        // KZN — Durban metro + surrounds
+        'Durban':              '-30.1,30.7,-29.6,31.2',
+        'Umhlanga':            '-29.73,31.06,-29.63,31.14',
+        'Ballito':             '-29.57,31.18,-29.48,31.26',
+        'KwaMashu':            '-29.8,30.9,-29.7,31.0',
+        'Umlazi':              '-29.97,30.87,-29.87,30.97',
+        'Pinetown':            '-29.87,30.81,-29.79,30.90',
+        'Amanzimtoti':         '-30.09,30.84,-30.02,30.92',
+        'Pietermaritzburg':    '-29.67,30.33,-29.57,30.45',
+        'Richards Bay':        '-28.80,32.02,-28.72,32.10',
+        // Gauteng
+        'Johannesburg':        '-26.4,27.8,-25.9,28.3',
+        'Sandton':             '-26.2,28.0,-26.0,28.2',
+        'Pretoria':            '-25.9,28.0,-25.6,28.4',
+        // Other metros
+        'Cape Town':           '-34.2,18.3,-33.7,18.7',
+        'Gqeberha':            '-33.97,25.55,-33.92,25.63',
+      };
+
+      const PROVINCE_MAP = {
+        'Durban':'KZN','Umhlanga':'KZN','Ballito':'KZN','KwaMashu':'KZN','Umlazi':'KZN',
+        'Pinetown':'KZN','Amanzimtoti':'KZN','Pietermaritzburg':'KZN','Richards Bay':'KZN',
+        'Johannesburg':'GP','Sandton':'GP','Pretoria':'GP',
+        'Cape Town':'WC','Gqeberha':'EC',
       };
 
       const overpassFetch = async (query) => {
@@ -469,7 +493,7 @@ module.exports = async (req, res) => {
       for (const city of cities) {
         const bbox = CITY_BOXES[city];
         if (!bbox) continue;
-        const province = { 'Durban':'KZN','KwaMashu':'KZN','Umlazi':'KZN','Johannesburg':'GP','Sandton':'GP','Cape Town':'WC','Pretoria':'GP' }[city] || null;
+        const province = PROVINCE_MAP[city] || null;
 
         for (const vt of VENUE_TYPES) {
           const overpassQuery = `[out:json][timeout:20];(node${vt.filter}(${bbox});way${vt.filter}(${bbox}););out body;`;
