@@ -1,5 +1,5 @@
 const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError } = require('../shared');
-const { sendVerifApprovedEmail, sendVerifRejectedEmail, sendLeadEmail, sendMarketingEmail, EMAIL_CONFIGURED } = require('../email');
+const { sendVerifApprovedEmail, sendVerifRejectedEmail, sendLeadEmail, sendMarketingEmail, sendEventApprovedEmail, sendEventRejectedEmail, EMAIL_CONFIGURED } = require('../email');
 
 module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
@@ -355,9 +355,35 @@ module.exports = async (req, res) => {
       if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
       const eventId = adminEventMatch[1];
       const { approved } = req.body || {};
-      const { data: evtRow } = await sb().from('events').select('name,organiser_name').eq('id', eventId).single();
+      const { data: evtRow } = await sb().from('events').select('name,organiser_name,organiser_id').eq('id', eventId).single();
       const adminName = auth.profile.display_name || auth.user.email || 'Admin';
+
+      // Helper: notify organiser in-app + email (non-blocking)
+      async function notifyOrganiser(type, message, emailFn) {
+        if (!evtRow?.organiser_id) return;
+        await sb().from('notifications').insert({
+          user_id: evtRow.organiser_id,
+          type,
+          from_user_id: auth.user.id,
+          from_display_name: adminName,
+          message,
+          entity_type: 'event',
+          entity_id: type === 'event_approved' ? eventId : null,
+          data: {},
+          read: false,
+        });
+        const { data: orgProfile } = await sb().from('profiles').select('email,display_name').eq('id', evtRow.organiser_id).single();
+        if (orgProfile?.email) {
+          emailFn(orgProfile.email, orgProfile.display_name, evtRow.name).catch(e => console.error(`[email/${type}]`, e.message));
+        }
+      }
+
       if (approved === false) {
+        await notifyOrganiser(
+          'event_rejected',
+          `❌ Your event "${evtRow?.name}" was not approved. Please check your email for details or contact support.`,
+          sendEventRejectedEmail
+        );
         const { error } = await sb().from('events').delete().eq('id', eventId);
         if (error) return res.status(400).json({ error: error.message });
         await logAdminAction(auth.user.id, adminName, 'event_reject', eventId, evtRow?.name || eventId, {});
@@ -365,6 +391,11 @@ module.exports = async (req, res) => {
       }
       const { data, error } = await sb().from('events').update({ approved: true }).eq('id', eventId).select().single();
       if (error) return res.status(400).json({ error: error.message });
+      await notifyOrganiser(
+        'event_approved',
+        `✅ Your event "${evtRow?.name}" has been approved and is now live on Pulsefy!`,
+        sendEventApprovedEmail
+      );
       await logAdminAction(auth.user.id, adminName, 'event_approve', eventId, evtRow?.name || eventId, {});
       return res.status(200).json({ success: true, event: data });
     }

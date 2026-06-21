@@ -452,8 +452,59 @@ async function sendMarketingEmail(to, subject, headline, bodyText, ctaLabel, cta
   return deliver(to, subject, html, { headers: marketingHeaders(to) });
 }
 
+function eventApprovedHtml(displayName, eventName) {
+  const name = (displayName || 'there').split(' ')[0];
+  return layout(`
+    ${card(`
+      <p style="font-size:48px;margin:0 0 16px">🎉</p>
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:#ffffff">Your event is live, ${name}!</h1>
+      <p style="margin:0 0 16px;font-size:15px;color:#a0a0a0;line-height:1.7">
+        <strong style="color:#C6FF4A">${eventName}</strong> has been reviewed and approved by the Pulsefy team. It's now visible on the map and feed for everyone to discover.
+      </p>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px">
+        <tr>
+          <td style="padding:12px 20px;background:rgba(198,255,74,.08);border:1px solid rgba(198,255,74,.2);border-radius:12px;font-size:14px;color:#C6FF4A;line-height:1.6">
+            ◉ Share the event link with your audience to start getting RSVPs and ticket sales.
+          </td>
+        </tr>
+      </table>
+      ${btn(`${APP_URL}/organizer`, 'View Your Dashboard →')}
+    `)}
+  `);
+}
+
+function eventRejectedHtml(displayName, eventName) {
+  const name = (displayName || 'there').split(' ')[0];
+  return layout(`
+    ${card(`
+      <p style="font-size:48px;margin:0 0 16px">⚠️</p>
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:#ffffff">Event not approved, ${name}</h1>
+      <p style="margin:0 0 16px;font-size:15px;color:#a0a0a0;line-height:1.7">
+        Your event <strong style="color:#ffffff">${eventName}</strong> could not be approved at this time. This may be due to incomplete information, missing details, or content that doesn't meet our guidelines.
+      </p>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px">
+        <tr>
+          <td style="padding:12px 20px;background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.2);border-radius:12px;font-size:14px;color:#ff8ab0;line-height:1.6">
+            💡 Please re-submit your event with complete venue details, accurate dates, and a clear description. Reply to this email if you need help.
+          </td>
+        </tr>
+      </table>
+      ${btn(`${APP_URL}/organizer`, 'Re-submit Event →')}
+    `)}
+  `);
+}
+
+async function sendEventApprovedEmail(to, displayName, eventName) {
+  return deliver(to, `✅ Your event is live on Pulsefy: ${eventName}`, eventApprovedHtml(displayName, eventName));
+}
+
+async function sendEventRejectedEmail(to, displayName, eventName) {
+  return deliver(to, `Your event submission: ${eventName}`, eventRejectedHtml(displayName, eventName));
+}
+
 module.exports = {
   sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail,
   sendPaymentConfirmEmail, sendTicketEmail, sendLeadEmail,
-  sendOrderEmail, sendMarketingEmail, unsubToken, EMAIL_CONFIGURED,
+  sendOrderEmail, sendMarketingEmail, sendEventApprovedEmail, sendEventRejectedEmail,
+  unsubToken, EMAIL_CONFIGURED,
 };
