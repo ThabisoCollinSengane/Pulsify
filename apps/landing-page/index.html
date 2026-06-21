@@ -7717,6 +7717,15 @@ function obClose() {
   localStorage.setItem('p_onboarded', '1');
 }
 
+// Redirect Supabase recovery tokens to the reset-password page.
+// Happens when a preview-URL link or old link lands on / instead of /reset-password.
+(function() {
+  var h = window.location.hash, s = window.location.search;
+  if (h.indexOf('type=recovery') !== -1 || (s.indexOf('type=recovery') !== -1)) {
+    window.location.replace('/reset-password' + s + h);
+  }
+})();
+
 </script>
 <!-- Map card overlay — must be body-level so position:fixed has root stacking context (not inside tab-map's z-index:20 context) -->
 <div id="map-panel" onclick="if(event.target===this)closeMapPanel()">
