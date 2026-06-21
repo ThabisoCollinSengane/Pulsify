@@ -2769,9 +2769,44 @@ async function openSNPanel() {
   try {
     const r = await fetch('/api/notifications?limit=30', { headers: { 'Authorization': 'Bearer ' + session.access_token } });
     const { notifications } = await safeJson(r);
-    if (!notifications?.length) { list.innerHTML = '<div style="padding:30px;text-align:center;color:var(--mu)">No notifications yet.</div>'; return; }
-    const ICON = { like:'❤️', comment:'💬', follow:'👤', event:'🎟', order:'📦' };
-    list.innerHTML = notifications.map(n => `<div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border)"><div style="width:38px;height:38px;border-radius:50%;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">${ICON[n.type]||'🔔'}</div><div style="flex:1;min-width:0"><div style="font-size:.82rem;line-height:1.4;color:var(--tx)">${n.message||''}</div><div style="font-size:.68rem;color:var(--mu);margin-top:3px">${new Date(n.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div></div></div>`).join('');
+    if (!notifications?.length) { list.innerHTML = '<div style="padding:30px;text-align:center"><div style="font-size:2rem;margin-bottom:8px">✓</div><div style="font-size:.78rem;color:var(--mu)">You\'re all caught up!</div></div>'; return; }
+
+    const ICON = {follow:'👤',like:'❤️',comment:'💬',reply:'↩️',repost:'🔁',ticket:'🎟',event:'🎟',business_post:'📢',event_approved:'✅',event_rejected:'🚫',verification:'🏆',account:'⚙️',order:'📦',payment:'💳',squad_invite:'👥',system:'🔔',broadcast:'📣'};
+    const CLR  = {follow:'#B026FF',like:'#FF2D78',comment:'#00E5FF',reply:'#00E5FF',repost:'#C6FF4A',ticket:'#FF5C00',event:'#FF5C00',event_approved:'#C6FF4A',event_rejected:'#FF2D78',verification:'#FF5C00',order:'#00D4AA',payment:'#FF5C00',squad_invite:'#B026FF',broadcast:'#FF5C00'};
+
+    const uids = [...new Set(notifications.map(n => n.from_user_id).filter(Boolean))];
+    const avatarMap = {};
+    if (uids.length) {
+      const { data: profs } = await sb.from('profiles').select('id,avatar_url').in('id', uids);
+      (profs||[]).forEach(p => { avatarMap[p.id] = p.avatar_url; });
+    }
+
+    const xe = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    list.innerHTML = notifications.map(n => {
+      const c = CLR[n.type] || '#B026FF';
+      const ico = ICON[n.type] || '🔔';
+      const av = n.from_user_id ? avatarMap[n.from_user_id] : null;
+      const actorName = n.from_display_name || '';
+      const rawMsg = n.message || '';
+      let msgHtml;
+      if (actorName && rawMsg.startsWith(actorName)) {
+        msgHtml = `<span style="font-weight:700;color:var(--tx)">${xe(actorName)}</span><span style="color:var(--mu2)"> ${xe(rawMsg.slice(actorName.length).trimStart())}</span>`;
+      } else if (actorName) {
+        msgHtml = `<span style="font-weight:700;color:var(--tx)">${xe(actorName)}</span> <span style="color:var(--mu2)">${xe(rawMsg)}</span>`;
+      } else {
+        msgHtml = `<span style="color:var(--mu2)">${xe(rawMsg)}</span>`;
+      }
+      const avatarEl = av
+        ? `<img src="${xe(av)}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+        : `<div style="width:48px;height:48px;border-radius:50%;background:${c}1a;border:1px solid ${c}40;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">${ico}</div>`;
+      const ts = new Date(n.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      return `<div style="display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);border-left:3px solid ${n.read?'transparent':c};padding-left:${n.read?'0':'10px'};background:${n.read?'transparent':c+'0d'}">
+        <div style="position:relative;flex-shrink:0">${avatarEl}<div style="position:absolute;bottom:0;right:-2px;width:20px;height:20px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:.62rem;border:2px solid var(--bg)">${ico}</div></div>
+        <div style="flex:1;min-width:0"><div style="font-size:.8rem;line-height:1.42">${msgHtml}</div><div style="font-size:.64rem;color:${n.read?'var(--mu)':c};margin-top:3px;font-weight:${n.read?'400':'600'}">${ts}</div></div>
+        ${!n.read?`<div style="width:9px;height:9px;border-radius:50%;background:${c};flex-shrink:0;box-shadow:0 0 6px ${c}"></div>`:''}
+      </div>`;
+    }).join('');
+
     fetch('/api/notifications/mark-all-read', { method:'POST', headers:{'Authorization':'Bearer '+session.access_token} }).catch(()=>{});
     const dot = document.getElementById('sn-dot');
     if (dot) dot.style.display = 'none';

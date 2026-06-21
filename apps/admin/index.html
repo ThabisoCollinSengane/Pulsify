@@ -213,12 +213,13 @@ tr:hover td{background:rgba(255,255,255,.02)}
             <th>Role</th>
             <th class="hide-mobile">Subscription</th>
             <th>Status</th>
+            <th class="hide-mobile">Paystack</th>
             <th class="hide-mobile">Joined</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody id="users-tbody">
-          <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>
+          <tr><td colspan="8" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>
         </tbody>
       </table>
     </div>
@@ -1586,7 +1587,7 @@ function renderUsersTable() {
   );
 
   if (!items.length) {
-    document.getElementById('users-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--mu)">No users match this filter.</td></tr>';
+    document.getElementById('users-tbody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--mu)">No users match this filter.</td></tr>';
     return;
   }
 
@@ -1614,6 +1615,13 @@ function renderUsersTable() {
       ? '<span class="status-badge suspended-badge">🚫 Suspended</span>'
       : '<span class="status-badge s-ok">✅ Active</span>';
 
+    const isPayBiz = u.role === 'organizer' || u.role === 'organiser' || u.role === 'business';
+    const paystackBadge = !isPayBiz
+      ? '<span style="color:var(--mu);font-size:.72rem">—</span>'
+      : u.paystack_subaccount_code
+        ? `<span class="status-badge s-ok" title="${esc(u.paystack_subaccount_code)}">✅ Linked</span>`
+        : '<span class="status-badge s-warn" style="background:rgba(255,92,0,.1);border-color:rgba(255,92,0,.3);color:#FF5C00">⚠️ Not set up</span>';
+
     const joined = new Date(u.created_at).toLocaleDateString();
 
     return `<tr>
@@ -1622,6 +1630,7 @@ function renderUsersTable() {
       <td>${roleBadge}</td>
       <td class="hide-mobile">${subBadge}</td>
       <td>${statusBadge}</td>
+      <td class="hide-mobile">${paystackBadge}</td>
       <td class="hide-mobile" style="font-size:.72rem;color:var(--mu)">${joined}</td>
       <td>
         <div class="user-actions">

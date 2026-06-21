@@ -313,7 +313,7 @@ module.exports = async (req, res) => {
 
       const { data, error } = await sb()
         .from('profiles')
-        .select('id,email,role,display_name,subscription_type,trial_expires_at,suspended,created_at')
+        .select('id,email,role,display_name,subscription_type,trial_expires_at,suspended,created_at,paystack_subaccount_code')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
