@@ -1639,6 +1639,8 @@ async function loadDiscoverEvents() {
       .limit(40);
     if (error) throw error;
     const events = data || [];
+    // Cache events for the inline preview sheet
+    events.forEach(ev => { _discoverEvCache[ev.id] = ev; });
     if (!events.length) {
       el.innerHTML = '<div style="padding:30px 0;text-align:center;color:var(--mu);font-size:.82rem">No upcoming events yet 🎟</div>';
       return;
@@ -1655,11 +1657,12 @@ function renderDiscoverCard(ev) {
   const d = ev.date_local ? new Date(ev.date_local) : null;
   const date = d ? d.toLocaleDateString('en-ZA', { day:'numeric', month:'short' }) : '';
   const time = ev.time_local ? ev.time_local.slice(0,5) : '';
-  const url = '/?eid=' + encodeURIComponent(ev.id);
   const img = ev.image_url
     ? `<img src="${xe(ev.image_url)}" loading="lazy" style="width:100%;height:120px;object-fit:cover;border-radius:12px;margin-bottom:8px" onerror="this.style.display='none'"/>`
     : `<div style="width:100%;height:120px;background:linear-gradient(135deg,rgba(176,38,255,.18),rgba(255,92,0,.14));border-radius:12px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:2.4rem">🎟</div>`;
-  return `<a href="${url}" target="_blank" rel="noopener" style="display:block;background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:10px;text-decoration:none;color:inherit">
+  // Encode ev data for the inline preview (avoids navigating away)
+  const safeId = xe(ev.id);
+  return `<div onclick="openDiscoverPreview('${safeId}')" style="display:block;background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:10px;cursor:pointer">
     ${img}
     <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.92rem;margin-bottom:4px;color:var(--tx)">${xe(ev.name)}</div>
     <div style="font-size:.72rem;color:var(--mu2);margin-bottom:3px">📍 ${xe(ev.venue_city || '')}${ev.venue_name ? ' · ' + xe(ev.venue_name) : ''}</div>
@@ -1667,7 +1670,43 @@ function renderDiscoverCard(ev) {
       <div style="font-size:.7rem;color:var(--mu)">📅 ${xe(date)}${time ? ' · ' + xe(time) : ''}${ev.genre ? ' · ' + xe(ev.genre) : ''}</div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:${ev.is_free ? 'var(--li)' : 'var(--or)'}">${price}</div>
     </div>
-  </a>`;
+  </div>`;
+}
+
+let _discoverEvCache = {};
+function openDiscoverPreview(evId) {
+  const ev = _discoverEvCache[evId]; if (!ev) return;
+  const xe = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const price = ev.is_free ? 'FREE' : (ev.price_min ? 'R' + ev.price_min : 'TBA');
+  const d = ev.date_local ? new Date(ev.date_local).toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '';
+  const time = ev.time_local ? ev.time_local.slice(0,5) : '';
+
+  // Reuse the sn-overlay as a quick preview (or create a lightweight sheet)
+  let sh = document.getElementById('disc-preview-sheet');
+  if (!sh) {
+    sh = document.createElement('div');
+    sh.id = 'disc-preview-sheet';
+    sh.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(10px);z-index:3000;display:flex;align-items:flex-end;justify-content:center';
+    sh.onclick = e => { if (e.target === sh) sh.remove(); };
+    document.body.appendChild(sh);
+  }
+  sh.innerHTML = `<div style="background:var(--bg2);border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;padding:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem">Event Preview</div>
+      <div style="display:flex;gap:8px">
+        <a href="/?eid=${encodeURIComponent(ev.id)}" target="_blank" style="background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.3);color:var(--or);padding:5px 12px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;text-decoration:none">Open on site ↗</a>
+        <button onclick="document.getElementById('disc-preview-sheet').remove()" style="background:var(--surf);border:1px solid var(--border);border-radius:50%;width:30px;height:30px;color:var(--mu2);font-size:1rem;cursor:pointer">✕</button>
+      </div>
+    </div>
+    ${ev.image_url ? `<img src="${xe(ev.image_url)}" style="width:100%;height:180px;object-fit:cover;border-radius:14px;margin-bottom:14px">` : ''}
+    <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;margin-bottom:8px;color:var(--tx)">${xe(ev.name)}</div>
+    ${d ? `<div style="font-size:.8rem;color:var(--mu2);margin-bottom:4px">📅 ${xe(d)}${time?' · '+xe(time):''}</div>` : ''}
+    ${ev.venue_name||ev.venue_city ? `<div style="font-size:.8rem;color:var(--mu2);margin-bottom:4px">📍 ${xe([ev.venue_name,ev.venue_city].filter(Boolean).join(', '))}</div>` : ''}
+    ${ev.genre ? `<div style="font-size:.8rem;color:var(--mu2);margin-bottom:10px">🎵 ${xe(ev.genre)}</div>` : ''}
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:${ev.is_free?'var(--li)':'var(--or)'};margin-bottom:12px">${price}</div>
+    ${ev.description ? `<div style="font-size:.82rem;color:var(--mu2);line-height:1.6;white-space:pre-wrap;word-break:break-word">${xe(ev.description)}</div>` : ''}
+  </div>`;
+  sh.style.display = 'flex';
 }
 
 async function doLogout() {
@@ -2379,13 +2418,47 @@ async function openSNPanel() {
     const r = await fetch('/api/notifications?limit=30', { headers: { 'Authorization': 'Bearer ' + session.access_token } });
     const { notifications } = await safeJson(r);
     if (!notifications?.length) { list.innerHTML = '<div style="padding:30px;text-align:center"><div style="font-size:2rem;margin-bottom:8px">✓</div><div style="font-size:.78rem;color:var(--mu)">You\'re all caught up!</div></div>'; return; }
-    // Match the landing-page notification styling: colored icon badge + actor/message + timestamp
+
     const ICON = {follow:'👤',like:'❤️',comment:'💬',reply:'↩️',repost:'🔁',ticket:'🎟',event:'🎟',business_post:'📢',event_approved:'✅',event_rejected:'🚫',verification:'🏆',account:'⚙️',order:'📦',payment:'💳',squad_invite:'👥',squad_plan:'📅',system:'🔔',broadcast:'📣'};
     const CLR  = {follow:'#B026FF',like:'#FF2D78',comment:'#00E5FF',reply:'#00E5FF',repost:'#C6FF4A',ticket:'#FF5C00',event:'#FF5C00',event_approved:'#C6FF4A',event_rejected:'#FF2D78',verification:'#FF5C00',order:'#00D4AA',payment:'#FF5C00',squad_invite:'#B026FF',squad_plan:'#B026FF',broadcast:'#FF5C00'};
+
+    // Batch-fetch actor avatars
+    const uids = [...new Set(notifications.map(n => n.from_user_id).filter(Boolean))];
+    const avatarMap = {};
+    if (uids.length) {
+      const { data: profs } = await sb.from('profiles').select('id,avatar_url').in('id', uids);
+      (profs||[]).forEach(p => { avatarMap[p.id] = p.avatar_url; });
+    }
+
     list.innerHTML = notifications.map(n => {
       const c = CLR[n.type] || '#B026FF';
-      return `<div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border)"><div style="width:48px;height:48px;border-radius:50%;background:${c}1a;border:1px solid ${c}40;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">${ICON[n.type]||'🔔'}</div><div style="flex:1;min-width:0"><div style="font-size:.82rem;line-height:1.45;color:var(--tx)">${xe(n.message||'')}</div><div style="font-size:.68rem;color:var(--mu);margin-top:3px">${new Date(n.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div></div></div>`;
+      const ico = ICON[n.type] || '🔔';
+      const av = n.from_user_id ? avatarMap[n.from_user_id] : null;
+      const actorName = n.from_display_name || '';
+      const rawMsg = n.message || '';
+
+      // Bold the actor name at the front of the message
+      let msgHtml;
+      if (actorName && rawMsg.startsWith(actorName)) {
+        msgHtml = `<span style="font-weight:700;color:var(--tx)">${xe(actorName)}</span><span style="color:var(--mu2)"> ${xe(rawMsg.slice(actorName.length).trimStart())}</span>`;
+      } else if (actorName) {
+        msgHtml = `<span style="font-weight:700;color:var(--tx)">${xe(actorName)}</span> <span style="color:var(--mu2)">${xe(rawMsg)}</span>`;
+      } else {
+        msgHtml = `<span style="color:var(--mu2)">${xe(rawMsg)}</span>`;
+      }
+
+      const avatarEl = av
+        ? `<img src="${xe(av)}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+        : `<div style="width:48px;height:48px;border-radius:50%;background:${c}1a;border:1px solid ${c}40;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">${ico}</div>`;
+
+      const ts = new Date(n.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      return `<div style="display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);border-left:3px solid ${n.read?'transparent':c};padding-left:${n.read?'0':'10px'};background:${n.read?'transparent':c+'0d'}">
+        <div style="position:relative;flex-shrink:0">${avatarEl}<div style="position:absolute;bottom:0;right:-2px;width:20px;height:20px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:.62rem;border:2px solid var(--bg)">${ico}</div></div>
+        <div style="flex:1;min-width:0"><div style="font-size:.8rem;line-height:1.42">${msgHtml}</div><div style="font-size:.64rem;color:${n.read?'var(--mu)':c};margin-top:3px;font-weight:${n.read?'400':'600'}">${ts}</div></div>
+        ${!n.read?`<div style="width:9px;height:9px;border-radius:50%;background:${c};flex-shrink:0;box-shadow:0 0 6px ${c}"></div>`:''}
+      </div>`;
     }).join('');
+
     fetch('/api/notifications/mark-all-read', { method:'POST', headers:{'Authorization':'Bearer '+session.access_token} }).catch(()=>{});
     const dot = document.getElementById('sn-dot');
     if (dot) dot.style.display = 'none';
