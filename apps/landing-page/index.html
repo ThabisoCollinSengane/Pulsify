@@ -2,6 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
+<script>
+// Password-recovery guard — runs BEFORE the Supabase SDK loads so the client
+// can't consume the recovery token and sign the user in on the landing page.
+// Supabase appends "type=recovery" to the hash (or query) of the redirect URL.
+(function() {
+  try {
+    var h = window.location.hash || '', s = window.location.search || '';
+    if (location.pathname === '/reset-password') return;
+    if (h.indexOf('type=recovery') !== -1 || s.indexOf('type=recovery') !== -1) {
+      window.location.replace('/reset-password' + s + h);
+    }
+  } catch(e) {}
+})();
+</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="theme-color" content="#05080F"/>
 <meta name="description" content="Pulsefy — South Africa's live event discovery platform. Find concerts, festivals, shisanyamas, hotels, restaurants and nightlife near you. Book tickets, follow organisers, plan outings with your squad."/>
@@ -3213,6 +3227,7 @@ async function showPickupOrderForm() {
       <div style="font-size:.72rem;color:var(--mu2);margin-bottom:14px">${x(bizName)} · ${x(summary)}</div>
       <input id="po-name"  placeholder="Your name *" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;color:var(--tx);font-size:.84rem;margin-bottom:8px;box-sizing:border-box;outline:none"/>
       <input id="po-phone" placeholder="Phone number *" type="tel" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;color:var(--tx);font-size:.84rem;margin-bottom:8px;box-sizing:border-box;outline:none"/>
+      <input id="po-email" placeholder="Email (for your confirmation)" type="email" autocomplete="email" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;color:var(--tx);font-size:.84rem;margin-bottom:8px;box-sizing:border-box;outline:none"/>
       <input id="po-time"  placeholder="Preferred pickup time (e.g. 1:30pm)" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;color:var(--tx);font-size:.84rem;margin-bottom:8px;box-sizing:border-box;outline:none"/>
       <textarea id="po-notes" placeholder="Special instructions (optional)" rows="2" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;color:var(--tx);font-size:.84rem;margin-bottom:14px;box-sizing:border-box;outline:none;resize:none;font-family:inherit"></textarea>
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(176,38,255,.08);border:1px solid rgba(176,38,255,.2);border-radius:10px;margin-bottom:14px">
@@ -3227,6 +3242,7 @@ async function showPickupOrderForm() {
 async function submitPickupOrder(bizId) {
   const name  = document.getElementById('po-name')?.value?.trim();
   const phone = document.getElementById('po-phone')?.value?.trim();
+  const email = document.getElementById('po-email')?.value?.trim();
   const time  = document.getElementById('po-time')?.value?.trim();
   const notes = document.getElementById('po-notes')?.value?.trim();
   if (!name || !phone) { showToast('Name and phone are required', 'err'); return; }
@@ -3235,7 +3251,7 @@ async function submitPickupOrder(bizId) {
   let j;
   try {
     j = await Api.post('/pickup-orders', {
-      business_id: bizId || Object.values(_bizCart)[0]?.bizId, customer_name: name, customer_phone: phone, items, notes, pickup_time: time, total,
+      business_id: bizId || Object.values(_bizCart)[0]?.bizId, customer_name: name, customer_phone: phone, customer_email: email || null, items, notes, pickup_time: time, total,
     }, { auth: 'optional' });
   } catch (e) { showToast(e.message || 'Order failed', 'err'); return; }
   document.getElementById('pickup-form-overlay')?.remove();
@@ -7700,15 +7716,6 @@ function obClose() {
   setTimeout(() => { const ov = document.getElementById('ob-ov'); if (ov) ov.style.display = 'none'; }, 350);
   localStorage.setItem('p_onboarded', '1');
 }
-
-// Redirect Supabase recovery tokens to the reset-password page.
-// Happens when a preview-URL link or old link lands on / instead of /reset-password.
-(function() {
-  var h = window.location.hash, s = window.location.search;
-  if (h.indexOf('type=recovery') !== -1 || (s.indexOf('type=recovery') !== -1)) {
-    window.location.replace('/reset-password' + s + h);
-  }
-})();
 
 </script>
 <!-- Map card overlay — must be body-level so position:fixed has root stacking context (not inside tab-map's z-index:20 context) -->

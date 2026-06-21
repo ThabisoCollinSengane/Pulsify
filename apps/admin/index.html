@@ -162,6 +162,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="tab-btn" onclick="switchTab('verifications',this)">🏆 Verify</div>
     <div class="tab-btn" onclick="switchTab('banners',this)">🖼 Banners</div>
     <div class="tab-btn" onclick="switchTab('notifications',this)">🔔 Notify</div>
+    <div class="tab-btn" onclick="switchTab('email',this)">📨 Email</div>
     <div class="tab-btn" onclick="switchTab('reports',this)">🚩 Reports</div>
     <div class="tab-btn" onclick="switchTab('promotions',this)">🚀 Promos</div>
     <div class="tab-btn" onclick="switchTab('squad-promos',this)">🎁 Deals</div>
@@ -780,6 +781,65 @@ tr:hover td{background:rgba(255,255,255,.02)}
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <!-- TAB: EMAIL MARKETING -->
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
+  <div id="tab-email" class="tab-content">
+    <div style="margin-bottom:20px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.03em;margin-bottom:4px">Email Marketing</div>
+      <div style="font-size:.82rem;color:var(--mu2)">Email opted-in subscribers about promotions and trending events. Every send includes a one-click unsubscribe (POPIA).</div>
+    </div>
+
+    <!-- Audience -->
+    <div style="display:flex;align-items:center;gap:14px;background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:16px 20px;margin-bottom:18px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2.2rem;color:var(--li);line-height:1" id="mkt-audience">—</div>
+      <div style="flex:1">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.84rem">opted-in subscribers</div>
+        <div style="font-size:.72rem;color:var(--mu2)" id="mkt-audience-sub">with an email address, matching the selected audience</div>
+      </div>
+    </div>
+
+    <!-- Compose -->
+    <div style="background:var(--surf);border:1px solid var(--border2);border-radius:16px;padding:20px;margin-bottom:24px">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:14px">Compose</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Audience</div>
+          <select class="inp" id="mkt-city" style="width:100%" onchange="loadMarketingAudience()">
+            <option value="all">All cities</option>
+            <option value="Durban">Durban</option>
+            <option value="Johannesburg">Johannesburg</option>
+            <option value="Cape Town">Cape Town</option>
+            <option value="Pretoria">Pretoria</option>
+            <option value="Gqeberha">Gqeberha</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Subject *</div>
+          <input class="inp" id="mkt-subject" placeholder="e.g. 🔥 This weekend in Durban" style="width:100%"/>
+        </div>
+        <div style="grid-column:1/-1">
+          <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Headline (optional)</div>
+          <input class="inp" id="mkt-headline" placeholder="Big bold line at the top of the email" style="width:100%"/>
+        </div>
+        <div style="grid-column:1/-1">
+          <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Message * <span style="color:var(--mu2);font-weight:400">(“Hi {firstName},” is added automatically)</span></div>
+          <textarea class="inp" id="mkt-message" placeholder="What's happening — promotions, trending events, a special weekend…" rows="5" style="width:100%;resize:none"></textarea>
+        </div>
+        <div>
+          <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Button label (optional)</div>
+          <input class="inp" id="mkt-cta-label" placeholder="e.g. See what's on →" style="width:100%"/>
+        </div>
+        <div>
+          <div style="font-size:.72rem;color:var(--mu);margin-bottom:4px">Button link (optional)</div>
+          <input class="inp" id="mkt-cta-url" placeholder="https://pulsefy.co.za/?genre=amapiano" style="width:100%"/>
+        </div>
+      </div>
+      <div id="msg-email" class="msg"></div>
+      <button class="btn btn-primary" id="mkt-send-btn" onclick="sendMarketingBlast()" style="margin-top:8px">📨 Send to <span id="mkt-send-count">0</span> subscribers</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
   <!-- TAB: REPORTS -->
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
   <div id="tab-reports" class="tab-content">
@@ -1067,6 +1127,7 @@ function switchTab(tab, btn) {
   else if (tab === 'verifications') loadVerifications();
   else if (tab === 'banners') loadBanners();
   else if (tab === 'notifications') { loadNotifHistory(); loadActivityLog(); }
+  else if (tab === 'email') loadMarketingAudience();
   else if (tab === 'reports') loadReports();
   else if (tab === 'promotions') loadAdminPromos();
   else if (tab === 'squad-promos') loadAdminSquadPromos();
@@ -2379,6 +2440,67 @@ async function sendAdminNotification() {
     showNotifMsg('Network error: ' + e.message, 'err');
   } finally {
     btn.disabled = false; btn.textContent = '🔔 Send Notification';
+  }
+}
+
+// ── Email marketing ───────────────────────────────────────────────────────────
+function showEmailMsg(text, kind) {
+  const m = document.getElementById('msg-email');
+  if (!m) return;
+  m.textContent = text; m.className = 'msg show msg-' + (kind === 'ok' ? 'ok' : 'err');
+  setTimeout(() => m.classList.remove('show'), 5000);
+}
+
+async function loadMarketingAudience() {
+  const city = document.getElementById('mkt-city')?.value || 'all';
+  const elN = document.getElementById('mkt-audience');
+  const elC = document.getElementById('mkt-send-count');
+  if (elN) elN.textContent = '…';
+  try {
+    const r = await fetch('/api/admin/marketing-audience?city=' + encodeURIComponent(city), {
+      headers: { Authorization: 'Bearer ' + adminToken },
+    });
+    const d = await safeJson(r);
+    const n = r.ok ? (d.audience || 0) : 0;
+    if (elN) elN.textContent = n;
+    if (elC) elC.textContent = n;
+  } catch(e) { if (elN) elN.textContent = '0'; }
+}
+
+async function sendMarketingBlast() {
+  const city     = document.getElementById('mkt-city').value;
+  const subject  = document.getElementById('mkt-subject').value.trim();
+  const headline = document.getElementById('mkt-headline').value.trim();
+  const message  = document.getElementById('mkt-message').value.trim();
+  const ctaLabel = document.getElementById('mkt-cta-label').value.trim();
+  const ctaUrl   = document.getElementById('mkt-cta-url').value.trim();
+  if (!subject || !message) return showEmailMsg('Subject and message are required.', 'err');
+
+  const count = document.getElementById('mkt-send-count').textContent;
+  const who = city === 'all' ? 'all opted-in subscribers' : `opted-in subscribers in ${city}`;
+  if (!confirm(`Send "${subject}" to ${count} ${who}? This sends real emails.`)) return;
+
+  const btn = document.getElementById('mkt-send-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const r = await fetch('/api/admin/marketing-blast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ subject, headline, message, cta_label: ctaLabel, cta_url: ctaUrl, city }),
+    });
+    const d = await safeJson(r);
+    if (!r.ok) return showEmailMsg(d.error || 'Failed to send', 'err');
+    showEmailMsg(`✅ Sent ${d.sent} · skipped ${d.skipped}.${d.warning ? ' ' + d.warning : ''}`, 'ok');
+    document.getElementById('mkt-subject').value = '';
+    document.getElementById('mkt-headline').value = '';
+    document.getElementById('mkt-message').value = '';
+    document.getElementById('mkt-cta-label').value = '';
+    document.getElementById('mkt-cta-url').value = '';
+  } catch(e) {
+    showEmailMsg('Network error: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '📨 Send to <span id="mkt-send-count">' + count + '</span> subscribers';
   }
 }
 

@@ -1,6 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
-const { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail, sendTicketEmail } = require('./email');
+const { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail, sendTicketEmail, sendOrderEmail, unsubToken } = require('./email');
 const { rateLimited, captureError, corsHeaders, signQr, verifyQr, validate, flagEnabled } = require('./shared');
 
 const SUPA_URL  = process.env.SUPABASE_URL  || 'https://cjzewfvtdayjgjdpdmln.supabase.co';
@@ -154,6 +154,19 @@ module.exports = async (req, res) => {
   const today  = new Date().toISOString().split('T')[0];
 
   try {
+
+    /* ─── GET /unsubscribe ── one-click email opt-out (public) ─────── */
+    if (url === '/unsubscribe' && req.method === 'GET') {
+      const email = (q.e || '').toLowerCase();
+      const token = q.t || '';
+      const page = (title, msg) => `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${title} — Pulsefy</title><style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#05080F;color:#F0EEF8;font-family:system-ui,sans-serif;padding:24px}.c{max-width:420px;text-align:center;background:#0D1424;border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:32px 24px}h1{font-size:1.3rem;margin:0 0 10px}p{color:#9997B0;line-height:1.6;font-size:.9rem}a{color:#FF5C00;text-decoration:none;font-weight:700}</style></head><body><div class="c"><div style="font-size:2.4rem;margin-bottom:8px">📭</div><h1>${title}</h1><p>${msg}</p><p style="margin-top:18px"><a href="https://pulsefy.co.za">← Back to Pulsefy</a></p></div></body></html>`;
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      if (!email || !token || token !== unsubToken(email)) {
+        return res.status(400).send(page('Invalid link', 'This unsubscribe link is invalid or has expired. You can manage email preferences in the app under Profile → Settings.'));
+      }
+      await sb().from('profiles').update({ marketing_opt_in: false }).ilike('email', email);
+      return res.status(200).send(page('You\'re unsubscribed', 'You won\'t receive any more promotional emails from Pulsefy. You\'ll still get essential emails like ticket and order confirmations.'));
+    }
 
     /* ─── GET /events ─────────────────────────────────────── */
     if (url === '/events' && req.method === 'GET') {
@@ -2994,17 +3007,17 @@ module.exports = async (req, res) => {
 
     /* ─── POST /pickup-orders ────────────────────────────── */
     if (url === '/pickup-orders' && req.method === 'POST') {
-      const { business_id, customer_name, customer_phone, items, notes, pickup_time, total } = req.body || {};
+      const { business_id, customer_name, customer_phone, customer_email, items, notes, pickup_time, total } = req.body || {};
       if (!business_id || !customer_name || !customer_phone || !items?.length)
         return res.status(400).json({ error: 'business_id, customer_name, customer_phone, items required' });
       const order_ref = `ORD-${Date.now()}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
       // capture user_id if the caller is authenticated
-      let placing_user_id = null;
+      let placing_user_id = null, placing_user_email = null;
       const placingToken = tokenFrom(req);
       if (placingToken) {
         try {
           const { data: { user } } = await createClient(SUPA_URL, SUPA_ANON).auth.getUser(placingToken);
-          if (user) placing_user_id = user.id;
+          if (user) { placing_user_id = user.id; placing_user_email = user.email; }
         } catch(_) {}
       }
       const { data: order, error: oErr } = await sb().from('pickup_orders').insert({
@@ -3022,6 +3035,13 @@ module.exports = async (req, res) => {
           entity_id: order.id, entity_type: 'pickup_order',
           message: `${customer_name} placed a pickup order — R${(+total || 0).toFixed(2)} · Ref: ${order_ref}`,
         }).catch(() => {});
+      }
+      // Customer confirmation — emailed address takes priority, else the
+      // signed-in user's account email. Fire-and-forget; never blocks the order.
+      const orderEmailTo = customer_email || placing_user_email;
+      if (orderEmailTo) {
+        sendOrderEmail(orderEmailTo, customer_name, biz?.name || '', order_ref, items, +total || 0, pickup_time)
+          .catch(() => {});
       }
       return res.status(200).json({ success: true, order_ref, order_id: order.id });
     }
