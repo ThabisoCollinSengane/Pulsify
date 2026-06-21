@@ -118,20 +118,60 @@ Subscriptions stored in `push_subscriptions` table.
 ## 7. Payments (Paystack)
 
 - **Current status:** Gated behind `paystack_live` feature flag (`feature_flags` table, `key='paystack_live'`). Flag is `false` — payments blocked until live keys are set.
+- Paystack account status: **Awaiting Review** — test keys available, live keys blocked until approval.
 - Free tickets: auto-confirm via `/ticket/purchase`
 - Paid tickets: client → `/ticket/init` (creates pending booking) → Paystack → `/ticket/confirm` + `/api/paystack/webhook`
-- Both `/ticket/confirm` and webhook re-verify with Paystack API and assert `currency==='ZAR'` and `amount >= total_paid*100`
+- `/ticket/confirm` uses `verifyPaystackTx(ref, expectedZAR)` — retries Paystack API up to 3× with backoff before giving up. Prevents real payments being rejected due to transient Paystack timeouts.
+- Both `/ticket/confirm` and webhook assert `currency==='ZAR'` and `amount >= total_paid*100`
 - Organiser Paystack subaccount code stored in `profiles.paystack_subaccount_code`
 
 ---
 
-## 8. Open PRs
+## 8. MCP Tools (Active in `.mcp.json`)
 
-| PR | Title | Status |
-|----|-------|--------|
-| #100 | feat: notify organiser on event approve/reject | Draft — CI running, merge to main when green |
-| #16 | Experimental homepage redesign | Preview only — merge when user wants |
-| #13 | News desk | Preview only — merge when user wants |
+`.mcp.json` at repo root configures all MCP servers. They load fresh on each new session.
+
+| MCP | Purpose | Auth |
+|-----|---------|------|
+| **Vercel** | List deployments, get logs, env vars, preview URLs | HTTP OAuth — run `/mcp` on session start to authenticate |
+| **Supabase** | Run SQL, list tables, apply migrations, get logs | Auto (project linked) |
+| **GitHub** | PRs, commits, issues, push files | Auto |
+| **Browserbase** | Cloud browser — navigate, screenshot, click, test UI flows | API key inlined in `.mcp.json` (rotate after adding as env var) |
+| **Context7** | Pulls live library docs (Supabase, Mapbox, Paystack, etc.) — prevents hallucinated API calls | None needed |
+| **Sequential Thinking** | Structured chain-of-thought for complex multi-step tasks — plan before coding | None needed |
+| **Sentry** | Error monitoring — needs `SENTRY_AUTH_TOKEN` env var once DSN is set | `SENTRY_AUTH_TOKEN` env var |
+
+### How to use Browserbase
+Browserbase is a **cloud browser** — it works in remote Claude Code sessions (unlike Playwright which needs a local machine).
+
+Use it to:
+- Screenshot the preview URL after every deploy to verify UI changes
+- Click through flows (sign up, buy ticket, submit event) to catch regressions
+- Test mobile viewport by resizing the session
+
+**Key tool sequence:**
+1. `mcp__browserbase__browserbase_session_create` — start session
+2. `mcp__browserbase__browserbase_stagehand_navigate` — go to URL
+3. `mcp__browserbase__browserbase_screenshot` — capture
+4. `mcp__browserbase__browserbase_stagehand_act` — click/type
+5. `mcp__browserbase__browserbase_session_close` — clean up
+
+**Credentials in `.mcp.json`:**
+- `BROWSERBASE_API_KEY`: `bb_live_r_GGfR4qZpsFIxsYIObYUdAVGC4` (rotate this — currently inlined)
+- `BROWSERBASE_PROJECT_ID`: `acfdfb7a-e155-4b4d-8566-636852ed00f5`
+
+**Note:** Browserbase is a stdio MCP (uses `npx`). If the session says "tool not found", the npx server failed to start silently — fall back to `mcp__Vercel__web_fetch_vercel_url` to inspect the preview URL.
+
+**Latest preview URL:** check Vercel MCP `list_deployments` for the freshest READY deployment on the feature branch.
+
+### How to use Sequential Thinking
+Before any change that touches more than 2 files or has non-obvious side effects, use the `mcp__sequential-thinking` tool to plan first. It forces step-by-step reasoning and surfaces edge cases before code is written. Especially useful for:
+- Feed break ordering / woven content changes
+- Payment flow modifications
+- Overlay z-index / stacking changes (see CLAUDE.md §7 for known gotchas)
+
+### How to use Context7
+When editing code that calls a third-party API (Supabase JS client, Mapbox GL, Paystack), use Context7 to pull current docs before writing the call. Prevents using deprecated methods or wrong parameter shapes.
 
 ---
 
@@ -142,10 +182,12 @@ Subscriptions stored in `push_subscriptions` table.
 |-----|-------|
 | `VAPID_PUBLIC_KEY` | `BHBoop2acb0dbGJVWIIcZVGfHxmCPiNr-CVHAx7teFEf9wDHlLFMEmnsFYXEqW8siwDK7psVgORmVMXHgKWK-Bg` |
 | `VAPID_PRIVATE_KEY` | `uuBneOoDBH-l8SkOwKg--ESxewdUcYS-dWaP-hhHqiw` |
-| `PAYSTACK_SECRET_KEY` | Live key from Paystack dashboard → Settings → API Keys |
-| `PAYSTACK_PUBLIC_KEY` | Live key from Paystack dashboard |
+| `PAYSTACK_SECRET_KEY` | **Test key for now** — Paystack dashboard → Settings → API Keys (account "Awaiting Review") |
+| `PAYSTACK_PUBLIC_KEY` | Test key from Paystack dashboard |
 | `SUPABASE_SERVICE_KEY` | Confirm set — Supabase → Project Settings → API → service_role |
 | `MAPBOX_TOKEN` | Confirm set — Mapbox → Account → Access Tokens |
+| `BROWSERBASE_API_KEY` | `bb_live_r_GGfR4qZpsFIxsYIObYUdAVGC4` — add here, then remove from `.mcp.json` |
+| `BROWSERBASE_PROJECT_ID` | `acfdfb7a-e155-4b4d-8566-636852ed00f5` |
 
 ### GitHub Secrets (GitHub → Repo → Settings → Secrets → Actions)
 | Secret | Value |
@@ -162,10 +204,20 @@ Subscriptions stored in `push_subscriptions` table.
 
 ### Paystack
 - Point webhook URL at: `https://pulsefy.co.za/api/paystack/webhook`
+- Add test keys to Vercel now; swap for live keys once account is approved
 
 ---
 
-## 10. Deferred (Post-Launch)
+## 10. Open PRs
+
+| PR | Title | Status |
+|----|-------|--------|
+| #16 | Experimental homepage redesign | Preview only — merge when user wants |
+| #13 | News desk | Preview only — merge when user wants |
+
+---
+
+## 11. Deferred (Post-Launch)
 
 - **Frontend modularization** — `apps/landing-page/index.html` is ~7,200 lines. Works fine, defer until post-launch.
 - **Frontend API service layer** — wrap all `/api/*` calls in a single `Api` module instead of scattered direct calls.
@@ -173,14 +225,7 @@ Subscriptions stored in `push_subscriptions` table.
 - **Queue/background jobs** — emails and ticket confirmations should move off the request path.
 - **Sentry DSN** — create Sentry project, set `PULSIFY_SENTRY_DSN` (frontend) + `SENTRY_DSN` (Vercel).
 - **Daily backups** — workflow is created, just needs GitHub secrets + Supabase `backups` bucket (see Section 9).
-
----
-
-## 11. Vercel MCP (New)
-
-`.mcp.json` added to repo root — connects Claude Code to Vercel via MCP.
-On session start, run `/mcp` → select `vercel` → authenticate via browser OAuth (no token needed in config).
-Gives Claude direct access to deployments, env vars, logs, domains without leaving the session.
+- **Rotate Browserbase key** — currently inlined in `.mcp.json`. Move to Vercel env var + update `.mcp.json` to use `${BROWSERBASE_API_KEY}`.
 
 ---
 

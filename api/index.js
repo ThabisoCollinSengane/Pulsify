@@ -84,6 +84,28 @@ async function paystackGet(path) {
   });
 }
 
+// Shared payment verifier — retries up to 3× on transient failures.
+// Returns { ok, pd, reason } so both /ticket/confirm and /payments/webhook
+// use identical verification logic and can never drift out of sync.
+async function verifyPaystackTx(ref, expectedZAR) {
+  let pd = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const vr = await paystackGet(`/transaction/verify/${encodeURIComponent(ref)}`);
+      pd = vr?.data || null;
+      if (pd) break;
+    } catch (e) {
+      console.error(`[paystack/verify] attempt ${attempt} failed:`, e.message);
+      if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1000));
+    }
+  }
+  if (!pd || pd.status !== 'success') return { ok: false, pd, reason: 'Payment not verified by Paystack' };
+  const expectedKobo = Math.round(expectedZAR * 100);
+  if (pd.currency !== 'ZAR') return { ok: false, pd, reason: `Wrong currency: ${pd.currency}` };
+  if ((pd.amount || 0) < expectedKobo) return { ok: false, pd, reason: `Amount mismatch: got ${pd.amount} kobo, expected ${expectedKobo}` };
+  return { ok: true, pd, reason: null };
+}
+
 async function createPaystackSubaccount(businessName, bankName, accountNumber, email) {
   if (!PAYSTACK_SECRET || PAYSTACK_SECRET === '') return null;
   const bankCode = SA_BANK_CODES[bankName] || '';
@@ -715,19 +737,10 @@ module.exports = async (req, res) => {
 
       // Re-verify with Paystack (source of truth). No secret → payments off.
       if (!PAYSTACK_SECRET) return res.status(503).json({ error: 'Payments not enabled' });
-      let pd = null;
-      try {
-        const vr = await paystackGet(`/transaction/verify/${encodeURIComponent(ref)}`);
-        pd = vr?.data || null;
-      } catch(e) { console.error('[paystack/verify]', e.message); }
-      if (!pd || pd.status !== 'success') return res.status(400).json({ error: 'Payment not verified' });
-
-      // Amount + currency must match what we asked for. Guards against a
-      // tampered client paying less than the ticket price.
-      const expectedKobo = Math.round((booking.total_paid || 0) * 100);
-      if (pd.currency !== 'ZAR' || (pd.amount || 0) < expectedKobo) {
-        console.error('[paystack/verify] amount mismatch', ref, pd.amount, expectedKobo, pd.currency);
-        return res.status(400).json({ error: 'Payment amount mismatch' });
+      const { ok, pd, reason } = await verifyPaystackTx(ref, booking.total_paid || 0);
+      if (!ok) {
+        console.error('[paystack/verify]', ref, reason);
+        return res.status(400).json({ error: reason || 'Payment not verified' });
       }
 
       // Confirm the booking (idempotent guard on status).
