@@ -2,6 +2,5 @@
 .env*.local
 .env
 *.env
-.env
-.env
 .aider*
+node_modules/
