@@ -160,8 +160,9 @@ Use it to:
 - `BROWSERBASE_API_KEY`: `bb_live_r_GGfR4qZpsFIxsYIObYUdAVGC4` (rotate this — currently inlined)
 - `BROWSERBASE_PROJECT_ID`: `acfdfb7a-e155-4b4d-8566-636852ed00f5`
 
-**Latest preview URL:** `https://pulsify-7czxbsiwf-thabisosengane5-collabs-projects.vercel.app`
-(Check Vercel MCP `list_deployments` for the freshest URL at session start)
+**Note:** Browserbase is a stdio MCP (uses `npx`). If the session says "tool not found", the npx server failed to start silently — fall back to `mcp__Vercel__web_fetch_vercel_url` to inspect the preview URL.
+
+**Latest preview URL:** check Vercel MCP `list_deployments` for the freshest READY deployment on the feature branch.
 
 ### How to use Sequential Thinking
 Before any change that touches more than 2 files or has non-obvious side effects, use the `mcp__sequential-thinking` tool to plan first. It forces step-by-step reasoning and surfaces edge cases before code is written. Especially useful for:
@@ -213,8 +214,6 @@ When editing code that calls a third-party API (Supabase JS client, Mapbox GL, P
 |----|-------|--------|
 | #16 | Experimental homepage redesign | Preview only — merge when user wants |
 | #13 | News desk | Preview only — merge when user wants |
-
-**Current branch** `claude/fix-event-organizer-feeds-ZCzRM` has unpublished commits ahead of main — create and merge a PR to push everything live.
 
 ---
 
