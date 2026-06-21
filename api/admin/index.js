@@ -933,6 +933,30 @@ module.exports = async (req, res) => {
       return res.status(200).json({ success: true });
     }
 
+    /* ─── GET /admin/email-status ── is Resend (or SMTP) configured? ─ */
+    if (url === '/admin/email-status' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const hasResend = !!process.env.RESEND_API_KEY;
+      const hasSmtp   = !!(process.env.SMTP_HOST && process.env.SMTP_PASS);
+      return res.status(200).json({
+        configured: EMAIL_CONFIGURED,
+        provider: hasResend ? 'resend' : hasSmtp ? 'smtp' : 'none',
+        from: process.env.RESEND_FROM || process.env.SMTP_USER || null,
+      });
+    }
+
+    /* ─── POST /admin/test-email ── send a test to verify delivery ──── */
+    if (url === '/admin/test-email' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      if (!EMAIL_CONFIGURED) return res.status(400).json({ error: 'No email provider configured. Add RESEND_API_KEY to Vercel environment variables.' });
+      const to = req.body?.to || auth.user.email;
+      const ok = await sendLeadEmail(to, '✅ Pulsefy email test', `Hi! This is a test email from Pulsefy confirming your email delivery is working. Sent at ${new Date().toISOString()}.`);
+      if (!ok) return res.status(500).json({ error: 'Delivery failed — check Vercel function logs for details.' });
+      return res.status(200).json({ sent: true, to });
+    }
+
     return res.status(404).json({ error: 'Not found' });
   } catch (e) {
     captureError(e, { url });
