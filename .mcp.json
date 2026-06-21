@@ -19,7 +19,7 @@
       "args": ["-y", "@browserbasehq/mcp-server-browserbase"],
       "env": {
         "BROWSERBASE_API_KEY": "bb_live_r_GGfR4qZpsFIxsYIObYUdAVGC4",
-        "BROWSERBASE_PROJECT_ID": "${BROWSERBASE_PROJECT_ID}"
+        "BROWSERBASE_PROJECT_ID": "acfdfb7a-e155-4b4d-8566-636852ed00f5"
       }
     },
     "context7": {
