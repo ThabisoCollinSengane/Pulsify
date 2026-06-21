@@ -548,6 +548,21 @@ select.inp option{background:#1C1140}
           <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Add bank account to receive payouts from ticket sales.</div>
         </div>
 
+        <!-- Payout Account -->
+        <div class="setting-card">
+          <div class="setting-card-row">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="setting-card-icon" style="background:linear-gradient(135deg,rgba(110,255,71,.15),rgba(0,229,255,.1));border:1px solid rgba(110,255,71,.25)">💰</div>
+              <div>
+                <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Payout Account</div>
+                <div id="org-payout-status" style="font-size:.68rem;color:var(--mu)">Loading…</div>
+              </div>
+            </div>
+            <button class="btn-sec" id="org-payout-btn" style="padding:6px 12px;font-size:.72rem" onclick="openOrgSheet('org-payment-sheet')">Set Up →</button>
+          </div>
+          <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">Required to receive payouts from events and orders.</div>
+        </div>
+
         <!-- Social Links -->
         <div class="section-label" style="margin-top:4px">Social Links</div>
         <div class="setting-card" id="org-social-card">
@@ -1046,6 +1061,24 @@ async function loadOrgSettingsStatus() {
       if (pm.bank && btn) btn.textContent = 'Edit →';
     }
   } catch(e) {}
+}
+
+// ── Org Payout Account Status ────────────────────────────────
+async function loadOrgPayoutStatus() {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return;
+    const { data: prof } = await sb.from('profiles').select('paystack_subaccount_code').eq('id', session.user.id).single();
+    const el  = document.getElementById('org-payout-status');
+    const btn = document.getElementById('org-payout-btn');
+    if (prof?.paystack_subaccount_code) {
+      if (el)  { el.textContent = '✅ Subaccount linked'; el.style.color = 'var(--li)'; }
+      if (btn)   btn.style.display = 'none';
+    } else {
+      if (el)  { el.textContent = '⚠️ Set up your payout account to receive payments'; el.style.color = 'var(--mu)'; }
+      if (btn)   btn.style.display = '';
+    }
+  } catch(e) { console.warn('[loadOrgPayoutStatus]', e); }
 }
 
 // ── Org Verification — face scan + ID doc ────────────────────
@@ -2990,6 +3023,7 @@ fillCityDatalist();
 
 renderOrgFAQ();
 loadOrgSettingsStatus();
+loadOrgPayoutStatus();
 loadOrgSocialLinks();
 history.replaceState({ pane: 'pane-post' }, '');
 init().then(() => { initNotifBell(); loadMyEvents(); });
