@@ -37,6 +37,7 @@ module.exports = async (req, res) => {
           attendance_count,organiser_name,capacity,tickets_sold,rank_score`, { count: 'exact' })
         .gte('date_local', from_date)
         .eq('is_active', true)
+        .eq('approved', true)
         .not('status', 'in', '(cancelled,postponed)')
         .order('is_frontline',   { ascending: false })
         .order('rank_score',     { ascending: false, nullsFirst: false })
@@ -51,7 +52,7 @@ module.exports = async (req, res) => {
         if (genres.length > 1) query = query.or(genres.map(g => `genre.ilike.%${g}%`).join(','));
         else if (genres.length === 1) query = query.ilike('genre', `%${genres[0]}%`);
       }
-      if (search) query = query.textSearch('id', search, { type: 'websearch', config: 'english' });
+      if (search) query = query.or(`name.ilike.%${search}%,venue_name.ilike.%${search}%,venue_city.ilike.%${search}%`);
       if (q.bounds) {
         const [bw, bs, be, bn] = q.bounds.split(',').map(parseFloat);
         if (!isNaN(bw) && !isNaN(bs) && !isNaN(be) && !isNaN(bn)) {
