@@ -1,0 +1,49 @@
+name: Daily Database Backup
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # 2am UTC = 4am SAST every day
+  workflow_dispatch:        # allow manual trigger from GitHub Actions UI
+
+jobs:
+  backup:
+    name: pg_dump → Supabase Storage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Dump database
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          pg_dump "$DB_URL" \
+            --no-owner \
+            --no-acl \
+            --format=custom \
+            --file=backup-${DATE}.dump
+          gzip -k backup-${DATE}.dump
+          echo "BACKUP_FILE=backup-${DATE}.dump.gz" >> $GITHUB_ENV
+          echo "BACKUP_DATE=${DATE}" >> $GITHUB_ENV
+
+      # Upload to Supabase Storage so you can download from the dashboard
+      - name: Upload to Supabase Storage
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          curl -sf \
+            -X POST \
+            "${SUPABASE_URL}/storage/v1/object/backups/${BACKUP_FILE}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_KEY}" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary "@${BACKUP_FILE}" \
+            && echo "Uploaded to Supabase Storage: backups/${BACKUP_FILE}" \
+            || echo "Warning: Supabase Storage upload failed (continuing)"
+
+      # GitHub artifact as a secondary fallback — kept 30 days
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ env.BACKUP_DATE }}
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 30
