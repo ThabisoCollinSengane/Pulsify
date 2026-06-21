@@ -268,6 +268,11 @@ select.inp option{background:#1C1140}
       </div>
     </div>
     <div class="section-label" style="margin-top:16px">My Events</div>
+    <div id="org-events-filter-pills" style="display:flex;gap:8px;padding:8px 0 10px">
+      <button id="org-ev-pill-upcoming" onclick="loadMyEvents('upcoming')" style="font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;padding:5px 14px;border-radius:50px;border:1px solid var(--pu);background:rgba(176,38,255,.25);color:var(--pu);cursor:pointer">Upcoming</button>
+      <button id="org-ev-pill-past"     onclick="loadMyEvents('past')"     style="font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;padding:5px 14px;border-radius:50px;border:1px solid var(--border);background:transparent;color:var(--mu);cursor:pointer">Past</button>
+      <button id="org-ev-pill-all"      onclick="loadMyEvents('all')"      style="font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;padding:5px 14px;border-radius:50px;border:1px solid var(--border);background:transparent;color:var(--mu);cursor:pointer">All</button>
+    </div>
     <div id="my-events-list" class="card"><div class="empty">Loading…</div></div>
   </div>
 
@@ -2054,14 +2059,34 @@ async function submitEvent() {
 }
 
 const _evMap = {};
-async function loadMyEvents() {
+async function loadMyEvents(filter = 'upcoming') {
+  // Update active pill
+  ['upcoming','past','all'].forEach(f => {
+    const pill = document.getElementById('org-ev-pill-' + f);
+    if (!pill) return;
+    if (f === filter) {
+      pill.style.background = 'rgba(176,38,255,.25)';
+      pill.style.borderColor = 'var(--pu)';
+      pill.style.color = 'var(--pu)';
+    } else {
+      pill.style.background = 'transparent';
+      pill.style.borderColor = 'var(--border)';
+      pill.style.color = 'var(--mu)';
+    }
+  });
   const el = document.getElementById('my-events-list');
   if (!el || !currentUser) return;
   try {
-    const { data: evs } = await sb.from('events').select('id,name,date_local,time_local,venue_name,venue_city,genre,description,image_url,approved,is_active,venue_lat,venue_lon').eq('organiser_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
-    if (!evs?.length) { el.innerHTML = '<div class="empty">No events yet. Create your first above!</div>'; return; }
-    evs.forEach(e => { _evMap[e.id] = e; });
-    el.innerHTML = evs.map(e => {
+    const { data: evs } = await sb.from('events').select('id,name,date_local,time_local,venue_name,venue_city,genre,description,image_url,approved,is_active,venue_lat,venue_lon').eq('organiser_id', currentUser.id).order('created_at', { ascending: false }).limit(50);
+    const today = new Date().toISOString().split('T')[0];
+    const filtered = !evs ? [] : evs.filter(e => {
+      if (filter === 'upcoming') return (e.date_local || '') >= today;
+      if (filter === 'past')     return (e.date_local || '') < today;
+      return true;
+    });
+    if (!filtered.length) { el.innerHTML = '<div class="empty">' + (filter === 'past' ? 'No past events.' : 'No upcoming events. Create your first above!') + '</div>'; return; }
+    filtered.forEach(e => { _evMap[e.id] = e; });
+    el.innerHTML = filtered.map(e => {
       const badge = e.approved
         ? `<span style="background:rgba(0,229,100,.12);color:#00e564;border:1px solid rgba(0,229,100,.3);border-radius:20px;padding:2px 8px;font-size:.65rem;font-weight:700">✅ Live</span>`
         : `<span style="background:rgba(255,180,0,.1);color:#FFB400;border:1px solid rgba(255,180,0,.25);border-radius:20px;padding:2px 8px;font-size:.65rem;font-weight:700">⏳ Under review</span>`;
