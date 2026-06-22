@@ -1673,7 +1673,7 @@ function triggerRev() { const obs = new IntersectionObserver(entries => { entrie
 function getSB() {
   if (!sbClient && window.supabase) {
     sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
-      auth: { detectSessionInUrl: false, autoRefreshToken: true, persistSession: true, storage: window.sessionStorage }
+      auth: { detectSessionInUrl: false, autoRefreshToken: true, persistSession: true }
     });
   }
   return sbClient;
@@ -1695,8 +1695,8 @@ const Api = {
     const headers = {};
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     if (auth) {
-      // Token is read from the live Supabase session (stored in sessionStorage).
-      // Never written to localStorage so XSS cannot exfiltrate it across sessions.
+      // Token is read from the live Supabase session (the SDK manages its own
+      // storage). We never keep a separate copy in a p_token key.
       let token = '';
       try {
         const { data: { session } } = await getSB().auth.getSession();
