@@ -3242,7 +3242,7 @@ async function loadBizMenu(bizId, bizName) {
       ${catItems.map((item, ii) => `
         <div class="menu-card" style="animation-delay:${(ci * 10 + ii) * 40}ms">
           <div class="menu-card-img">
-            ${item.image_url ? `<img src="${x(item.image_url)}" loading="lazy" alt="">` : '🍽️'}
+            ${item.image_url ? `<img src="${x(item.image_url)}" loading="lazy" alt="" onerror="this.style.display='none';this.parentElement.textContent='🍽️'">` : '🍽️'}
           </div>
           <div class="menu-card-info">
             <div class="menu-card-name">${x(item.name)}</div>
@@ -3678,13 +3678,13 @@ async function loadDiscoverSquadDeals() {
         ? `total · ${p.squad_min}–${p.squad_max} people`
         : `Free for groups of ${p.squad_min}+`;
       const badge = p.squad_max <= 10
-        ? `<span class="deal-badge" style="background:rgba(255,45,136,.15);color:var(--pk);border:1px solid rgba(255,45,136,.3);font-size:.52rem">Limited</span>`
-        : i < 2 ? `<span class="deal-badge" style="background:rgba(198,255,74,.1);color:#C6FF4A;border:1px solid rgba(198,255,74,.25);font-size:.52rem">Popular</span>` : '';
-      return `<div onclick="openDealDetail('${x(p.id)}')" style="width:230px;flex-shrink:0;background:var(--surf);border:1px solid ${meta.border};border-radius:16px;overflow:hidden;cursor:pointer;animation:card-in .2s ease-out ${i * 50}ms both;transition:transform .18s" ontouchstart="this.style.transform='scale(.97)'" ontouchend="this.style.transform=''">
+        ? `<span style="position:absolute;top:7px;right:8px;z-index:2;background:rgba(255,45,136,.95);color:#fff;border-radius:50px;padding:2px 8px;font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Limited</span>`
+        : i < 2 ? `<span style="position:absolute;top:7px;right:8px;z-index:2;background:rgba(198,255,74,.95);color:#0A0118;border-radius:50px;padding:2px 8px;font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Popular</span>` : '';
+      return `<div onclick="openDealDetail('${x(p.id)}')" style="position:relative;width:230px;flex-shrink:0;background:var(--surf);border:1px solid ${meta.border};border-radius:16px;overflow:hidden;cursor:pointer;animation:card-in .2s ease-out ${i * 50}ms both;transition:transform .18s" ontouchstart="this.style.transform='scale(.97)'" ontouchend="this.style.transform=''">
+        ${badge}
         <div style="background:${meta.bg};border-bottom:1px solid ${meta.border};padding:8px 12px;display:flex;align-items:center;gap:7px">
           <span style="font-size:1rem">${meta.icon}</span>
-          <span style="font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:${meta.color}">${meta.label}</span>
-          ${badge}
+          <span style="font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:${meta.color};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${meta.label}</span>
         </div>
         <div style="padding:11px 12px">
           <div style="font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(p.title)}</div>
@@ -7180,15 +7180,16 @@ async function loadSquadDeals(squadId) {
         const dealSub = p.total_price ? `total · ${p.squad_min}–${p.squad_max} people` : `for groups of ${p.squad_min}+`;
         const dealColor = p.total_price ? 'var(--or)' : '#C6FF4A';
         const loc = [p.venue_name, p.location_city, p.valid_days].filter(Boolean).join(' · ');
-        // Badge: Limited when squad_max <= 10, else Popular for first 3
+        // Badge: Limited when squad_max <= 10, else Popular for first 3.
+        // Absolute-positioned corner chip so it never collides with the label.
         const badge = p.squad_max <= 10
-          ? `<span class="deal-badge" style="background:rgba(255,45,136,.15);color:var(--pk);border:1px solid rgba(255,45,136,.3)">Limited</span>`
-          : i < 3 ? `<span class="deal-badge" style="background:rgba(198,255,74,.1);color:#C6FF4A;border:1px solid rgba(198,255,74,.25)">Popular</span>` : '';
-        return `<div onclick="openDealDetail('${x(p.id)}')" class="deal-card" style="animation-delay:${i * 50}ms">
+          ? `<span style="position:absolute;top:9px;right:10px;z-index:2;background:rgba(255,45,136,.95);color:#fff;border-radius:50px;padding:3px 10px;font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Limited</span>`
+          : i < 3 ? `<span style="position:absolute;top:9px;right:10px;z-index:2;background:rgba(198,255,74,.95);color:#0A0118;border-radius:50px;padding:3px 10px;font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Popular</span>` : '';
+        return `<div onclick="openDealDetail('${x(p.id)}')" class="deal-card" style="position:relative;animation-delay:${i * 50}ms">
+          ${badge}
           <div class="deal-card-head" style="background:${meta.bg};border-bottom:1px solid ${meta.border}">
             <span style="font-size:1.1rem">${meta.icon}</span>
             <span style="font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:${meta.color}">${meta.label}</span>
-            ${badge}
           </div>
           <div style="padding:16px">
             <div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;margin-bottom:8px">${x(p.title)}</div>
