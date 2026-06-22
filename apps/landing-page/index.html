@@ -2869,7 +2869,8 @@ async function openEv(evId) {
     const vibe = Math.min(100, Math.round((sold / Math.max(totalCap, 1)) * 60 + Math.min(lc / 5, 40)));
     const vibeLabel = vibe >= 81 ? 'FULL SEND 💥' : vibe >= 61 ? 'Lit 🔥' : vibe >= 41 ? 'Vibing 🎵' : vibe >= 21 ? 'Warming Up 🌡️' : 'Chill 😴';
     const vibeColor = vibe >= 81 ? '#FF2D78' : vibe >= 61 ? '#FF5C00' : vibe >= 41 ? '#C6FF4A' : vibe >= 21 ? '#00E5FF' : '#666';
-    const lineup = Array.isArray(ev.lineup) ? ev.lineup : (ev.lineup ? JSON.parse(ev.lineup) : []);
+    const _lineupRaw = Array.isArray(ev.lineup) ? ev.lineup : (ev.lineup ? JSON.parse(ev.lineup) : []);
+    const lineup = _lineupRaw.map(a => typeof a === 'string' ? a : (a?.name || a?.artist || Object.values(a||{})[0] || '')).filter(Boolean);
 
     let tkHTML = '';
     if (tiers.length) {
@@ -2930,7 +2931,7 @@ async function openEv(evId) {
           <div class="ib2"><div class="il">Date</div><div class="iv">${fdate(ev.date_local)}</div></div>
           <div class="ib2"><div class="il">Time</div><div class="iv">${ft(ev.time_local) || '-'}</div></div>
           <div class="ib2 w"><div class="il">Venue</div><div class="iv">${x(ev.venue_name || '')}<br/><span style="font-size:.73rem;color:var(--mu)">${x(ev.venue_address || ev.venue_city || '')}</span></div></div>
-          ${lineup.length ? `<div class="ib2 w"><div class="il">Lineup</div><div class="iv" style="font-size:.8rem">${lineup.map(a => '<span style="display:inline-block;background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.25);border-radius:50px;padding:2px 10px;margin:2px;font-size:.72rem;color:var(--or)">' + x(a) + '</span>').join('')}</div></div>` : ''}
+          <div class="ib2 w"><div class="il">Lineup</div><div class="iv" style="font-size:.8rem">${lineup.length ? lineup.map(a => '<span style="display:inline-block;background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.25);border-radius:50px;padding:2px 10px;margin:2px;font-size:.72rem;color:var(--or)">' + x(a) + '</span>').join('') : '<span style="color:var(--mu);font-size:.75rem;font-style:italic">No lineup added by organizer</span>'}</div></div>
           ${ev.dress_code ? `<div class="ib2"><div class="il">Dress Code</div><div class="iv" style="font-size:.78rem">${x(ev.dress_code)}</div></div>` : ''}
           ${ev.age_restriction ? `<div class="ib2"><div class="il">Age</div><div class="iv" style="font-size:.78rem">${x(ev.age_restriction)}</div></div>` : ''}
         </div>
@@ -8056,13 +8057,38 @@ const _CL_STEPS = {
     { id:'menu',    label:'Add your menu',           desc:'Let customers browse & order',       href:'/business',         icon:'🍽' },
   ],
 };
-function startChecklist(role, userId) {
+async function startChecklist(role, userId) {
   if (!userId) return;
   if (localStorage.getItem('p_cl_done_' + userId)) return;
   if (sessionStorage.getItem('p_cl_hidden_' + userId)) return;
   const effectiveRole = (role === 'organizer' || role === 'business') ? role : 'fan';
   const steps = _CL_STEPS[effectiveRole]; if (!steps) return;
+  // Merge manually-marked done set with auto-detected completed steps
   const done = _clDone(userId);
+  try {
+    const prof = JSON.parse(localStorage.getItem('p_profile') || '{}');
+    if (prof.avatar_url) done.add('photo');
+    if (prof.city) done.add('city');
+    if (prof.display_name && prof.bio) done.add('profile');
+    const sev = JSON.parse(localStorage.getItem('p_sev') || '[]');
+    if (sev.length) done.add('save');
+    const sb = getSB();
+    if (sb && !done.has('squad')) {
+      const { count } = await sb.from('follows').select('id', { count: 'exact', head: true }).eq('follower_id', userId);
+      if (count > 0) done.add('squad');
+    }
+    if (effectiveRole === 'organizer' && sb) {
+      const { count: evCount } = await sb.from('events').select('id', { count: 'exact', head: true }).eq('organizer_id', userId);
+      if (evCount > 0) done.add('event');
+    }
+    if (effectiveRole === 'business' && sb) {
+      const { count: menuCount } = await sb.from('menu_items').select('id', { count: 'exact', head: true }).eq('business_id', userId);
+      if (menuCount > 0) done.add('menu');
+      const { data: biz } = await sb.from('businesses').select('description').eq('owner_id', userId).single();
+      if (biz?.description) done.add('listing');
+    }
+    localStorage.setItem('p_cl_' + userId, JSON.stringify([...done]));
+  } catch(_) {}
   if (done.size >= steps.length) { localStorage.setItem('p_cl_done_' + userId, '1'); return; }
   const el = document.getElementById('cl-panel'); if (!el) return;
   _clRender(effectiveRole, userId);
