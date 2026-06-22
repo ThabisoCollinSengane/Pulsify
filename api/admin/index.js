@@ -1,5 +1,6 @@
 const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError } = require('../shared');
-const { sendVerifApprovedEmail, sendVerifRejectedEmail, sendLeadEmail, sendMarketingEmail, sendEventApprovedEmail, sendEventRejectedEmail, EMAIL_CONFIGURED } = require('../email');
+const { sendVerifApprovedEmail, sendVerifRejectedEmail, sendLeadEmail, sendMarketingEmail, sendEventApprovedEmail, sendEventRejectedEmail, sendClaimLinkEmail, EMAIL_CONFIGURED } = require('../email');
+const PUBLIC_URL = process.env.PUBLIC_URL || 'https://pulsefy.co.za';
 
 module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
@@ -102,6 +103,29 @@ module.exports = async (req, res) => {
           ignored: ignoredCount || 0,
         },
       });
+    }
+
+    /* ─── POST /leads/email/:id ─── send claim-link email ── */
+    const claimMatch = url.match(/^\/leads\/email\/([^/]+)$/);
+    if (claimMatch && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+
+      const { data: lead, error: lErr } = await sb().from('scraped_leads').select('id,name,email,city').eq('id', claimMatch[1]).single();
+      if (lErr || !lead) return res.status(404).json({ error: 'Lead not found' });
+      if (!lead.email) return res.status(400).json({ error: 'Lead has no email address' });
+
+      const claimUrl = `${PUBLIC_URL}/create-account?email=${encodeURIComponent(lead.email)}&biz=${encodeURIComponent(lead.name || '')}&ref=claim_email`;
+      const sent = await sendClaimLinkEmail(lead.email, lead.name, claimUrl);
+      if (!sent) return res.status(502).json({ error: 'Email delivery failed — check email provider config' });
+
+      // Log activity + mark as contacted
+      await Promise.all([
+        sb().from('lead_activities').insert({ lead_id: lead.id, type: 'email_sent', summary: 'Claim link email sent', data: { claim_url: claimUrl } }),
+        sb().from('scraped_leads').update({ status: 'contacted', updated_at: new Date().toISOString() }).eq('id', lead.id).eq('status', 'new'),
+      ]);
+
+      return res.status(200).json({ sent: true, to: lead.email });
     }
 
     /* ─── PATCH /leads/:id ───────────────────────────────── */

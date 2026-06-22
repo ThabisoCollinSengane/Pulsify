@@ -258,6 +258,7 @@ body{padding-top:58px}
     <div class="modal-ftr">
       <button class="btn-sm" onclick="closeModal('lead-modal')">Close</button>
       <button class="btn-sm" onclick="openTemplatesModal()">📋 Templates</button>
+      <button class="btn-sm" id="claim-link-btn" onclick="sendClaimLink()" style="display:none">🔗 Claim Link</button>
       <button class="btn-primary" onclick="openEmailForActive()">✉️ Send Email</button>
       <button class="btn-primary" style="background:linear-gradient(135deg,#25D366,#128C7E)" onclick="openWaForActive()">💬 WhatsApp</button>
     </div>
@@ -580,6 +581,7 @@ function openLead(id) {
   const l = _cache[id]; if (!l) return;
   _activeLead = l;
   document.getElementById('modal-title').textContent = l.name;
+  document.getElementById('claim-link-btn').style.display = l.email ? '' : 'none';
   showTab('details');
   document.getElementById('lead-modal').classList.add('open');
 }
@@ -823,6 +825,23 @@ function exportToCSV() {
   const rows = [cols.join(','), ...leads.map(l => cols.map(c => `"${(l[c]||'').toString().replace(/"/g,'""')}"`).join(','))];
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.join('\n')], { type:'text/csv' }));
   a.download = `pulsefy-leads-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+}
+
+// ── Claim link ────────────────────────────────────────────────────────────────
+async function sendClaimLink() {
+  const l = _activeLead; if (!l?.email) return;
+  const btn = document.getElementById('claim-link-btn');
+  btn.textContent = 'Sending…'; btn.disabled = true;
+  const r = await fetch(`${API}/leads/email/${l.id}`, { method: 'POST', headers: authHeaders() });
+  const j = await safeJson(r);
+  btn.textContent = '🔗 Claim Link'; btn.disabled = false;
+  if (r.ok) {
+    toast(`Claim link sent to ${j.to} ✓`);
+    if (_cache[l.id]) _cache[l.id].status = 'contacted';
+    reloadKanban();
+  } else {
+    toast('Error: ' + (j.error || 'send failed'), false);
+  }
 }
 
 // ── Outreach Templates ────────────────────────────────────────────────────────
