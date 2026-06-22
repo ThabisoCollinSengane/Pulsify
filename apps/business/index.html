@@ -126,15 +126,23 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 .msg-ok{background:rgba(198,255,74,.08);border:1px solid rgba(198,255,74,.25);color:var(--li)}
 .msg-err{background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);color:var(--pk)}
 
+/* ── SHARED ANIMATION LAYER ── */
+@keyframes card-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes err-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.card-in{animation:card-in .2s ease-out both}
 /* ── MENU ITEMS ── */
-.menu-item-card{display:flex;align-items:center;gap:12px;background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:12px 14px;margin:0 14px 10px}
-.mi-img{width:52px;height:52px;border-radius:10px;background:var(--surf2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;position:relative}
+.menu-item-card{display:flex;align-items:center;gap:12px;background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:12px 14px;margin:0 14px 10px;animation:card-in .2s ease-out both;transition:border-color .18s}
+.mi-img{width:64px;height:64px;border-radius:10px;background:var(--surf2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.6rem;overflow:hidden;position:relative}
 .mi-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .mi-info{flex:1;min-width:0}
-.mi-name{font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;margin-bottom:2px}
-.mi-desc{font-size:.68rem;color:var(--mu);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mi-price{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--li)}
+.mi-name{font-family:'Syne',sans-serif;font-weight:700;font-size:.84rem;margin-bottom:3px}
+.mi-desc{font-size:.68rem;color:var(--mu);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mi-price{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;color:var(--or);letter-spacing:.02em}
 .mi-actions{display:flex;gap:6px;flex-shrink:0}
+/* Skeleton for menu */
+.menu-skel-card{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:16px;background:var(--surf);margin:0 14px 10px}
+.skel{background:linear-gradient(90deg,var(--surf) 25%,rgba(168,108,255,.12) 50%,var(--surf) 75%);background-size:200% 100%;animation:shim 1.6s infinite;border-radius:8px}
+@keyframes shim{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
 /* ── ORDERS TABLE ── */
 .orders-wrap{padding:0 14px 20px;overflow-x:auto}
@@ -2462,7 +2470,15 @@ async function tryAddMenuItem() {
 
 async function renderMenu() {
   const el = document.getElementById('menu-list');
-  el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--mu)">Loading…</div>';
+  el.innerHTML = [1,2,3].map(() => `
+    <div class="menu-skel-card">
+      <div class="skel" style="width:64px;height:64px;border-radius:10px;flex-shrink:0"></div>
+      <div style="flex:1">
+        <div class="skel" style="height:13px;border-radius:6px;margin-bottom:7px;width:55%"></div>
+        <div class="skel" style="height:10px;border-radius:6px;margin-bottom:7px;width:80%"></div>
+        <div class="skel" style="height:20px;border-radius:6px;width:28%"></div>
+      </div>
+    </div>`).join('');
   const bizId = getBizId();
   if (!bizId) { el.innerHTML = emptyState('🍽️', 'No menu items', 'Add items to your menu.'); return; }
   const sb = getSB();
@@ -2483,21 +2499,28 @@ async function renderMenu() {
   }
   // Free account cap warning
   const capHtml = items.length >= 10 ? `<div style="margin:10px 14px;padding:14px 16px;background:linear-gradient(135deg,rgba(255,92,0,.12),rgba(176,38,255,.08));border:1px solid rgba(255,92,0,.4);border-radius:14px"><div style="font-size:.85rem;font-weight:700;color:var(--or);margin-bottom:4px">⭐ Menu item limit reached</div><div style="font-size:.74rem;color:var(--mu);margin-bottom:10px">Free plan: max 10 menu items. Upgrade to Premium for unlimited.</div><button class="btn-primary" style="width:100%" onclick="showTab('profile')">Upgrade to Premium →</button></div>` : '';
+  let cardIdx = 0;
   el.innerHTML = capHtml + cats.map(cat =>
     `<div style="padding:10px 14px 0"><div class="section-label">${xe(cat)}</div></div>` +
-    items.filter(i => (i.category || 'General') === cat).map(item => `
-      <div class="menu-item-card">
-        <div class="mi-img">${item.image_url ? `<img src="${xe(item.image_url)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : ''}🍽️</div>
+    items.filter(i => (i.category || 'General') === cat).map(item => {
+      const delay = (cardIdx++) * 40;
+      return `
+      <div class="menu-item-card" style="animation-delay:${delay}ms">
+        <div class="mi-img">
+          ${item.image_url ? `<img src="${xe(item.image_url)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : ''}
+          ${item.image_url ? '' : '🍽️'}
+        </div>
         <div class="mi-info">
           <div class="mi-name" style="${!item.is_available ? 'opacity:.5' : ''}">${xe(item.name)}</div>
-          <div class="mi-desc">${xe(item.description || '')}</div>
-          <div class="mi-price">R${item.price}</div>
+          ${item.description ? `<div class="mi-desc">${xe(item.description)}</div>` : ''}
+          <div class="mi-price">R${parseFloat(item.price || 0).toFixed(2)}</div>
         </div>
         <div class="mi-actions">
           <button class="btn-ghost" onclick="editMenuItem('${item.id}')">Edit</button>
           <button class="btn-danger" onclick="deleteMenuItem('${item.id}',this)">🗑</button>
         </div>
-      </div>`).join('')
+      </div>`;
+    }).join('')
   ).join('');
 }
 
