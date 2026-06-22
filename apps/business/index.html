@@ -716,13 +716,13 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <div class="sheet-head"><div class="sheet-title" id="mi-sheet-title">Add Menu Item</div><button class="sheet-close" onclick="closeSheet('menu-sheet')">✕</button></div>
     <div class="sheet-body">
       <input type="hidden" id="mi-edit-id"/>
+      <input type="hidden" id="mi-existing-img"/>
       <label class="ff-label">Item Name *</label>
       <input class="ff" type="text" id="mi-name" placeholder="e.g. Braai Mixed Platter"/>
       <label class="ff-label">Description</label>
       <input class="ff" type="text" id="mi-desc" placeholder="Brief description…"/>
       <div class="ff-row">
         <div><label class="ff-label">Price (R) *</label><input class="ff" type="number" id="mi-price" placeholder="0.00" min="0"/></div>
-        <div><label class="ff-label">Emoji</label><input class="ff" type="text" id="mi-emoji" placeholder="🍖" maxlength="4"/></div>
       </div>
       <label class="ff-label">Category</label>
       <select class="ff" id="mi-cat">
@@ -2517,10 +2517,10 @@ async function submitMenuItem() {
     }
   }
 
-  // Preserve existing photos when editing if no new files selected
+  // Preserve existing photo URL when editing if no new file was selected
   if (!photos.length && id) {
-    const existing = load('menu', []).find(m => m.id === id);
-    photos = existing?.photos || [];
+    const existingUrl = document.getElementById('mi-existing-img').value;
+    if (existingUrl) photos = [existingUrl];
   }
 
   const sb = getSB();
@@ -2565,7 +2565,7 @@ async function editMenuItem(id) {
   document.getElementById('mi-name').value  = item.name || '';
   document.getElementById('mi-desc').value  = item.description || '';
   document.getElementById('mi-price').value = item.price || '';
-  document.getElementById('mi-emoji').value = '';
+  document.getElementById('mi-existing-img').value = item.image_url || '';
   const miCatSel = document.getElementById('mi-cat');
   if (item.category && !Array.from(miCatSel.options).some(o => o.value === item.category)) {
     miCatSel.add(new Option(item.category, item.category)); // preserve a legacy/custom category
@@ -2583,7 +2583,8 @@ async function editMenuItem(id) {
 function resetMenuForm() {
   document.getElementById('mi-edit-id').value = '';
   document.getElementById('mi-sheet-title').textContent = 'Add Menu Item';
-  ['mi-name','mi-desc','mi-price','mi-emoji','mi-cat'].forEach(id => { document.getElementById(id).value = ''; });
+  ['mi-name','mi-desc','mi-price','mi-cat'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('mi-existing-img').value = '';
   document.getElementById('mi-avail').value = '1';
   _menuImgFiles = [];
   const grid = document.getElementById('mi-img-grid');
