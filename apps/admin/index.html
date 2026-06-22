@@ -1443,8 +1443,9 @@ async function saveCoords() {
   if (city)     updates.city     = city;
   if (province) updates.province = province;
 
-  const { error } = await sb.from('businesses').update(updates).eq('id', editId);
+  const { data: saved, error } = await sb.from('businesses').update(updates).eq('id', editId).select('id');
   if (error) { showEditMsg('Save failed: ' + error.message, 'err'); return; }
+  if (!saved || !saved.length) { showEditMsg('Save blocked — 0 rows updated (admin role / RLS). Coordinates were NOT saved.', 'err'); return; }
 
   appendLog(`✅ Saved: ${lat.toFixed(4)}, ${lon.toFixed(4)}`, 'ok');
   showEditMsg('✅ Saved successfully', 'ok');
