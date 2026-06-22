@@ -3129,7 +3129,7 @@ async function openBiz(bizId) {
         <button class="rb" onclick="shareIt('${x(b.name)}')"><span class="ri">🔗</span><span class="rl">Share</span></button>
         <button class="rb" onclick="openReportModal('business','${x(b.id)}','${x(b.name).replace(/'/g,'\\\'')}')"><span class="ri">🚩</span><span class="rl">Report</span></button>
       </div>
-      <div class="bztb"><div class="bzt active" onclick="switchBT(this,'bp-info')">ℹ️ Info</div><div class="bzt" onclick="switchBT(this,'bp-menu');loadBizMenu('${x(b.id)}','${x(b.name)}')">🍽 Menu</div><div class="bzt" onclick="switchBT(this,'bp-gallery')">📸 Gallery</div></div>
+      <div class="bztb"><div class="bzt active" onclick="switchBT(this,'bp-info')">ℹ️ Info</div><div class="bzt" onclick="switchBT(this,'bp-menu');loadBizMenu('${x(b.id)}','${x(b.name).replace(/'/g,"\\'")}')">🍽 Menu</div><div class="bzt" onclick="switchBT(this,'bp-gallery')">📸 Gallery</div></div>
       <div class="bzp" id="bp-menu"><div id="biz-menu-body" style="padding:4px 0"><div style="padding:20px;text-align:center;color:var(--mu);font-size:.78rem">Tap to load menu</div></div></div>
       <div class="bzp active" id="bp-info">
         <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px">
@@ -3148,6 +3148,11 @@ async function openBiz(bizId) {
         ${gallery.length ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">${gallery.map(u => `<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--surf2)"><img src="${x(u)}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.background='var(--surf2)'"/></div>`).join('')}</div>` : '<p style="color:var(--mu);font-size:.84rem;padding:8px 0">No photos yet.</p>'}
       </div>`;
 
+    if (window._pendingBizTab === 'menu') {
+      window._pendingBizTab = null;
+      const menuTabEl = document.querySelector('#biz-detail .bztb .bzt:nth-child(2)');
+      if (menuTabEl) { switchBT(menuTabEl, 'bp-menu'); loadBizMenu(b.id, b.name); }
+    }
     triggerRev();
   } catch(err) {
     document.getElementById('biz-detail').innerHTML = `<div style="padding:40px;text-align:center;color:var(--mu)">Could not load place. <button onclick="goBack()" style="color:var(--or);background:none;border:none;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700">Go back</button></div>`;
@@ -7036,7 +7041,7 @@ async function openDealDetail(promoId) {
         </div>
       </div>` : ''}
       <div style="position:sticky;bottom:0;background:linear-gradient(to top,var(--bg2) 75%,transparent);padding:16px 0 4px">
-        <button onclick="_sqJoinFromDetail('${x(p.id)}','${x(p.title)}','${x(p.venue_name)}')" style="width:100%;padding:14px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer">👥 Join Squad to Claim</button>
+        <button onclick="_sqJoinFromDetail('${x(p.id)}','${x(p.title).replace(/'/g,"\\'")}','${x(p.venue_name).replace(/'/g,"\\'")}','${x(p.deal_type||'')}','${x(p.business_id||'')}','${x(p.event_id||'')}')" style="width:100%;padding:14px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer">${p.event_id ? '🎟 Buy Tickets with Squad' : p.business_id ? '🍽 Order with Squad' : '👥 Join Squad to Claim'}</button>
       </div>`;
   } catch(e) {
     ws.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Could not load deal</div>';
@@ -7050,7 +7055,23 @@ function _sqBackFromDetail() {
   showSqTab('deals', _sqCurrentSquad.id);
 }
 
-function _sqJoinFromDetail(dealId, title, venue) {
+function _sqJoinFromDetail(dealId, title, venue, dealType, bizId, eventId) {
+  // Close the squad sheet so the destination screen is visible
+  const ov = document.getElementById('social-sheet-ov');
+  if (ov) ov.style.display = 'none';
+
+  if (bizId) {
+    // Food/venue deal — open the business card and auto-switch to Menu tab
+    window._pendingBizTab = 'menu';
+    openBiz(bizId);
+    return;
+  }
+  if (eventId) {
+    // Event deal — open the event detail (ticket tiers shown there)
+    openEv(eventId);
+    return;
+  }
+  // Fallback: share the deal with the squad
   sqJoinDeal(dealId, title, venue);
 }
 
