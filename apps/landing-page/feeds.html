@@ -960,10 +960,10 @@ async function submitPost() {
       const ext  = _cImgFile.name.split('.').pop() || 'jpg';
       const path = _uid + '/' + Date.now() + '.' + ext;
       const { data: up, error: upErr } = await sb.storage.from('post-images').upload(path, _cImgFile, { upsert: false });
-      if (!upErr) {
-        const { data: { publicUrl } } = sb.storage.from('post-images').getPublicUrl(path);
-        imageUrl = publicUrl;
-      }
+      // Don't silently post text-only when the user attached a photo — abort and let them retry.
+      if (upErr) throw new Error('Photo upload failed: ' + upErr.message);
+      const { data: { publicUrl } } = sb.storage.from('post-images').getPublicUrl(path);
+      imageUrl = publicUrl;
     } else if (_cImg && _cImg.startsWith('http')) {
       imageUrl = _cImg;
     }
