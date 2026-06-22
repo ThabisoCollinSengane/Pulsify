@@ -408,9 +408,14 @@ function leadHtml(bodyText) {
 
         <table cellpadding="0" cellspacing="0" border="0">
           <tr><td style="background:linear-gradient(135deg,#B026FF,#FF5C00);border-radius:50px;padding:0">
-            <a href="${APP_URL}/?utm_source=crm&utm_medium=email" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:50px;font-family:Arial,Helvetica,sans-serif">Join Pulsefy Free →</a>
+            <a href="${APP_URL}/?utm_source=crm&utm_medium=email&ref=signup" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:50px;font-family:Arial,Helvetica,sans-serif">Create Your Free Account →</a>
           </td></tr>
         </table>
+
+        <p style="margin:20px 0 0;font-size:13px;color:#606060;line-height:1.8">
+          Need help getting set up? Chat with us on WhatsApp —<br/>
+          <a href="https://wa.me/27679132678" style="color:#25D366;font-weight:700;text-decoration:none">💬 WhatsApp us at 067 913 2678</a>
+        </p>
       </td></tr>
 
       <tr><td height="20"></td></tr>
