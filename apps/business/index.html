@@ -2249,6 +2249,19 @@ async function submitEvent() {
     const lineup  = lineupRaw ? lineupRaw.split(',').map(s => s.trim()) : [];
     const showOnMap = !id && (document.getElementById('ev-show-on-map')?.checked || false);
 
+    // Auto-geocode from venue + city when no coords were entered, so the event
+    // can land on the map without manual lat/lon. /api/geocode validates SA
+    // bounds server-side (returns null outside SA) and keeps the Mapbox token
+    // off the client.
+    let venueLat = evLat, venueLon = evLon;
+    if ((venueLat === null || venueLon === null) && venue) {
+      try {
+        const gr = await fetch('/api/geocode?venue=' + encodeURIComponent(venue) + '&city=' + encodeURIComponent(city || ''));
+        const gj = await gr.json();
+        if (gj && gj.lat != null && gj.lon != null) { venueLat = gj.lat; venueLon = gj.lon; }
+      } catch(_) {}
+    }
+
     if (id) {
       const { error: upErr } = await sb2.from('events').update({
         name, date_local: date || null, time_local: time || null,
@@ -2256,7 +2269,7 @@ async function submitEvent() {
         description: desc || null, price_min: price, price_max: price,
         is_free: price === 0, image_url: imgUrl || null,
         lineup: lineup.length ? lineup : null,
-        ...(evLat !== null && evLon !== null ? { venue_lat: evLat, venue_lon: evLon } : {}),
+        ...(venueLat !== null && venueLon !== null ? { venue_lat: venueLat, venue_lon: venueLon } : {}),
       }).eq('id', id).eq('organiser_id', session.user.id);
       if (upErr) throw new Error(upErr.message);
     } else {
@@ -2272,7 +2285,8 @@ async function submitEvent() {
         organiser_id: session.user.id,
         is_active: true, approved: false, source: 'business',
         lineup: lineup.length ? lineup : null,
-        ...(evLat !== null && evLon !== null ? { venue_lat: evLat, venue_lon: evLon } : {}),
+        location_confidence: (venueLat !== null && venueLon !== null) ? (evLat !== null ? 100 : 80) : 0,
+        ...(venueLat !== null && venueLon !== null ? { venue_lat: venueLat, venue_lon: venueLon } : {}),
       });
       if (insErr) throw new Error(insErr.message);
 
