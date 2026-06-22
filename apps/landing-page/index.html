@@ -1673,7 +1673,7 @@ function triggerRev() { const obs = new IntersectionObserver(entries => { entrie
 function getSB() {
   if (!sbClient && window.supabase) {
     sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
-      auth: { detectSessionInUrl: false, autoRefreshToken: true, persistSession: true }
+      auth: { detectSessionInUrl: false, autoRefreshToken: true, persistSession: true, storage: window.sessionStorage }
     });
   }
   return sbClient;
@@ -1695,15 +1695,13 @@ const Api = {
     const headers = {};
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     if (auth) {
-      // Canonical token logic: prefer the live session token (localStorage
-      // p_token goes stale when Supabase silently refreshes ~hourly), persist
-      // it, and fall back to the last-known p_token if getSession is unavailable.
+      // Token is read from the live Supabase session (stored in sessionStorage).
+      // Never written to localStorage so XSS cannot exfiltrate it across sessions.
       let token = '';
       try {
         const { data: { session } } = await getSB().auth.getSession();
-        if (session?.access_token) { token = session.access_token; localStorage.setItem('p_token', token); }
+        if (session?.access_token) { token = session.access_token; }
       } catch (_) {}
-      if (!token) token = localStorage.getItem('p_token') || '';
       if (token) headers['Authorization'] = 'Bearer ' + token;
       else if (auth === true) throw new Error('Not signed in');
     }
@@ -4695,7 +4693,6 @@ async function handleAuth() {
     role: profile?.role || 'user',
   }));
   localStorage.setItem('p_profile', JSON.stringify(profile || {}));
-  localStorage.setItem('p_token', data.session.access_token);
   currentUser = data.user;
   document.getElementById('auth-modal')?.classList.remove('open');
   showToast('✅ Signed in!', 'ok');
@@ -6387,7 +6384,6 @@ async function initSupabaseSession() {
     if (profile) {
       localStorage.setItem('p_user', JSON.stringify({id:session.user.id,email:session.user.email,display_name:profile.display_name||session.user.email?.split('@')[0],role:profile.role||'user'}));
       localStorage.setItem('p_profile', JSON.stringify(profile));
-      localStorage.setItem('p_token', session.access_token);
     }
     const btn = document.getElementById('auth-btn');
     if (btn) { btn.textContent='Feed'; btn.onclick=()=>{ window.location.href='/feeds'; }; }
@@ -6421,12 +6417,9 @@ async function initSupabaseSession() {
   } catch(e) { console.warn('initSupabaseSession:', e.message); }
 
   sb.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'TOKEN_REFRESHED' && session) {
-      localStorage.setItem('p_token', session.access_token);
-    }
     if (event === 'SIGNED_IN' && session) {
       try {
-        localStorage.setItem('p_token', session.access_token);
+
 
         // Email confirmation flow: create profile from pending data then redirect
         let pending = null;
@@ -7922,9 +7915,9 @@ async function openMySocialSheet() {
   // Also try to fetch fresh from Supabase
   try {
     const sb = getSB();
-    const token = localStorage.getItem('p_token');
-    if (sb && token) {
-      const sess = JSON.parse(localStorage.getItem('p_user')||'{}');
+    const userId = JSON.parse(localStorage.getItem('p_user')||'{}').id;
+    if (sb && userId) {
+      const sess = { id: userId };
       if (sess.id) {
         const { data } = await sb.from('profiles').select('social_links').eq('id', sess.id).single();
         if (data?.social_links) current = data.social_links;
