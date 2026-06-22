@@ -123,6 +123,18 @@ body{padding-top:58px}
 /* toast */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 22px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--tx);z-index:1000;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}.toast.ok{border-color:rgba(198,255,74,.4);color:var(--li)}
+/* templates panel */
+.tpl-panel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;padding:20px}
+.tpl-card{background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.tpl-card-name{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--or);letter-spacing:.05em}
+.tpl-card-tag{display:inline-block;font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:50px;margin-left:6px;text-transform:uppercase;letter-spacing:.08em}
+.tag-biz{background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.25);color:var(--or)}
+.tag-org{background:rgba(176,38,255,.12);border:1px solid rgba(176,38,255,.25);color:var(--pu)}
+.tag-wa{background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.25);color:#25D366}
+.tpl-card-body{font-size:.78rem;color:var(--mu2);line-height:1.6;white-space:pre-wrap;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;max-height:160px;overflow-y:auto}
+.tpl-copy-btn{align-self:flex-start;background:transparent;border:1px solid var(--border2);color:var(--mu2);padding:6px 16px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer;transition:all .2s}
+.tpl-copy-btn:hover{border-color:var(--li);color:var(--li)}
+.tpl-copy-btn.copied{border-color:var(--li);color:var(--li);background:rgba(198,255,74,.08)}
 /* auth gate */
 .auth-gate{position:fixed;inset:0;background:var(--bg);z-index:900;display:flex;align-items:center;justify-content:center;padding:24px}
 .auth-card{width:100%;max-width:380px;background:var(--bg2);border:1px solid var(--border2);border-radius:22px;padding:28px 24px 32px}
@@ -173,6 +185,7 @@ body{padding-top:58px}
       <p style="color:var(--mu2);font-size:.8rem;margin-top:3px">Kanban pipeline · bulk outreach · activity timeline</p>
     </div>
     <div style="display:flex;gap:8px">
+      <button class="btn-sm" onclick="openTemplatesModal()">📋 Templates</button>
       <button class="btn-sm" onclick="exportToCSV()">📎 Export CSV</button>
       <button class="btn-sm" onclick="openScrapeModal()">🔍 Scrape OSM</button>
     </div>
@@ -302,6 +315,26 @@ body{padding-top:58px}
       <div class="wa-list" id="wa-list"></div>
     </div>
     <div class="modal-ftr"><button class="btn-sm" onclick="closeModal('wa-modal')">Close</button></div>
+  </div>
+</div>
+
+<!-- Templates modal -->
+<div class="modal-ov" id="tpl-modal" onclick="if(event.target===this)closeModal('tpl-modal')">
+  <div class="modal" style="max-width:920px;max-height:90vh">
+    <div style="background:linear-gradient(135deg,#B026FF 0%,#FF5C00 100%);border-radius:20px 20px 0 0;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.05em;color:#fff">📋 Outreach Templates</div>
+        <div style="font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.7);margin-top:2px">Click Copy → paste anywhere (WhatsApp, email, DM)</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('tpl-modal')">✕</button>
+    </div>
+    <div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <span style="font-size:.72rem;color:var(--mu2);font-family:'Syne',sans-serif">Edit fields in bold before sending:</span>
+      <code style="font-size:.68rem;color:var(--or);background:rgba(255,92,0,.08);padding:2px 8px;border-radius:6px">{{name}}</code>
+      <code style="font-size:.68rem;color:var(--or);background:rgba(255,92,0,.08);padding:2px 8px;border-radius:6px">{{city}}</code>
+      <code style="font-size:.68rem;color:var(--or);background:rgba(255,92,0,.08);padding:2px 8px;border-radius:6px">{{business_name}}</code>
+    </div>
+    <div class="tpl-panel-grid" id="tpl-panel-grid"></div>
   </div>
 </div>
 
@@ -776,6 +809,194 @@ function exportToCSV() {
   const rows = [cols.join(','), ...leads.map(l => cols.map(c => `"${(l[c]||'').toString().replace(/"/g,'""')}"`).join(','))];
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.join('\n')], { type:'text/csv' }));
   a.download = `pulsefy-leads-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+}
+
+// ── Outreach Templates ────────────────────────────────────────────────────────
+const OUTREACH_TEMPLATES = [
+  {
+    name: '1. Cold Intro — General Business',
+    tags: ['biz','wa'],
+    body: `Hi {{name}} 👋
+
+I came across your business and wanted to reach out personally — I'm Thabiso from Pulsefy, South Africa's growing event & entertainment platform.
+
+We'd love to feature {{business_name}} on Pulsefy. It's completely free to list, and you'd get:
+✅ A branded profile visible to thousands of locals in {{city}}
+📍 Pinned on our interactive map so people discover you easily
+🎟 Built-in ticket sales (we only earn when you earn)
+
+Takes less than 5 minutes to get set up. Would you be keen?
+
+Sign up here 👉 https://pulsefy.co.za
+Or WhatsApp us: 067 913 2678`
+  },
+  {
+    name: '2. Cold Intro — Event Organiser',
+    tags: ['org','wa'],
+    body: `Hi {{name}} 👋
+
+I'm Thabiso from Pulsefy — SA's fastest-growing event discovery platform. I came across your events and think you'd be a perfect fit.
+
+List your events for FREE and reach thousands of people in {{city}} who are actively looking for things to do. You get:
+🎟 Built-in ticket sales with instant payouts
+📢 Discovery on our map, feed & social sharing
+👥 Squad features so fans can roll with their friends to your events
+
+Getting listed takes under 5 minutes. Let's get your next event live 🔥
+
+Create your organiser account: https://pulsefy.co.za
+Questions? WhatsApp: 067 913 2678`
+  },
+  {
+    name: '3. Follow-Up (No Reply)',
+    tags: ['wa','biz'],
+    body: `Hi {{name}} 👋
+
+Just following up on my message from earlier about getting {{business_name}} listed on Pulsefy.
+
+We're actively onboarding businesses and organisers in {{city}} this month — and spots on our featured map are limited. I'd hate for you to miss it!
+
+No catch — it's free to list and you stay in full control.
+
+Worth a quick 5 minutes? 👉 https://pulsefy.co.za
+Or drop me a message here on WhatsApp: 067 913 2678`
+  },
+  {
+    name: '4. KZN — Local Focus Pitch',
+    tags: ['biz','wa'],
+    body: `Hi {{name}} 👋
+
+Events and nightlife in KwaZulu-Natal are blowing up on Pulsefy right now — Durban, Umhlanga, {{city}} and surrounding areas are our fastest-growing markets.
+
+We're looking for local businesses and organisers to feature this season. Getting listed is FREE and you'll get discovered by the right crowd through our live map and event feed.
+
+I can have {{business_name}} live on Pulsefy within the hour 🚀
+
+Sign up: https://pulsefy.co.za
+WhatsApp me: 067 913 2678`
+  },
+  {
+    name: '5. Restaurant / Shisanyama Pitch',
+    tags: ['biz'],
+    body: `Hi {{name}} 👋
+
+I'm Thabiso from Pulsefy. We're building a live map of the best spots to eat, drink and vibe in {{city}} — and I think {{business_name}} deserves to be on it.
+
+With a free Pulsefy business listing you get:
+📍 Pinned on our live map with your menu & photos
+🍖 Pickup orders from hungry locals
+🔥 Exposure to people actively looking for shisanyamas & restaurants near them
+
+No commission on orders, no monthly fees. Just more customers finding you 🙌
+
+List for free: https://pulsefy.co.za
+Questions? WhatsApp: 067 913 2678`
+  },
+  {
+    name: '6. Club / Nightlife Venue',
+    tags: ['biz','org'],
+    body: `Hi {{name}} 👋
+
+I'm Thabiso from Pulsefy — SA's go-to platform for nightlife & events. We'd love to feature {{business_name}} on our platform.
+
+People in {{city}} use Pulsefy to decide where to go out every weekend. A free listing means:
+🎧 Your upcoming events promoted on our feed & map
+🎟 Built-in ticket sales with no hidden fees
+📸 Your vibe visible to thousands of people searching for nightlife
+
+Takes 5 minutes to set up. Your next event could sell out faster than ever 🔥
+
+Get listed free: https://pulsefy.co.za
+WhatsApp: 067 913 2678`
+  },
+  {
+    name: '7. Referral / Warm Intro',
+    tags: ['wa','biz'],
+    body: `Hi {{name}} 👋
+
+A mutual connection mentioned {{business_name}} and thought you'd be a great fit for Pulsefy — SA's event & entertainment platform.
+
+We're bringing together the best venues, organisers and businesses in {{city}}, and your name kept coming up 😊
+
+Listing is free and takes 5 minutes. Happy to walk you through it personally.
+
+👉 https://pulsefy.co.za
+WhatsApp me directly: 067 913 2678`
+  },
+  {
+    name: '8. Festival / Large Event Organiser',
+    tags: ['org'],
+    body: `Hi {{name}} 👋
+
+I'm Thabiso from Pulsefy. We work with festival and event organisers across South Africa to help them sell tickets faster and reach bigger audiences.
+
+For {{business_name}} we can offer:
+🎟 Tiered ticket sales (Early Bird, VIP, General)
+📢 Featured placement on our home feed to thousands of users
+🗺 Map pin in {{city}} so people discover your event while exploring
+👥 Social squad features — people buy tickets together with friends
+
+Everything is free to set up. We only take a small fee on paid tickets (and you can pass that to the buyer).
+
+Let's talk: https://pulsefy.co.za
+WhatsApp: 067 913 2678`
+  },
+  {
+    name: '9. Second Follow-Up (Last Attempt)',
+    tags: ['wa'],
+    body: `Hi {{name}} 👋
+
+Last message from me, I promise 😊
+
+I know you're busy running {{business_name}}, so I'll keep it short — Pulsefy is free, takes 5 minutes to set up, and could put you in front of thousands of people in {{city}} who are actively looking for what you offer.
+
+If the timing isn't right, totally understand. But if you're ever interested, here's the link:
+
+👉 https://pulsefy.co.za
+
+Or WhatsApp me anytime: 067 913 2678
+
+Hope to work with you soon! 🙏`
+  },
+  {
+    name: '10. Instagram DM — Short Version',
+    tags: ['wa','org'],
+    body: `Hey {{name}} 👋 Love what you're doing! I'm Thabiso from Pulsefy — we help SA businesses & event organisers get discovered for free. Would love to feature {{business_name}} on our platform. Takes 5 min to set up 👉 pulsefy.co.za or WhatsApp 067 913 2678 🔥`
+  },
+];
+
+function openTemplatesModal() {
+  const grid = document.getElementById('tpl-panel-grid');
+  grid.innerHTML = OUTREACH_TEMPLATES.map((t, i) => {
+    const tags = (t.tags || []).map(tag => {
+      if (tag === 'biz')  return `<span class="tpl-card-tag tag-biz">Business</span>`;
+      if (tag === 'org')  return `<span class="tpl-card-tag tag-org">Organiser</span>`;
+      if (tag === 'wa')   return `<span class="tpl-card-tag tag-wa">WhatsApp</span>`;
+      return '';
+    }).join('');
+    return `<div class="tpl-card">
+      <div><span class="tpl-card-name">${escH(t.name)}</span>${tags}</div>
+      <div class="tpl-card-body">${escH(t.body)}</div>
+      <button class="tpl-copy-btn" id="copy-btn-${i}" onclick="copyTpl(${i})">📋 Copy message</button>
+    </div>`;
+  }).join('');
+  document.getElementById('tpl-modal').classList.add('open');
+}
+
+function copyTpl(idx) {
+  const t = OUTREACH_TEMPLATES[idx]; if (!t) return;
+  navigator.clipboard.writeText(t.body).then(() => {
+    const btn = document.getElementById('copy-btn-'+idx);
+    btn.textContent = '✅ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 Copy message'; btn.classList.remove('copied'); }, 2000);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = t.body; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('Copied ✓');
+  });
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
