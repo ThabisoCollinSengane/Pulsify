@@ -1732,7 +1732,7 @@ function showTab(name, _noPush) {
   document.getElementById('back-btn').classList.remove('show');
   if (!_noPush) history.replaceState({ tab: name, detail: false }, '');
   setTimeout(triggerRev, 80);
-  if (name === 'me')      { renderProfile(); }
+  if (name === 'me')      { renderProfile(); try { const _u = JSON.parse(localStorage.getItem('p_user') || '{}'); if (_u.id) startChecklist(_u.role, _u.id); } catch(_) {} }
   if (name === 'tickets') renderBookings();
   if (name === 'discover') loadDiscover();
   if (name === 'map') {
@@ -3234,11 +3234,17 @@ async function loadBizMenu(bizId, bizName) {
       </div>
     </div>`).join('');
   const sb = getSB();
-  const { data: items } = await sb.from('menu_items').select('*').eq('business_id', bizId).eq('is_available', true).order('category').order('sort_order');
+  const [{ data: items }, { data: rawDeals }] = await Promise.all([
+    sb.from('menu_items').select('*').eq('business_id', bizId).eq('is_available', true).order('category').order('sort_order'),
+    sb.from('squad_promos').select('id,title,linked_menu_item_ids').eq('business_id', bizId).eq('approved', true).eq('is_active', true),
+  ]);
   if (!items || !items.length) {
     el.innerHTML = '<div style="padding:24px;text-align:center;font-size:.78rem;color:var(--mu)">No menu available yet.</div>';
     return;
   }
+  // Build map: menuItemId → deal {id, title}
+  const itemDealMap = {};
+  (rawDeals || []).forEach(d => { (d.linked_menu_item_ids || []).forEach(mid => { itemDealMap[mid] = d; }); });
   // Registry so stepper buttons need only the item id in onclick —
   // avoids injecting names/quotes (e.g. "Zaba's") into HTML attributes.
   window._menuBizId = bizId; window._menuBizName = bizName;
@@ -3248,7 +3254,10 @@ async function loadBizMenu(bizId, bizName) {
   el.innerHTML = Object.entries(bycat).map(([cat, catItems], ci) => `
     <div style="margin-bottom:20px">
       <div class="menu-cat-label">${x(cat)}</div>
-      ${catItems.map((item, ii) => `
+      ${catItems.map((item, ii) => {
+        const deal = itemDealMap[item.id];
+        const dealBadge = deal ? `<div onclick="openDealDetail('${x(deal.id)}')" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.3);border-radius:50px;padding:2px 8px;font-size:.62rem;font-weight:700;color:#FF5C00;margin-top:4px">🔥 DEAL · ${x(deal.title)}</div>` : '';
+        return `
         <div class="menu-card" style="animation-delay:${(ci * 10 + ii) * 40}ms">
           <div class="menu-card-img">
             ${item.image_url ? `<img src="${x(item.image_url)}" loading="lazy" alt="" onerror="this.style.display='none';this.parentElement.textContent='🍽️'">` : '🍽️'}
@@ -3257,13 +3266,15 @@ async function loadBizMenu(bizId, bizName) {
             <div class="menu-card-name">${x(item.name)}</div>
             ${item.description ? `<div class="menu-card-desc">${x(item.description)}</div>` : ''}
             <div class="menu-card-price">R${(item.price || 0).toFixed(2)}</div>
+            ${dealBadge}
           </div>
           <div class="menu-stepper">
             <button class="ms-btn ms-minus" onclick="_cartSub('${x(item.id)}')" id="csub-${x(item.id)}" style="display:none">−</button>
             <span class="ms-count" id="cq-${x(item.id)}">0</span>
             <button class="ms-btn ms-plus" onclick="_cartAdd('${x(item.id)}')">+</button>
           </div>
-        </div>`).join('')}
+        </div>`;
+      }).join('')}
     </div>`).join('') + `
   <div id="biz-cart-bar" style="display:none;position:sticky;bottom:0;background:var(--bg2);border-top:1px solid var(--border2);padding:10px 0 6px;margin-top:4px">
     <button onclick="_openCartPreview()" style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:13px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
@@ -6405,7 +6416,7 @@ async function initSupabaseSession() {
     } catch(_) {}
     renderProfile();
     setTimeout(startOnboarding, 600);
-    setTimeout(() => startChecklist(profile?.role, session.user.id), 2000);
+    // checklist is triggered from the ME tab, not auto-shown
   } catch(e) { console.warn('initSupabaseSession:', e.message); }
 
   sb.auth.onAuthStateChange(async (event, session) => {
@@ -7265,6 +7276,28 @@ async function openDealDetail(promoId) {
     }).join('');
     const overflow = Math.max(0, (_sqCurrentMembers || []).length - 5);
     const memberCount = _sqCurrentSquad ? (_sqCurrentSquad.member_count || _sqCurrentMembers.length) : 0;
+    let includedHtml = '';
+    if (p.linked_menu_item_ids?.length && p.business_id) {
+      const { data: menuItems } = await getSB().from('menu_items').select('id,name,price,image_url').in('id', p.linked_menu_item_ids);
+      if (menuItems?.length) {
+        const rows = menuItems.map(mi => `
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div style="width:38px;height:38px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.1rem">
+              ${mi.image_url ? `<img src="${x(mi.image_url)}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.textContent='🍽️'">` : '🍽️'}
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(mi.name)}</div>
+              <div style="font-size:.72rem;color:var(--mu)">R${(mi.price||0).toFixed(2)}</div>
+            </div>
+          </div>`).join('');
+        const bizIdSafe = x(p.business_id);
+        includedHtml = `<div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:20px">
+          <div style="font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:4px">What's included</div>
+          ${rows}
+          <div onclick="window._pendingBizTab='menu';openBiz('${bizIdSafe}')" style="cursor:pointer;margin-top:10px;font-size:.74rem;font-weight:700;color:var(--or);font-family:'Syne',sans-serif">View on menu →</div>
+        </div>`;
+      }
+    }
     ws.innerHTML = `
       <button onclick="_sqBackFromDetail()" style="background:none;border:none;color:var(--mu);font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;padding:0 0 16px;display:flex;align-items:center;gap:5px">‹ Back to Deals</button>
       <div style="background:${meta.bg};border:1px solid ${meta.border};border-radius:50px;display:inline-flex;align-items:center;gap:6px;padding:6px 14px;margin-bottom:12px">
@@ -7280,6 +7313,7 @@ async function openDealDetail(promoId) {
         <span style="color:var(--border2)">·</span><span>👥 ${p.squad_min}–${p.squad_max} people</span>
       </div>
       ${p.description ? `<div style="font-size:.8rem;color:var(--mu2);line-height:1.6;margin-bottom:20px;padding:12px;background:var(--surf);border:1px solid var(--border);border-radius:10px">${x(p.description)}</div>` : ''}
+      ${includedHtml}
       ${_sqCurrentSquad ? `<div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:24px">
         <div style="font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:8px">Your Squad</div>
         <div style="display:flex;align-items:center;gap:10px">
@@ -8000,28 +8034,38 @@ function obClose() {
   }
 })();
 
-// ── Post-signup checklist (organiser / business only) ─────────────────────────
+// ── Post-signup checklist ─────────────────────────────────────────────────────
+// Triggered when user opens the ME tab (not auto-shown on login).
+// X = hide for this browser session; "Don't show again" = permanent dismiss.
+// Row click = navigate to the step; circle tap = mark done manually.
 const _CL_STEPS = {
+  fan: [
+    { id:'photo',  label:'Add a profile photo',    desc:'Let friends recognise you',          href:'/profile-settings', icon:'🤳' },
+    { id:'city',   label:'Set your city',           desc:'See events near you',                href:'/profile-settings', icon:'📍' },
+    { id:'squad',  label:'Find your first squad',   desc:'Connect with people at events',      tab:'discover',           icon:'👥' },
+    { id:'save',   label:'Save an event',           desc:'Tap ♥ on any event to bookmark',    tab:'home',               icon:'🎟' },
+  ],
   organizer: [
-    { id:'profile', label:'Complete your profile',     desc:'Add avatar, bio & city',          href:'/?tab=settings', icon:'🎨' },
-    { id:'event',   label:'Create your first event',   desc:'Takes under 3 minutes to go live', href:'/organizer',     icon:'🎟' },
-    { id:'share',   label:'Share your event link',     desc:'Post to socials & WhatsApp',       href:'/organizer',     icon:'📢' },
+    { id:'profile', label:'Complete your profile',  desc:'Add avatar, bio & city',             href:'/profile-settings', icon:'🎨' },
+    { id:'event',   label:'Create your first event',desc:'Takes under 3 minutes to go live',   href:'/organizer',        icon:'🎟' },
+    { id:'share',   label:'Share your event link',  desc:'Post to socials & WhatsApp',         href:'/organizer',        icon:'📢' },
   ],
   business: [
-    { id:'profile', label:'Complete your profile',     desc:'Add logo, bio & city',             href:'/?tab=settings', icon:'🎨' },
-    { id:'listing', label:'Set up your listing',       desc:'Hours, photos & description',      href:'/business',      icon:'📍' },
-    { id:'menu',    label:'Add your menu',             desc:'Let customers browse & order',     href:'/business',      icon:'🍽' },
+    { id:'profile', label:'Complete your profile',  desc:'Add logo, bio & city',               href:'/profile-settings', icon:'🎨' },
+    { id:'listing', label:'Set up your listing',    desc:'Hours, photos & description',        href:'/business',         icon:'📍' },
+    { id:'menu',    label:'Add your menu',           desc:'Let customers browse & order',       href:'/business',         icon:'🍽' },
   ],
 };
 function startChecklist(role, userId) {
-  if (role !== 'organizer' && role !== 'business') return;
-  const key = 'p_cl_done_' + userId;
-  if (localStorage.getItem(key)) return;
-  const steps = _CL_STEPS[role]; if (!steps) return;
+  if (!userId) return;
+  if (localStorage.getItem('p_cl_done_' + userId)) return;
+  if (sessionStorage.getItem('p_cl_hidden_' + userId)) return;
+  const effectiveRole = (role === 'organizer' || role === 'business') ? role : 'fan';
+  const steps = _CL_STEPS[effectiveRole]; if (!steps) return;
   const done = _clDone(userId);
-  if (done.size >= steps.length) { localStorage.setItem(key, '1'); return; }
+  if (done.size >= steps.length) { localStorage.setItem('p_cl_done_' + userId, '1'); return; }
   const el = document.getElementById('cl-panel'); if (!el) return;
-  _clRender(role, userId);
+  _clRender(effectiveRole, userId);
   el.style.display = 'flex';
   requestAnimationFrame(() => { el.style.transform = 'translateY(0)'; });
 }
@@ -8034,13 +8078,14 @@ function _clRender(role, uid) {
   const pct = Math.round(count / total * 100);
   const rows = steps.map(s => {
     const isDone = done.has(s.id);
-    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer" onclick="clStep('${role}','${uid}','${s.id}','${s.href}')">
-      <div style="width:32px;height:32px;border-radius:50%;background:${isDone ? 'rgba(198,255,74,.15)' : 'rgba(255,255,255,.05)'};border:1.5px solid ${isDone ? 'rgba(198,255,74,.5)' : 'rgba(255,255,255,.12)'};display:flex;align-items:center;justify-content:center;font-size:${isDone ? '.9rem' : '1rem'};flex-shrink:0">${isDone ? '✓' : s.icon}</div>
-      <div style="flex:1;min-width:0">
+    const href = s.href || 'null'; const tab = s.tab || 'null';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+      <div onclick="clMark('${role}','${uid}','${s.id}')" style="width:32px;height:32px;border-radius:50%;background:${isDone ? 'rgba(198,255,74,.15)' : 'rgba(255,255,255,.05)'};border:1.5px solid ${isDone ? 'rgba(198,255,74,.5)' : 'rgba(255,255,255,.12)'};display:flex;align-items:center;justify-content:center;font-size:${isDone ? '.9rem' : '1rem'};flex-shrink:0;cursor:pointer" title="${isDone ? 'Done' : 'Tap to mark done'}">${isDone ? '✓' : (s.icon||'✓')}</div>
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="clNav('${uid}','${href}','${tab}')">
         <div style="font-size:.82rem;font-weight:700;color:${isDone ? 'var(--mu)' : 'var(--tx)'};text-decoration:${isDone ? 'line-through' : 'none'}">${s.label}</div>
         <div style="font-size:.7rem;color:var(--mu);margin-top:1px">${s.desc}</div>
       </div>
-      ${isDone ? '' : '<div style="color:var(--mu);font-size:.8rem">›</div>'}
+      ${isDone ? '' : '<div style="color:var(--mu);font-size:.8rem;pointer-events:none">›</div>'}
     </div>`;
   }).join('');
   const panel = document.getElementById('cl-panel');
@@ -8050,28 +8095,34 @@ function _clRender(role, uid) {
         <div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--tx)">🚀 Get set up on Pulsefy</div>
         <div style="font-size:.68rem;color:var(--mu);margin-top:2px">${count}/${total} steps complete</div>
       </div>
-      <button onclick="clDismiss('${uid}')" style="background:none;border:none;color:var(--mu);font-size:1rem;cursor:pointer;padding:4px 8px">✕</button>
+      <button onclick="clHide('${uid}')" style="background:none;border:none;color:var(--mu);font-size:1rem;cursor:pointer;padding:4px 8px" title="Hide">✕</button>
     </div>
     <div style="height:3px;background:rgba(255,255,255,.07);border-radius:2px;margin-bottom:12px">
       <div style="height:3px;background:linear-gradient(90deg,#B026FF,#FF5C00);border-radius:2px;width:${pct}%;transition:width .4s"></div>
     </div>
-    ${rows}`;
+    ${rows}
+    <div style="text-align:center;margin-top:10px">
+      <button onclick="clDismiss('${uid}')" style="background:none;border:none;color:var(--mu);font-size:.68rem;cursor:pointer;text-decoration:underline;opacity:.7">Don't show again</button>
+    </div>`;
 }
-function clStep(role, uid, stepId, href) {
+function clNav(uid, href, tab) {
+  if (href && href !== 'null') { window.location.href = href; }
+  else if (tab && tab !== 'null') { clHide(uid); showTab(tab); }
+}
+function clMark(role, uid, stepId) {
   const done = _clDone(uid); done.add(stepId);
   localStorage.setItem('p_cl_' + uid, JSON.stringify([...done]));
   const steps = _CL_STEPS[role] || [];
-  if (done.size >= steps.length) {
-    clDismiss(uid);
-  } else {
-    _clRender(role, uid);
-  }
-  if (href) window.location.href = href;
+  if (done.size >= steps.length) { clDismiss(uid); } else { _clRender(role, uid); }
 }
-function clDismiss(uid) {
+function clHide(uid) {
   const el = document.getElementById('cl-panel');
   if (el) { el.style.transform = 'translateY(110%)'; setTimeout(() => { el.style.display = 'none'; }, 300); }
-  localStorage.setItem('p_cl_done_' + uid, '1');
+  if (uid) sessionStorage.setItem('p_cl_hidden_' + uid, '1');
+}
+function clDismiss(uid) {
+  clHide(uid);
+  if (uid) localStorage.setItem('p_cl_done_' + uid, '1');
 }
 
 </script>
