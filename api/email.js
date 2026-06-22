@@ -408,9 +408,14 @@ function leadHtml(bodyText) {
 
         <table cellpadding="0" cellspacing="0" border="0">
           <tr><td style="background:linear-gradient(135deg,#B026FF,#FF5C00);border-radius:50px;padding:0">
-            <a href="${APP_URL}/?utm_source=crm&utm_medium=email" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:50px;font-family:Arial,Helvetica,sans-serif">Join Pulsefy Free →</a>
+            <a href="${APP_URL}/?utm_source=crm&utm_medium=email&ref=signup" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:50px;font-family:Arial,Helvetica,sans-serif">Create Your Free Account →</a>
           </td></tr>
         </table>
+
+        <p style="margin:20px 0 0;font-size:13px;color:#606060;line-height:1.8">
+          Need help getting set up? Chat with us on WhatsApp —<br/>
+          <a href="https://wa.me/27679132678" style="color:#25D366;font-weight:700;text-decoration:none">💬 WhatsApp us at 067 913 2678</a>
+        </p>
       </td></tr>
 
       <tr><td height="20"></td></tr>
@@ -545,9 +550,111 @@ async function sendEventRejectedEmail(to, displayName, eventName) {
   return deliver(to, `Your event submission: ${eventName}`, eventRejectedHtml(displayName, eventName));
 }
 
+// ─── Claim-link email (lead outreach → signup) ────────────────────────────────
+function claimLinkHtml(businessName, claimUrl) {
+  const biz = escapeHtml(businessName || 'your business');
+  return bannerLayout(`
+    <p style="font-size:36px;margin:0 0 16px">🔗</p>
+    <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:#ffffff;line-height:1.3">Your listing on Pulsefy is ready to claim</h1>
+    <p style="margin:0 0 20px;font-size:15px;color:#a0a0a0;line-height:1.7">
+      Hi there! We've reserved a spot for <strong style="color:#ffffff">${biz}</strong> on Pulsefy — South Africa's event &amp; entertainment platform. Create your free account to take ownership of your page, add your events, and start getting discovered.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px">
+      <tr>
+        <td style="padding:14px 16px;background:rgba(176,38,255,.08);border:1px solid rgba(176,38,255,.25);border-radius:12px;font-size:13px;color:#c060ff;line-height:1.7">
+          ✅ Free to join &nbsp;·&nbsp; 📍 Pinned on our live map &nbsp;·&nbsp; 🎟 Built-in ticket sales
+        </td>
+      </tr>
+    </table>
+    <table cellpadding="0" cellspacing="0" border="0">
+      <tr><td style="background:linear-gradient(135deg,#B026FF,#FF5C00);border-radius:50px;padding:0">
+        <a href="${claimUrl}" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:50px;font-family:Arial,Helvetica,sans-serif">Claim Your Free Listing →</a>
+      </td></tr>
+    </table>
+    <hr style="border:none;border-top:1px solid #2a2a2a;margin:24px 0"/>
+    <p style="margin:0;font-size:12px;color:#555;line-height:1.7">
+      Or copy this link: <a href="${claimUrl}" style="color:#B026FF;word-break:break-all">${claimUrl}</a><br/>
+      Need help? WhatsApp us: <a href="https://wa.me/27679132678" style="color:#25D366;text-decoration:none">067 913 2678</a>
+    </p>
+  `, 'South Africa&#39;s Event &amp; Entertainment Platform');
+}
+
+async function sendClaimLinkEmail(to, businessName, claimUrl) {
+  return deliver(to, `${businessName || 'Your listing'} on Pulsefy — claim your free page`, claimLinkHtml(businessName, claimUrl), { headers: marketingHeaders(to) });
+}
+
+// ─── Onboarding nudge emails (day-2 and day-7) ───────────────────────────────
+function nudgeDay2Html(displayName, role) {
+  const name = (displayName || 'there').split(' ')[0];
+  const isOrg = role === 'organizer';
+  const steps = isOrg
+    ? [['🎨', 'Complete your profile', 'Add your avatar and bio so fans can find you', '/?tab=settings'],
+       ['🎟', 'Create your first event', 'It takes under 3 minutes to go live', '/organizer'],
+       ['📢', 'Share your event link', 'Post it to your socials and watch RSVPs roll in', '/organizer']]
+    : [['🎨', 'Complete your profile', 'Add your logo, hours, and description', '/?tab=settings'],
+       ['📍', 'Go live on the map', 'Get discovered by locals looking for spots like yours', '/business'],
+       ['🍽', 'Add your menu', 'Let customers browse and order pickup in-app', '/business']];
+  const rows = steps.map(([icon, title, desc]) =>
+    `<tr><td style="padding:10px 0;border-bottom:1px solid #222">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td width="36" style="font-size:22px;vertical-align:top">${icon}</td>
+        <td style="vertical-align:top;padding-left:10px">
+          <div style="font-size:14px;font-weight:700;color:#fff">${title}</div>
+          <div style="font-size:12px;color:#707070;margin-top:2px">${desc}</div>
+        </td>
+      </tr></table>
+    </td></tr>`
+  ).join('');
+  return bannerLayout(`
+    <p style="font-size:36px;margin:0 0 16px">👋</p>
+    <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:#ffffff;line-height:1.3">Hey ${name}, ready to go live?</h1>
+    <p style="margin:0 0 20px;font-size:15px;color:#a0a0a0;line-height:1.7">
+      You joined Pulsefy 2 days ago — nice! Here are the 3 steps to get fully set up and start getting discovered:
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px">${rows}</table>
+    ${btn(`${PUBLIC_URL}${isOrg ? '/organizer' : '/business'}`, isOrg ? 'Open Organiser Dashboard →' : 'Open Business Dashboard →')}
+    <hr style="border:none;border-top:1px solid #2a2a2a;margin:24px 0 16px"/>
+    <p style="margin:0;font-size:13px;color:#555;line-height:1.7">Need a hand? Reply to this email or <a href="https://wa.me/27679132678" style="color:#25D366;text-decoration:none">WhatsApp us at 067 913 2678</a> — we're here to help.</p>
+  `);
+}
+
+function nudgeDay7Html(displayName, role) {
+  const name = (displayName || 'there').split(' ')[0];
+  const isOrg = role === 'organizer';
+  return bannerLayout(`
+    <p style="font-size:36px;margin:0 0 16px">📅</p>
+    <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:#ffffff;line-height:1.3">It's been a week, ${name} — let's make it count</h1>
+    <p style="margin:0 0 20px;font-size:15px;color:#a0a0a0;line-height:1.7">
+      ${isOrg
+        ? "You signed up on Pulsefy a week ago. Organisers who list their first event within the first 7 days get <strong style=\"color:#C6FF4A\">3× more profile views</strong> in their first month. Don't miss the window."
+        : "You signed up on Pulsefy a week ago. Businesses with complete listings get <strong style=\"color:#C6FF4A\">5× more map taps</strong> than those with empty profiles. A few minutes now = more customers this weekend."}
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px">
+      <tr><td style="padding:14px 20px;background:rgba(198,255,74,.07);border:1px solid rgba(198,255,74,.2);border-radius:12px;font-size:14px;color:#C6FF4A;line-height:1.7">
+        ${isOrg
+          ? '🎟 Your first event is free to list, takes 3 minutes, and goes live immediately after review.'
+          : '📍 Your business listing is free, takes 5 minutes, and puts you on our live map today.'}
+      </td></tr>
+    </table>
+    ${btn(`${PUBLIC_URL}${isOrg ? '/organizer' : '/business'}`, isOrg ? 'List Your First Event →' : 'Complete Your Listing →')}
+    <hr style="border:none;border-top:1px solid #2a2a2a;margin:24px 0 16px"/>
+    <p style="margin:0;font-size:13px;color:#555;line-height:1.7">Questions? <a href="https://wa.me/27679132678" style="color:#25D366;text-decoration:none">WhatsApp 067 913 2678</a> — Thabiso will get back to you personally.</p>
+  `);
+}
+
+async function sendNudgeDay2Email(to, displayName, role) {
+  const label = role === 'organizer' ? 'organiser' : 'business';
+  return deliver(to, `Hey ${(displayName||'').split(' ')[0] || 'there'} — 3 steps to go live on Pulsefy`, nudgeDay2Html(displayName, role));
+}
+
+async function sendNudgeDay7Email(to, displayName, role) {
+  return deliver(to, `One week on Pulsefy — let's get you live`, nudgeDay7Html(displayName, role));
+}
+
 module.exports = {
   sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail,
   sendPaymentConfirmEmail, sendTicketEmail, sendLeadEmail,
   sendOrderEmail, sendMarketingEmail, sendEventApprovedEmail, sendEventRejectedEmail,
+  sendClaimLinkEmail, sendNudgeDay2Email, sendNudgeDay7Email,
   unsubToken, EMAIL_CONFIGURED,
 };
