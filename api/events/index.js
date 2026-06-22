@@ -39,7 +39,9 @@ module.exports = async (req, res) => {
         .eq('is_active', true)
         .eq('approved', true)
         .not('status', 'in', '(cancelled,postponed)')
-        .order('is_frontline',   { ascending: false })
+        // Order by the single blended rank_score (which now folds in the
+        // featured/frontline bonus). Ordering by is_frontline first would
+        // re-impose the old hard gate that buried every non-featured post.
         .order('rank_score',     { ascending: false, nullsFirst: false })
         .order('date_local',     { ascending: true })
         .range(offset, offset + limit - 1);
