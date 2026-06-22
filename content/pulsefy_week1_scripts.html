@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pulsefy News Desk — Week 1 Scripts</title>
+<style>
+  :root { --purple:#6B2FB5; --orange:#FF7A1A; --ink:#1c1c28; --muted:#6b6b7b; --bg:#faf8ff; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: var(--ink); background:#fff; margin:0; line-height:1.5; }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 32px 28px 60px; }
+  header.hero { background: linear-gradient(120deg, var(--purple), var(--orange)); color:#fff; padding: 28px 28px; border-radius: 14px; margin-bottom: 26px; }
+  header.hero h1 { margin: 0 0 6px; font-size: 26px; }
+  header.hero p { margin: 0; opacity: .95; font-size: 14px; }
+  h2 { color: var(--purple); border-bottom: 3px solid var(--orange); padding-bottom: 6px; margin-top: 38px; font-size: 21px; }
+  h3 { color: var(--purple); margin-top: 26px; font-size: 17px; }
+  .meta { font-size: 13px; color: var(--muted); margin: 4px 0 14px; }
+  .badge { display:inline-block; background: var(--purple); color:#fff; font-size:11px; font-weight:700; padding:3px 9px; border-radius: 20px; letter-spacing:.4px; text-transform:uppercase; }
+  .badge.orange { background: var(--orange); }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+  th, td { border: 1px solid #e3def0; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--bg); color: var(--purple); }
+  td.tc { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--orange); font-weight:700; width: 74px; }
+  .block { position: relative; background: var(--bg); border: 1px solid #e3def0; border-left: 5px solid var(--orange); border-radius: 8px; padding: 16px 16px 16px; margin: 12px 0 20px; }
+  .block .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color: var(--purple); margin-bottom:8px; display:block; }
+  pre { font-family: 'Courier New', monospace; font-size: 13px; white-space: pre-wrap; margin: 0; color: var(--ink); }
+  button.copy { position: absolute; top: 12px; right: 12px; background: var(--purple); color:#fff; border:none; border-radius:6px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer; }
+  button.copy:hover { background: var(--orange); }
+  .note { background:#fff7ef; border:1px solid #ffd9b3; border-radius:8px; padding:12px 14px; font-size:13.5px; margin:14px 0; }
+  ul { margin: 8px 0 14px; padding-left: 20px; } li { margin: 3px 0; }
+  .small { font-size: 12.5px; color: var(--muted); }
+  .foot { margin-top: 40px; font-size: 12px; color: var(--muted); border-top:1px solid #eee; padding-top:14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>🎙️ Pulsefy News Desk — Full Playbook</h1>
+  <p>Part 1: Week 1 scripts · Part 2: production, image prompts, lip-sync, voice &amp; animation maps · Purple &amp; orange aesthetic</p>
+</header>
+
+<p class="small">Note: brief says "Pulsefy", the live product is "Pulsify". Lock ONE spelling everywhere before posting. This pack uses <strong>Pulsefy</strong> as written — change globally if needed.</p>
+
+<h2>📦 What's in here</h2>
+<ul>
+  <li>Reusable <strong>intro &amp; outro</strong> (same every episode — record once, reuse).</li>
+  <li><strong>Video 1 — Map Drop:</strong> Florida Road (Thursday).</li>
+  <li><strong>Video 2 — Spotlight:</strong> Eyadini Lounge, Umlazi (Sunday).</li>
+  <li>For each: full anchor dialogue, timing, on-screen text, B-roll cues, captions &amp; hashtags.</li>
+  <li>HeyGen + CapCut assembly checklist.</li>
+</ul>
+
+<!-- ============ REUSABLE ============ -->
+<h2>♻️ Reusable Intro &amp; Outro (record once)</h2>
+
+<div class="block">
+  <span class="label">Standard Intro — ~3 sec</span>
+  <button class="copy" onclick="cp(this)">Copy</button>
+<pre>[Breaking-news sting + flash]
+ANCHOR: "Good evening Durban — you're watching the Pulsefy News Desk. Let's get into it."</pre>
+</div>
+
+<div class="block">
+  <span class="label">Standard Outro / CTA — ~5 sec (THIS IS YOUR SUPPLY-SIDE ENGINE)</span>
+  <button class="copy" onclick="cp(this)">Copy</button>
+<pre>ANCHOR: (turns to camera) "That's tonight's pulse.
+Want YOUR event or venue on this desk? It's free — link in bio.
+Pulsefy. Find your vibe."
+[Logo sting]</pre>
+</div>
+
+<!-- ============ VIDEO 1 ============ -->
+<h2>🗺️ VIDEO 1 — "MAP DROP: Florida Road"</h2>
+<p class="meta"><span class="badge">Map Drop</span> &nbsp; <span class="badge orange">Thursday drop</span> &nbsp; Target length: ~40 sec</p>
+
+<table>
+  <tr><th>Time</th><th>Anchor dialogue</th><th>On screen (the "desk screen")</th></tr>
+  <tr><td class="tc">0:00–0:03</td><td>INTRO (see reusable above)</td><td>Anchor at desk, logo flash</td></tr>
+  <tr><td class="tc">0:03–0:10</td><td>"Tonight on the map — Florida Road, Morningside. The street that's basically one long invitation."</td><td>Screen-record: Pulsefy map zooming into Morningside</td></tr>
+  <tr><td class="tc">0:10–0:22</td><td>"We dropped three pins. Pin one: rooftop drinks. Pin two: live music. Pin three… we honestly lost count after the third lounge. The map nearly caught a vibe and walked off on its own."</td><td>Map: 3 pins drop one by one (animated). Cut to 2-sec B-roll of each vibe type</td></tr>
+  <tr><td class="tc">0:22–0:33</td><td>"This is the whole point — open Pulsefy, see what's near you, pick your spot before your friends pick the wrong one."</td><td>Phone mockup: finger tapping a pin → venue card opens</td></tr>
+  <tr><td class="tc">0:33–0:40</td><td>OUTRO + CTA (see reusable above)</td><td>Anchor to camera, logo sting</td></tr>
+</table>
+
+<div class="block">
+  <span class="label">Video 1 — Full dialogue only (paste into HeyGen)</span>
+  <button class="copy" onclick="cp(this)">Copy</button>
+<pre>Good evening Durban — you're watching the Pulsefy News Desk. Let's get into it.
+
+Tonight on the map — Florida Road, Morningside. The street that's basically one long invitation.
+
+We dropped three pins. Pin one: rooftop drinks. Pin two: live music. Pin three… we honestly lost count after the third lounge. The map nearly caught a vibe and walked off on its own.
+
+This is the whole point — open Pulsefy, see what's near you, pick your spot before your friends pick the wrong one.
+
+That's tonight's pulse. Want your event or venue on this desk? It's free — link in bio. Pulsefy. Find your vibe.</pre>
+</div>
+
+<div class="block">
+  <span class="label">Video 1 — Caption + hashtags (paste into TikTok/IG/YouTube)</span>
+  <button class="copy" onclick="cp(this)">Copy</button>
+<pre>📍 We put Florida Road on the desk. 3 pins. 1 street. Endless excuses to go out 😮‍💨 Where are you starting your night? 👇
+#Durban #FloridaRoad #DurbanNightlife #Morningside #Pulsefy #DurbanEvents #Kzn #ThingsToDoInDurban #DurbanLife #SouthAfrica</pre>
+</div>
+
+<div class="note"><strong>B-roll for Video 1:</strong> rooftop bar / cocktail pour, small live band or crowd dancing, neon street at night. Sources: Pexels &amp; Pixabay ("rooftop bar", "live music crowd", "city night street"). Best of all: film 5–10 sec of the real Florida Road yourself.</div>
+
+<!-- ============ VIDEO 2 ============ -->
+<h2>🥩 VIDEO 2 — "SPOTLIGHT: Eyadini Lounge"</h2>
+<p class="meta"><span class="badge">Spotlight</span> &nbsp; <span class="badge orange">Sunday drop</span> &nbsp; Target length: ~45 sec</p>
+
+<table>
+  <tr><th>Time</th><th>Anchor dialogue</th><th>On screen (the "desk screen")</th></tr>
+  <tr><td class="tc">0:00–0:03</td><td>INTRO (reusable)</td><td>Anchor at desk, logo flash</td></tr>
+  <tr><td class="tc">0:03–0:12</td><td>"Tonight's Spotlight: Eyadini Lounge, deep in Umlazi. A shisanyama that has seen more legends than a heritage museum."</td><td>Eyadini flyer / exterior photo on screen + map pin on Umlazi</td></tr>
+  <tr><td class="tc">0:12–0:26</td><td>"Here's the report: the meat is also legendary. The vibe? Sunday chills, cars parked like a motor show, and a crowd that dresses up just to eat well. This is not a meal — it's an event."</td><td>B-roll: braai/meat sizzling, crowd, parked cars, people laughing</td></tr>
+  <tr><td class="tc">0:26–0:38</td><td>"If 'where should we link up Sunday' is a debate in your group chat — consider it settled. Open Pulsefy, find the pin, thank us later."</td><td>Phone mockup: Eyadini pin → venue card → "Get directions"</td></tr>
+  <tr><td class="tc">0:38–0:45</td><td>OUTRO + CTA (reusable)</td><td>Anchor to camera, logo sting</td></tr>
+</table>
+
+<div class="block">
+  <span class="label">Video 2 — Full dialogue only (paste into HeyGen)</span>
+  <button class="copy" onclick="cp(this)">Copy</button>
+<pre>Good evening Durban — you're watching the Pulsefy News Desk. Let's get into it.
+
+Tonight's Spotlight: Eyadini Lounge, deep in Umlazi. A shisanyama that has seen more legends than a heritage museum.
+
+Here's the report: the meat is also legendary. The vibe? Sunday chills, cars parked like a motor show, and a crowd that dresses up just to eat well. This is not a meal — it's an event.
+
+If "where should we link up Sunday" is a debate in your group chat — consider it settled. Open Pulsefy, find the pin, thank us later.
+
+That's tonight's pulse. Want your event or venue on this desk? It's free — link in bio. Pulsefy. Find your vibe.</pre>
+</div>
+
+<div class="block">
+  <span class="label">Video 2 — Caption + hashtags</span>
+  <button class="copy" onclick="cp(this)">Copy</button>
+<pre>🥩🔥 SPOTLIGHT: Eyadini Lounge, Umlazi. More legends than a museum… and the meat is also legendary. Settle the group-chat debate — your Sunday plug is sorted. 📍 Find the pin on Pulsefy.
+#Eyadini #Umlazi #Shisanyama #Durban #DurbanFood #Braai #KZN #DurbanLife #SundayVibes #Pulsefy #SouthAfrica</pre>
+</div>
+
+<div class="note"><strong>B-roll for Video 2:</strong> meat on the braai/grill close-ups, a lively outdoor crowd, nice cars, people eating &amp; laughing. Sources: Pexels &amp; Pixabay ("braai", "barbecue meat", "outdoor party crowd"). <strong>Keep it flattering</strong> — Eyadini isn't an onboarded partner yet, so report facts and good vibes, never criticism.</div>
+
+<!-- ============ ASSEMBLY ============ -->
+<h2>🛠️ HeyGen + CapCut Assembly Checklist</h2>
+<ul>
+  <li><strong>1. Anchor:</strong> Paste the "dialogue only" block into HeyGen → generate talking-anchor clip (young, cheeky, purple blazer/orange tie).</li>
+  <li><strong>2. CapCut layout:</strong> anchor on the left ~40% of frame; a rounded "screen" rectangle on the right ~55% for flyers/map/B-roll.</li>
+  <li><strong>3. Map footage:</strong> screen-record the live Pulsefy map zooming to Durban + pins. This is your most valuable shot — it proves the product works.</li>
+  <li><strong>4. Captions:</strong> CapCut Auto-Captions ON (most people watch muted). Style purple text, orange highlight.</li>
+  <li><strong>5. Sound:</strong> "breaking news" sting at intro (Mixkit), low music bed under dialogue (CapCut free library).</li>
+  <li><strong>6. Export:</strong> 1080×1920, 30fps. Post Thu 18:00–20:00 (TikTok) / Sun 11:00–13:00 (IG).</li>
+  <li><strong>7. First hour:</strong> reply to every comment — comment velocity drives reach.</li>
+</ul>
+
+<div class="note"><strong>Reminder:</strong> verify any event date within 48h of posting, keep satire <em>with</em> people not <em>at</em> them (punch at situations: group-chat debates, parking, outfit panic), and DM any venue you feature with the view count — that screenshot is your sales pitch to onboard them.</div>
+
+<!-- ================= PART 2 ================= -->
+<h2>🎬 PART 2 — Production &amp; Editing Playbook</h2>
+
+<h3>Your master scene</h3>
+<p>You have ONE finished studio scene (anchor bottom-left and clear of the screen; Durban coastline window; rich DURBAN/KZN screen with events + map pins; Zulu shield on the desk). Save it as <code>pulsefy_master_scene.png</code> and <strong>reuse it every episode</strong>. You never re-position the anchor again — that job is done.</p>
+
+<h3>The layer model (CapCut)</h3>
+<p>Every episode is a stack of layers; only the screen-content layer changes week to week:</p>
+<ul>
+  <li><strong>Layer 1 — Background:</strong> the master scene (reused).</li>
+  <li><strong>Layer 2 — Screen content:</strong> this week's flyer / map recording / B-roll, sized to sit inside the screen area. <em>The only layer you swap.</em></li>
+  <li><strong>Layer 3 — Talking head:</strong> short lip-sync clips for intro + outro only.</li>
+  <li><strong>Layer 4 — Segment label:</strong> small SPOTLIGHT / MAP DROP tag (Canva).</li>
+  <li><strong>Layer 5 — Captions:</strong> CapCut auto-captions.</li>
+  <li><strong>Layer 6 — Audio:</strong> voiceover (voice-changed) + music + news sting.</li>
+</ul>
+
+<h3>Per-episode edits (~6, most take seconds)</h3>
+<table>
+  <tr><th>#</th><th>Edit</th><th>Effort</th></tr>
+  <tr><td>1</td><td>Drop in the master scene as background</td><td>5 sec (reused)</td></tr>
+  <tr><td>2</td><td>Overlay your video / flyer onto the screen zone</td><td>~2 min</td></tr>
+  <tr><td>3</td><td>Record your voiceover</td><td>real-time</td></tr>
+  <tr><td>4</td><td>Apply AI voice change (CapCut Voice Changer)</td><td>~30 sec</td></tr>
+  <tr><td>5</td><td>Lip-sync the intro + outro clips (Hedra) + drop in</td><td>~5 min</td></tr>
+  <tr><td>6</td><td>Auto-captions + music + news sting, then export</td><td>~3 min</td></tr>
+</table>
+<p class="small">Realistically ~10–15 min per video once you've done one or two.</p>
+
+<h2>🖼️ Image Prompts (paste into ChatGPT)</h2>
+<p class="small">AI image tools often misspell text on shirts/screens. If PULSEFY comes out wrong, generate the shirt plain and add the real logo in Canva/CapCut. Spell it exactly: <strong>P-U-L-S-E-F-Y</strong>.</p>
+
+<div class="block">
+  <span class="label">A. Rich vertical scene (TikTok / Reels twin of your horizontal master)</span>
+  <button class="copy" onclick="cp(this)">Copy</button>
+<pre>Create a vertical 9:16 news studio scene, rich and detailed, premium 3D-cartoon style, deep purple (#6B2FB5) and vibrant orange (#FF7A1A) lighting.
+
+- TOP 60%: a large glowing studio screen with a purple-orange neon bezel and a header reading "PULSEFY NEWS DESK". Inside the screen: the aerial Durban coastline with Moses Mabhida Stadium as the backdrop, a "DURBAN - KWAZULU-NATAL" title, an "UPCOMING EVENTS" panel on the left with icons, and a glowing map of the KZN coast on the right with location pins labelled Umlazi, Durban North, Morningside, Durban CBD, Amanzimtoti. Include small South African flags. Rich and full.
+- BOTTOM 40%: a young South African male anchor, mid-20s, short fade, light beard, warm cheeky smile, seated behind a sleek reflective desk on the LEFT side, his body BELOW the screen and NOT overlapping it. White t-shirt with a pink circular logo and the word "PULSEFY". Small clip-on mic. A Zulu shield-and-spears ornament on the desk. Purple desk under-glow.
+
+Keep it rich and detailed. Anchor must not cover the screen. Vertical 9:16.</pre>
+</div>
+
+<div class="block">
+  <span class="label">B. Solo close-up portrait (your reusable talking-head for lip-sync)</span>
+  <button class="copy" onclick="cp(this)">Copy</button>
+<pre>Using the news anchor character from this image as reference, create a clean front-facing close-up portrait of the SAME man - same face, same short fade haircut, same light beard, same warm slightly cheeky smile, same skin tone.
+
+Framing: head and shoulders, facing the camera directly, looking into the lens, mouth relaxed and slightly open (ready to speak), eyes open.
+Wardrobe: the same white t-shirt with the pink circular logo and the word "PULSEFY".
+Background: a simple, smooth dark-purple studio blur (no text, no screen, no objects) so he can be cut out easily.
+Lighting: soft, even, professional studio lighting on the face.
+Style: same polished 3D-cartoon look as the reference.
+
+Vertical portrait orientation, sharp focus on the face.</pre>
+</div>
+
+<div class="block">
+  <span class="label">C. Remove the photographer's signature (rights cleared by Stan Sanetra)</span>
+  <button class="copy" onclick="cp(this)">Copy</button>
+<pre>Remove the "Stan Sanetra" text watermark in the top-left corner of this photo. Fill that area cleanly with matching sky and ocean so it looks natural and untouched. Do not change anything else in the image - keep the beachfront, stadium, city and colours exactly the same. Output the full image at the same dimensions.</pre>
+</div>
+
+<div class="block">
+  <span class="label">D. Move the anchor aside on your rich HORIZONTAL scene</span>
+  <button class="copy" onclick="cp(this)">Copy</button>
+<pre>Recreate this exact news studio scene, keeping everything the same: the left window showing the aerial Durban coastline with Moses Mabhida Stadium, the right screen with the "DURBAN - KWAZULU-NATAL" title, the "UPCOMING EVENTS" panel, the glowing map with location pins, the South African flags, the purple-and-orange lighting, the desk and the Zulu shield ornament.
+
+Change ONLY this: move the male anchor to the LOWER-LEFT of the frame, seated behind the desk, so his head and body are clearly BELOW the screen and do NOT cover the events panel or the map. Keep his face, hairstyle, beard, smile and white "PULSEFY" t-shirt exactly the same. Everything else stays identical. 16:9 horizontal.</pre>
+</div>
+
+<div class="note"><strong>Putting the Durban photo on the screen:</strong> use <strong>CapCut</strong> (non-destructive), NOT a full-image AI regen — that can change the anchor's face between episodes. In CapCut: Overlay → Add overlay → import the watermark-removed photo → resize to sit inside the screen area → opacity ~90% so it reads like a display.</div>
+
+<h2>🎭 Talking Anchor — Lips &amp; Motion</h2>
+<p>Honest truth: <strong>lips are easy, hands are hard.</strong> Free tools lip-sync a still image well, but none reliably animate gesturing hands — don't let hands hold up your launch.</p>
+<p><strong>The trick:</strong> only animate the 3–5 seconds he's actually on camera (intro line + outro CTA). The middle is screen content + B-roll + voiceover with the anchor NOT in frame. Cuts the work ~80%.</p>
+<table>
+  <tr><th>App</th><th>What it does</th><th>Free?</th></tr>
+  <tr><td><strong>Hedra</strong> (start here)</td><td>Photo + your audio → lip-sync + natural head/upper-body motion</td><td>Free tier</td></tr>
+  <tr><td>D-ID</td><td>Photo + audio → clean lip-sync (face only)</td><td>Free trial credits</td></tr>
+  <tr><td>HeyGen (Talking Photo)</td><td>Photo + audio → talking avatar</td><td>Free tier (watermark)</td></tr>
+  <tr><td>Vidnoz</td><td>Free AI talking photo</td><td>Free tier</td></tr>
+</table>
+<ul>
+  <li>Use the solo close-up portrait (Prompt B) — lip-sync tools work best on a clear single face.</li>
+  <li>Feed portrait + your voiceover audio into Hedra → it lip-syncs and adds slight head motion.</li>
+  <li>In CapCut, drop the talking clip over the studio scene for the intro/outro only.</li>
+</ul>
+<p class="small"><strong>Hands gesturing (optional, later):</strong> image-to-video tools Kling AI or Hailuo (MiniMax), free tiers. Feed the scene + "the anchor talks and gestures naturally." Trade-off: more credits, slower, AI hands can glitch. Skip for now.</p>
+
+<h2>🎙️ Voiceover + AI Voice Change</h2>
+<p>You speak the lines yourself, then change your voice so the anchor sounds like a different presenter. No extra app — CapCut has a built-in <strong>Voice Changer</strong>.</p>
+<ul>
+  <li>Record your voice in CapCut (Audio → Record) or import it.</li>
+  <li>Select the clip → tap <strong>Voice changer</strong> → pick an effect until it sounds like a different presenter.</li>
+  <li>Split out the intro + outro audio — those feed Hedra for lip-sync.</li>
+  <li>Upgrade later: ElevenLabs free tier has a realistic speech-to-speech voice changer.</li>
+</ul>
+
+<h2>🗺️ Animation Maps</h2>
+<p><strong>Rule:</strong> his face is only on screen when HE is talking (lip-sync). The moment it's pure voiceover, cut to the screen/B-roll fullscreen — never a static face with a moving voice.</p>
+<h3>Video 1 — Map Drop (~40s) · only ~10 sec animated</h3>
+<table>
+  <tr><th>Time</th><th>On screen</th><th>Animate?</th></tr>
+  <tr><td class="tc">0:00–0:03</td><td>Anchor close-up — intro line</td><td>✅ Lip-sync (~3 sec)</td></tr>
+  <tr><td class="tc">0:03–0:33</td><td>Pulsefy map zoom + pins + B-roll</td><td>❌ Voiceover only (anchor not in frame)</td></tr>
+  <tr><td class="tc">0:33–0:40</td><td>Anchor close-up — outro + CTA</td><td>✅ Lip-sync (~7 sec)</td></tr>
+</table>
+<h3>Video 2 — Eyadini Spotlight (~45s) · only ~10 sec animated</h3>
+<table>
+  <tr><th>Time</th><th>On screen</th><th>Animate?</th></tr>
+  <tr><td class="tc">0:00–0:03</td><td>Anchor close-up — intro line</td><td>✅ Lip-sync (~3 sec)</td></tr>
+  <tr><td class="tc">0:03–0:38</td><td>Eyadini flyer + braai B-roll + map pin</td><td>❌ Voiceover only (anchor not in frame)</td></tr>
+  <tr><td class="tc">0:38–0:45</td><td>Anchor close-up — outro + CTA</td><td>✅ Lip-sync (~7 sec)</td></tr>
+</table>
+
+<h2>🆓 Free App Stack (R0 / month)</h2>
+<table>
+  <tr><th>App</th><th>Use</th></tr>
+  <tr><td>CapCut</td><td>Main editor: overlay, captions, voice changer, zoom motion, export</td></tr>
+  <tr><td>Canva</td><td>Logo PNG, segment labels, screen graphics, flyers</td></tr>
+  <tr><td>ChatGPT</td><td>Studio scene + solo portrait + photo edits</td></tr>
+  <tr><td>Hedra / D-ID</td><td>Lip-sync the intro + outro talking-head clips</td></tr>
+  <tr><td>Pexels + Pixabay</td><td>Free B-roll: braai, crowds, nightlife, Durban aerials</td></tr>
+  <tr><td>Mixkit</td><td>Free news sting + music bed</td></tr>
+  <tr><td>Kling / Hailuo (optional)</td><td>Image-to-video for gesturing shots (later)</td></tr>
+</table>
+
+<div class="note"><strong>Photo rights:</strong> the Durban aerial belongs to photographer <strong>Stan Sanetra</strong>, who cleared it for free use and allowed removing his signature — keep a record of that permission. For any future photo you don't own: get written permission, use free-commercial stock (Pexels/Pixabay), or generate your own. Never strip a watermark you haven't been given rights to remove.</div>
+
+<h2>✅ Weekly Checklist (per video)</h2>
+<ul>
+  <li>Pick the segment + write/confirm the script (use the Week 1 pack).</li>
+  <li>Record voiceover → apply CapCut Voice Changer → export audio.</li>
+  <li>Lip-sync intro + outro audio in Hedra using the solo portrait.</li>
+  <li>Screen-record the live Pulsefy map / gather the flyer + B-roll.</li>
+  <li>CapCut: master scene → lip-sync intro → screen content (voiceover) → lip-sync outro.</li>
+  <li>Auto-captions (purple/orange) + music + news sting.</li>
+  <li>Export 1080×1920, 30fps. Post Thu 18:00–20:00 (TikTok) / Sun 11:00–13:00 (IG).</li>
+  <li>First hour: reply to every comment. DM any venue you featured the view count.</li>
+</ul>
+
+<!-- ================= PART 3 ================= -->
+<h2>🎤 PART 3 — Meet Charlie, the Host</h2>
+<p>Charlie is the face of the desk. Lock his character so the satire is consistent every episode — same voice, same cheek, same warmth. Every script line should sound like it came out of his mouth.</p>
+
+<h3>Who he is</h3>
+<ul>
+  <li><strong>Charlie</strong> — mid-20s, born-and-bred Durban. Sharp, quick-witted, effortlessly charming.</li>
+  <li>A smart young man who reads the city like a local: taxi routes, braai spots, group-chat debates.</li>
+  <li>Credible enough to "report the news," cheeky enough to wink at the camera.</li>
+  <li>Confident but self-aware — he'll happily make Pulsefy (and himself) the butt of the joke.</li>
+</ul>
+
+<h3>His comedic voice</h3>
+<ul>
+  <li>Deadpan news delivery of slightly absurd observations ("Breaking: man caught turning meat that wasn't his").</li>
+  <li>Mock-serious "breaking news" energy applied to nightlife and shisanyama.</li>
+  <li>Local, specific references: taxis, load-shedding, Sunday plans, outfit panic, group chats.</li>
+  <li>Warm sarcasm — he teases the situation, never insults a person or venue.</li>
+  <li>Lands the punchline, then a beat — a smirk to camera does half the work.</li>
+</ul>
+
+<div class="block">
+  <span class="label">Charlie-isms — his signature lines / flavour</span>
+  <button class="copy" onclick="cp(this)">Copy</button>
+<pre>OPEN:       "Good evening Durban - you're watching the Pulsefy News Desk."
+SIGN-OFF:   "That's tonight's pulse."
+FILLER:     "Here's the report..." / "Sources say..." / "This just in..." / "Consider it settled."
+SELF-AWARE: "...we honestly lost count after the third lounge."
+CTA:        "Want YOUR event or venue on this desk? It's free - link in bio."</pre>
+</div>
+
+<h3>Satire rules (keep it funny AND safe)</h3>
+<ul>
+  <li>Punch at <strong>situations</strong>, never at people or a venue's quality.</li>
+  <li>When in doubt, make Charlie / Pulsefy the joke.</li>
+  <li>Keep it light, local and warm — clever, not cruel.</li>
+  <li>No politics, no punching down. Satire that makes people feel <em>seen</em>, not attacked.</li>
+</ul>
+<p class="small">Your Week 1 hooks already carry Charlie's voice — keep writing every future line as if he's saying it out loud with a smirk.</p>
+
+<h2>🎥 Camera Angles — ChatGPT prompts for Charlie</h2>
+<p>These give you shot variety so you can <strong>cut between angles like a real broadcast</strong>. For <strong>every</strong> prompt: first upload your master scene (or the solo portrait) as a reference so Charlie's face, hair, beard, white PULSEFY t-shirt and the purple-orange studio stay identical. Generate 2–3 of each and save them as your reusable <strong>angle library</strong>.</p>
+
+<div class="block">
+  <span class="label">1. Medium shot (camera 2)</span>
+  <button class="copy" onclick="cp(this)">Copy</button>
+<pre>Using Charlie, the news anchor from this reference image (same face, short fade, light beard, white PULSEFY t-shirt, same purple-and-orange studio), create a MEDIUM shot: waist up, seated at the news desk, both hands resting on the desk, looking into the lens with a confident slightly cheeky smile. Frame it like a second studio camera - a bit closer than the wide shot. Keep the desk, lighting and Zulu shield consistent. Vertical 9:16.</pre>
+</div>
+
+<div class="block">
+  <span class="label">2. 3/4 side angle (dynamic cutaway)</span>
+  <button class="copy" onclick="cp(this)">Copy</button>
+<pre>Using Charlie from this reference image (identical face and wardrobe), create a 3/4 SIDE-ANGLE shot: the camera sits to his side at about 45 degrees while he turns his head toward the lens with a playful look. Same purple-orange studio and desk, cinematic side lighting. Vertical 9:16.</pre>
+</div>
+
+<div class="block">
+  <span class="label">3. Over-the-shoulder (looking at the screen)</span>
+  <button class="copy" onclick="cp(this)">Copy</button>
+<pre>Using Charlie from this reference image, create an OVER-THE-SHOULDER shot: camera behind Charlie looking past his shoulder toward the large glowing studio screen that shows the Durban map and pins. Back of his head and shoulder in soft focus, the screen sharp. Same purple studio. Vertical 9:16.</pre>
+</div>
+
+<div class="block">
+  <span class="label">4. Reaction close-ups (COMEDY GOLD — one quick cut after a punchline)</span>
+  <button class="copy" onclick="cp(this)">Copy</button>
+<pre>Using Charlie from this reference image, create a CLOSE-UP reaction shot, head and shoulders, plain dark-purple studio blur background, with this expression: [SMIRK TO CAMERA]. Same face, hair, beard and white PULSEFY t-shirt. Soft even lighting. Vertical 9:16.
+
+Swap the bracket for each reaction you want a cut for:
+[SMIRK TO CAMERA]  [RAISED EYEBROW, SKEPTICAL]  [WIDE-EYED MOCK-SHOCK]
+[HOLDING BACK LAUGHTER]  [DEADPAN, UNIMPRESSED]  [SLOW NOD, IMPRESSED]</pre>
+</div>
+
+<div class="block">
+  <span class="label">5. Low-angle "breaking news" (mock-dramatic intro)</span>
+  <button class="copy" onclick="cp(this)">Copy</button>
+<pre>Using Charlie from this reference image, create a slightly LOW-ANGLE close-up: he leans toward the camera with a mock-serious 'breaking news' expression, dramatic purple-orange rim lighting, intense but tongue-in-cheek. Same face and PULSEFY tee. Vertical 9:16.</pre>
+</div>
+
+<div class="block">
+  <span class="label">6. Hand-on-chin smirk (thinking / skeptical beat)</span>
+  <button class="copy" onclick="cp(this)">Copy</button>
+<pre>Using Charlie from this reference image, create a close-up: hand on his chin, one eyebrow raised, a playful skeptical 'hmm' look, as if reacting to something ridiculous. Plain purple studio blur. Same face and wardrobe. Vertical 9:16.</pre>
+</div>
+
+<div class="block">
+  <span class="label">7. Presenting gesture (point to the screen — great for Map Drop)</span>
+  <button class="copy" onclick="cp(this)">Copy</button>
+<pre>Using Charlie from this reference image, create a MEDIUM shot of him gesturing toward the side of the frame with an open hand (presenting), looking at the camera with a smile, as if pointing at the screen content. Same studio, desk and wardrobe. Vertical 9:16.</pre>
+</div>
+
+<div class="note"><strong>How to use the angle library in CapCut:</strong> open on the <strong>wide</strong> master scene → cut to a <strong>medium</strong> or <strong>side</strong> angle for variety → drop a <strong>reaction close-up</strong> for a beat right after a punchline → use <strong>over-the-shoulder</strong> when you talk about the map. Cutting between 3–4 angles is what makes 40 seconds feel like a real show instead of one static frame.</div>
+
+<div class="foot">Pulsefy News Desk · Full Playbook · Generated for thacollin2@gmail.com</div>
+
+</div>
+
+<script>
+function cp(btn){
+  var pre = btn.parentElement.querySelector('pre');
+  var txt = pre.innerText;
+  navigator.clipboard.writeText(txt).then(function(){
+    var old = btn.textContent; btn.textContent = "Copied ✓";
+    setTimeout(function(){ btn.textContent = old; }, 1500);
+  });
+}
+</script>
+</body>
+</html>
