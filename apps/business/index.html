@@ -1398,6 +1398,18 @@ function initDashboard() {
   const url = `${location.origin}/business-menu?id=${getBizId()}`;
   document.getElementById('menu-url-display').textContent = url;
   document.getElementById('profile-menu-url').textContent = url;
+  // Real-time: push new orders into the list without a manual refresh
+  const _sb = getSB(); const _bizId = getBizId();
+  if (_sb && _bizId) {
+    _sb.channel('biz_orders_' + _bizId)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pickup_orders', filter: 'business_id=eq.' + _bizId }, payload => {
+        if (!ORDERS.find(o => o.id === payload.new.id)) {
+          ORDERS.unshift(payload.new);
+          renderOrders(); renderStats(); renderHomeOrdersPreview(); updateOrderBadge();
+          toast('📦 New order — ' + (payload.new.customer_name || 'Customer') + ' · R' + parseFloat(payload.new.total || 0).toFixed(2), 'ok');
+        }
+      }).subscribe();
+  }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2725,7 +2737,20 @@ async function updateOrderStatus(id, status) {
   const i = ORDERS.findIndex(o => o.id === id);
   if (i >= 0) ORDERS[i].status = status;
   renderOrders(); renderStats(); renderHomeOrdersPreview();
-  if (status === 'ready') toast('Order marked Ready 🟢', 'ok');
+  if (status === 'ready') {
+    toast('Order marked Ready 🟢', 'ok');
+    const order = ORDERS.find(o => o.id === id);
+    if (order?.user_id && sb) {
+      sb.from('notifications').insert({
+        user_id: order.user_id,
+        type: 'order_ready',
+        from_display_name: BIZ?.name || 'Venue',
+        entity_id: id,
+        entity_type: 'pickup_order',
+        message: `Your order (Ref: ${order.order_ref}) is ready for collection at ${BIZ?.name || 'the venue'}! 🔔`,
+      }).catch(() => {});
+    }
+  }
 }
 
 function renderHomeOrdersPreview() {
