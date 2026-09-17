@@ -88,8 +88,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
-<link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet"/>
-<script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.8.0/mapbox-gl.css" rel="stylesheet"/>
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.8.0/mapbox-gl.js"></script>
 <script>
 function openAvatarLightbox() {
   const av = document.getElementById('profile-av');
@@ -3645,14 +3645,12 @@ function initMap() {
       if (!features.length) return;
       const clusterId = features[0].properties.cluster_id;
       const src = mapObj.getSource('pulsify-spots'); if (!src) return;
-      src.getClusterExpansionZoom(clusterId, (err, zoom) => {
-        if (err) return;
-        mapObj.easeTo({ center: features[0].geometry.coordinates, zoom });
-      });
+      src.getClusterExpansionZoom(clusterId)
+        .then(zoom => mapObj.easeTo({ center: features[0].geometry.coordinates, zoom: zoom + 0.5, duration: 700, essential: true }))
+        .catch(() => {});
     });
     mapObj.on('mouseenter', 'clusters-circle', () => { mapObj.getCanvas().style.cursor = 'pointer'; });
     mapObj.on('mouseleave', 'clusters-circle', () => { mapObj.getCanvas().style.cursor = ''; });
-    mapObj.on('zoom', _toggleMapMarkersForZoom);
     mapObj.on('zoomend', _toggleMapMarkersForZoom);
     mapObj.on('moveend', () => { clearTimeout(_mapBoundsDebounce); _mapBoundsDebounce = setTimeout(_loadEventsByBounds, 700); });
 
@@ -3887,21 +3885,23 @@ function toggleMapStyle() {
   const style = _mapStyleDark
     ? 'mapbox://styles/mapbox/dark-v11'
     : 'mapbox://styles/mapbox/satellite-streets-v12';
-  // setStyle wipes custom sources/layers/images — re-add them once the new style loads.
-  // Heatmap-forced state can't survive the wipe (layers are rebuilt with default
-  // paint), so drop back to normal view rather than show a stale toggle state.
+  const _wasHeatmap = _heatmapForced;
   _heatmapForced = false;
   mapObj.once('style.load', () => {
+    mapObj.setProjection('globe');
     _addMapSourcesAndLayers();
     placeMapMarkers();
     placePoisOnMap();
     _toggleMapMarkersForZoom();
+    if (_wasHeatmap) toggleHeatmapView();
   });
   mapObj.setStyle(style);
   const btn = document.getElementById('map-style-btn');
   if (btn) { btn.textContent = _mapStyleDark ? '🛰' : '🌗'; btn.title = _mapStyleDark ? 'Satellite view' : 'Dark view'; }
-  const heatBtn = document.getElementById('map-heat-btn');
-  if (heatBtn) { heatBtn.style.background = 'rgba(5,8,15,.65)'; heatBtn.style.borderColor = 'rgba(255,255,255,.2)'; }
+  if (!_wasHeatmap) {
+    const heatBtn = document.getElementById('map-heat-btn');
+    if (heatBtn) { heatBtn.style.background = 'rgba(5,8,15,.65)'; heatBtn.style.borderColor = 'rgba(255,255,255,.2)'; }
+  }
 }
 
 /* SVG icon set for map markers */
@@ -4168,9 +4168,10 @@ async function _loadEventsByBounds() {
   // Skip if viewport is entirely outside SA
   if (parseFloat(bn) < -35 || parseFloat(bs2) > -22 || parseFloat(be) < 16 || parseFloat(bw) > 33) return;
   try {
-    const { events } = await Api.get(`/events?bounds=${bw},${bs2},${be},${bn}&limit=50&_t=${Date.now()}`);
+    const { events } = await Api.get(`/events?bounds=${bw},${bs2},${be},${bn}&limit=100&_t=${Date.now()}`);
     if (!events?.length) return;
-    const fresh = events.filter(ev => !eventsForMap.find(e2 => e2.id === ev.id));
+    const seen = new Set(eventsForMap.map(e => e.id));
+    const fresh = events.filter(ev => !seen.has(ev.id));
     if (!fresh.length) return;
     eventsForMap = [...eventsForMap, ...fresh];
     if (mapInited && mapObj) placeMapMarkers();
