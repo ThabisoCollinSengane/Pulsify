@@ -4,3 +4,4 @@
 *.env
 .aider*
 node_modules/
+apps/landing-page/index.html.bak

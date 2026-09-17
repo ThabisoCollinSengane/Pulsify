@@ -781,17 +781,24 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 <!-- ══ MAP ══ -->
 <div class="panel" id="tab-map" style="overflow:hidden;top:0!important;bottom:0!important">
   <!-- Header bar — floats over map, sits below app top bar + ticker -->
-  <div style="position:absolute;top:calc(var(--th) + var(--tk));left:0;right:0;height:56px;z-index:50;background:linear-gradient(180deg,rgba(5,8,15,.82) 0%,rgba(5,8,15,0) 100%);backdrop-filter:blur(10px);display:flex;align-items:center;padding:0 10px;gap:6px">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:.05em;color:#fff;flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 8px rgba(0,0,0,.6)">📍 PULSEFY MAP</div>
-    <div style="display:flex;align-items:center;gap:4px;background:rgba(5,8,15,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);border-radius:50px;padding:3px 9px;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:800;color:#fff;letter-spacing:.04em;flex-shrink:0"><b id="map-cnt" style="color:var(--li)">0</b>&nbsp;spots</div>
-    <button id="map-loc-btn" onclick="goToMyLocation()" title="My Location" style="width:30px;height:30px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(0,229,255,.4);color:var(--cy);font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">📍</button>
-    <button id="map-style-btn" onclick="toggleMapStyle()" title="Toggle map style" style="width:30px;height:30px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">🌗</button>
-    <button onclick="snapMapBack()" title="Reset view" style="width:30px;height:30px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">⌂</button>
-    <button onclick="showNearbyEventsPanel()" title="Nearby events list" style="width:30px;height:30px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">☰</button>
-    <button id="map-heat-btn" onclick="toggleHeatmapView()" title="Toggle heatmap" style="width:30px;height:30px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">🔥</button>
+  <div style="position:absolute;top:calc(var(--th) + var(--tk));left:0;right:0;height:44px;z-index:50;background:rgba(5,8,15,.78);backdrop-filter:blur(12px);display:flex;align-items:center;padding:0 8px;gap:5px;border-bottom:1px solid rgba(255,255,255,.06)">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:.05em;color:#fff;flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 8px rgba(0,0,0,.6)">📍 PULSEFY MAP</div>
+    <div style="display:flex;align-items:center;gap:4px;background:rgba(5,8,15,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);border-radius:50px;padding:2px 8px;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:800;color:#fff;letter-spacing:.04em;flex-shrink:0"><b id="map-cnt" style="color:var(--li)">0</b>&nbsp;spots</div>
+    <button onclick="showMapSearch()" id="map-search-btn" title="Search places" style="width:28px;height:28px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(0,229,255,.35);color:var(--cy);font-size:.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">🔍</button>
+    <button id="map-loc-btn" onclick="goToMyLocation()" title="My Location" style="width:28px;height:28px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(0,229,255,.4);color:var(--cy);font-size:.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">📍</button>
+    <button id="map-style-btn" onclick="toggleMapStyle()" title="Toggle map style" style="width:28px;height:28px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.78rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">🌗</button>
+    <button onclick="snapMapBack()" title="Reset view" style="width:28px;height:28px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.78rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">⌂</button>
+    <button onclick="showNearbyEventsPanel()" title="Nearby events list" style="width:28px;height:28px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.78rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">☰</button>
+    <button id="map-heat-btn" onclick="toggleHeatmapView()" title="Toggle heatmap" style="width:28px;height:28px;border-radius:50%;background:rgba(5,8,15,.65);border:1px solid rgba(255,255,255,.2);color:var(--mu2);font-size:.78rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(8px);transition:background .2s">🔥</button>
+  </div>
+  <!-- Search bar — hidden, expands below header when 🔍 tapped -->
+  <div id="map-search-bar" style="display:none;position:absolute;top:calc(var(--th) + var(--tk) + 44px);left:0;right:0;z-index:51;padding:6px 10px;background:rgba(5,8,15,.96);backdrop-filter:blur(14px);border-bottom:1px solid rgba(0,229,255,.18);align-items:center;gap:8px">
+    <input id="map-search-input" type="text" placeholder="Search places in South Africa..." onkeydown="if(event.key==='Enter')doMapSearch(this.value);else if(event.key==='Escape')showMapSearch()" style="flex:1;background:rgba(255,255,255,.09);border:1px solid rgba(0,229,255,.3);border-radius:50px;padding:7px 14px;color:#fff;font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none;min-width:0"/>
+    <button onclick="doMapSearch(document.getElementById('map-search-input')?.value)" style="width:32px;height:32px;border-radius:50%;background:rgba(0,229,255,.15);border:1px solid rgba(0,229,255,.4);color:var(--cy);font-size:.88rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">🔍</button>
+    <button onclick="showMapSearch()" style="width:28px;height:28px;border-radius:50%;background:transparent;border:none;color:var(--mu);font-size:1rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">✕</button>
   </div>
   <!-- Filter chips — floats over map, below header -->
-  <div style="position:absolute;top:calc(var(--th) + var(--tk) + 56px);left:0;right:0;z-index:49;display:flex;gap:6px;padding:8px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;background:linear-gradient(180deg,rgba(5,8,15,.5) 0%,rgba(5,8,15,0) 100%);backdrop-filter:blur(4px)">
+  <div style="position:absolute;top:calc(var(--th) + var(--tk) + 44px);left:0;right:0;z-index:49;display:flex;gap:6px;padding:6px 10px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;background:linear-gradient(180deg,rgba(5,8,15,.45) 0%,rgba(5,8,15,0) 100%);backdrop-filter:blur(3px)">
     <select id="map-city-jump" onchange="jumpToCity(this.value)" title="Jump to city" style="flex-shrink:0;background:rgba(5,8,15,.7);border:1px solid rgba(255,255,255,.18);border-radius:50px;padding:0 12px;height:32px;color:#fff;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;backdrop-filter:blur(8px);-webkit-appearance:none;appearance:none">
       <option value="all">📍 All SA</option>
       <option value="durban">Durban</option>
@@ -1058,7 +1065,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   <button class="bb active" data-tab="home" onclick="showTab('home')"><svg viewBox="0 0 24 24"><path d="M12 3C12 3 4 9.5 4 15a8 8 0 0016 0C20 9.5 12 3 12 3Z"/><path d="M12 10v5M9.5 13h5"/></svg><span class="bl">Home</span></button>
   <button class="bb" data-tab="discover" onclick="showTab('discover')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"/></svg><span class="bl">Discover</span></button>
   <button class="bb" data-tab="map" onclick="showTab('map')"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3M9 20V7m6 13l5.447-2.724A1 1 0 0021 16.382V5.618a1 1 0 00-1.447-.894L15 7m0 13V7M9 7l6-3"/></svg><span class="bl">Map</span></button>
-  <button class="bb" data-tab="tickets" onclick="showTab('tickets')"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M16 7v-.5a3.5 3.5 0 00-7 0V7M16 17v.5a3.5 3.5 0 01-7 0V17"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span class="bl">Bookings</span></button>
+  <button class="bb" data-tab="tickets" onclick="showTab('tickets')"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M16 7v-.5a3.5 3.5 0 00-7 0V7M16 17v.5a3.5 3.5 0 01-7 0V17"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span class="bl">My Bookings</span></button>
   <button class="bb" data-tab="me" onclick="showTab('me')"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 19c0-3 2.7-5.5 6-5.5s6 2.5 6 5.5"/><circle cx="18" cy="8" r="2.2"/><path d="M15.5 18.5c0-1.8 1.1-3.3 2.5-4"/></svg><span class="bl">Me</span></button>
 </nav>
 <div class="toast" id="toast"></div>
@@ -1977,12 +1984,18 @@ const _TRUST_HTML = `<div id="feed-break-trust">
   <div class="rd-trust" style="margin-top:10px">
     <span class="rd-trust-item">✔ Trusted across SA</span>
     <span class="rd-trust-item">✔ Verified venues</span>
-    <span class="rd-trust-item">✔ Real events near you</span>
+    <span class="rd-trust-item">✔ Secure Paystack payments</span>
   </div>
   <div class="rd-why">
     <div class="rd-why-card"><span class="rd-why-ic">⚡</span><span class="rd-why-t">Find events instantly</span></div>
     <div class="rd-why-card"><span class="rd-why-ic">🫂</span><span class="rd-why-t">Go out with your squad</span></div>
     <div class="rd-why-card"><span class="rd-why-ic">🎉</span><span class="rd-why-t">Discover experiences</span></div>
+  </div>
+  <div style="text-align:center;padding:6px 0 2px;font-family:'Syne',sans-serif;font-size:.62rem;color:var(--mu);line-height:1.6">
+    By purchasing tickets you agree to our
+    <button onclick="showLegal()" style="background:none;border:none;color:var(--or);font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;cursor:pointer;padding:0;text-decoration:underline">Terms &amp; Conditions</button>
+    ·
+    <button onclick="showLegal('refund')" style="background:none;border:none;color:var(--or);font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;cursor:pointer;padding:0;text-decoration:underline">Refund Policy</button>
   </div>
 </div>`;
 
@@ -3953,10 +3966,10 @@ function _toggleMapMarkersForZoom() {
   if (mc) {
     const scale = Math.max(0.55, Math.min(1.35, 0.55 + (z - 15) * 0.18));
     mc.style.setProperty('--mz', scale.toFixed(2));
-    mc.classList.toggle('mk-nolabel', z < 16); // hide labels when zoomed out
+    mc.classList.toggle('mk-nolabel', z < 13); // hide labels when zoomed out
   }
   if (mapMarkers.length) {
-    const shouldShow = mapObj.getZoom() > 15;
+    const shouldShow = mapObj.getZoom() > 12;
     if (_markersVisible !== shouldShow) {
       _markersVisible = shouldShow;
       if (shouldShow) mapMarkers.forEach(m => { try { m.addTo(mapObj); } catch(e){} });
@@ -4095,11 +4108,11 @@ function _addMapSourcesAndLayers() {
       minzoom: 10,
       paint: {
         'circle-color': ['coalesce', ['get', 'genre_color'], '#FF5C00'],
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 3, 14, 7, 15, 9],
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 3, 13, 7, 14, 9],
         'circle-stroke-width': 1.5,
         'circle-stroke-color': 'rgba(255,255,255,0.75)',
-        'circle-opacity': ['interpolate', ['linear'], ['zoom'], 14, 1, 15.5, 0],
-        'circle-stroke-opacity': ['interpolate', ['linear'], ['zoom'], 14, 1, 15.5, 0],
+        'circle-opacity': ['interpolate', ['linear'], ['zoom'], 11.5, 1, 13, 0],
+        'circle-stroke-opacity': ['interpolate', ['linear'], ['zoom'], 11.5, 1, 13, 0],
       },
     });
 }
@@ -4244,7 +4257,7 @@ function _makeMarkerEl(s, isEv, labelText, countBadge, imgUrl) {
     imgDiv.style.backgroundImage = `url(${JSON.stringify(imgUrl)})`;
     el.appendChild(imgDiv);
   } else {
-    el.style.cssText = `position:absolute;top:0;left:0;background:${s.grad||s.bg};color:${s.dark?'#000':'#fff'};box-shadow:0 0 5px rgba(${s.sh},.5),0 0 12px rgba(${s.sh},.18),0 2px 8px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.15);filter:saturate(.55) brightness(.8);`;
+    el.style.cssText = `position:absolute;top:0;left:0;background:${s.grad||s.bg};color:${s.dark?'#000':'#fff'};box-shadow:0 0 8px rgba(${s.sh},.75),0 0 22px rgba(${s.sh},.32),0 2px 8px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.2);`;
     el.style.fontSize = `calc(${isEv ? '.72rem' : '.62rem'} * var(--mz, 1))`;
     const iconHtml = countBadge
       ? `<span style="display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:'Syne',sans-serif;font-size:calc(.65rem * var(--mz,1));font-weight:900">${countBadge}</span>`
@@ -4540,6 +4553,117 @@ function snapMapBack() {
   if (!mapObj) return;
   // Reset bearing + pitch too so free-rotation is undone (north-up, flat)
   mapObj.flyTo({ center: _MAP_HOME.center, zoom: _MAP_HOME.zoom, bearing: 0, pitch: 0, duration: 900, essential: true });
+}
+
+function showMapSearch() {
+  const bar = document.getElementById('map-search-bar');
+  const btn = document.getElementById('map-search-btn');
+  if (!bar) return;
+  const open = bar.style.display === 'flex';
+  bar.style.display = open ? 'none' : 'flex';
+  if (btn) btn.style.background = open ? 'rgba(5,8,15,.65)' : 'rgba(0,229,255,.18)';
+  if (!open) { const inp = document.getElementById('map-search-input'); if (inp) { inp.value = ''; inp.focus(); } }
+}
+
+async function doMapSearch(q) {
+  if (!q || !q.trim() || !mapObj) return;
+  try {
+    const r = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q.trim())}.json?country=za&language=en&types=place,address,poi,region,district&access_token=${MAPBOX_TOKEN}`);
+    const d = await r.json();
+    const f = d.features?.[0];
+    if (f) {
+      const [lon, lat] = f.center;
+      mapObj.flyTo({ center: [lon, lat], zoom: 13, duration: 900, essential: true });
+      _mapFitDone = true;
+      showMapSearch(); // close search bar after result
+    } else { showToast('No results found for "' + q.trim() + '"'); }
+  } catch(e) { showToast('Search unavailable'); }
+}
+
+const _LEGAL_CONTENT = {
+  terms: `<h3>1. Acceptance of Terms</h3>
+<p>By accessing or using Pulsefy ("the Platform"), you agree to be bound by these Terms and Conditions. If you do not agree, please do not use the Platform.</p>
+<h3>2. Platform Role</h3>
+<p>Pulsefy is a <strong>marketplace</strong> connecting event-goers with event organisers and businesses. We do not organise, host, or manage events directly. The event organiser is solely responsible for the event, its content, and any changes or cancellations.</p>
+<h3>3. Ticket Purchases</h3>
+<ul>
+  <li>All ticket purchases are <strong>final</strong> once payment is confirmed.</li>
+  <li>Tickets are non-transferable unless the event organiser explicitly permits transfers.</li>
+  <li>You will receive a QR-code ticket via the app after successful payment.</li>
+  <li>Pulsefy charges a service fee which is included in the ticket price shown.</li>
+</ul>
+<h3>4. Event Changes &amp; Cancellations</h3>
+<p>Event organisers may change event details (time, venue, line-up) at their discretion. In the event of a full cancellation, refund eligibility is determined by the organiser's stated policy. Pulsefy will facilitate communication but is not liable for cancelled events.</p>
+<h3>5. Age Restrictions</h3>
+<p>Some events are restricted to attendees aged 18 and over. It is your responsibility to comply with age restrictions. Entry may be refused if valid ID cannot be presented.</p>
+<h3>6. Conduct</h3>
+<p>You agree to comply with all venue rules and applicable South African law. Pulsefy reserves the right to suspend accounts that engage in fraudulent, abusive, or unlawful behaviour.</p>
+<h3>7. Privacy</h3>
+<p>Your personal data is processed in accordance with our Privacy Policy and the Protection of Personal Information Act (POPIA).</p>
+<h3>8. Limitation of Liability</h3>
+<p>To the fullest extent permitted by law, Pulsefy shall not be liable for any loss, injury, or damage arising from your attendance at an event listed on the Platform.</p>
+<h3>9. Governing Law</h3>
+<p>These Terms are governed by the laws of the Republic of South Africa.</p>
+<p style="font-size:.7rem;color:var(--mu);margin-top:16px">Last updated: September 2026 · Contact: <a href="mailto:support@pulsefy.co.za">support@pulsefy.co.za</a></p>`,
+
+  refund: `<h3>Refund Policy</h3>
+<p>Pulsefy facilitates refunds on behalf of event organisers in line with the Consumer Protection Act (CPA) and the individual organiser's policy.</p>
+<h3>Organiser Cancellation</h3>
+<p>If an event is <strong>cancelled entirely</strong> by the organiser, all ticket holders are entitled to a full refund of the ticket price (excluding the Pulsefy service fee, which is non-refundable).</p>
+<h3>Event Postponement</h3>
+<p>If an event is postponed, your ticket remains valid for the rescheduled date. If you cannot attend the new date, you may request a refund within <strong>7 days</strong> of the postponement announcement.</p>
+<h3>Buyer Request Refunds</h3>
+<ul>
+  <li>Refunds requested by buyers are <strong>not automatically granted</strong>.</li>
+  <li>Requests must be submitted at least <strong>48 hours before the event</strong>.</li>
+  <li>Approval is at the organiser's discretion and is not guaranteed.</li>
+  <li>Pulsefy service fees are non-refundable in all buyer-request cases.</li>
+</ul>
+<h3>How to Request</h3>
+<p>Navigate to <strong>My Bookings → [Event] → Request Refund</strong>, or email <a href="mailto:support@pulsefy.co.za">support@pulsefy.co.za</a> with your booking reference.</p>
+<h3>Processing Time</h3>
+<p>Approved refunds are processed within <strong>5–10 business days</strong> via the original payment method (Paystack).</p>
+<p style="font-size:.7rem;color:var(--mu);margin-top:16px">Last updated: September 2026</p>`,
+
+  payment: `<h3>Payment Processing</h3>
+<p>All payments on Pulsefy are processed by <strong>Paystack</strong>, a PCI-DSS Level 1 compliant payment processor. Pulsefy does not store or have access to your full card details.</p>
+<h3>Accepted Methods</h3>
+<ul>
+  <li>Visa &amp; Mastercard (debit and credit)</li>
+  <li>Instant EFT (selected South African banks)</li>
+  <li>Mobile money (where available)</li>
+</ul>
+<h3>Currency</h3>
+<p>All transactions are processed in <strong>South African Rand (ZAR)</strong>. The price displayed at checkout is the final amount you will be charged.</p>
+<h3>Security</h3>
+<p>Payments are secured with TLS encryption and Paystack's fraud detection. You may be asked to complete 3D Secure authentication with your bank.</p>
+<h3>Receipts</h3>
+<p>A payment confirmation is sent to your registered email and is visible in <strong>My Bookings</strong> within the app.</p>
+<h3>Failed Payments</h3>
+<p>If a payment fails, no charge is made. Contact your bank or try a different payment method. Repeated failures should be reported to <a href="mailto:support@pulsefy.co.za">support@pulsefy.co.za</a>.</p>
+<p style="font-size:.7rem;color:var(--mu);margin-top:16px">Payment partner: <strong>Paystack</strong> · <a href="https://paystack.com/compliance" target="_blank" rel="noopener">Paystack Compliance</a></p>`,
+};
+
+function showLegal(tab) {
+  const ov = document.getElementById('legal-overlay'); if (!ov) return;
+  switchLegalTab(tab || 'terms', null);
+  ov.style.display = 'block';
+  history.pushState({ overlay: 'legal' }, '');
+}
+function closeLegal() {
+  const ov = document.getElementById('legal-overlay'); if (!ov) return;
+  ov.style.display = 'none';
+}
+function switchLegalTab(tab, btn) {
+  const body = document.getElementById('legal-body'); if (!body) return;
+  body.innerHTML = _LEGAL_CONTENT[tab] || '';
+  document.querySelectorAll('.legal-tab').forEach(t => {
+    t.classList.remove('active');
+    t.style.borderBottomColor = 'transparent';
+    t.style.color = 'var(--mu)';
+  });
+  const active = btn || document.querySelector(`.legal-tab[onclick*="'${tab}'"]`);
+  if (active) { active.classList.add('active'); active.style.borderBottomColor = 'var(--or)'; active.style.color = 'var(--or)'; }
 }
 
 function openSocialSheet(tab) {
@@ -8251,5 +8375,29 @@ function clDismiss(uid) {
 <div id="map-panel" onclick="if(event.target===this)closeMapPanel()">
   <div id="mp-card"><div id="mp-content"></div></div>
 </div>
+
+<!-- Legal / T&Cs modal -->
+<div id="legal-overlay" onclick="if(event.target===this)closeLegal()" style="display:none;position:fixed;inset:0;z-index:4500;background:rgba(0,0,0,.72);backdrop-filter:blur(10px)">
+  <div style="position:absolute;bottom:0;left:0;right:0;max-height:88vh;background:var(--bg2);border-radius:22px 22px 0 0;overflow:hidden;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0">
+      <span id="legal-title" style="font-family:'Syne',sans-serif;font-size:.88rem;font-weight:800;letter-spacing:.04em">TERMS &amp; CONDITIONS</span>
+      <button onclick="closeLegal()" style="background:none;border:none;color:var(--mu);font-size:1.3rem;cursor:pointer;padding:0;line-height:1">✕</button>
+    </div>
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0">
+      <button class="legal-tab active" onclick="switchLegalTab('terms',this)" style="flex:1;padding:10px 0;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;background:none;border:none;border-bottom:2px solid var(--or);color:var(--or);cursor:pointer">Terms &amp; Use</button>
+      <button class="legal-tab" onclick="switchLegalTab('refund',this)" style="flex:1;padding:10px 0;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;background:none;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">Refund Policy</button>
+      <button class="legal-tab" onclick="switchLegalTab('payment',this)" style="flex:1;padding:10px 0;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;background:none;border:none;border-bottom:2px solid transparent;color:var(--mu);cursor:pointer">Payments</button>
+    </div>
+    <div id="legal-body" style="overflow-y:auto;padding:18px;font-size:.78rem;line-height:1.7;color:var(--mu2);flex:1"></div>
+  </div>
+</div>
+<style>
+.legal-tab.active{color:var(--or)!important;border-bottom-color:var(--or)!important}
+#legal-body h3{font-family:'Syne',sans-serif;font-size:.8rem;font-weight:800;color:var(--tx);margin:14px 0 5px;letter-spacing:.04em}
+#legal-body p{margin:0 0 10px}
+#legal-body ul{margin:0 0 10px;padding-left:18px}
+#legal-body li{margin-bottom:4px}
+#legal-body a{color:var(--or)}
+</style>
 </body>
 </html>
