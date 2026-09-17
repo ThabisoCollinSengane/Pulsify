@@ -3279,7 +3279,7 @@ module.exports = async (req, res) => {
       const city  = (q.city  || '').trim();
       if (!venue && !city) return res.status(400).json({ error: 'venue or city required' });
 
-      const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN || 'pk.eyJ1IjoidGhhY29sbGluMiIsImEiOiJjbW51Mm95cHEwYm8xMnJyMXEzaXgxMDBmIn0.nF80wBOn-jxhjpAIus9anw';
+      const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN || 'pk.eyJ1IjoidGhhY29sbGluMiIsImEiOiJjbXU1dm1ucnIwNHFqMnhzYmlhM2hhdWF5In0.fkNIi485olS5p3JF-2fDRw';
       const q2 = encodeURIComponent([venue, city, 'South Africa'].filter(Boolean).join(', '));
       const mbUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${q2}.json?access_token=${MAPBOX_TOKEN}&country=za&types=poi,address,place&limit=1`;
 
