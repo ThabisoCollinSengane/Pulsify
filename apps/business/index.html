@@ -126,15 +126,23 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 .msg-ok{background:rgba(198,255,74,.08);border:1px solid rgba(198,255,74,.25);color:var(--li)}
 .msg-err{background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);color:var(--pk)}
 
+/* ── SHARED ANIMATION LAYER ── */
+@keyframes card-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes err-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.card-in{animation:card-in .2s ease-out both}
 /* ── MENU ITEMS ── */
-.menu-item-card{display:flex;align-items:center;gap:12px;background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:12px 14px;margin:0 14px 10px}
-.mi-img{width:52px;height:52px;border-radius:10px;background:var(--surf2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;position:relative}
+.menu-item-card{display:flex;align-items:center;gap:12px;background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:12px 14px;margin:0 14px 10px;animation:card-in .2s ease-out both;transition:border-color .18s}
+.mi-img{width:64px;height:64px;border-radius:10px;background:var(--surf2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.6rem;overflow:hidden;position:relative}
 .mi-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .mi-info{flex:1;min-width:0}
-.mi-name{font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;margin-bottom:2px}
-.mi-desc{font-size:.68rem;color:var(--mu);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mi-price{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--li)}
+.mi-name{font-family:'Syne',sans-serif;font-weight:700;font-size:.84rem;margin-bottom:3px}
+.mi-desc{font-size:.68rem;color:var(--mu);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mi-price{font-family:'Bebas Neue',sans-serif;font-size:1.25rem;color:var(--or);letter-spacing:.02em}
 .mi-actions{display:flex;gap:6px;flex-shrink:0}
+/* Skeleton for menu */
+.menu-skel-card{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:16px;background:var(--surf);margin:0 14px 10px}
+.skel{background:linear-gradient(90deg,var(--surf) 25%,rgba(168,108,255,.12) 50%,var(--surf) 75%);background-size:200% 100%;animation:shim 1.6s infinite;border-radius:8px}
+@keyframes shim{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
 /* ── ORDERS TABLE ── */
 .orders-wrap{padding:0 14px 20px;overflow-x:auto}
@@ -493,6 +501,10 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
       <input class="ff" type="date" id="biz-sqp-to" style="margin-bottom:0"/>
     </div>
     <textarea class="ff" id="biz-sqp-desc" placeholder="Describe the deal for squads…" rows="3" style="resize:none"></textarea>
+    <div id="biz-sqp-menu-picker" style="display:none;margin-bottom:12px">
+      <div style="font-size:.72rem;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Tag menu items in this deal (optional)</div>
+      <div id="biz-sqp-menu-items" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
     <button class="btn" id="biz-sqp-btn" onclick="submitBizSquadPromo()" style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;padding:13px;border-radius:12px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;border:none;margin-bottom:20px">Submit Deal for Approval 🎁</button>
 
     <div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:10px">My Squad Deals</div>
@@ -1398,6 +1410,18 @@ function initDashboard() {
   const url = `${location.origin}/business-menu?id=${getBizId()}`;
   document.getElementById('menu-url-display').textContent = url;
   document.getElementById('profile-menu-url').textContent = url;
+  // Real-time: push new orders into the list without a manual refresh
+  const _sb = getSB(); const _bizId = getBizId();
+  if (_sb && _bizId) {
+    _sb.channel('biz_orders_' + _bizId)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pickup_orders', filter: 'business_id=eq.' + _bizId }, payload => {
+        if (!ORDERS.find(o => o.id === payload.new.id)) {
+          ORDERS.unshift(payload.new);
+          renderOrders(); renderStats(); renderHomeOrdersPreview(); updateOrderBadge();
+          toast('📦 New order — ' + (payload.new.customer_name || 'Customer') + ' · R' + parseFloat(payload.new.total || 0).toFixed(2), 'ok');
+        }
+      }).subscribe();
+  }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2229,6 +2253,19 @@ async function submitEvent() {
     const lineup  = lineupRaw ? lineupRaw.split(',').map(s => s.trim()) : [];
     const showOnMap = !id && (document.getElementById('ev-show-on-map')?.checked || false);
 
+    // Auto-geocode from venue + city when no coords were entered, so the event
+    // can land on the map without manual lat/lon. /api/geocode validates SA
+    // bounds server-side (returns null outside SA) and keeps the Mapbox token
+    // off the client.
+    let venueLat = evLat, venueLon = evLon;
+    if ((venueLat === null || venueLon === null) && venue) {
+      try {
+        const gr = await fetch('/api/geocode?venue=' + encodeURIComponent(venue) + '&city=' + encodeURIComponent(city || ''));
+        const gj = await gr.json();
+        if (gj && gj.lat != null && gj.lon != null) { venueLat = gj.lat; venueLon = gj.lon; }
+      } catch(_) {}
+    }
+
     if (id) {
       const { error: upErr } = await sb2.from('events').update({
         name, date_local: date || null, time_local: time || null,
@@ -2236,7 +2273,7 @@ async function submitEvent() {
         description: desc || null, price_min: price, price_max: price,
         is_free: price === 0, image_url: imgUrl || null,
         lineup: lineup.length ? lineup : null,
-        ...(evLat !== null && evLon !== null ? { venue_lat: evLat, venue_lon: evLon } : {}),
+        ...(venueLat !== null && venueLon !== null ? { venue_lat: venueLat, venue_lon: venueLon } : {}),
       }).eq('id', id).eq('organiser_id', session.user.id);
       if (upErr) throw new Error(upErr.message);
     } else {
@@ -2252,7 +2289,8 @@ async function submitEvent() {
         organiser_id: session.user.id,
         is_active: true, approved: false, source: 'business',
         lineup: lineup.length ? lineup : null,
-        ...(evLat !== null && evLon !== null ? { venue_lat: evLat, venue_lon: evLon } : {}),
+        location_confidence: (venueLat !== null && venueLon !== null) ? (evLat !== null ? 100 : 80) : 0,
+        ...(venueLat !== null && venueLon !== null ? { venue_lat: venueLat, venue_lon: venueLon } : {}),
       });
       if (insErr) throw new Error(insErr.message);
 
@@ -2450,7 +2488,15 @@ async function tryAddMenuItem() {
 
 async function renderMenu() {
   const el = document.getElementById('menu-list');
-  el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--mu)">Loading…</div>';
+  el.innerHTML = [1,2,3].map(() => `
+    <div class="menu-skel-card">
+      <div class="skel" style="width:64px;height:64px;border-radius:10px;flex-shrink:0"></div>
+      <div style="flex:1">
+        <div class="skel" style="height:13px;border-radius:6px;margin-bottom:7px;width:55%"></div>
+        <div class="skel" style="height:10px;border-radius:6px;margin-bottom:7px;width:80%"></div>
+        <div class="skel" style="height:20px;border-radius:6px;width:28%"></div>
+      </div>
+    </div>`).join('');
   const bizId = getBizId();
   if (!bizId) { el.innerHTML = emptyState('🍽️', 'No menu items', 'Add items to your menu.'); return; }
   const sb = getSB();
@@ -2471,21 +2517,28 @@ async function renderMenu() {
   }
   // Free account cap warning
   const capHtml = items.length >= 10 ? `<div style="margin:10px 14px;padding:14px 16px;background:linear-gradient(135deg,rgba(255,92,0,.12),rgba(176,38,255,.08));border:1px solid rgba(255,92,0,.4);border-radius:14px"><div style="font-size:.85rem;font-weight:700;color:var(--or);margin-bottom:4px">⭐ Menu item limit reached</div><div style="font-size:.74rem;color:var(--mu);margin-bottom:10px">Free plan: max 10 menu items. Upgrade to Premium for unlimited.</div><button class="btn-primary" style="width:100%" onclick="showTab('profile')">Upgrade to Premium →</button></div>` : '';
+  let cardIdx = 0;
   el.innerHTML = capHtml + cats.map(cat =>
     `<div style="padding:10px 14px 0"><div class="section-label">${xe(cat)}</div></div>` +
-    items.filter(i => (i.category || 'General') === cat).map(item => `
-      <div class="menu-item-card">
-        <div class="mi-img">${item.image_url ? `<img src="${xe(item.image_url)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : ''}🍽️</div>
+    items.filter(i => (i.category || 'General') === cat).map(item => {
+      const delay = (cardIdx++) * 40;
+      return `
+      <div class="menu-item-card" style="animation-delay:${delay}ms">
+        <div class="mi-img">
+          ${item.image_url ? `<img src="${xe(item.image_url)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : ''}
+          ${item.image_url ? '' : '🍽️'}
+        </div>
         <div class="mi-info">
           <div class="mi-name" style="${!item.is_available ? 'opacity:.5' : ''}">${xe(item.name)}</div>
-          <div class="mi-desc">${xe(item.description || '')}</div>
-          <div class="mi-price">R${item.price}</div>
+          ${item.description ? `<div class="mi-desc">${xe(item.description)}</div>` : ''}
+          <div class="mi-price">R${parseFloat(item.price || 0).toFixed(2)}</div>
         </div>
         <div class="mi-actions">
           <button class="btn-ghost" onclick="editMenuItem('${item.id}')">Edit</button>
           <button class="btn-danger" onclick="deleteMenuItem('${item.id}',this)">🗑</button>
         </div>
-      </div>`).join('')
+      </div>`;
+    }).join('')
   ).join('');
 }
 
@@ -2725,7 +2778,20 @@ async function updateOrderStatus(id, status) {
   const i = ORDERS.findIndex(o => o.id === id);
   if (i >= 0) ORDERS[i].status = status;
   renderOrders(); renderStats(); renderHomeOrdersPreview();
-  if (status === 'ready') toast('Order marked Ready 🟢', 'ok');
+  if (status === 'ready') {
+    toast('Order marked Ready 🟢', 'ok');
+    const order = ORDERS.find(o => o.id === id);
+    if (order?.user_id && sb) {
+      sb.from('notifications').insert({
+        user_id: order.user_id,
+        type: 'order_ready',
+        from_display_name: BIZ?.name || 'Venue',
+        entity_id: id,
+        entity_type: 'pickup_order',
+        message: `Your order (Ref: ${order.order_ref}) is ready for collection at ${BIZ?.name || 'the venue'}! 🔔`,
+      }).catch(() => {});
+    }
+  }
 }
 
 function renderHomeOrdersPreview() {
@@ -3225,6 +3291,8 @@ function applyBizDealTemplate(name) {
 let _bizDealType = 'food';
 const BIZ_DEAL_ICONS  = { food:'🍔', nightlife:'🎶', event:'🎟', chill:'☕' };
 
+let _bizSqpSelectedItems = new Set();
+
 function setBizDealType(type) {
   _bizDealType = type;
   ['food','nightlife','chill','event'].forEach(t => {
@@ -3240,6 +3308,44 @@ function setBizDealType(type) {
       el.querySelector('div:nth-child(2)').style.color = 'var(--tx)';
     }
   });
+  const picker = document.getElementById('biz-sqp-menu-picker');
+  if (!picker) return;
+  if (type === 'food') {
+    picker.style.display = 'block';
+    _loadBizSqpMenuItems();
+  } else {
+    picker.style.display = 'none';
+    _bizSqpSelectedItems.clear();
+  }
+}
+
+async function _loadBizSqpMenuItems() {
+  const el = document.getElementById('biz-sqp-menu-items');
+  if (!el) return;
+  const bizId = getBizId();
+  if (!bizId) { el.innerHTML = '<span style="font-size:.72rem;color:var(--mu)">Save your listing first to tag menu items.</span>'; return; }
+  el.innerHTML = '<span style="font-size:.72rem;color:var(--mu)">Loading…</span>';
+  const { data: items } = await getSB().from('menu_items').select('id,name,price').eq('business_id', bizId).eq('is_available', true).order('sort_order');
+  if (!items || !items.length) { el.innerHTML = '<span style="font-size:.72rem;color:var(--mu)">No menu items yet — add some in the Menu tab first.</span>'; return; }
+  el.innerHTML = items.map(it => `
+    <div id="bsqp-chip-${it.id}" onclick="_toggleBizSqpItem('${it.id}')" style="cursor:pointer;background:var(--surf);border:1.5px solid var(--border);border-radius:50px;padding:5px 11px;font-size:.7rem;transition:.15s">${x(it.name)} · R${(it.price||0).toFixed(0)}</div>
+  `).join('');
+}
+
+function _toggleBizSqpItem(itemId) {
+  const chip = document.getElementById('bsqp-chip-' + itemId);
+  if (!chip) return;
+  if (_bizSqpSelectedItems.has(itemId)) {
+    _bizSqpSelectedItems.delete(itemId);
+    chip.style.background = 'var(--surf)';
+    chip.style.borderColor = 'var(--border)';
+    chip.style.color = '';
+  } else {
+    _bizSqpSelectedItems.add(itemId);
+    chip.style.background = 'rgba(198,255,74,.1)';
+    chip.style.borderColor = 'rgba(198,255,74,.4)';
+    chip.style.color = '#C6FF4A';
+  }
 }
 
 async function submitBizSquadPromo() {
@@ -3261,6 +3367,8 @@ async function submitBizSquadPromo() {
     valid_from: document.getElementById('biz-sqp-from')?.value || null,
     valid_to: document.getElementById('biz-sqp-to')?.value || null,
     description: document.getElementById('biz-sqp-desc')?.value?.trim() || '',
+    business_id: getBizId() || null,
+    linked_menu_item_ids: [..._bizSqpSelectedItems],
   };
   try {
     const r = await fetch('/api/squad-promos', {
@@ -3272,6 +3380,8 @@ async function submitBizSquadPromo() {
     if (!r.ok) throw new Error(j.error || 'Failed');
     toast('Deal submitted for admin approval ✅');
     ['biz-sqp-title','biz-sqp-venue','biz-sqp-city','biz-sqp-price','biz-sqp-days','biz-sqp-from','biz-sqp-to','biz-sqp-desc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    _bizSqpSelectedItems.clear();
+    _loadBizSqpMenuItems();
     loadMyBizSquadPromos();
   } catch(e) {
     toast(e.message || 'Error submitting deal');

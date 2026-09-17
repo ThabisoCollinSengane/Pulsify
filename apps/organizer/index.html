@@ -458,6 +458,12 @@ select.inp option{background:#1C1140}
           <textarea class="inp" id="org-sqp-desc" placeholder="Describe the deal for squads…" rows="3" style="resize:none;margin-bottom:0"></textarea>
         </div>
 
+        <!-- Section: Menu/pricelist item tagging (food deals only) -->
+        <div id="org-sqp-menu-picker" style="display:none;margin:0 0 12px">
+          <div class="sqp-group-label">🍽 Tag pricelist items in this deal (optional)</div>
+          <div id="org-sqp-menu-items" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>
+        </div>
+
         <button class="btn-primary" id="org-sqp-btn" onclick="submitOrgSquadPromo()" style="width:100%">Submit Deal for Approval 🎁</button>
       </div>
     </div>
@@ -3054,6 +3060,35 @@ let _orgDealType = 'event';
 const DEAL_ICONS = { food:'🍔', nightlife:'🎶', event:'🎟', chill:'☕' };
 const DEAL_LABELS = { food:'Food Deal', nightlife:'Nightlife Deal', event:'Event Deal', chill:'Chill Deal' };
 
+let _orgSqpSelectedItems = new Set();
+
+async function _loadOrgSqpMenuItems() {
+  const el = document.getElementById('org-sqp-menu-items');
+  if (!el) return;
+  el.innerHTML = '<span style="font-size:.72rem;color:var(--mu)">Loading…</span>';
+  const { data: items } = await sb.from('menu_items').select('id,name,price').eq('business_id', currentUser.id).eq('is_available', true).order('sort_order');
+  if (!items || !items.length) { el.innerHTML = '<span style="font-size:.72rem;color:var(--mu)">No pricelist items yet — add some in the Pricelist tab first.</span>'; return; }
+  el.innerHTML = items.map(it => `
+    <div id="osqp-chip-${it.id}" onclick="_toggleOrgSqpItem('${it.id}')" style="cursor:pointer;background:var(--surf2);border:1.5px solid var(--border);border-radius:50px;padding:5px 11px;font-size:.7rem;transition:.15s">${x(it.name)} · R${(it.price||0).toFixed(0)}</div>
+  `).join('');
+}
+
+function _toggleOrgSqpItem(itemId) {
+  const chip = document.getElementById('osqp-chip-' + itemId);
+  if (!chip) return;
+  if (_orgSqpSelectedItems.has(itemId)) {
+    _orgSqpSelectedItems.delete(itemId);
+    chip.style.background = 'var(--surf2)';
+    chip.style.borderColor = 'var(--border)';
+    chip.style.color = '';
+  } else {
+    _orgSqpSelectedItems.add(itemId);
+    chip.style.background = 'rgba(198,255,74,.1)';
+    chip.style.borderColor = 'rgba(198,255,74,.4)';
+    chip.style.color = 'var(--li)';
+  }
+}
+
 function setOrgDealType(type) {
   _orgDealType = type;
   ['event','nightlife','food','chill'].forEach(t => {
@@ -3069,6 +3104,15 @@ function setOrgDealType(type) {
       el.querySelector('div:nth-child(2)').style.color = 'var(--tx)';
     }
   });
+  const picker = document.getElementById('org-sqp-menu-picker');
+  if (!picker) return;
+  if (type === 'food') {
+    picker.style.display = 'block';
+    _loadOrgSqpMenuItems();
+  } else {
+    picker.style.display = 'none';
+    _orgSqpSelectedItems.clear();
+  }
 }
 
 async function submitOrgSquadPromo() {
@@ -3089,6 +3133,7 @@ async function submitOrgSquadPromo() {
     valid_from: document.getElementById('org-sqp-from')?.value || null,
     valid_to: document.getElementById('org-sqp-to')?.value || null,
     description: document.getElementById('org-sqp-desc')?.value?.trim() || '',
+    linked_menu_item_ids: [..._orgSqpSelectedItems],
   };
   try {
     const r = await fetch('/api/squad-promos', {
@@ -3100,6 +3145,8 @@ async function submitOrgSquadPromo() {
     if (!r.ok) throw new Error(j.error || 'Failed');
     toast('Deal submitted for admin approval ✅', 'ok');
     ['org-sqp-title','org-sqp-venue','org-sqp-city','org-sqp-price','org-sqp-days','org-sqp-from','org-sqp-to','org-sqp-desc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    _orgSqpSelectedItems.clear();
+    _loadOrgSqpMenuItems();
     loadMyOrgSquadPromos();
   } catch(e) {
     toast(e.message || 'Error submitting deal', 'err');

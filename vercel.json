@@ -9,13 +9,15 @@
     "api/cron/squad-reminders.js":     { "maxDuration": 30 },
     "api/cron/event-cleanup.js":       { "maxDuration": 30 },
     "api/cron/hype-score.js":          { "maxDuration": 30 },
-    "api/cron/event-reminders.js":     { "maxDuration": 30 }
+    "api/cron/event-reminders.js":     { "maxDuration": 30 },
+    "api/cron/onboarding-nudge.js":    { "maxDuration": 30 }
   },
   "crons": [
     { "path": "/api/cron/squad-reminders",  "schedule": "0 5 * * *" },
     { "path": "/api/cron/event-cleanup",    "schedule": "0 4 * * *" },
     { "path": "/api/cron/hype-score",       "schedule": "0 6 * * *" },
-    { "path": "/api/cron/event-reminders",  "schedule": "0 8 * * *" }
+    { "path": "/api/cron/event-reminders",  "schedule": "0 8 * * *" },
+    { "path": "/api/cron/onboarding-nudge", "schedule": "0 10 * * *" }
   ],
   "rewrites": [
     { "source": "/api/events/search",      "destination": "/api/events" },

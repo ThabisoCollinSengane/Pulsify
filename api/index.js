@@ -3015,7 +3015,13 @@ module.exports = async (req, res) => {
     if (menuBizId && req.method === 'GET') {
       const { data, error } = await sb().from('menu_items').select('*').eq('business_id', menuBizId).eq('is_available', true).order('category').order('sort_order');
       if (error) return res.status(400).json({ error: error.message });
-      return res.status(200).json({ items: data || [] });
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: deals } = await sb().from('squad_promos')
+        .select('id,title,linked_menu_item_ids')
+        .eq('business_id', menuBizId).eq('approved', true).eq('is_active', true)
+        .or(`valid_to.is.null,valid_to.gte.${today}`)
+        .not('linked_menu_item_ids', 'eq', '{}');
+      return res.status(200).json({ items: data || [], deals: deals || [] });
     }
 
     /* ─── POST /pickup-orders ────────────────────────────── */
@@ -3122,8 +3128,12 @@ module.exports = async (req, res) => {
         return res.status(403).json({ error: 'Organizer or business account required' });
       const { title, description, deal_type, venue_name, location_city,
               squad_min, squad_max, total_price, valid_days,
-              valid_from, valid_to, image_url } = req.body || {};
+              valid_from, valid_to, image_url,
+              business_id, linked_menu_item_ids } = req.body || {};
       if (!title || !venue_name) return res.status(400).json({ error: 'title and venue_name are required' });
+      const safeLinkedIds = Array.isArray(linked_menu_item_ids)
+        ? linked_menu_item_ids.filter(id => /^[0-9a-f-]{36}$/i.test(id))
+        : [];
       const { data: promo, error } = await sbAs(token).from('squad_promos').insert({
         title, description: description || null,
         deal_type: deal_type || 'food', venue_name,
@@ -3135,6 +3145,8 @@ module.exports = async (req, res) => {
         image_url: image_url || null,
         owner_id: auth.user.id, owner_role: role,
         approved: role === 'admin',
+        business_id: business_id || null,
+        linked_menu_item_ids: safeLinkedIds,
       }).select().single();
       if (error) return res.status(400).json({ error: error.message });
       return res.status(201).json({ promo });
