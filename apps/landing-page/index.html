@@ -90,6 +90,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.8.0/mapbox-gl.css" rel="stylesheet"/>
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.8.0/mapbox-gl.js"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.css" rel="stylesheet"/>
+<script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
 <script>
 function openAvatarLightbox() {
   const av = document.getElementById('profile-av');
@@ -1966,8 +1968,16 @@ function _mapPreviewHtml() {
   const lon = hasLoc ? userLon : 25.5;
   const lat = hasLoc ? userLat : -29.5;
   const zoom = hasLoc ? 11 : 4.1;
-  const pin = hasLoc ? `pin-s+ff5c00(${lon.toFixed(4)},${lat.toFixed(4)})/` : '';
-  const img = `https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/${pin}${lon},${lat},${zoom},0/640x260@2x?access_token=${MAPBOX_TOKEN}`;
+  const w = Math.min(640, Math.round((screen.width || 390) * Math.min(window.devicePixelRatio || 1, 2)));
+  // Up to 3 event pins (pink) + optional user pin (orange)
+  const evPins = eventsForMap
+    .filter(ev => ev.venue_lat && ev.venue_lon)
+    .slice(0, 3)
+    .map(ev => `pin-s+ff2d78(${parseFloat(ev.venue_lon).toFixed(4)},${parseFloat(ev.venue_lat).toFixed(4)})`)
+    .join(',');
+  const userPin = hasLoc ? `pin-s+ff5c00(${lon.toFixed(4)},${lat.toFixed(4)})` : '';
+  const overlayParts = [userPin, evPins].filter(Boolean).join(',');
+  const img = `https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/${overlayParts ? overlayParts + '/' : ''}${lon},${lat},${zoom},0/${w}x260@2x?access_token=${MAPBOX_TOKEN}`;
   const sub = hasLoc ? 'Events &amp; spots near you' : 'Discover events across South Africa';
   return `<div id="feed-break-map" style="padding:8px 14px 4px">
     <div onclick="showTab('map')" style="position:relative;height:200px;border-radius:18px;overflow:hidden;cursor:pointer;border:1px solid rgba(168,108,255,.32);box-shadow:0 8px 24px rgba(0,0,0,.28),0 0 18px rgba(168,108,255,.18)">
@@ -3633,6 +3643,51 @@ function initMap() {
   // Compass shown so users can re-orient north after free rotation
   mapObj.addControl(new mapboxgl.NavigationControl({ showCompass: true, visualizePitch: true }), 'top-right');
 
+  // Live tracking dot with compass heading — wired to our custom 📍 button
+  const _geoCtrl = new mapboxgl.GeolocateControl({
+    positionOptions: { enableHighAccuracy: true },
+    trackUserLocation: true,
+    showUserHeading: true,
+    showAccuracyCircle: true,
+  });
+  mapObj.addControl(_geoCtrl, 'top-right');
+  _geoCtrl.on('geolocate', e => {
+    userLat = e.coords.latitude; userLon = e.coords.longitude;
+    const btn = document.getElementById('map-loc-btn');
+    if (btn) { btn.textContent = '📍'; btn.style.background = 'rgba(0,229,255,.2)'; btn.style.border = '1px solid rgba(0,229,255,.9)'; }
+  });
+  _geoCtrl.on('trackuserlocationend', () => {
+    const btn = document.getElementById('map-loc-btn');
+    if (btn) { btn.style.background = 'rgba(5,8,15,.7)'; btn.style.border = '1px solid rgba(0,229,255,.4)'; }
+  });
+  _geoCtrl.on('error', () => {
+    const btn = document.getElementById('map-loc-btn');
+    if (btn) { btn.textContent = '📍'; btn.style.background = 'rgba(5,8,15,.7)'; }
+    if (!_mapAutoLocateDone) return;
+    showLocationHelp(goToMyLocation);
+  });
+  window._geoCtrl = _geoCtrl;
+
+  // Place-search geocoder in top-left, collapsed to icon until tapped
+  if (window.MapboxGeocoder) {
+    const geocoder = new MapboxGeocoder({
+      accessToken: MAPBOX_TOKEN,
+      mapboxgl: mapboxgl,
+      placeholder: 'Search places…',
+      countries: 'za',
+      language: 'en',
+      types: 'place,address,poi,region,district',
+      collapsed: true,
+      marker: false,
+    });
+    mapObj.addControl(geocoder, 'top-left');
+    geocoder.on('result', e => {
+      const [lon, lat] = e.result.center;
+      mapObj.flyTo({ center: [lon, lat], zoom: 13, duration: 900, essential: true });
+      _mapFitDone = true;
+    });
+  }
+
   mapObj.on('load', () => {
     mapObj.resize();
     setTimeout(() => mapObj.resize(), 200);
@@ -3651,6 +3706,36 @@ function initMap() {
     });
     mapObj.on('mouseenter', 'clusters-circle', () => { mapObj.getCanvas().style.cursor = 'pointer'; });
     mapObj.on('mouseleave', 'clusters-circle', () => { mapObj.getCanvas().style.cursor = ''; });
+
+    // Unclustered-dot layer — GPU circles at zoom 11-15, DOM markers take over at 15+
+    mapObj.on('click', 'unclustered-dot', e => {
+      if (!e.features?.length) return;
+      const props = e.features[0].properties;
+      const key = props.venue_key;
+      if (props.type === 'event') {
+        const evs = eventsForMap.filter(ev => {
+          const la = parseFloat(ev.venue_lat), lo = parseFloat(ev.venue_lon);
+          return !isNaN(la) && la.toFixed(4) + ',' + lo.toFixed(4) === key;
+        });
+        if (evs.length === 1) showMapPanel(evs[0], 'event', _ms(evs[0], 'event'));
+        else if (evs.length > 1) showVenueEventsPanel(evs, _ms(evs[0], 'event'));
+      } else {
+        const biz = bizForMap.find(b => {
+          const la = parseFloat(b.lat), lo = parseFloat(b.lon);
+          return !isNaN(la) && la.toFixed(4) + ',' + lo.toFixed(4) === key;
+        });
+        if (biz) showMapPanel(biz, 'biz', _ms(biz, 'biz'));
+      }
+    });
+    mapObj.on('mouseenter', 'unclustered-dot', () => { mapObj.getCanvas().style.cursor = 'pointer'; });
+    mapObj.on('mouseleave', 'unclustered-dot', () => { mapObj.getCanvas().style.cursor = ''; });
+
+    // Hide GeolocateControl's own button — we use the custom 📍 btn instead
+    setTimeout(() => {
+      const gcBtn = mapObj?.getContainer()?.querySelector('.mapboxgl-ctrl-geolocate');
+      if (gcBtn) gcBtn.style.display = 'none';
+    }, 300);
+
     mapObj.on('zoomend', _toggleMapMarkersForZoom);
     mapObj.on('moveend', () => { clearTimeout(_mapBoundsDebounce); _mapBoundsDebounce = setTimeout(_loadEventsByBounds, 700); });
 
@@ -3706,12 +3791,12 @@ function _toggleMapMarkersForZoom() {
   const z = mapObj.getZoom();
   const mc = document.getElementById('mc');
   if (mc) {
-    const scale = Math.max(0.5, Math.min(1.35, 0.5 + (z - 11) * 0.12));
+    const scale = Math.max(0.55, Math.min(1.35, 0.55 + (z - 15) * 0.18));
     mc.style.setProperty('--mz', scale.toFixed(2));
-    mc.classList.toggle('mk-nolabel', z < 13.5); // hide labels when zoomed out
+    mc.classList.toggle('mk-nolabel', z < 16); // hide labels when zoomed out
   }
   if (mapMarkers.length) {
-    const shouldShow = mapObj.getZoom() > 11;
+    const shouldShow = mapObj.getZoom() > 15;
     if (_markersVisible !== shouldShow) {
       _markersVisible = shouldShow;
       if (shouldShow) mapMarkers.forEach(m => { try { m.addTo(mapObj); } catch(e){} });
@@ -3753,6 +3838,9 @@ function _addMapSourcesAndLayers() {
       cluster: true,
       clusterMaxZoom: 11,
       clusterRadius: 80,
+      clusterProperties: {
+        free_count: ['+', ['case', ['==', ['get', 'is_free'], true], 1, 0]],
+      },
     });
     // Heatmap layer beneath clusters — glowing "busy area" effect at low zoom.
     mapObj.addLayer({
@@ -3761,7 +3849,11 @@ function _addMapSourcesAndLayers() {
       source: 'pulsify-spots',
       maxzoom: 12,
       paint: {
-        'heatmap-weight': ['interpolate', ['linear'], ['coalesce', ['get', 'point_count'], 1], 0, 0, 50, 1],
+        'heatmap-weight': ['case',
+          ['has', 'point_count'], ['interpolate', ['linear'], ['get', 'point_count'], 0, 0, 50, 1],
+          ['==', ['get', 'is_free'], true], 0.8,
+          0.4
+        ],
         'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 11, 3],
         'heatmap-color': [
           'interpolate', ['linear'], ['heatmap-density'],
@@ -3805,23 +3897,49 @@ function _addMapSourcesAndLayers() {
         'circle-opacity': 0.93,
       },
     });
-    // Layer: count text on top of the circle
+    // Layer: count text on top of the circle (+ FREE badge when cluster has free events)
     mapObj.addLayer({
       id: 'clusters',
       type: 'symbol',
       source: 'pulsify-spots',
       filter: ['has', 'point_count'],
       layout: {
-        'text-field': '{point_count_abbreviated}',
+        'text-field': ['case',
+          ['>', ['coalesce', ['get', 'free_count'], 0], 0],
+          ['format',
+            ['to-string', ['get', 'point_count_abbreviated']], {},
+            '\n', {},
+            ['concat', ['to-string', ['get', 'free_count']], ' FREE'], {'font-scale': 0.62, 'text-color': '#00E5A0'}
+          ],
+          ['to-string', ['get', 'point_count_abbreviated']]
+        ],
         'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
         'text-size': 13,
         'text-allow-overlap': true,
         'text-ignore-placement': true,
+        'text-line-height': 1.2,
       },
       paint: {
         'text-color': '#ffffff',
         'text-halo-color': 'rgba(0,0,0,.35)',
         'text-halo-width': 1,
+      },
+    });
+    // Unclustered dots — GPU-rendered genre-coloured circles at zoom 11-15
+    // (DOM markers take over above zoom 15, cluster bubbles below zoom 11)
+    mapObj.addLayer({
+      id: 'unclustered-dot',
+      type: 'circle',
+      source: 'pulsify-spots',
+      filter: ['!', ['has', 'point_count']],
+      minzoom: 10,
+      paint: {
+        'circle-color': ['coalesce', ['get', 'genre_color'], '#FF5C00'],
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 3, 14, 7, 15, 9],
+        'circle-stroke-width': 1.5,
+        'circle-stroke-color': 'rgba(255,255,255,0.75)',
+        'circle-opacity': ['interpolate', ['linear'], ['zoom'], 14, 1, 15.5, 0],
+        'circle-stroke-opacity': ['interpolate', ['linear'], ['zoom'], 14, 1, 15.5, 0],
       },
     });
 }
@@ -3864,7 +3982,7 @@ function toggleHeatmapView() {
   if (!mapObj) return;
   _heatmapForced = !_heatmapForced;
   const vis = _heatmapForced ? 'none' : 'visible';
-  ['clusters-glow', 'clusters-circle', 'clusters'].forEach(id => {
+  ['clusters-glow', 'clusters-circle', 'clusters', 'unclustered-dot'].forEach(id => {
     if (mapObj.getLayer(id)) mapObj.setLayoutProperty(id, 'visibility', vis);
   });
   if (mapObj.getLayer('spots-heat')) {
@@ -3997,6 +4115,7 @@ function placeMapMarkers() {
   if (!mapObj) return;
   mapMarkers.forEach(m => { try { m.remove(); } catch(e){} });
   mapMarkers = [];
+  const geoFeatures = [];
 
   const catF = currentMapFilter;
 
@@ -4021,11 +4140,12 @@ function placeMapMarkers() {
     const ev0 = events[0];
     const s   = _ms(ev0, 'event');
     const cnt = events.length;
+    const key = lat.toFixed(4) + ',' + lon.toFixed(4);
     const el  = _makeMarkerEl(s, true, cnt > 1 ? (ev0.venue_name || ev0.name || '') : (ev0.name || ''), cnt > 1 ? cnt : null, cnt === 1 ? ev0.image_url : null);
 
     const _open = e => {
       e.stopPropagation();
-      if (e.cancelable) e.preventDefault(); // suppress the synthesized ghost-click that lands on the just-opened panel
+      if (e.cancelable) e.preventDefault();
       if (window._mapMarkerTapped) window._mapMarkerTapped();
       if (cnt === 1) showMapPanel(ev0, 'event', s);
       else showVenueEventsPanel(events, s);
@@ -4034,18 +4154,30 @@ function placeMapMarkers() {
     el.addEventListener('touchend', _open, { passive: false });
 
     mapMarkers.push(new mapboxgl.Marker({ element: el, anchor: 'center' }).setLngLat([lon, lat]).addTo(mapObj));
+    geoFeatures.push({
+      type: 'Feature',
+      properties: {
+        type: 'event',
+        is_free: events.some(ev => ev.is_free || ev.price === 0 || ev.price_min === 0),
+        genre_color: s.bg,
+        venue_key: key,
+        count: cnt,
+      },
+      geometry: { type: 'Point', coordinates: [lon, lat] },
+    });
   });
 
   // ── Businesses: one marker per business ──
   bzs.forEach(item => {
     const lat = parseFloat(item.lat), lon = parseFloat(item.lon);
     if (isNaN(lat) || isNaN(lon) || lat < -35 || lat > -22 || lon < 16 || lon > 33) return;
-    const s  = _ms(item, 'biz');
-    const el = _makeMarkerEl(s, false, item.name || '', null);
+    const s   = _ms(item, 'biz');
+    const key = lat.toFixed(4) + ',' + lon.toFixed(4);
+    const el  = _makeMarkerEl(s, false, item.name || '', null);
 
     const _open = e => {
       e.stopPropagation();
-      if (e.cancelable) e.preventDefault(); // suppress the synthesized ghost-click that lands on the just-opened panel
+      if (e.cancelable) e.preventDefault();
       if (window._mapMarkerTapped) window._mapMarkerTapped();
       showMapPanel(item, 'biz', s);
     };
@@ -4053,15 +4185,16 @@ function placeMapMarkers() {
     el.addEventListener('touchend', _open, { passive: false });
 
     mapMarkers.push(new mapboxgl.Marker({ element: el, anchor: 'center' }).setLngLat([lon, lat]).addTo(mapObj));
+    geoFeatures.push({
+      type: 'Feature',
+      properties: { type: 'biz', is_free: false, genre_color: s.bg, venue_key: key, count: 1 },
+      geometry: { type: 'Point', coordinates: [lon, lat] },
+    });
   });
 
-  // Sync cluster source
+  // Sync cluster + unclustered-dot source with rich feature properties
   if (mapObj.getSource && mapObj.getSource('pulsify-spots')) {
-    const features = mapMarkers.map(m => {
-      const ll = m.getLngLat();
-      return { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [ll.lng, ll.lat] } };
-    });
-    mapObj.getSource('pulsify-spots').setData({ type: 'FeatureCollection', features });
+    mapObj.getSource('pulsify-spots').setData({ type: 'FeatureCollection', features: geoFeatures });
   }
 
   _markersVisible = null;
@@ -4323,45 +4456,11 @@ function _autoLocateOnce() {
 }
 
 function goToMyLocation(silent) {
-  if (!mapObj) return;
-  // Toggle: if YOU marker is already showing, remove it and reset button
-  if (window._myLocMarker) {
-    window._myLocMarker.remove();
-    window._myLocMarker = null;
-    const btn = document.getElementById('map-loc-btn');
-    if (btn) { btn.textContent = '📍'; btn.style.background = 'rgba(5,8,15,.7)'; btn.style.border = '1px solid rgba(0,229,255,.4)'; }
-    showToast('Location hidden');
-    return;
-  }
-  if (!navigator.geolocation) { showToast('Location not supported on this device', 'err'); return; }
+  if (!mapObj || !window._geoCtrl) return;
+  // GeolocateControl cycles: OFF → tracking → OFF on repeated trigger() calls
   const btn = document.getElementById('map-loc-btn');
   if (btn) { btn.textContent = '⏳'; btn.style.background = 'rgba(0,229,255,.15)'; }
-  navigator.geolocation.getCurrentPosition(
-    pos => {
-      const { latitude: lat, longitude: lon } = pos.coords;
-      const inSA = lat >= -35 && lat <= -22 && lon >= 16 && lon <= 33;
-      if (btn) { btn.textContent = '📍'; btn.style.background = inSA ? 'rgba(0,229,255,.2)' : 'rgba(5,8,15,.7)'; btn.style.border = inSA ? '1px solid rgba(0,229,255,.9)' : '1px solid rgba(0,229,255,.4)'; }
-      if (!inSA) { showToast('You appear to be outside South Africa'); return; }
-      mapObj.flyTo({ center: [lon, lat], zoom: 13, duration: 1200, essential: true });
-      // Add/refresh user location marker
-      if (window._myLocMarker) window._myLocMarker.remove();
-      const el = document.createElement('div');
-      el.style.cssText = 'position:absolute;top:0;left:0;width:22px;height:22px';
-      el.innerHTML = `
-        <div style="position:absolute;width:46px;height:46px;top:50%;left:50%;margin-top:-23px;margin-left:-23px;border-radius:50%;background:rgba(0,229,255,.12);animation:locPulse 2.2s ease-out infinite;pointer-events:none"></div>
-        <div style="position:absolute;width:34px;height:34px;top:50%;left:50%;margin-top:-17px;margin-left:-17px;border-radius:50%;border:1.5px solid rgba(0,229,255,.45);animation:locPulse 2.2s ease-out .6s infinite;pointer-events:none"></div>
-        <div style="position:absolute;width:22px;height:22px;top:0;left:0;border-radius:50%;background:rgba(0,229,255,.95);border:2.5px solid #fff;box-shadow:0 0 10px rgba(0,229,255,1),0 0 22px rgba(0,229,255,.8),0 0 40px rgba(0,229,255,.45),0 2px 8px rgba(0,0,0,.9)"></div>
-        <div style="position:absolute;top:26px;left:50%;transform:translateX(-50%);background:rgba(0,229,255,.95);color:#000;font-family:'Syne',sans-serif;font-size:.5rem;font-weight:900;padding:2px 6px;border-radius:4px;white-space:nowrap;letter-spacing:.12em;box-shadow:0 0 10px rgba(0,229,255,.7)">YOU</div>
-      `;
-      window._myLocMarker = new mapboxgl.Marker({ element: el, anchor: 'center' }).setLngLat([lon, lat]).addTo(mapObj);
-      showToast('📍 Showing your location');
-    },
-    err => {
-      if (btn) { btn.textContent = '📍'; btn.style.background = 'rgba(5,8,15,.7)'; }
-      if (!silent) showLocationHelp(goToMyLocation);
-    },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
-  );
+  window._geoCtrl.trigger();
 }
 
 function showMapPanel(item, type, s) {
