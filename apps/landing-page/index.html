@@ -2985,6 +2985,7 @@ async function openEv(evId) {
         <button class="rb" onclick="toggleSave('ev','${x(ev.id)}',this)"><span class="ri">${savedEv.includes(ev.id) ? '🔖' : '🏷'}</span><span class="rl">Save</span></button>
         <button class="rb" onclick="shareIt('${x(ev.name)}')"><span class="ri">🔗</span><span class="rl">Share</span></button>
         <button class="rb" onclick="openReportModal('${x(ev.id)}','${x(ev.name).replace(/'/g,'\\\'')}')"><span class="ri">🚩</span><span class="rl">Report</span></button>
+        ${ev.siza_enabled ? `<button class="rb act" id="lumi-open-btn" onclick="openLumiChat('${x(ev.id)}','${x(ev.name).replace(/'/g,"\\'")}')"><span class="ri">🤖</span><span class="rl" style="color:var(--or)">Ask Lumi</span></button>` : ''}
       </div>
       <div class="db">
         <div class="ig">
@@ -3027,6 +3028,82 @@ async function openEv(evId) {
     document.getElementById('ev-detail').innerHTML = `<div style="padding:40px;text-align:center;color:var(--mu)">Could not load event. <button onclick="goBack()" style="color:var(--or);background:none;border:none;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700">Go back</button></div>`;
   }
 }
+
+/* ══ LUMI CHAT WIDGET ═══════════════════════════════════ */
+let _lumiEvId = null, _lumiEvName = '', _lumiSessId = null, _lumiMsgs = [];
+
+function openLumiChat(evId, evName) {
+  _lumiEvId = evId; _lumiEvName = evName;
+  _lumiSessId = _lumiSessId || ('ls_' + Math.random().toString(36).slice(2));
+  let sheet = document.getElementById('lumi-chat-sheet');
+  if (!sheet) {
+    sheet = document.createElement('div');
+    sheet.id = 'lumi-chat-sheet';
+    sheet.style.cssText = 'position:fixed;inset:0;z-index:4500;display:flex;flex-direction:column;background:var(--bg);transition:transform .3s ease;transform:translateY(100%)';
+    sheet.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;padding:16px 20px 12px;border-bottom:1px solid var(--border);flex-shrink:0">
+        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);display:flex;align-items:center;justify-content:center;font-size:1.1rem">🤖</div>
+        <div style="flex:1"><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem">Lumi</div><div id="lumi-ev-label" style="font-size:.72rem;color:var(--mu)"></div></div>
+        <button onclick="closeLumiChat()" style="background:none;border:none;color:var(--mu);font-size:1.3rem;cursor:pointer;padding:4px">✕</button>
+      </div>
+      <div id="lumi-msgs" style="flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:10px"></div>
+      <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0">
+        <input id="lumi-input" placeholder="Ask about this event…" style="flex:1;padding:11px 14px;border-radius:24px;border:1px solid var(--border);background:var(--surf);color:var(--tx);font-size:.84rem;outline:none" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendLumi()}">
+        <button onclick="sendLumi()" id="lumi-send-btn" style="width:40px;height:40px;border-radius:50%;background:var(--or);border:none;color:#fff;font-size:1rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">↑</button>
+      </div>`;
+    document.body.appendChild(sheet);
+    requestAnimationFrame(() => { sheet.style.transform = 'translateY(0)'; });
+  } else {
+    sheet.style.display = 'flex';
+    requestAnimationFrame(() => { sheet.style.transform = 'translateY(0)'; });
+  }
+  document.getElementById('lumi-ev-label').textContent = evName;
+  if (!_lumiMsgs.length) _lumiAddMsg('out', `Hey! I'm Lumi 👋 I know everything about "${evName}". Ask me about tickets, lineup, dress code, or anything else!`);
+}
+
+function closeLumiChat() {
+  const sheet = document.getElementById('lumi-chat-sheet');
+  if (sheet) { sheet.style.transform = 'translateY(100%)'; setTimeout(() => { sheet.style.display = 'none'; }, 300); }
+}
+
+function _lumiAddMsg(dir, text, contact) {
+  _lumiMsgs.push({ dir, text });
+  const msgsEl = document.getElementById('lumi-msgs');
+  if (!msgsEl) return;
+  const isOut = dir === 'out';
+  const bubble = document.createElement('div');
+  bubble.style.cssText = `display:flex;flex-direction:column;align-items:${isOut ? 'flex-start' : 'flex-end'};gap:4px`;
+  bubble.innerHTML = `<div style="max-width:82%;padding:11px 14px;border-radius:${isOut ? '4px 18px 18px 18px' : '18px 4px 18px 18px'};background:${isOut ? 'var(--surf)' : 'var(--or)'};color:${isOut ? 'var(--tx)' : '#fff'};font-size:.84rem;line-height:1.5;white-space:pre-wrap">${x(text)}</div>
+    ${contact ? `<button onclick="window.location='mailto:'" style="font-size:.72rem;color:var(--or);background:none;border:1px solid var(--or);border-radius:20px;padding:5px 12px;cursor:pointer;margin-top:2px">Contact Organiser →</button>` : ''}`;
+  msgsEl.appendChild(bubble);
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+
+async function sendLumi() {
+  const inp = document.getElementById('lumi-input');
+  const text = inp?.value?.trim();
+  if (!text || !_lumiEvId) return;
+  inp.value = '';
+  _lumiAddMsg('in', text);
+  const btn = document.getElementById('lumi-send-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    const body = { event_id: _lumiEvId, session_id: _lumiSessId, message: text };
+    if (currentUser) { body.customer_name = currentUser.display_name || ''; body.customer_email = currentUser.email || ''; }
+    const token = (await getSB().auth.getSession()).data?.session?.access_token;
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const r = await fetch('/api/siza/chat', { method: 'POST', headers, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Lumi is unavailable right now');
+    _lumiAddMsg('out', d.reply, d.suggest_contact);
+  } catch (e) {
+    _lumiAddMsg('out', e.message || "Sorry, I couldn't connect. Try again.");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↑'; }
+  }
+}
+/* ══ END LUMI CHAT ══════════════════════════════════════ */
 
 async function toggleEvLike(evId, btn) {
   if (!currentUser) { showToast('Sign in to like events'); return; }
