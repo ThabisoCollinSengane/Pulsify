@@ -89,6 +89,28 @@ module.exports = async (req, res) => {
             metadata: { paystack: pdata },
           }, { onConflict: 'reference' }).catch(() => {});
         }
+
+        // Handle Siza-originated orders
+        if (meta.siza_order_id) {
+          const { data: sizaOrder } = await sb().from('siza_orders')
+            .select('*')
+            .eq('id', meta.siza_order_id)
+            .eq('state', 'pending')
+            .single();
+          if (sizaOrder) {
+            const expectedCents = sizaOrder.total_cents;
+            if (pdata.currency === 'ZAR' && (pdata.amount || 0) >= expectedCents) {
+              await sb().from('siza_orders')
+                .update({ state: 'paid', paystack_reference: ref })
+                .eq('id', sizaOrder.id)
+                .eq('state', 'pending');
+              console.log('[siza/order] paid', sizaOrder.id, ref);
+            } else {
+              await sb().from('siza_orders').update({ state: 'failed' }).eq('id', sizaOrder.id);
+              console.error('[siza/order] amount mismatch', sizaOrder.id, pdata.amount, expectedCents);
+            }
+          }
+        }
       }
       return res.status(200).json({ received: true });
     }

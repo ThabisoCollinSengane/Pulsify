@@ -779,8 +779,19 @@ select.inp option{background:#1C1140}
       </div>
       <div style="display:flex;gap:10px;margin-top:14px">
         <button class="btn-sec" style="flex:1" onclick="closeOrgSheet('org-ev-preview-sheet')">← Edit</button>
-        <button class="btn-primary" style="flex:2" onclick="closeOrgSheet('org-ev-preview-sheet');submitEvent()">Create Event 🎉</button>
+        <button class="btn-primary" style="flex:2" onclick="closeOrgSheet('org-ev-preview-sheet');openSizaStepOrSubmit()">Create Event 🎉</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- SIZA SETUP SHEET -->
+<div class="sn-overlay" id="org-siza-sheet" onclick="if(event.target===this)closeOrgSheet('org-siza-sheet')">
+  <div class="sn-sheet" style="max-height:92vh">
+    <div class="sn-handle"></div>
+    <div class="sn-head"><div class="sn-title">🤖 Siza AI Setup</div><button class="sn-close" onclick="closeOrgSheet('org-siza-sheet')">✕</button></div>
+    <div class="sn-body" style="padding-bottom:40px" id="siza-sheet-body">
+      <!-- filled by openSizaStep() -->
     </div>
   </div>
 </div>
@@ -821,6 +832,7 @@ select.inp option{background:#1C1140}
         <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Featured on map &amp; discovery</div><div style="font-size:.71rem;color:var(--mu)">Your events rank higher in search and map results</div></div></div>
         <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Analytics dashboard</div><div style="font-size:.71rem;color:var(--mu)">Views, saves, ticket sales by day</div></div></div>
         <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Priority support</div><div style="font-size:.71rem;color:var(--mu)">Faster response from the Pulsefy team</div></div></div>
+        <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Siza AI Assistant</div><div style="font-size:.71rem;color:var(--mu)">AI handles customer questions & sells tickets while you sleep</div></div></div>
       </div>
       <button class="btn-primary" style="width:100%;padding:15px;font-size:.92rem" id="org-pay-btn" onclick="startOrgPayment()">Pay R220/month · Activate Premium 🚀</button>
       <div id="org-pay-msg" style="text-align:center;font-size:.68rem;color:var(--mu);margin-top:10px">🔒 Secured by Paystack · Cancel anytime · Monthly billing</div>
@@ -905,6 +917,18 @@ select.inp option{background:#1C1140}
           <button type="button" class="btn-sec" style="flex:1;padding:8px;font-size:.76rem" id="req-loc-btn" onclick="submitEventLocationRequest()">Submit Location ✓</button>
         </div>
         <div id="edit-ev-loc-msg" style="font-size:.7rem;color:var(--mu2);min-height:14px"></div>
+      </div>
+      <!-- Siza AI (premium only) -->
+      <div id="edit-siza-section" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">🤖 Siza AI Assistant</div>
+        <label style="display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:14px">
+          <input type="checkbox" id="edit-siza-toggle" style="width:20px;height:20px;accent-color:var(--or);cursor:pointer">
+          <span style="font-size:.82rem">Enable Siza for this event</span>
+        </label>
+        <div id="edit-siza-text-wrap" style="opacity:.45;pointer-events:none">
+          <div style="font-size:.72rem;color:var(--mu);margin-bottom:8px">Re-paste event details to update Siza's knowledge (optional — leave blank to keep existing)</div>
+          <textarea id="edit-siza-knowledge-text" placeholder="Paste updated flyer text, FAQs, pricing, lineup…" style="width:100%;min-height:100px;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--txt);font-size:.78rem;line-height:1.5;resize:vertical;box-sizing:border-box"></textarea>
+        </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:10px">
         <button class="btn-sec" style="flex:1" onclick="closeOrgSheet('org-edit-event-sheet')">Cancel</button>
@@ -1379,6 +1403,51 @@ function previewEventForm() {
   document.getElementById('ev-preview-organizer').textContent = currentProfile?.display_name || 'Organizer';
 
   openOrgSheet('org-ev-preview-sheet');
+}
+
+function openSizaStepOrSubmit() {
+  if (currentProfile?.subscription_type === 'premium') {
+    openSizaStep();
+  } else {
+    submitEvent();
+  }
+}
+
+function openSizaStep() {
+  const enabled = window._sizaEnabled || false;
+  const text = window._sizaKnowledgeText || '';
+  document.getElementById('siza-sheet-body').innerHTML = `
+    <div style="margin-bottom:18px">
+      <p style="font-size:.82rem;color:var(--mu);line-height:1.5;margin-bottom:16px">
+        Siza AI handles customer questions, explains your event details, and sells tickets — automatically, 24/7 on web and WhatsApp.
+      </p>
+      <label style="display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:20px">
+        <input type="checkbox" id="siza-toggle" ${enabled ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--or);cursor:pointer">
+        <span style="font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700">Enable Siza for this event</span>
+      </label>
+      <div id="siza-text-area-wrap" style="${enabled ? '' : 'opacity:.45;pointer-events:none'}">
+        <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;margin-bottom:8px;color:var(--txt)">Paste your event details</div>
+        <div style="font-size:.72rem;color:var(--mu);margin-bottom:10px">Copy-paste your flyer text, WhatsApp post or event description. Siza will extract FAQs, pricing, dress code, lineup and more.</div>
+        <textarea id="siza-knowledge-text" placeholder="e.g. Join us at Ultra Durban... Tickets: R250 General / R500 VIP... Dress code: smart casual... Lineup: DJ Maphorisa, Kabza De Small..." style="width:100%;min-height:140px;padding:12px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--txt);font-size:.8rem;line-height:1.5;resize:vertical;box-sizing:border-box">${x(text)}</textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-secondary" style="flex:1" onclick="closeOrgSheet('org-siza-sheet');submitEvent()">Skip</button>
+      <button class="btn-primary" style="flex:2" onclick="saveSizaStep()">Save & Create Event 🎉</button>
+    </div>
+  `;
+  document.getElementById('siza-toggle').addEventListener('change', function() {
+    document.getElementById('siza-text-area-wrap').style.opacity = this.checked ? '1' : '.45';
+    document.getElementById('siza-text-area-wrap').style.pointerEvents = this.checked ? '' : 'none';
+  });
+  openOrgSheet('org-siza-sheet');
+}
+
+function saveSizaStep() {
+  window._sizaEnabled = document.getElementById('siza-toggle')?.checked || false;
+  window._sizaKnowledgeText = document.getElementById('siza-knowledge-text')?.value || '';
+  closeOrgSheet('org-siza-sheet');
+  submitEvent();
 }
 
 function x(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -2046,6 +2115,7 @@ async function submitEvent() {
         venue_lon: evLon,
         location_confidence: locConfidence,
         tiers,
+        siza_enabled: window._sizaEnabled || false,
       }),
     });
     const evData = await evRes.json();
@@ -2061,6 +2131,18 @@ async function submitEvent() {
         headers: { Authorization: 'Bearer ' + freshToken },
       }).catch(() => {});
     }
+
+    // If Siza was enabled and organizer pasted knowledge text, ingest it now
+    const sizaText = (window._sizaKnowledgeText || '').trim();
+    if (window._sizaEnabled && sizaText) {
+      fetch('/api/siza/ingest/' + eventId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + freshToken },
+        body: JSON.stringify({ text: sizaText }),
+      }).catch(() => {});
+    }
+    window._sizaEnabled = false;
+    window._sizaKnowledgeText = '';
 
     const priceLabel = allFree ? 'FREE' : (minPrice === maxPrice ? 'R' + minPrice : 'From R' + minPrice);
     await fetch('/api/posts', {
@@ -2247,6 +2329,25 @@ function openEditEventSheet(evId) {
   const imgThumb = document.getElementById('edit-ev-img-thumb');
   if (e.image_url) { imgThumb.src = e.image_url; imgPrev.style.display = 'block'; }
   else { imgPrev.style.display = 'none'; imgThumb.src = ''; }
+  const sizaSec = document.getElementById('edit-siza-section');
+  if (sizaSec) {
+    if (currentProfile?.subscription_type === 'premium') {
+      sizaSec.style.display = 'block';
+      const tog = document.getElementById('edit-siza-toggle');
+      const wrap = document.getElementById('edit-siza-text-wrap');
+      if (tog) {
+        tog.checked = e.siza_enabled || false;
+        if (wrap) { wrap.style.opacity = tog.checked ? '1' : '.45'; wrap.style.pointerEvents = tog.checked ? '' : 'none'; }
+        tog.onchange = function() {
+          if (wrap) { wrap.style.opacity = this.checked ? '1' : '.45'; wrap.style.pointerEvents = this.checked ? '' : 'none'; }
+        };
+      }
+      const ta = document.getElementById('edit-siza-knowledge-text');
+      if (ta) ta.value = '';
+    } else {
+      sizaSec.style.display = 'none';
+    }
+  }
   openOrgSheet('org-edit-event-sheet');
 }
 
@@ -2275,7 +2376,8 @@ async function saveEventEdit() {
     if (upErr) { toast('Image upload failed — saving other changes', 'err'); }
     else { newImgUrl = sb.storage.from('post-images').getPublicUrl(path).data.publicUrl; }
   }
-  const upd = { name, date_local: date, time_local: time||null, venue_name: venue, venue_city: city, genre: genre||null, description: desc||null };
+  const sizaToggle = document.getElementById('edit-siza-toggle');
+  const upd = { name, date_local: date, time_local: time||null, venue_name: venue, venue_city: city, genre: genre||null, description: desc||null, siza_enabled: sizaToggle ? sizaToggle.checked : false };
   if (newImgUrl) upd.image_url = newImgUrl;
 
   // Auto-geocode if the current edit clears or changes the venue and there are no existing coords
@@ -2302,6 +2404,14 @@ async function saveEventEdit() {
   if (_evMap[_editEvId]) Object.assign(_evMap[_editEvId], upd);
   closeOrgSheet('org-edit-event-sheet');
   toast('Event updated ✅', 'ok');
+  const editSizaText = (document.getElementById('edit-siza-knowledge-text')?.value || '').trim();
+  if (upd.siza_enabled && editSizaText) {
+    fetch('/api/siza/ingest/' + _editEvId, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + editSess?.access_token },
+      body: JSON.stringify({ text: editSizaText }),
+    }).catch(() => {});
+  }
   loadMyEvents();
 }
 
