@@ -296,3 +296,62 @@ Tracked work from the security, architecture and map briefs. Tackle in order:
       (30s in-process cache, fails-closed on error). First gate: `paystack_live` flag in
       `/ticket/init` blocks paid ticket init when false. Flip to true once live Paystack
       keys are set. `db/feature_flags_fn.sql`.
+
+### F. CRM + Leads (shipped PR #124, bugs fixed PR #125)
+
+#### HubSpot CRM integration — PR #124 (merged to main, commit `41275c3`)
+- **`lib/hubspot.js`** — `upsertContact(profile)` maps Supabase profiles → HubSpot contacts:
+  `email`, `firstname`/`lastname` (split on space), `phone`, `city` (from `province`), `pulsify_user_id` (custom prop).
+- **`api/admin/index.js`** — `POST /admin/hubspot-sync`: iterates all `profiles` rows in
+  batches of 50, upserts each to HubSpot. Requires admin JWT. Returns `{ synced, errors }`.
+- **`api/events/index.js`** — ticket purchases (`/ticket/purchase`, `/ticket/confirm`)
+  call `upsertContact` after a booking confirms, so buyers land in HubSpot automatically.
+- **`api/index.js`** — `/auth/register-business` calls `upsertContact` on new business
+  registrations.
+- **Env var:** `HUBSPOT_TOKEN` (Private App token) stored as Vercel env var ONLY.
+  **NEVER commit it to any file or HTML.**
+- **One-time bulk sync:** `POST https://pulsefy.co.za/api/admin/hubspot-sync` with admin JWT.
+  Run this once after deploy to backfill all existing profiles.
+
+#### Bug fixes — PR #125 (merged to main after migration)
+- **Emoji reactions on comments** (`feeds.html` + `index.html`): per-comment emoji
+  reaction bar (`❤️ 😂 🔥 😮`) was rendering below every comment. Removed `_reactBar` from
+  `buildCmts` in `feeds.html` and cleared `cm-reaction-bar` in `renderComments` in
+  `index.html`. Comments now show like + reply only.
+- **"Could not load orders"** (`pickup_orders` table): table was created without a
+  `user_id` column; `GET /user/pickup-orders` queries `.eq('user_id', ...)` — Postgres
+  error caused the orders tab to show "Could not load orders". Fixed in `db/schema_additions.sql`.
+  **Migration required:** run `db/add_pickup_orders_user_id.sql` on Supabase:
+  ```sql
+  ALTER TABLE pickup_orders ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES profiles(id);
+  CREATE INDEX IF NOT EXISTS idx_orders_user ON pickup_orders(user_id);
+  ```
+
+### G. Next: TikTok Leads / Organizer Outreach for Durban
+
+**Goal:** identify Durban event organizers active on TikTok and surface them as leads in
+HubSpot (or the `scraped_leads` table) for outreach.
+
+**Existing infrastructure to build on:**
+- `scraped_leads` table — already in DB, used by lead-gen; RLS locked to service_role only.
+- `api/cron/tiktok-leads.js` — cron exists (runs 9am daily via Vercel cron), currently
+  a stub. This is the entry point to implement.
+- `api/admin/index.js` — leads endpoints exist; `GET /leads` + `POST /leads` already wired.
+- HubSpot `upsertContact` in `lib/hubspot.js` — can push discovered organizers directly
+  to CRM once identified.
+
+**Approach options (decide before coding):**
+1. **TikTok search scrape** — query TikTok's public search for Durban event hashtags
+   (`#DurbanEvents`, `#DurbanNightlife`, `#DurbanParty`) via a headless browser or
+   TikTok's unofficial API; extract creator handles + bios + follower counts.
+2. **Profile bio keyword match** — crawl creators whose bios contain "organizer",
+   "events", "Durban", "KZN"; score by follower count + posting frequency.
+3. **Existing events DB cross-reference** — match organizer names from `events` table
+   against TikTok handles via fuzzy search; prioritize known organizers first.
+
+**What to implement in `api/cron/tiktok-leads.js`:**
+- Fetch Durban-tagged TikTok creators (approach TBD).
+- Dedupe against existing `scraped_leads` (by handle or email).
+- Insert new leads with `source='tiktok'`, `city='Durban'`, `status='new'`.
+- Optionally push to HubSpot via `upsertContact` if email is discoverable.
+- Return `{ found, inserted, skipped }` for the cron log.
