@@ -5372,7 +5372,7 @@ function renderComments(newId) {
     const pinBadge = (isOrg && depth === 0) ? `<span style="font-size:.55rem;background:rgba(255,92,0,.18);color:var(--or);border-radius:50px;padding:1px 6px;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.04em;vertical-align:middle">📌 Organiser</span> ` : '';
     const replies = (c.replies || []).map(r => renderOne(r, depth + 1)).join('');
     const replyBtn = depth < 2 ? `<button onclick="(function(){var inp=document.getElementById('comment-input');if(inp){window._cmtReplyTo='${x(c.id)}';inp.placeholder='Replying to ${x(name.replace(/'/g,""))}…';inp.focus();}})()" style="background:none;border:none;color:var(--mu);font-size:.62rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;padding:2px 0;margin-top:2px;letter-spacing:.04em">↩ Reply</button>` : '';
-    const reactBar = depth === 0 ? `<div class="cm-reaction-bar">${_REACT_EMOJIS.map(e => `<button class="cm-react" onclick="cmtReact('${x(c.id)}','${e}',this)">${e} <span>0</span></button>`).join('')}</div>` : '';
+    const reactBar = '';
     const isNew = c.id === newId;
     return `<div class="${isOrg && depth===0 ? 'cm-pin' : ''}" style="margin-left:${depth*18}px;${depth>0?'padding-left:8px;border-left:1.5px solid var(--border);':''}">
       <div class="cm${isNew ? ' cm-new' : ''}">

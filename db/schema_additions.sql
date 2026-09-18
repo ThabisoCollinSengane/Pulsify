@@ -102,6 +102,7 @@ CREATE TABLE IF NOT EXISTS pickup_orders (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_ref     TEXT UNIQUE NOT NULL,
   business_id   UUID REFERENCES businesses(id) ON DELETE CASCADE,
+  user_id       UUID REFERENCES profiles(id),
   customer_name TEXT NOT NULL,
   customer_phone TEXT,
   items         JSONB NOT NULL,
@@ -114,6 +115,7 @@ CREATE TABLE IF NOT EXISTS pickup_orders (
 );
 CREATE INDEX IF NOT EXISTS idx_orders_business ON pickup_orders(business_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status   ON pickup_orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_user     ON pickup_orders(user_id);
 
 -- Business hours
 CREATE TABLE IF NOT EXISTS business_hours (
