@@ -1,4 +1,4 @@
-const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, rateLimited, captureError } = require('../shared');
+const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, rateLimited, captureError } = require('../../lib/shared');
 
 module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));

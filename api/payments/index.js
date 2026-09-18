@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError } = require('../shared');
+const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError } = require('../../lib/shared');
 const { sendPaymentConfirmEmail, sendTicketEmail } = require('../email');
 
 module.exports = async (req, res) => {

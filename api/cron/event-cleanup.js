@@ -1,4 +1,4 @@
-const { sb, CORS } = require('../shared');
+const { sb, CORS } = require('../../lib/shared');
 
 module.exports = async (req, res) => {
   Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));

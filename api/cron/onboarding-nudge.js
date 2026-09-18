@@ -1,4 +1,4 @@
-const { sb, CORS } = require('../shared');
+const { sb, CORS } = require('../../lib/shared');
 const { sendNudgeDay2Email, sendNudgeDay7Email } = require('../email');
 
 module.exports = async (req, res) => {

@@ -1,4 +1,4 @@
-const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError } = require('../shared');
+const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError } = require('../../lib/shared');
 const { sendVerifApprovedEmail, sendVerifRejectedEmail, sendLeadEmail, sendMarketingEmail, sendEventApprovedEmail, sendEventRejectedEmail, sendClaimLinkEmail, EMAIL_CONFIGURED } = require('../email');
 const PUBLIC_URL = process.env.PUBLIC_URL || 'https://pulsefy.co.za';
 
