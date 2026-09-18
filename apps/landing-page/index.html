@@ -1971,6 +1971,7 @@ let _feedLoadingMore = false;
    break fall back to the last card when there aren't enough events. */
 let _frontlineHtml = '';   // businesses
 let _communityHtml = '';   // community posts
+let _studentHtml   = '';   // student events
 let _dealsHtml     = '';   // deals
 let _feedFinal     = false; // true once the last feed page has loaded
 
@@ -2110,9 +2111,10 @@ function _injectFeedBreaks(final) {
   _placeTrustBreak(final);       // trust strip → directly under categories
   _placeDealsBreak(final);       // deals → after 9 events
   _placeBreak('feed-break-community', _communityHtml, 12, final);
+  _placeBreak('feed-break-student', _studentHtml, 15, final);
 }
 function _ejectFeedBreaks() {
-  ['feed-break-biz', 'feed-break-map', 'feed-break-categories', 'feed-break-trust', 'feed-break-deals', 'feed-break-community']
+  ['feed-break-biz', 'feed-break-map', 'feed-break-categories', 'feed-break-trust', 'feed-break-deals', 'feed-break-community', 'feed-break-student']
     .forEach(id => document.getElementById(id)?.remove());
 }
 
@@ -2562,6 +2564,7 @@ function setGenre(btn, genre) {
 const CAT_MAP = {
   nightlife: ['gqom', 'amapiano', 'house', 'club', 'festival', 'nightlife'],
   food:      ['food', 'market', 'cultural', 'social'],
+  student:   ['student', 'social', 'outdoor', 'comedy', 'sport', 'cultural'],
 };
 // Vibes are a UX layer over the existing genres — each maps to a set of real
 // genre tokens the events API already understands (comma-joined into feedGenre,
@@ -6098,6 +6101,36 @@ async function loadCommunityPosts() {
   } catch(e) { console.warn('[CommunityPulse]', e.message); }
 }
 
+/* Home-feed strip: student & youth events */
+async function loadStudentEvents() {
+  try {
+    const genres = (CAT_MAP.student || ['student']).join(',');
+    const data = await Api.get(`/events?genre=${encodeURIComponent(genres)}&limit=10&offset=0`);
+    const events = data.events || data;
+    if (!events || !events.length) return;
+    const cardsHtml = events.map(ev => {
+      const img = ev.image_url || ev.banner_url || '';
+      const title = x(ev.title || ev.name || 'Event');
+      const venue = x(ev.venue_name || ev.city || '');
+      const price = (ev.min_price != null && ev.min_price === 0) ? 'Free' : (ev.min_price ? `R${fn(ev.min_price)}` : '');
+      const dateStr = ev.date_local ? new Date(ev.date_local).toLocaleDateString('en-ZA', {day:'numeric',month:'short'}) : '';
+      return `
+      <div onclick="openEv('${x(ev.id)}')" style="width:150px;flex-shrink:0;border-radius:16px;overflow:hidden;background:var(--surf);border:1px solid var(--border);cursor:pointer">
+        <div style="height:110px;background:var(--surf2);position:relative;overflow:hidden">
+          ${img ? `<img src="${x(img)}" loading="lazy" style="width:100%;height:100%;object-fit:cover"/>` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:2rem">🎓</div>`}
+          ${price ? `<div style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.65);color:#fff;font-size:.55rem;font-weight:700;padding:2px 7px;border-radius:20px">${price}</div>` : ''}
+        </div>
+        <div style="padding:6px 10px 8px">
+          <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div>
+          <div style="font-size:.58rem;color:var(--mu);margin-top:2px">${[dateStr, venue].filter(Boolean).join(' · ')}</div>
+        </div>
+      </div>`;
+    }).join('');
+    _studentHtml = `<div id="feed-break-student"><div class="sl"><span>🎓 Student &amp; Youth Events</span></div><div class="hs">${cardsHtml}</div></div>`;
+    _injectFeedBreaks(_feedFinal);
+  } catch(e) { console.warn('[StudentEvents]', e.message); }
+}
+
 async function openAllPhotos(userId) {
   const sb = getSB(); if (!sb) return;
   const ov = document.getElementById('prof-overlay');
@@ -6897,10 +6930,11 @@ window.addEventListener('DOMContentLoaded', () => {
   loadDeals();
   loadPromoBanners();
   loadCommunityPosts();
+  loadStudentEvents();
   // When the page is restored from the back-forward cache (e.g. pressing back
   // from /feeds after liking a post), the browser skips JS re-run, leaving the
   // "Latest from organizers" strip showing stale like counts. Refresh it.
-  window.addEventListener('pageshow', (e) => { if (e.persisted) loadCommunityPosts(); });
+  window.addEventListener('pageshow', (e) => { if (e.persisted) { loadCommunityPosts(); loadStudentEvents(); } });
   if (_restoredTab !== 'home') showTab(_restoredTab, true);
   else triggerRev();
 
