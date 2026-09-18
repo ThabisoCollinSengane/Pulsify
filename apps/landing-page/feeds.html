@@ -79,6 +79,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .csnd{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .cmt-reply-btn{background:none;border:none;color:var(--mu);font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.04em;cursor:pointer;padding:2px 0;margin-top:3px}
 .cmt-reply-btn:hover{color:var(--or)}
+.cmt-like-btn{background:none;border:none;color:var(--mu);font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;cursor:pointer;padding:2px 4px;display:inline-flex;align-items:center;gap:2px;line-height:1}
+.cmt-like-btn.liked{color:var(--pk)}
+.cmt-react-bar{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+.cmt-react-btn{background:none;border:1px solid var(--border);border-radius:50px;padding:2px 7px;font-size:.72rem;cursor:pointer;transition:background .15s;display:inline-flex;align-items:center;gap:2px;color:var(--mu2);line-height:1.5}
+.cmt-react-btn.reacted{background:rgba(255,92,0,.12);border-color:rgba(255,92,0,.35);color:var(--or)}
 .cmt-replies{margin-left:36px;border-left:1px solid var(--border);padding-left:8px;margin-top:4px}
 .reply-banner{background:rgba(255,92,0,.08);border:1px solid rgba(255,92,0,.25);border-radius:8px;padding:6px 10px;margin:0 14px 6px;font-size:.7rem;color:var(--mu2);display:flex;align-items:center;justify-content:space-between;gap:8px}
 .reply-banner button{background:none;border:none;color:var(--mu);cursor:pointer;font-size:.85rem}
@@ -631,13 +636,20 @@ function buildCmts(comments, postId) {
       ? '<div class="cmt-replies">'+c.replies.map(r => renderOne(r, true)).join('')+'</div>'
       : '';
     const body = c.body || c.content || c.text || '';
+    const _clLiked = (() => { try { return JSON.parse(localStorage.getItem('p_cl_'+c.id)||'false'); } catch(e) { return false; } })();
+    const _clCnt = Math.max(0,(c.like_count||0)+(_clLiked&&!c.liked_by_me?1:0));
+    const _myR = (() => { try { return localStorage.getItem('p_cr_'+c.id)||''; } catch(e) { return ''; } })();
+    const _rcts = c.reactions||{};
+    const _likeBtn = '<button class="cmt-like-btn'+(_clLiked?' liked':'')+'" id="cl-'+x(c.id)+'" onclick="doLikeComment(\''+x(c.id)+'\')">'+(_clLiked?'❤️':'🤍')+' <span id="clc-'+x(c.id)+'">'+(_clCnt||'')+'</span></button>';
+    const _reactBar = '<div class="cmt-react-bar">'+['❤️','😂','🔥','😮'].map(e=>{const cnt=_rcts[e]||0;const act=_myR===e;return '<button class="cmt-react-btn'+(act?' reacted':'')+'" onclick="doReactComment(\''+x(c.id)+'\',this)">'+e+(cnt?' <span>'+cnt+'</span>':'')+'</button>';}).join('')+'</div>';
     return ''+
       '<div class="cmt-item" id="c-'+x(c.id)+'">'+avEl+
         '<div style="flex:1;min-width:0">'+
           '<div class="cmt-name" style="cursor:pointer" onclick="openProfile(\''+x(c.user_id||'')+'\')">'+x(name)+'</div>'+
           '<div class="cmt-text">'+x(body)+'</div>'+
           '<div class="cmt-time">'+timeAgo(ts)+'</div>'+
-          replyBtn+
+          '<div style="display:flex;align-items:center;gap:4px;margin-top:3px">'+replyBtn+_likeBtn+'</div>'+
+          _reactBar+
         '</div>'+
       '</div>'+repliesHtml;
   };
@@ -690,6 +702,48 @@ async function doRepost(postId) {
       await sb.from('reposts').insert({post_id: postId, user_id: _uid}).catch(()=>{});
     }
   }
+}
+
+async function doLikeComment(cmtId) {
+  if (!_uid) return showToast('Sign in to like');
+  const key = 'p_cl_'+cmtId;
+  const liked = (() => { try { return JSON.parse(localStorage.getItem(key)||'false'); } catch(e) { return false; } })();
+  const newLiked = !liked;
+  try { localStorage.setItem(key, JSON.stringify(newLiked)); } catch(e) {}
+  const btn = document.getElementById('cl-'+cmtId);
+  const cnt = document.getElementById('clc-'+cmtId);
+  if (btn) { btn.classList.toggle('liked', newLiked); btn.childNodes[0].textContent = newLiked ? '❤️' : '🤍'; }
+  if (cnt) { const n = parseInt(cnt.textContent||'0',10); cnt.textContent = Math.max(0, n + (newLiked?1:-1)) || ''; }
+  fetch('/api/reactions', {
+    method: newLiked ? 'POST' : 'DELETE',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
+    body: JSON.stringify({ entity_type: 'comment', entity_id: cmtId, type: 'like' }),
+  }).catch(()=>{});
+}
+
+function doReactComment(cmtId, btn) {
+  if (!_uid) return showToast('Sign in to react');
+  const emoji = btn.textContent.trim().replace(/\s.*/, '');
+  const key = 'p_cr_'+cmtId;
+  const prev = (() => { try { return localStorage.getItem(key)||''; } catch(e) { return ''; } })();
+  const same = prev === emoji;
+  const next = same ? '' : emoji;
+  try { if (next) localStorage.setItem(key, next); else localStorage.removeItem(key); } catch(e) {}
+  const bar = btn.closest('.cmt-react-bar');
+  if (bar) bar.querySelectorAll('.cmt-react-btn').forEach(b => {
+    const bEmoji = b.textContent.trim().replace(/\s.*/, '');
+    const wasPrev = bEmoji === prev;
+    const isNext  = bEmoji === next;
+    const sp = b.querySelector('span');
+    if (wasPrev && !isNext && sp) { const n=parseInt(sp.textContent,10)-1; if(n<=0)sp.remove(); else sp.textContent=n; }
+    if (!wasPrev && isNext) { let sp2=b.querySelector('span'); if(!sp2){sp2=document.createElement('span');b.appendChild(sp2);} sp2.textContent=(parseInt(sp2.textContent||'0',10)+1); }
+    b.classList.toggle('reacted', bEmoji === next);
+  });
+  if (next) fetch('/api/reactions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
+    body: JSON.stringify({ entity_type: 'comment', entity_id: cmtId, type: next }),
+  }).catch(()=>{});
 }
 
 // Threaded comments — lazy-load from DB on first open

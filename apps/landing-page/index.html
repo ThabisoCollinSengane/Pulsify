@@ -6569,9 +6569,10 @@ async function renderAdminPromos() {
   body.innerHTML = `
     <div style="font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.03em;margin-bottom:2px">👮 Admin</div>
     <div style="font-size:.78rem;color:var(--mu);margin-bottom:14px">Review submissions & trust accounts</div>
-    <div style="display:flex;gap:8px;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:10px">
+    <div style="display:flex;gap:8px;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:10px;flex-wrap:wrap">
       <button onclick="setAdminView('promos')" class="sq-stab ${_adminView==='promos'?'active':''}">📣 Promos</button>
       <button onclick="setAdminView('trusted')" class="sq-stab ${_adminView==='trusted'?'active':''}">⭐ Trusted</button>
+      <button onclick="setAdminView('tiktok')" class="sq-stab ${_adminView==='tiktok'?'active':''}">🎵 TikTok Leads</button>
     </div>
     ${_adminView === 'promos'
       ? `<div style="display:flex;gap:8px;margin-bottom:14px">
@@ -6579,13 +6580,29 @@ async function renderAdminPromos() {
           <button onclick="setAdminPromoFilter('active')" class="sq-stab ${_adminPromoFilter==='active'?'active':''}">✅ Active</button>
         </div>
         <div id="admin-promo-list"><div style="font-size:.78rem;color:var(--mu);padding:14px 0">Loading…</div></div>`
-      : `<div style="font-size:.74rem;color:var(--mu);margin-bottom:10px;line-height:1.5">Trusted accounts have their promos auto-approved. Use for verified businesses & repeat organizers.</div>
-        <div id="admin-trusted-list"><div style="font-size:.78rem;color:var(--mu);padding:14px 0">Loading…</div></div>`}`;
-  if (_adminView === 'promos') loadAdminPromos(); else loadTrustedSubmitters();
+      : _adminView === 'trusted'
+      ? `<div style="font-size:.74rem;color:var(--mu);margin-bottom:10px;line-height:1.5">Trusted accounts have their promos auto-approved. Use for verified businesses & repeat organizers.</div>
+        <div id="admin-trusted-list"><div style="font-size:.78rem;color:var(--mu);padding:14px 0">Loading…</div></div>`
+      : `<div style="font-size:.74rem;color:var(--mu);margin-bottom:10px;line-height:1.5">TikTok posts about Durban events. Click a link to open the post and leave a comment inviting them to add their event on Pulsefy.</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <button onclick="setAdminTikTokFilter('new')" class="sq-stab ${(_adminTikTokFilter||'new')==='new'?'active':''}">🆕 New</button>
+          <button onclick="setAdminTikTokFilter('contacted')" class="sq-stab ${(_adminTikTokFilter||'new')==='contacted'?'active':''}">✉️ Contacted</button>
+          <button onclick="setAdminTikTokFilter('all')" class="sq-stab ${(_adminTikTokFilter||'new')==='all'?'active':''}">📋 All</button>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:12px">
+          <input id="tiktok-lead-url" class="sq-input" placeholder="Add TikTok post URL…" style="flex:1;font-size:.78rem;padding:8px 12px"/>
+          <button onclick="addTikTokLead()" style="background:linear-gradient(135deg,#ff0050,#ff4081);border:none;color:#fff;font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;padding:8px 14px;border-radius:50px;cursor:pointer;white-space:nowrap">+ Add</button>
+        </div>
+        <div id="admin-tiktok-list"><div style="font-size:.78rem;color:var(--mu);padding:14px 0">Loading…</div></div>`}`;
+  if (_adminView === 'promos') loadAdminPromos();
+  else if (_adminView === 'trusted') loadTrustedSubmitters();
+  else loadTikTokLeads();
 }
 
 function setAdminView(v) { _adminView = v; renderAdminPromos(); }
 function setAdminPromoFilter(f) { _adminPromoFilter = f; renderAdminPromos(); }
+let _adminTikTokFilter = 'new';
+function setAdminTikTokFilter(f) { _adminTikTokFilter = f; renderAdminPromos(); }
 
 async function loadTrustedSubmitters() {
   const list = document.getElementById('admin-trusted-list'); if (!list) return;
@@ -6663,6 +6680,79 @@ async function rejectPromo(id) {
     await Api.del('/admin/promotions/' + id, undefined, { auth: true });
     showToast('Rejected'); loadAdminPromos();
   } catch(e) { showToast(e.message || 'Failed'); }
+}
+
+async function loadTikTokLeads() {
+  const list = document.getElementById('admin-tiktok-list'); if (!list) return;
+  if (!currentUser) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu)">Sign in</div>'; return; }
+  try {
+    const sb = getSB(); if (!sb) throw new Error('No client');
+    let q = sb.from('tiktok_leads').select('*').order('created_at', { ascending: false });
+    if (_adminTikTokFilter !== 'all') q = q.eq('status', _adminTikTokFilter);
+    const { data, error } = await q;
+    if (error) throw error;
+    const leads = data || [];
+    if (!leads.length) { list.innerHTML = '<div style="font-size:.78rem;color:var(--mu);padding:24px 0;text-align:center">No leads in this view.</div>'; return; }
+    list.innerHTML = leads.map(l => {
+      const contacted = l.status === 'contacted';
+      const tn = l.thumbnail_url ? `<img src="${x(l.thumbnail_url)}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;flex-shrink:0" onerror="this.style.display='none'"/>` : '';
+      return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+        ${tn}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.7rem;color:var(--mu);margin-bottom:2px">${x(l.author_handle||'unknown')}</div>
+          <a href="${x(l.url)}" target="_blank" rel="noopener" style="font-size:.72rem;color:var(--or);word-break:break-all;display:block;margin-bottom:4px">${x(l.url.substring(0,60))}${l.url.length>60?'…':''}</a>
+          ${l.caption ? `<div style="font-size:.68rem;color:var(--mu2);line-height:1.4;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${x(l.caption)}</div>` : ''}
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button onclick="copyLeadComment('${x(l.author_handle||'')}')" style="background:var(--surf2);border:1px solid var(--border2);color:var(--mu2);font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;padding:5px 10px;border-radius:50px;cursor:pointer">📋 Copy comment</button>
+            ${!contacted ? `<button onclick="markLeadContacted('${x(l.id)}')" style="background:rgba(198,255,74,.1);border:1px solid rgba(198,255,74,.3);color:var(--li);font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;padding:5px 10px;border-radius:50px;cursor:pointer">✉️ Mark contacted</button>` : `<span style="font-size:.68rem;color:var(--li);font-weight:700;padding:5px 0">✓ Contacted</span>`}
+            <button onclick="deleteTikTokLead('${x(l.id)}')" style="background:rgba(255,45,120,.06);border:1px solid rgba(255,45,120,.2);color:var(--pk);font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;padding:5px 10px;border-radius:50px;cursor:pointer">🗑</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { list.innerHTML = '<div style="font-size:.78rem;color:var(--pk);padding:14px 0">Error: '+x(e.message||'Failed')+'</div>'; }
+}
+
+async function addTikTokLead() {
+  const inp = document.getElementById('tiktok-lead-url');
+  const url = inp?.value.trim(); if (!url) return;
+  if (!url.includes('tiktok.com')) return showToast('Not a TikTok URL', 'err');
+  inp.value = '';
+  try {
+    const sb = getSB(); if (!sb) throw new Error('No client');
+    const { error } = await sb.from('tiktok_leads').insert({ url, status: 'new' });
+    if (error) throw error;
+    showToast('Lead added', 'ok'); loadTikTokLeads();
+  } catch(e) { showToast(e.message || 'Failed to add', 'err'); }
+}
+
+async function markLeadContacted(id) {
+  try {
+    const sb = getSB(); if (!sb) throw new Error('No client');
+    const { error } = await sb.from('tiktok_leads').update({ status: 'contacted' }).eq('id', id);
+    if (error) throw error;
+    showToast('Marked as contacted', 'ok'); loadTikTokLeads();
+  } catch(e) { showToast(e.message || 'Failed', 'err'); }
+}
+
+async function deleteTikTokLead(id) {
+  if (!confirm('Delete this lead?')) return;
+  try {
+    const sb = getSB(); if (!sb) throw new Error('No client');
+    const { error } = await sb.from('tiktok_leads').delete().eq('id', id);
+    if (error) throw error;
+    showToast('Deleted'); loadTikTokLeads();
+  } catch(e) { showToast(e.message || 'Failed', 'err'); }
+}
+
+function copyLeadComment(handle) {
+  const h = handle ? ('@' + handle + ' ') : '';
+  const msg = `${h}Hey! 👋 We noticed you're posting about Durban events 🔥 Add your event on Pulsefy — it's free & reaches thousands of people in Durban/KZN. 👉 pulsefy.co.za`;
+  navigator.clipboard?.writeText(msg).then(() => showToast('Comment copied!', 'ok')).catch(() => {
+    const ta = document.createElement('textarea'); ta.value = msg;
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+    showToast('Comment copied!', 'ok');
+  });
 }
 
 /* ── Supabase session sync on load ── */
