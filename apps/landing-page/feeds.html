@@ -127,6 +127,26 @@ textarea.ff-c{resize:none;height:80px;line-height:1.55}
 .toast.ok{border-color:rgba(198,255,74,.4);color:var(--li)}
 .toast.err{border-color:rgba(255,45,120,.4);color:var(--pk)}
 .sl{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 6px;font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--mu)}
+/* Stories row */
+#feed-stories{display:flex;gap:14px;padding:14px 14px 10px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--border);background:var(--surf)}
+#feed-stories::-webkit-scrollbar{display:none}
+.sv{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent}
+.sv-ring{width:52px;height:52px;border-radius:50%;padding:2.5px;background:linear-gradient(135deg,#FF5C00,#B026FF);flex-shrink:0}
+.sv-ring.seen{background:var(--surf2)}
+.sv-av{width:100%;height:100%;border-radius:50%;background:var(--surf2);border:2px solid var(--surf);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-family:'Syne',sans-serif;font-weight:700;color:#fff}
+.sv-av img{width:100%;height:100%;object-fit:cover}
+.sv-name{font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;color:var(--mu2);max-width:54px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Card entry animation */
+@keyframes fcIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fc{animation:fcIn .22s ease both}
+/* Image wrap with gradient stats overlay */
+.fb-wrap{position:relative;overflow:hidden;line-height:0}
+.fb-wrap .fb{width:100%;aspect-ratio:1/1;object-fit:cover;display:block}
+.fb-wrap::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.65) 0%,transparent 45%);pointer-events:none}
+.fb-stats{position:absolute;bottom:8px;left:12px;z-index:1;display:flex;gap:10px}
+.fb-stat{font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;color:rgba(255,255,255,.92);display:flex;align-items:center;gap:3px}
+/* Hot badge */
+.hot-badge{display:inline-flex;align-items:center;gap:2px;background:linear-gradient(135deg,#FF5C00,#FF2D78);color:#fff;padding:1px 6px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;letter-spacing:.06em;vertical-align:middle;margin-left:5px}
 </style>
 </head>
 <body>
@@ -271,6 +291,7 @@ let _totalPages = 1;
 let _loading    = false;
 let _hasMore    = true;
 let _newCount   = 0;   // unseen posts since last render (realtime)
+let _storiesHtml = null;
 
 const _GENRE_FILTERS = ['gqom','amapiano','afrobeats','festival','sport','kwaito','hip-hop'];
 
@@ -401,6 +422,7 @@ async function render() {
     _posts = fetched;
 
     feedEl.innerHTML = '';
+    _injectStories();
     if (!_posts.length) {
       const msgs = {
         following: 'Follow organizers and friends to see their posts here.',
@@ -408,16 +430,65 @@ async function render() {
         fans: 'No fan posts yet — be the first to share!',
       };
       const msg = msgs[_filter] || 'No posts yet. Be the first to share something!';
-      feedEl.innerHTML = `<div class="es"><div class="ei">📰</div><div class="et">Nothing here yet</div><div class="em">${msg}</div></div>`;
+      feedEl.insertAdjacentHTML('beforeend', `<div class="es"><div class="ei">📰</div><div class="et">Nothing here yet</div><div class="em">${msg}</div></div>`);
     } else {
       _posts.forEach(post => feedEl.appendChild(buildCard(post)));
       _attachSentinel(feedEl);
     }
   } catch(e) {
-    feedEl.innerHTML = `<div class="es"><div class="ei">📡</div><div class="et">Could not load posts</div><div class="em">${x(e.message||'Unknown error')}</div></div>`;
+    feedEl.innerHTML = '';
+    _injectStories();
+    feedEl.insertAdjacentHTML('beforeend', `<div class="es"><div class="ei">📡</div><div class="et">Could not load posts</div><div class="em">${x(e.message||'Unknown error')}</div></div>`);
     console.error('Feed load error:', e);
   }
   _loading = false;
+}
+
+function _injectStories() {
+  const feedEl = document.getElementById('feed');
+  if (!feedEl) return;
+  if (document.getElementById('feed-stories')) return; // already present
+  if (!_storiesHtml) return; // not loaded yet
+  feedEl.insertAdjacentHTML('afterbegin', _storiesHtml);
+}
+
+async function loadStories() {
+  const sb = getSB();
+  if (!sb || !_uid) return;
+  try {
+    // Get all users this person follows
+    const { data: follows } = await sb.from('follows').select('following_id').eq('follower_id', _uid).limit(30);
+    if (!follows || !follows.length) return;
+    const ids = follows.map(f => f.following_id);
+    // Fetch profiles of followed users (prioritise organisers)
+    const { data: profiles } = await sb.from('profiles').select('id,display_name,username,avatar_url,role').in('id', ids).limit(20);
+    if (!profiles || !profiles.length) return;
+    // Sort: organisers first
+    profiles.sort((a, b) => (b.role === 'organizer' ? 1 : 0) - (a.role === 'organizer' ? 1 : 0));
+    const seenKey = 'p_stories_seen_' + _uid;
+    let seen = [];
+    try { seen = JSON.parse(localStorage.getItem(seenKey) || '[]'); } catch(e) {}
+    const items = profiles.map(p => {
+      const isSeen = seen.includes(p.id);
+      const initials = (p.display_name || p.username || '?')[0].toUpperCase();
+      const avatar = p.avatar_url ? `<img src="${x(p.avatar_url)}" loading="lazy" onerror="this.style.display='none'"/>` : initials;
+      return `<div class="sv" onclick="openProfile('${x(p.id)}');_markStorySeen('${x(p.id)}','${x(seenKey)}')">` +
+        `<div class="sv-ring${isSeen?' seen':''}"><div class="sv-av">${avatar}</div></div>` +
+        `<div class="sv-name">${x(p.display_name || p.username)}</div>` +
+        `</div>`;
+    }).join('');
+    _storiesHtml = `<div id="feed-stories">${items}</div>`;
+    _injectStories();
+  } catch(e) { /* stories are non-critical */ }
+}
+
+function _markStorySeen(uid, seenKey) {
+  try {
+    let seen = JSON.parse(localStorage.getItem(seenKey) || '[]');
+    if (!seen.includes(uid)) { seen.push(uid); localStorage.setItem(seenKey, JSON.stringify(seen)); }
+    const ring = document.querySelector(`#feed-stories .sv[onclick*="${uid}"] .sv-ring`);
+    if (ring) ring.classList.add('seen');
+  } catch(e) {}
 }
 
 // Load next page and APPEND (infinite scroll)
@@ -484,6 +555,7 @@ function buildCard(post) {
   try { following = JSON.parse(localStorage.getItem('p_following') || '[]'); } catch(e) {}
   const isFollowing = following.includes(post.user_id);
   const isOwn    = post.user_id === _uid;
+  const isHot    = (post.like_count || 0) >= 15 || _filter === 'trending';
 
   const cap = post.caption || '';
   const shortCap = cap.length > 220 ? cap.slice(0,220) : cap;
@@ -502,7 +574,7 @@ function buildCard(post) {
         (post.avatar_url ? '<img src="'+x(post.avatar_url)+'" loading="lazy" onerror="this.style.display=\u0027none\u0027"/>' : (post.display_name?.[0]?.toUpperCase()||'😊')) +
       '</div>' +
       '<div style="flex:1;min-width:0;cursor:pointer" onclick="openProfile(\u0027'+x(post.user_id)+'\u0027)">' +
-        '<div class="fo">' + x(post.display_name || post.username) + (post.is_verified ? '<span class="verified-pill" title="Verified by Pulsefy"><span class="puls-badge"></span><span class="verified-txt">Verified</span></span>' : '') + (isOrg ? '<span class="org-pill">📢 Page</span>' : '') + '</div>' +
+        '<div class="fo">' + x(post.display_name || post.username) + (post.is_verified ? '<span class="verified-pill" title="Verified by Pulsefy"><span class="puls-badge"></span><span class="verified-txt">Verified</span></span>' : '') + (isOrg ? '<span class="org-pill">📢 Page</span>' : '') + (isHot ? '<span class="hot-badge">🔥 HOT</span>' : '') + '</div>' +
         (post.event_name ? '<div style="font-size:.64rem;color:var(--or);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;letter-spacing:.04em;cursor:pointer" onclick="window.location.href=\u0027/?q=\u0027+encodeURIComponent(post.event_name||\u0027\u0027)" title="Find this event">🎟 '+x(post.event_name)+' ↗</div>' : '') +
         '<div class="fl">@'+x(post.username)+' · '+timeAgo(post.ts || post.created_at)+'</div>' +
       '</div>' +
@@ -521,7 +593,7 @@ function buildCard(post) {
         }
       }
       if (!urls.length) return '';
-      if (urls.length === 1) return '<img class="fb" src="' + x(urls[0]) + '" loading="lazy" onerror="this.remove()"/>';
+      if (urls.length === 1) return '<div class="fb-wrap"><img class="fb" src="'+x(urls[0])+'" loading="lazy" onerror="this.parentNode.remove()"/><div class="fb-stats"><span class="fb-stat">❤️ '+fn(post.like_count||0)+'</span><span class="fb-stat">💬 '+fn(post.comment_count||0)+'</span></div></div>';
       // Multiple photos — horizontal scroll gallery
       return '<div style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:#000">' + urls.map(u => '<img src="' + x(u) + '" loading="lazy" onerror="this.remove()" style="width:100%;aspect-ratio:4/5;object-fit:cover;flex:0 0 100%;scroll-snap-align:start;display:block"/>').join('') + '</div>';
     })() +
@@ -1043,6 +1115,7 @@ async function initFeed() {
     }
   }
   await render();
+  loadStories();
   _initPullToRefresh();
   const qp = new URLSearchParams(location.search);
   const pid = qp.get('pid'), cid = qp.get('cid');
