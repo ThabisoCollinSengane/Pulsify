@@ -3031,6 +3031,8 @@ async function openEv(evId) {
 
 /* ══ LUMI CHAT WIDGET ═══════════════════════════════════ */
 let _lumiEvId = null, _lumiEvName = '', _lumiSessId = null, _lumiMsgs = [];
+let _lumiConvId = null, _lumiBuyState = null; // _lumiBuyState: null | 'qty' | 'contact' | 'done'
+let _lumiBuyQty = 1;
 
 function openLumiChat(evId, evName) {
   _lumiEvId = evId; _lumiEvName = evName;
@@ -3047,7 +3049,8 @@ function openLumiChat(evId, evName) {
         <button onclick="closeLumiChat()" style="background:none;border:none;color:var(--mu);font-size:1.3rem;cursor:pointer;padding:4px">✕</button>
       </div>
       <div id="lumi-msgs" style="flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:10px"></div>
-      <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0">
+      <div id="lumi-buy-form" style="display:none;padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0"></div>
+      <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0" id="lumi-input-row">
         <input id="lumi-input" placeholder="Ask about this event…" style="flex:1;padding:11px 14px;border-radius:24px;border:1px solid var(--border);background:var(--surf);color:var(--tx);font-size:.84rem;outline:none" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendLumi()}">
         <button onclick="sendLumi()" id="lumi-send-btn" style="width:40px;height:40px;border-radius:50%;background:var(--or);border:none;color:#fff;font-size:1rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">↑</button>
       </div>`;
@@ -3066,7 +3069,7 @@ function closeLumiChat() {
   if (sheet) { sheet.style.transform = 'translateY(100%)'; setTimeout(() => { sheet.style.display = 'none'; }, 300); }
 }
 
-function _lumiAddMsg(dir, text, contact) {
+function _lumiAddMsg(dir, text, contact, buyBtn) {
   _lumiMsgs.push({ dir, text });
   const msgsEl = document.getElementById('lumi-msgs');
   if (!msgsEl) return;
@@ -3074,9 +3077,89 @@ function _lumiAddMsg(dir, text, contact) {
   const bubble = document.createElement('div');
   bubble.style.cssText = `display:flex;flex-direction:column;align-items:${isOut ? 'flex-start' : 'flex-end'};gap:4px`;
   bubble.innerHTML = `<div style="max-width:82%;padding:11px 14px;border-radius:${isOut ? '4px 18px 18px 18px' : '18px 4px 18px 18px'};background:${isOut ? 'var(--surf)' : 'var(--or)'};color:${isOut ? 'var(--tx)' : '#fff'};font-size:.84rem;line-height:1.5;white-space:pre-wrap">${x(text)}</div>
-    ${contact ? `<button onclick="window.location='mailto:'" style="font-size:.72rem;color:var(--or);background:none;border:1px solid var(--or);border-radius:20px;padding:5px 12px;cursor:pointer;margin-top:2px">Contact Organiser →</button>` : ''}`;
+    ${contact ? `<button onclick="openLumiContactOrganiser()" style="font-size:.72rem;color:var(--or);background:none;border:1px solid var(--or);border-radius:20px;padding:5px 12px;cursor:pointer;margin-top:2px">Contact Organiser →</button>` : ''}
+    ${buyBtn ? `<button onclick="startLumiBuy()" style="font-size:.72rem;color:#fff;background:var(--or);border:none;border-radius:20px;padding:6px 16px;cursor:pointer;margin-top:2px;font-weight:600">🎟 Buy Tickets</button>` : ''}`;
   msgsEl.appendChild(bubble);
   msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+
+function openLumiContactOrganiser() {
+  // Show the current event organiser email or just open the event detail contact
+  showToast('Tap the event card to find the organiser contact');
+}
+
+function startLumiBuy() {
+  if (_lumiBuyState) return;
+  _lumiBuyState = 'qty';
+  const form = document.getElementById('lumi-buy-form');
+  const inputRow = document.getElementById('lumi-input-row');
+  if (!form || !inputRow) return;
+  inputRow.style.display = 'none';
+  form.style.display = 'block';
+  const hasEmail = currentUser?.email;
+  form.innerHTML = `
+    <div style="font-size:.8rem;color:var(--mu);margin-bottom:8px">How many tickets?</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <button onclick="if(_lumiBuyQty>1)_lumiBuyQty--;document.getElementById('lumi-qty-display').textContent=_lumiBuyQty" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--surf);color:var(--tx);font-size:1.1rem;cursor:pointer">−</button>
+      <span id="lumi-qty-display" style="font-size:1.1rem;font-weight:700;min-width:24px;text-align:center">1</span>
+      <button onclick="_lumiBuyQty++;document.getElementById('lumi-qty-display').textContent=_lumiBuyQty" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--surf);color:var(--tx);font-size:1.1rem;cursor:pointer">+</button>
+    </div>
+    ${hasEmail ? '' : `
+    <input id="lumi-buy-name" placeholder="Your name" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surf);color:var(--tx);font-size:.84rem;outline:none;margin-bottom:6px">
+    <input id="lumi-buy-email" placeholder="Email address" type="email" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surf);color:var(--tx);font-size:.84rem;outline:none;margin-bottom:6px">
+    <input id="lumi-buy-phone" placeholder="Phone number" type="tel" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surf);color:var(--tx);font-size:.84rem;outline:none;margin-bottom:6px">
+    `}
+    <div style="display:flex;gap:8px">
+      <button onclick="cancelLumiBuy()" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surf);color:var(--tx);font-size:.84rem;cursor:pointer">Cancel</button>
+      <button onclick="submitLumiBuy()" id="lumi-buy-submit" style="flex:2;padding:10px;border-radius:10px;border:none;background:var(--or);color:#fff;font-size:.84rem;font-weight:600;cursor:pointer">Get Payment Link →</button>
+    </div>`;
+  _lumiBuyQty = 1;
+}
+
+function cancelLumiBuy() {
+  _lumiBuyState = null;
+  const form = document.getElementById('lumi-buy-form');
+  const inputRow = document.getElementById('lumi-input-row');
+  if (form) { form.style.display = 'none'; form.innerHTML = ''; }
+  if (inputRow) inputRow.style.display = 'flex';
+}
+
+async function submitLumiBuy() {
+  const btn = document.getElementById('lumi-buy-submit');
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    const name = currentUser?.display_name || document.getElementById('lumi-buy-name')?.value?.trim() || '';
+    const email = currentUser?.email || document.getElementById('lumi-buy-email')?.value?.trim() || '';
+    const phone = document.getElementById('lumi-buy-phone')?.value?.trim() || '';
+    if (!email) { showToast('Please enter your email'); if (btn) { btn.disabled = false; btn.textContent = 'Get Payment Link →'; } return; }
+    const r = await fetch('/api/siza/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventId: _lumiEvId, conversationId: _lumiConvId, customerName: name, customerEmail: email, customerPhone: phone, quantity: _lumiBuyQty }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Order failed');
+    cancelLumiBuy();
+    _lumiBuyState = 'done';
+    _lumiAddMsg('out', `Here's your payment link for ${d.quantity}× ${d.ticketName || 'ticket'} — total R${(d.totalCents / 100).toFixed(2)}:`);
+    const msgsEl = document.getElementById('lumi-msgs');
+    if (msgsEl) {
+      const link = document.createElement('a');
+      link.href = d.paymentUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.style.cssText = 'display:inline-block;margin-top:4px;padding:11px 20px;border-radius:24px;background:var(--or);color:#fff;font-size:.84rem;font-weight:600;text-decoration:none';
+      link.textContent = 'Pay securely →';
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'display:flex;align-items:flex-start';
+      wrapper.appendChild(link);
+      msgsEl.appendChild(wrapper);
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+    }
+  } catch (e) {
+    showToast(e.message || 'Could not create order');
+    if (btn) { btn.disabled = false; btn.textContent = 'Get Payment Link →'; }
+  }
 }
 
 async function sendLumi() {
@@ -3096,7 +3179,8 @@ async function sendLumi() {
     const r = await fetch('/api/siza/chat', { method: 'POST', headers, body: JSON.stringify(body) });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Lumi is unavailable right now');
-    _lumiAddMsg('out', d.reply, d.suggest_contact);
+    if (d.conversationId) _lumiConvId = d.conversationId;
+    _lumiAddMsg('out', d.reply, d.suggestContact, d.suggestPurchase && _lumiBuyState !== 'done');
   } catch (e) {
     _lumiAddMsg('out', e.message || "Sorry, I couldn't connect. Try again.");
   } finally {
