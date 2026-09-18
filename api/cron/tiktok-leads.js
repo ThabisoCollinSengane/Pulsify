@@ -4,7 +4,7 @@
 import { getSB } from '../shared.js';
 import { syncBusinessRegistration } from '../../lib/hubspot.js';
 
-const RAPIDAPI_HOST = 'tiktok-scraper7.p.rapidapi.com';
+const RAPIDAPI_HOST = 'tiktok-scraper2.p.rapidapi.com';
 
 // Hashtags ordered by specificity — event-organizer signals first
 const HASHTAGS = [
