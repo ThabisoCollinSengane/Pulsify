@@ -1,4 +1,5 @@
 const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError } = require('../../lib/shared');
+const { upsertContact } = require('../../lib/hubspot');
 const { sendVerifApprovedEmail, sendVerifRejectedEmail, sendLeadEmail, sendMarketingEmail, sendEventApprovedEmail, sendEventRejectedEmail, sendClaimLinkEmail, EMAIL_CONFIGURED } = require('../email');
 const PUBLIC_URL = process.env.PUBLIC_URL || 'https://pulsefy.co.za';
 
@@ -1080,6 +1081,42 @@ module.exports = async (req, res) => {
       }
       await logAdminAction(auth.user.id, auth.profile.display_name || 'Admin', 'marketing_blast', '', subject, { sent, skipped, city: city || 'all' });
       return res.status(200).json({ sent, skipped, audience: recipients.length });
+    }
+
+    /* ─── POST /admin/hubspot-sync ── bulk-upsert all profiles to HubSpot CRM ─ */
+    if (url === '/admin/hubspot-sync' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      if (!process.env.HUBSPOT_TOKEN) return res.status(400).json({ error: 'HUBSPOT_TOKEN env var not set' });
+
+      let synced = 0, skipped = 0, errors = 0;
+      let page = 0;
+      const BATCH = 100;
+
+      while (true) {
+        const { data: profiles, error: dbErr } = await sb()
+          .from('profiles')
+          .select('email, display_name, phone, city, province')
+          .not('email', 'is', null)
+          .range(page * BATCH, (page + 1) * BATCH - 1);
+
+        if (dbErr) return res.status(500).json({ error: dbErr.message, synced, skipped, errors });
+        if (!profiles?.length) break;
+
+        for (const p of profiles) {
+          if (!p.email) { skipped++; continue; }
+          try {
+            const id = await upsertContact({ email: p.email, name: p.display_name || null, phone: p.phone || null });
+            id ? synced++ : errors++;
+          } catch { errors++; }
+        }
+
+        if (profiles.length < BATCH) break;
+        page++;
+      }
+
+      await logAdminAction(auth.user.id, auth.profile.display_name || 'Admin', 'hubspot_bulk_sync', null, null, { synced, skipped, errors });
+      return res.status(200).json({ success: true, synced, skipped, errors });
     }
 
     return res.status(404).json({ error: 'Not found' });
