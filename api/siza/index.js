@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { sb, sbAs, corsHeaders, verifyToken, rateLimited, captureError } = require('../../lib/shared');
-const { groqChat, groqEmbed, buildPulseSystemPrompt } = require('../../lib/groq');
+const { groqChat, groqEmbed, buildLumiSystemPrompt } = require('../../lib/groq');
 
 module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
@@ -103,7 +103,7 @@ ${text.slice(0, 4000)}`;
         .select('id,name,genre,siza_enabled,organizer_id')
         .eq('id', eventId).single();
       if (!event) return res.status(404).json({ error: 'Event not found' });
-      if (!event.siza_enabled) return res.status(403).json({ error: 'Pulse is not enabled for this event' });
+      if (!event.siza_enabled) return res.status(403).json({ error: 'Lumi is not enabled for this event' });
 
       // Get or create conversation
       let convId = conversationId;
@@ -168,7 +168,7 @@ ${text.slice(0, 4000)}`;
         .limit(7);
       const recentMsgs = (history || []).reverse().slice(0, -1); // exclude the message we just inserted
 
-      const systemPrompt = buildPulseSystemPrompt(event, channel) + knowledgeContext;
+      const systemPrompt = buildLumiSystemPrompt(event, channel) + knowledgeContext;
       const chatMessages = recentMsgs.map(m => ({
         role: m.direction === 'in' ? 'user' : 'assistant',
         content: m.body,
@@ -185,7 +185,7 @@ ${text.slice(0, 4000)}`;
       try {
         reply = await groqChat(chatMessages, systemPrompt);
         suggestPurchase = buyIntent || /how much|price|cost|r\d/i.test(message);
-        // If Pulse says it doesn't know, flag for escalation UI
+        // If Lumi says it doesn't know, flag for escalation UI
         suggestContact = /don't have|contact|organis|not sure|I can't/i.test(reply);
       } catch (e) {
         console.error('[siza/chat] groq error:', e.message);
@@ -303,8 +303,19 @@ ${text.slice(0, 4000)}`;
 
       const from = msg.from; // WhatsApp phone number
       const text = msg.text?.body || '';
-      const phoneId = process.env.WHATSAPP_PHONE_ID;
       const token = process.env.WHATSAPP_TOKEN;
+
+      // Route by phone_number_id: find which organizer owns this number
+      const incomingPhoneId = change.value?.metadata?.phone_number_id;
+      const phoneId = incomingPhoneId || process.env.WHATSAPP_PHONE_ID;
+
+      // Look up organizer by their registered phone_number_id
+      let organizerId = null;
+      if (incomingPhoneId) {
+        const { data: orgProfile } = await sb().from('profiles')
+          .select('id').eq('whatsapp_phone_id', incomingPhoneId).single();
+        organizerId = orgProfile?.id || null;
+      }
 
       // Find or create conversation for this phone number
       let { data: conv } = await sb().from('siza_conversations')
@@ -317,14 +328,15 @@ ${text.slice(0, 4000)}`;
 
       // If no active conversation, ask which event
       if (!conv) {
-        // Check if the message looks like an event name / ID
-        // For now, look for active siza-enabled events
-        const { data: activeEvents } = await sb().from('events')
+        // Look for active siza-enabled events; scope to organizer if matched
+        let evQuery = sb().from('events')
           .select('id,name')
           .eq('siza_enabled', true)
           .gte('date_local', new Date().toISOString().split('T')[0])
           .order('date_local', { ascending: true })
           .limit(5);
+        if (organizerId) evQuery = evQuery.eq('organizer_id', organizerId);
+        const { data: activeEvents } = await evQuery;
 
         if (!activeEvents || activeEvents.length === 0) {
           await sendWhatsApp(from, phoneId, token, "Hi! There are no active events right now. Please check back soon.");
@@ -377,7 +389,7 @@ ${text.slice(0, 4000)}`;
           ).join('\n');
         }
 
-        const systemPrompt = buildPulseSystemPrompt(event, 'whatsapp') + ctx;
+        const systemPrompt = buildLumiSystemPrompt(event, 'whatsapp') + ctx;
         chatReply = await groqChat([{ role: 'user', content: text }], systemPrompt);
         suggestContact = /don't have|contact|organis|not sure|I can't/i.test(chatReply);
 
@@ -391,6 +403,93 @@ ${text.slice(0, 4000)}`;
       const finalMsg = suggestContact ? chatReply + '\n\nNeed more help? Reply CONTACT to be connected to the organiser.' : chatReply;
       await sendWhatsApp(from, phoneId, token, finalMsg);
       return res.status(200).json({ received: true });
+    }
+
+    // POST /siza/whatsapp/register — start OTP flow for organizer's dedicated number
+    if (method === 'POST' && path === '/siza/whatsapp/register') {
+      const { data: { user } } = await sb().auth.getUser();
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+      const { phone_number } = req.body || {};
+      if (!phone_number) return res.status(400).json({ error: 'phone_number required' });
+
+      const token = process.env.WHATSAPP_TOKEN;
+      const bizId = process.env.WHATSAPP_BUSINESS_ID;
+      if (!token || !bizId) return res.status(503).json({ error: 'WhatsApp not configured' });
+
+      // Register the number with Meta (triggers OTP to that number)
+      const regRes = await fetch(`https://graph.facebook.com/v18.0/${bizId}/phone_numbers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ cc: '27', phone_number: phone_number.replace(/^\+/, ''), migrate_phone_number: false }),
+      });
+      const regData = await regRes.json();
+      if (!regRes.ok) return res.status(400).json({ error: regData.error?.message || 'Meta registration failed' });
+
+      // Store the pending phone_number_id on the profile (not yet verified)
+      await sb().from('profiles').update({
+        whatsapp_phone_id: regData.id,
+        whatsapp_display_number: phone_number,
+        whatsapp_verified: false,
+      }).eq('id', user.id);
+
+      // Trigger OTP delivery
+      await fetch(`https://graph.facebook.com/v18.0/${regData.id}/request_code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ code_method: 'SMS', language: 'en_US' }),
+      });
+
+      return res.status(200).json({ ok: true, phone_number_id: regData.id });
+    }
+
+    // POST /siza/whatsapp/verify — confirm OTP, mark number as verified
+    if (method === 'POST' && path === '/siza/whatsapp/verify') {
+      const { data: { user } } = await sb().auth.getUser();
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+      const { code } = req.body || {};
+      if (!code) return res.status(400).json({ error: 'code required' });
+
+      const token = process.env.WHATSAPP_TOKEN;
+      const { data: profile } = await sb().from('profiles').select('whatsapp_phone_id').eq('id', user.id).single();
+      if (!profile?.whatsapp_phone_id) return res.status(400).json({ error: 'No pending number — call /register first' });
+
+      const verRes = await fetch(`https://graph.facebook.com/v18.0/${profile.whatsapp_phone_id}/verify_code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ code }),
+      });
+      if (!verRes.ok) {
+        const err = await verRes.json();
+        return res.status(400).json({ error: err.error?.message || 'OTP verification failed' });
+      }
+
+      await sb().from('profiles').update({ whatsapp_verified: true }).eq('id', user.id);
+      return res.status(200).json({ ok: true });
+    }
+
+    // DELETE /siza/whatsapp/disconnect — deregister number from Meta, clear profile fields
+    if (method === 'DELETE' && path === '/siza/whatsapp/disconnect') {
+      const { data: { user } } = await sb().auth.getUser();
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const token = process.env.WHATSAPP_TOKEN;
+      const { data: profile } = await sb().from('profiles').select('whatsapp_phone_id').eq('id', user.id).single();
+
+      if (profile?.whatsapp_phone_id && token) {
+        await fetch(`https://graph.facebook.com/v18.0/${profile.whatsapp_phone_id}/deregister`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({}),
+        }).catch(e => console.warn('[siza/whatsapp] deregister error:', e.message));
+      }
+
+      await sb().from('profiles').update({
+        whatsapp_phone_id: null,
+        whatsapp_display_number: null,
+        whatsapp_verified: false,
+      }).eq('id', user.id);
+
+      return res.status(200).json({ ok: true });
     }
 
     return res.status(404).json({ error: 'Not found' });
