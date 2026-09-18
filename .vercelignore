@@ -16,3 +16,7 @@ scripts/
 supabase/
 .claude/
 .idx/
+
+# Utility module — imported by other functions, not a standalone serverless endpoint.
+# Excluding keeps the function count within the Hobby plan limit (max 12).
+api/shared.js
