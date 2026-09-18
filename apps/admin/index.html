@@ -500,6 +500,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
         </select>
         <select class="inp" id="leads-source" onchange="loadLeads(1)" style="max-width:150px">
           <option value="all">All Sources</option>
+          <option value="tiktok">🎵 TikTok</option>
           <option value="google_maps">Google Maps</option>
           <option value="instagram">Instagram</option>
           <option value="manual">Manual</option>
@@ -511,7 +512,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <table id="leads-table">
           <thead><tr>
             <th>Name</th><th class="hide-mobile">Category</th><th class="hide-mobile">City</th>
-            <th>Contact</th><th class="hide-mobile">Source</th><th>Status</th><th>Actions</th>
+            <th>Contact</th><th class="hide-mobile">Source</th><th class="hide-mobile">Score</th><th>Status</th><th>Actions</th>
           </tr></thead>
           <tbody id="leads-tbody">
             <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--mu)">Loading…</td></tr>
@@ -1821,22 +1822,41 @@ const LEAD_STATUS_NEXT   = { new:'contacted', contacted:'converted', converted:'
 
 function renderLeadsTable(leads) {
   if (!leads.length) {
-    document.getElementById('leads-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--mu)">No leads found.</td></tr>';
+    document.getElementById('leads-tbody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--mu)">No leads found.</td></tr>';
     return;
   }
   document.getElementById('leads-tbody').innerHTML = leads.map(l => {
     const statusCls = { new:'s-warn', contacted:'', converted:'s-ok', ignored:'s-bad' }[l.status] || '';
     const contact = [l.phone, l.email].filter(Boolean).join(' · ') || '—';
+    const isTikTok = l.source === 'tiktok';
+    const ttHandle = isTikTok ? (l.tiktok || l.name) : null;
     const socials = [
-      l.instagram ? `<a href="https://instagram.com/${esc(l.instagram.replace('@',''))}" target="_blank" style="color:var(--pk)">IG</a>` : '',
-      l.website   ? `<a href="${esc(safeUrl(l.website))}" target="_blank" style="color:var(--pk)">Web</a>` : '',
+      isTikTok && ttHandle ? `<a href="https://tiktok.com/@${esc(ttHandle.replace('@',''))}" target="_blank" style="color:#fff;font-size:.68rem">🎵 TT</a>` : '',
+      l.instagram ? `<a href="https://instagram.com/${esc(l.instagram.replace('@',''))}" target="_blank" style="color:var(--pk);font-size:.68rem">IG</a>` : '',
+      l.website   ? `<a href="${esc(safeUrl(l.website))}" target="_blank" style="color:var(--cy);font-size:.68rem">Web</a>` : '',
     ].filter(Boolean).join(' ');
+    const scoreVal = l.score != null ? l.score : null;
+    const scoreCls = scoreVal == null ? '' : scoreVal >= 60 ? 'coord-ok' : scoreVal >= 30 ? 'coord-warn' : 'coord-bad';
+    const scoreHtml = scoreVal != null
+      ? `<span class="${scoreCls}" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;font-weight:700">${scoreVal}</span>`
+      : `<span style="color:var(--mu)">—</span>`;
+    const followersHtml = isTikTok && l.follower_count
+      ? `<span style="font-size:.65rem;color:var(--mu2)">${l.follower_count >= 1000 ? (l.follower_count/1000).toFixed(1)+'k' : l.follower_count}</span>`
+      : '';
+    const bioSnippet = isTikTok && l.description
+      ? `<div style="font-size:.65rem;color:var(--mu);margin-top:2px;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(l.description)}">${esc(l.description.slice(0,60))}${l.description.length>60?'…':''}</div>`
+      : '';
     return `<tr>
-      <td style="font-weight:600">${esc(l.name || '—')}${socials ? ' ' + socials : ''}</td>
-      <td style="font-size:.75rem;color:var(--mu2)">${esc(l.category || '—')}</td>
-      <td style="font-size:.75rem">${esc(l.city || '—')}</td>
+      <td style="font-weight:600">
+        <div>${esc(l.name || '—')} ${socials}</div>
+        ${followersHtml ? `<div>${followersHtml} followers</div>` : ''}
+        ${bioSnippet}
+      </td>
+      <td class="hide-mobile" style="font-size:.75rem;color:var(--mu2)">${esc(l.category || '—')}</td>
+      <td class="hide-mobile" style="font-size:.75rem">${esc(l.city || '—')}</td>
       <td style="font-size:.72rem;font-family:'JetBrains Mono',monospace">${esc(contact)}</td>
-      <td style="font-size:.72rem;color:var(--mu2)">${esc(l.source || '—')}</td>
+      <td class="hide-mobile" style="font-size:.72rem;color:var(--mu2)">${esc(l.source || '—')}</td>
+      <td class="hide-mobile">${scoreHtml}</td>
       <td><span class="status-badge ${statusCls}">${LEAD_STATUS_LABELS[l.status] || l.status}</span></td>
       <td>
         <div class="user-actions">
