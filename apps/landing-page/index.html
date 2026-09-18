@@ -676,7 +676,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
       </select>
       <select class="ls" id="sel-city" onchange="onCityChange(this.value)">
         <option value="">🏙 All Cities</option>
-        <option value="Durban">🏖 Durban</option>
+        <option value="Durban" selected>🏖 Durban</option>
         <option value="Cape Town">🌊 Cape Town</option>
         <option value="Johannesburg">🏙 Johannesburg</option>
         <option value="Pretoria">Pretoria</option>
@@ -1469,10 +1469,13 @@ let _exitConfirmed = false;
 let feedPage = 1;
 let feedTotalPages = 1;
 let feedGenre      = 'all';
-let feedCity       = 'all';
-let feedProvince   = 'all';
+let feedCity       = 'Durban';
+let feedProvince   = 'KZN';
 let feedFrom       = '';
-let feedTo         = '';
+// Default window: today → 60 days out so the feed shows upcoming events first.
+// Users can widen this by changing city or using the date filter.
+const _defaultToDate = (() => { const d = new Date(); d.setDate(d.getDate() + 60); return d.toISOString().split('T')[0]; })();
+let feedTo         = _defaultToDate;
 let discCat        = 'all';
 let discGenre      = 'all';
 let discQuery      = '';
@@ -2150,7 +2153,8 @@ async function loadFeed(resetPage = false, append = false) {
     const count  = json.total  || events.length;
     feedTotalPages = json.total_pages || Math.ceil(count / limit) || 1;
     _feedFinal = feedPage >= feedTotalPages;
-    document.getElementById('feed-lbl').textContent = '🔥 ' + count + ' Upcoming Events';
+    const _cityLbl = (feedCity && feedCity !== 'all') ? ' in ' + feedCity : '';
+    document.getElementById('feed-lbl').textContent = '🔥 ' + count + ' Upcoming Events' + _cityLbl;
 
     const _loaderEl = document.getElementById('feed-more-loader');
     if (_loaderEl) _loaderEl.remove();
@@ -6105,7 +6109,8 @@ async function loadCommunityPosts() {
 async function loadStudentEvents() {
   try {
     const genres = (CAT_MAP.student || ['student']).join(',');
-    const data = await Api.get(`/events?genre=${encodeURIComponent(genres)}&limit=10&offset=0`);
+    const cityParam = (feedCity && feedCity !== 'all') ? `&city=${encodeURIComponent(feedCity)}` : '';
+    const data = await Api.get(`/events?genre=${encodeURIComponent(genres)}&limit=10&offset=0${cityParam}`);
     const events = data.events || data;
     if (!events || !events.length) return;
     const cardsHtml = events.map(ev => {
