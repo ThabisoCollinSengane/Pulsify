@@ -789,7 +789,7 @@ select.inp option{background:#1C1140}
 <div class="sn-overlay" id="org-siza-sheet" onclick="if(event.target===this)closeOrgSheet('org-siza-sheet')">
   <div class="sn-sheet" style="max-height:92vh">
     <div class="sn-handle"></div>
-    <div class="sn-head"><div class="sn-title">🤖 Siza AI Setup</div><button class="sn-close" onclick="closeOrgSheet('org-siza-sheet')">✕</button></div>
+    <div class="sn-head"><div class="sn-title">🤖 Pulse AI Setup</div><button class="sn-close" onclick="closeOrgSheet('org-siza-sheet')">✕</button></div>
     <div class="sn-body" style="padding-bottom:40px" id="siza-sheet-body">
       <!-- filled by openSizaStep() -->
     </div>
@@ -832,7 +832,7 @@ select.inp option{background:#1C1140}
         <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Featured on map &amp; discovery</div><div style="font-size:.71rem;color:var(--mu)">Your events rank higher in search and map results</div></div></div>
         <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Analytics dashboard</div><div style="font-size:.71rem;color:var(--mu)">Views, saves, ticket sales by day</div></div></div>
         <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Priority support</div><div style="font-size:.71rem;color:var(--mu)">Faster response from the Pulsefy team</div></div></div>
-        <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Siza AI Assistant</div><div style="font-size:.71rem;color:var(--mu)">AI handles customer questions & sells tickets while you sleep</div></div></div>
+        <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Pulse AI Assistant</div><div style="font-size:.71rem;color:var(--mu)">AI handles customer questions & sells tickets while you sleep</div></div></div>
       </div>
       <button class="btn-primary" style="width:100%;padding:15px;font-size:.92rem" id="org-pay-btn" onclick="startOrgPayment()">Pay R220/month · Activate Premium 🚀</button>
       <div id="org-pay-msg" style="text-align:center;font-size:.68rem;color:var(--mu);margin-top:10px">🔒 Secured by Paystack · Cancel anytime · Monthly billing</div>
@@ -920,13 +920,13 @@ select.inp option{background:#1C1140}
       </div>
       <!-- Siza AI (premium only) -->
       <div id="edit-siza-section" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:14px">
-        <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">🤖 Siza AI Assistant</div>
+        <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">🤖 Pulse AI Assistant</div>
         <label style="display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:14px">
           <input type="checkbox" id="edit-siza-toggle" style="width:20px;height:20px;accent-color:var(--or);cursor:pointer">
-          <span style="font-size:.82rem">Enable Siza for this event</span>
+          <span style="font-size:.82rem">Enable Pulse for this event</span>
         </label>
         <div id="edit-siza-text-wrap" style="opacity:.45;pointer-events:none">
-          <div style="font-size:.72rem;color:var(--mu);margin-bottom:8px">Re-paste event details to update Siza's knowledge (optional — leave blank to keep existing)</div>
+          <div style="font-size:.72rem;color:var(--mu);margin-bottom:8px">Re-paste event details to update Pulse's knowledge (optional — leave blank to keep existing)</div>
           <textarea id="edit-siza-knowledge-text" placeholder="Paste updated flyer text, FAQs, pricing, lineup…" style="width:100%;min-height:100px;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--txt);font-size:.78rem;line-height:1.5;resize:vertical;box-sizing:border-box"></textarea>
         </div>
       </div>
@@ -1419,15 +1419,15 @@ function openSizaStep() {
   document.getElementById('siza-sheet-body').innerHTML = `
     <div style="margin-bottom:18px">
       <p style="font-size:.82rem;color:var(--mu);line-height:1.5;margin-bottom:16px">
-        Siza AI handles customer questions, explains your event details, and sells tickets — automatically, 24/7 on web and WhatsApp.
+        Pulse AI handles customer questions, explains your event details, and sells tickets — automatically, 24/7 on web and WhatsApp.
       </p>
       <label style="display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:20px">
         <input type="checkbox" id="siza-toggle" ${enabled ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--or);cursor:pointer">
-        <span style="font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700">Enable Siza for this event</span>
+        <span style="font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700">Enable Pulse for this event</span>
       </label>
       <div id="siza-text-area-wrap" style="${enabled ? '' : 'opacity:.45;pointer-events:none'}">
         <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;margin-bottom:8px;color:var(--txt)">Paste your event details</div>
-        <div style="font-size:.72rem;color:var(--mu);margin-bottom:10px">Copy-paste your flyer text, WhatsApp post or event description. Siza will extract FAQs, pricing, dress code, lineup and more.</div>
+        <div style="font-size:.72rem;color:var(--mu);margin-bottom:10px">Copy-paste your flyer text, WhatsApp post or event description. Pulse will extract FAQs, pricing, dress code, lineup and more.</div>
         <textarea id="siza-knowledge-text" placeholder="e.g. Join us at Ultra Durban... Tickets: R250 General / R500 VIP... Dress code: smart casual... Lineup: DJ Maphorisa, Kabza De Small..." style="width:100%;min-height:140px;padding:12px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--txt);font-size:.8rem;line-height:1.5;resize:vertical;box-sizing:border-box">${x(text)}</textarea>
       </div>
     </div>

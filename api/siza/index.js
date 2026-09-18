@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { sb, sbAs, corsHeaders, verifyToken, rateLimited, captureError } = require('../../lib/shared');
-const { groqChat, groqEmbed, buildSizaSystemPrompt } = require('../../lib/groq');
+const { groqChat, groqEmbed, buildPulseSystemPrompt } = require('../../lib/groq');
 
 module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
@@ -103,7 +103,7 @@ ${text.slice(0, 4000)}`;
         .select('id,name,genre,siza_enabled,organizer_id')
         .eq('id', eventId).single();
       if (!event) return res.status(404).json({ error: 'Event not found' });
-      if (!event.siza_enabled) return res.status(403).json({ error: 'Siza is not enabled for this event' });
+      if (!event.siza_enabled) return res.status(403).json({ error: 'Pulse is not enabled for this event' });
 
       // Get or create conversation
       let convId = conversationId;
@@ -168,7 +168,7 @@ ${text.slice(0, 4000)}`;
         .limit(7);
       const recentMsgs = (history || []).reverse().slice(0, -1); // exclude the message we just inserted
 
-      const systemPrompt = buildSizaSystemPrompt(event, channel) + knowledgeContext;
+      const systemPrompt = buildPulseSystemPrompt(event, channel) + knowledgeContext;
       const chatMessages = recentMsgs.map(m => ({
         role: m.direction === 'in' ? 'user' : 'assistant',
         content: m.body,
@@ -185,7 +185,7 @@ ${text.slice(0, 4000)}`;
       try {
         reply = await groqChat(chatMessages, systemPrompt);
         suggestPurchase = buyIntent || /how much|price|cost|r\d/i.test(message);
-        // If Siza says it doesn't know, flag for escalation UI
+        // If Pulse says it doesn't know, flag for escalation UI
         suggestContact = /don't have|contact|organis|not sure|I can't/i.test(reply);
       } catch (e) {
         console.error('[siza/chat] groq error:', e.message);
@@ -377,7 +377,7 @@ ${text.slice(0, 4000)}`;
           ).join('\n');
         }
 
-        const systemPrompt = buildSizaSystemPrompt(event, 'whatsapp') + ctx;
+        const systemPrompt = buildPulseSystemPrompt(event, 'whatsapp') + ctx;
         chatReply = await groqChat([{ role: 'user', content: text }], systemPrompt);
         suggestContact = /don't have|contact|organis|not sure|I can't/i.test(chatReply);
 
