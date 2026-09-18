@@ -676,7 +676,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
       </select>
       <select class="ls" id="sel-city" onchange="onCityChange(this.value)">
         <option value="">🏙 All Cities</option>
-        <option value="Durban" selected>🏖 Durban</option>
+        <option value="Durban">🏖 Durban</option>
         <option value="Cape Town">🌊 Cape Town</option>
         <option value="Johannesburg">🏙 Johannesburg</option>
         <option value="Pretoria">Pretoria</option>
@@ -1469,7 +1469,7 @@ let _exitConfirmed = false;
 let feedPage = 1;
 let feedTotalPages = 1;
 let feedGenre      = 'all';
-let feedCity       = 'Durban';
+let feedCity       = 'all';
 let feedProvince   = 'KZN';
 let feedFrom       = '';
 // Default window: today → 60 days out so the feed shows upcoming events first.
@@ -2153,7 +2153,9 @@ async function loadFeed(resetPage = false, append = false) {
     const count  = json.total  || events.length;
     feedTotalPages = json.total_pages || Math.ceil(count / limit) || 1;
     _feedFinal = feedPage >= feedTotalPages;
-    const _cityLbl = (feedCity && feedCity !== 'all') ? ' in ' + feedCity : '';
+    const _cityLbl = (feedCity && feedCity !== 'all') ? ' in ' + feedCity
+                   : (feedProvince && feedProvince !== 'all') ? ' in ' + feedProvince
+                   : '';
     document.getElementById('feed-lbl').textContent = '🔥 ' + count + ' Upcoming Events' + _cityLbl;
 
     const _loaderEl = document.getElementById('feed-more-loader');

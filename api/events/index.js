@@ -16,14 +16,28 @@ module.exports = async (req, res) => {
       const page   = Math.max(1, parseInt(q.page  || '1'));
       const limit  = Math.min(50, parseInt(q.limit || '10'));
       const offset = (page - 1) * limit;
-      const city   = q.city   || '';
-      const genre  = q.genre  || '';
-      const search = q.search || '';
+      const city     = q.city     || '';
+      const province = q.province || '';
+      const genre    = q.genre    || '';
+      const search   = q.search   || '';
       const lat    = parseFloat(q.lat)       || null;
       const lon    = parseFloat(q.lon)       || null;
       const km     = parseFloat(q.radius_km) || 100;
       const from_date = q.from_date || today;
       const to_date   = q.to_date   || '';
+
+      // Province → city OR list (client passes province=KZN etc. for region-wide feeds)
+      const PROV_CITIES = {
+        KZN: ['Durban','Umhlanga','Ballito','Tongaat','Stanger','KwaDukuza','Pietermaritzburg','Newcastle','Richards Bay','Empangeni','Pinetown','Westville','Hillcrest','La Lucia','Umdloti','Salt Rock'],
+        GP:  ['Johannesburg','Pretoria','Sandton','Midrand','Centurion','Soweto','Randburg','Roodepoort','Germiston','Benoni','Boksburg','Tembisa'],
+        WC:  ['Cape Town','Stellenbosch','Paarl','George','Knysna','Somerset West','Bellville','Mitchells Plain','Tygervalley'],
+        EC:  ['Gqeberha','Port Elizabeth','East London'],
+        MP:  ['Mbombela','Nelspruit','Witbank','Middelburg'],
+        LP:  ['Polokwane','Limpopo'],
+        NW:  ['Rustenburg','Mafikeng'],
+        NC:  ['Kimberley','Upington'],
+        FS:  ['Bloemfontein','Welkom'],
+      };
 
       // events_ranked = events + a computed rank_score (hype + engagement +
       // time-relevance). Ordering by it gives a smarter default feed than raw
@@ -48,6 +62,10 @@ module.exports = async (req, res) => {
 
       if (to_date)                 query = query.lte('date_local', to_date);
       if (city && city !== 'all')  query = query.ilike('venue_city', `%${city}%`);
+      else if (province && province !== 'all' && PROV_CITIES[province]) {
+        const cities = PROV_CITIES[province];
+        query = query.or(cities.map(c => `venue_city.ilike.%${c}%`).join(','));
+      }
       if (genre === 'free')        query = query.eq('is_free', true);
       else if (genre && genre !== 'all') {
         const genres = genre.split(',').map(g => g.trim()).filter(Boolean);
