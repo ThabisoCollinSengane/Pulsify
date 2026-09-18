@@ -1,12 +1,11 @@
 // Cron: search TikTok public hashtags for Durban event posts and save to tiktok_leads
-// Runs daily. TikTok has no public API — uses the public web/oembed discovery approach.
-// Real implementation requires a RapidAPI TikTok scraper or Apify actor with a key.
-import { getSB } from '../shared.js';
+// Runs daily. TikTok has no public API — uses a RapidAPI TikTok scraper for discovery.
+// Set RAPIDAPI_KEY in Vercel env vars (real fetches are skipped when it's unset).
+const { sb, CORS } = require('../../lib/shared');
 
 const HASHTAGS = ['DurbanEvents', 'DurbanParty', 'KZNEvents', 'DurbanNightlife', 'DurbanVibes'];
 
 // Uses RapidAPI "TikTok Scraper" (host: tiktok-scraper7.p.rapidapi.com)
-// Set RAPIDAPI_KEY in Vercel env vars.
 async function fetchHashtagPosts(tag) {
   const key = process.env.RAPIDAPI_KEY;
   if (!key) return [];
@@ -28,31 +27,36 @@ async function fetchHashtagPosts(tag) {
   }));
 }
 
-export default async function handler(req, res) {
-  // Allow only GET (cron trigger) or internal calls
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+module.exports = async (req, res) => {
+  Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const sb = getSB();
-  if (!sb) return res.status(500).json({ error: 'No Supabase client' });
+  // Verify cron secret so only Vercel scheduler (or authorized callers) can trigger this
+  const secret = process.env.CRON_SECRET;
+  const auth = req.headers.authorization || '';
+  if (secret && auth !== 'Bearer ' + secret) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
   let inserted = 0;
-  let errors = [];
+  const errors = [];
 
   for (const tag of HASHTAGS) {
     try {
-      const posts = await fetchHashtagPosts(tag);
-      for (const post of posts) {
-        if (!post.url) continue;
-        const { error } = await sb.from('tiktok_leads').upsert(
-          { url: post.url, caption: post.caption, author_handle: post.author_handle, thumbnail_url: post.thumbnail_url },
-          { onConflict: 'url', ignoreDuplicates: true }
-        );
-        if (!error) inserted++;
-      }
+      const posts = (await fetchHashtagPosts(tag)).filter(p => p.url);
+      if (!posts.length) continue;
+      // ignoreDuplicates + select returns only the rows actually inserted, so the count is accurate.
+      const { data, error } = await sb()
+        .from('tiktok_leads')
+        .upsert(posts, { onConflict: 'url', ignoreDuplicates: true })
+        .select('id');
+      if (error) { errors.push({ tag, error: error.message }); continue; }
+      inserted += (data || []).length;
     } catch (e) {
       errors.push({ tag, error: e.message });
     }
   }
 
+  console.log(`[tiktok-leads] inserted=${inserted} errors=${errors.length}`);
   return res.status(200).json({ ok: true, inserted, errors });
-}
+};
