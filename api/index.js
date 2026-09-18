@@ -2,6 +2,7 @@ const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 const { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail, sendTicketEmail, sendOrderEmail, unsubToken } = require('./email');
 const { rateLimited, captureError, corsHeaders, signQr, verifyQr, validate, flagEnabled } = require('../lib/shared');
+const { syncTicketPurchase, syncBusinessRegistration } = require('../lib/hubspot');
 
 const SUPA_URL  = process.env.SUPABASE_URL  || 'https://cjzewfvtdayjgjdpdmln.supabase.co';
 const SUPA_ANON = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
@@ -591,6 +592,9 @@ module.exports = async (req, res) => {
       sendTicketEmail(buyer_email, buyer_name, ev.name, ev.date_local, ev.venue_name, ev.venue_city, booking_ref, tier?.name || null, qty, total_paid, unit_price === 0, qr_data)
         .catch(e => console.error('[email/ticket]', e.message));
 
+      // Sync to HubSpot CRM (non-blocking)
+      syncTicketPurchase({ buyerName: buyer_name, buyerEmail: buyer_email, buyerPhone: buyer_phone || null, eventName: ev.name, totalPaid: total_paid, bookingRef: booking_ref });
+
       // Notify the buyer if they're a registered user
       const user_id = v.user_id;
       if (user_id) {
@@ -761,6 +765,9 @@ module.exports = async (req, res) => {
       // Send ticket email
       sendTicketEmail(confirmed.buyer_email, confirmed.buyer_name, confirmed.events?.name, confirmed.events?.date_local, confirmed.events?.venue_name, confirmed.events?.venue_city, confirmed.booking_ref, confirmed.ticket_tiers?.name, confirmed.quantity, confirmed.total_paid, confirmed.unit_price === 0, confirmed.qr_data)
         .catch(e => console.error('[email/ticket]', e.message));
+
+      // Sync to HubSpot CRM (non-blocking)
+      syncTicketPurchase({ buyerName: confirmed.buyer_name, buyerEmail: confirmed.buyer_email, buyerPhone: null, eventName: confirmed.events?.name, totalPaid: confirmed.total_paid, bookingRef: confirmed.booking_ref });
 
       if (confirmed.user_id) {
         await sb().from('notifications').insert({
@@ -1050,6 +1057,10 @@ module.exports = async (req, res) => {
       }
 
       sendWelcomeEmail(email, name).catch(() => {});
+
+      // Sync to HubSpot CRM (non-blocking)
+      syncBusinessRegistration({ name, email, phone: b.phone || null, city: b.city || null, province: b.province || null, category: b.category || b.type || null, role });
+
       return res.status(200).json({ ok: true, user_id: uid, paystack_subaccount_code: subCode });
     }
 
