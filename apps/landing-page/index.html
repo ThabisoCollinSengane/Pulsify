@@ -379,6 +379,20 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 /* ── SHARED ANIMATION LAYER ── */
 @keyframes mc-bounce{0%{transform:scale(1)}40%{transform:scale(1.28)}100%{transform:scale(1)}}
 @keyframes card-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes likePop{0%{transform:scale(1)}40%{transform:scale(1.45)}70%{transform:scale(.9)}100%{transform:scale(1)}}
+@keyframes cmSlideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.cm-new{animation:cmSlideIn .25s ease}
+.cm-pin{border-left:2.5px solid var(--or)!important;padding-left:8px;background:rgba(255,92,0,.05);border-radius:0 10px 10px 0}
+.cm-reaction-bar{display:flex;gap:6px;margin-top:4px}
+.cm-react{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:50px;padding:3px 8px;font-size:.72rem;cursor:pointer;transition:background .15s;display:flex;align-items:center;gap:3px;font-family:'Syne',sans-serif;font-weight:700;color:var(--mu2)}
+.cm-react:active,.cm-react.rx-on{background:rgba(255,92,0,.22);border-color:var(--or);color:var(--or)}
+.cmt-skeleton{display:flex;gap:10px;align-items:flex-start}
+.cmt-sk-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(90deg,var(--surf2) 25%,var(--surf) 50%,var(--surf2) 75%);background-size:200% 100%;animation:shim 1.2s infinite}
+.cmt-sk-line{height:10px;border-radius:6px;background:linear-gradient(90deg,var(--surf2) 25%,var(--surf) 50%,var(--surf2) 75%);background-size:200% 100%;animation:shim 1.2s infinite;margin-bottom:6px}
+.comm-card-img{position:relative;height:130px;overflow:hidden;background:var(--surf2)}
+.comm-card-img img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s}
+.comm-card-img::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.72) 0%,transparent 55%);pointer-events:none}
+.comm-card-caption{position:absolute;bottom:0;left:0;right:0;padding:8px 10px;font-size:.65rem;color:#fff;font-family:'Syne',sans-serif;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 @keyframes err-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 .card-in{animation:card-in .2s ease-out both}.tap-press:active{transform:scale(.98)}
 /* ── MENU CARD SYSTEM ── */
@@ -1124,9 +1138,25 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
       <button onclick="closeComments()" style="background:none;border:none;color:var(--tx);font-size:18px;cursor:pointer;padding:4px 8px">&#x2715;</button>
     </div>
     <div id="comments-list" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px"></div>
-    <div style="padding:10px 14px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px">
-      <input id="comment-input" style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:8px 14px;color:var(--tx);font-size:14px;outline:none" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')postComment()"/>
-      <button onclick="postComment()" style="background:var(--or);border:none;border-radius:50%;width:36px;height:36px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#x27A4;</button>
+    <div style="padding:8px 14px 10px;border-top:1px solid rgba(255,255,255,.08)">
+      <div id="cmt-emoji-picker" style="display:none;flex-wrap:wrap;gap:6px;padding:6px 0 8px">
+        <span onclick="cmt_insertEmoji('😂')" style="font-size:1.3rem;cursor:pointer">😂</span>
+        <span onclick="cmt_insertEmoji('❤️')" style="font-size:1.3rem;cursor:pointer">❤️</span>
+        <span onclick="cmt_insertEmoji('🔥')" style="font-size:1.3rem;cursor:pointer">🔥</span>
+        <span onclick="cmt_insertEmoji('🙌')" style="font-size:1.3rem;cursor:pointer">🙌</span>
+        <span onclick="cmt_insertEmoji('👀')" style="font-size:1.3rem;cursor:pointer">👀</span>
+        <span onclick="cmt_insertEmoji('💯')" style="font-size:1.3rem;cursor:pointer">💯</span>
+        <span onclick="cmt_insertEmoji('🎉')" style="font-size:1.3rem;cursor:pointer">🎉</span>
+        <span onclick="cmt_insertEmoji('👏')" style="font-size:1.3rem;cursor:pointer">👏</span>
+        <span onclick="cmt_insertEmoji('😍')" style="font-size:1.3rem;cursor:pointer">😍</span>
+        <span onclick="cmt_insertEmoji('💪')" style="font-size:1.3rem;cursor:pointer">💪</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button onclick="cmt_toggleEmoji()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;padding:0 2px;opacity:.7">🙂</button>
+        <input id="comment-input" style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:8px 14px;color:var(--tx);font-size:14px;outline:none" placeholder="Add a comment..." maxlength="500" oninput="cmt_charCount(this)" onkeydown="if(event.key==='Enter')postComment()"/>
+        <span id="cmt-char-count" style="font-size:.62rem;color:var(--mu);min-width:28px;text-align:right;display:none"></span>
+        <button onclick="postComment()" style="background:var(--or);border:none;border-radius:50%;width:36px;height:36px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">&#x27A4;</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2344,7 +2374,7 @@ function buildCard(ev, idx) {
       <div class="fm"><span class="fct">📍 ${x(ev.venue_city)}</span><span class="fdt"></span>${_distBadge(ev) || `<span class="fda">${fdt(ev.date_local, ev.time_local)}</span>`}${social}</div>
       <div class="fv">${x(ev.venue_name || '')} · ${x(ev.genre || '')}</div>
     </div>
-    <div class="fac" onclick="event.stopPropagation()">
+    <div class="fac" onclick="event.stopPropagation()">${att >= 2 ? `<div style="display:flex;align-items:center;margin-right:4px">${(ev.recent_attendees||[]).slice(0,3).map((av,i)=>`<div style="width:20px;height:20px;border-radius:50%;border:1.5px solid var(--bg);overflow:hidden;background:var(--surf2);margin-left:${i?'-6px':'0'};z-index:${3-i};flex-shrink:0">${av?`<img src="${x(av)}" style="width:100%;height:100%;object-fit:cover">`:`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:.5rem">👤</div>`}</div>`).join('')}<span style="font-size:.58rem;color:var(--mu2);margin-left:4px;white-space:nowrap">${fn(att)} going</span></div>` : ''}
       <button class="ab" onclick="toggleLike(this, '${x(ev.id)}', 'events')"><span class="ai">🤍</span><span>${fn(ev.like_count)}</span></button>
       <button class="ab" onclick="openComments('${x(ev.id)}', '${x(ev.name)}', 'events')"><span class="ai">💬</span><span>${fn(ev.comment_count)}</span></button>
       <button class="ab" onclick="shareIt('${x(ev.name)}')"><span class="ai">🔗</span></button>
@@ -5279,7 +5309,7 @@ async function openComments(entityId, name, type = 'event') {
   const listEl = document.getElementById('comments-list');
   
   if (titleEl) titleEl.textContent = 'Comments on ' + name;
-  if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu)">Loading comments...</div>';
+  if (listEl) listEl.innerHTML = [1,2,3].map(() => `<div class="cmt-skeleton"><div class="cmt-sk-av"></div><div style="flex:1"><div class="cmt-sk-line" style="width:45%;"></div><div class="cmt-sk-line" style="width:80%;"></div><div class="cmt-sk-line" style="width:35%;"></div></div></div>`).join('');
   
   overlay.style.display = 'flex';
   
@@ -5303,16 +5333,25 @@ function closeComments() {
   activeEntityId = null;
 }
 
-function renderComments() {
+const _REACT_EMOJIS = ['❤️','🔥','😂','🙌','👀'];
+function renderComments(newId) {
   const listEl = document.getElementById('comments-list');
   if (!listEl) return;
 
   if (activeComments.length === 0) {
-    listEl.innerHTML = '<div style="padding:30px 20px;text-align:center;color:var(--mu);font-size:.8rem">Be the first to comment!</div>';
+    listEl.innerHTML = '<div style="padding:30px 20px;text-align:center;color:var(--mu);font-size:.8rem">Be the first to comment! 💬</div>';
     return;
   }
 
-  let _replyTarget = null;
+  // pin organiser comment to top
+  const sorted = [...activeComments].sort((a, b) => {
+    const aPin = a.is_organiser || a.author_role === 'organiser' || a.author_role === 'business';
+    const bPin = b.is_organiser || b.author_role === 'organiser' || b.author_role === 'business';
+    if (aPin && !bPin) return -1;
+    if (!aPin && bPin) return 1;
+    return 0;
+  });
+
   const renderOne = (c, depth = 0) => {
     const p = c.profiles || c.profile || {};
     const av = p.avatar_url ? `<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover">` : (p.display_name || '?')[0];
@@ -5320,20 +5359,57 @@ function renderComments() {
     const uid  = c.user_id || '';
     const clickable = uid ? `onclick="closeComments();openProfile('${x(uid)}')" style="cursor:pointer"` : '';
     const body = c.text || c.content || c.body || '';
+    const isOrg = c.is_organiser || c.author_role === 'organiser' || c.author_role === 'business';
+    const pinBadge = (isOrg && depth === 0) ? `<span style="font-size:.55rem;background:rgba(255,92,0,.18);color:var(--or);border-radius:50px;padding:1px 6px;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.04em;vertical-align:middle">📌 Organiser</span> ` : '';
     const replies = (c.replies || []).map(r => renderOne(r, depth + 1)).join('');
     const replyBtn = depth < 2 ? `<button onclick="(function(){var inp=document.getElementById('comment-input');if(inp){window._cmtReplyTo='${x(c.id)}';inp.placeholder='Replying to ${x(name.replace(/'/g,""))}…';inp.focus();}})()" style="background:none;border:none;color:var(--mu);font-size:.62rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;padding:2px 0;margin-top:2px;letter-spacing:.04em">↩ Reply</button>` : '';
-    return `<div style="margin-left:${depth*18}px;${depth>0?'padding-left:8px;border-left:1.5px solid var(--border);':''}">
-      <div class="cm">
+    const reactBar = depth === 0 ? `<div class="cm-reaction-bar">${_REACT_EMOJIS.map(e => `<button class="cm-react" onclick="cmtReact('${x(c.id)}','${e}',this)">${e} <span>0</span></button>`).join('')}</div>` : '';
+    const isNew = c.id === newId;
+    return `<div class="${isOrg && depth===0 ? 'cm-pin' : ''}" style="margin-left:${depth*18}px;${depth>0?'padding-left:8px;border-left:1.5px solid var(--border);':''}">
+      <div class="cm${isNew ? ' cm-new' : ''}">
         <div class="cav" ${clickable} style="background:linear-gradient(135deg,#1a0533,#4a0080);overflow:hidden;${uid?'cursor:pointer':''}">${av}</div>
         <div style="flex:1">
-          <div class="cna" ${clickable}>${x(name)}</div>
+          <div class="cna" ${clickable}>${pinBadge}${x(name)}</div>
           <div class="ctx">${x(body)}</div>
           <div style="display:flex;align-items:center;gap:10px"><div class="ctm">${timeAgoShort(c.created_at)}</div>${replyBtn}</div>
+          ${reactBar}
         </div>
       </div>${replies}</div>`;
   };
-  listEl.innerHTML = activeComments.map(c => renderOne(c)).join('');
+  listEl.innerHTML = sorted.map(c => renderOne(c)).join('');
   listEl.scrollTop = listEl.scrollHeight;
+}
+
+function cmtReact(commentId, emoji, btn) {
+  if (!currentUser) { showToast('Sign in to react', 'err'); return; }
+  btn.classList.toggle('rx-on');
+  const countEl = btn.querySelector('span');
+  const n = parseInt(countEl.textContent) || 0;
+  countEl.textContent = btn.classList.contains('rx-on') ? n + 1 : Math.max(0, n - 1);
+  Api.post('/reactions', { entity_type: 'comment', entity_id: commentId, type: emoji }, { auth: true }).catch(() => {});
+}
+
+function cmt_toggleEmoji() {
+  const p = document.getElementById('cmt-emoji-picker');
+  if (!p) return;
+  p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+}
+
+function cmt_insertEmoji(emoji) {
+  const inp = document.getElementById('comment-input');
+  if (!inp) return;
+  const s = inp.selectionStart || inp.value.length;
+  inp.value = inp.value.slice(0, s) + emoji + inp.value.slice(s);
+  inp.focus();
+  cmt_charCount(inp);
+}
+
+function cmt_charCount(inp) {
+  const cc = document.getElementById('cmt-char-count');
+  if (!cc) return;
+  const len = inp.value.length;
+  if (len >= 200) { cc.style.display = 'block'; cc.textContent = `${len}/500`; cc.style.color = len >= 450 ? 'var(--pk)' : 'var(--mu)'; }
+  else { cc.style.display = 'none'; }
 }
 
 async function postComment() {
@@ -5356,7 +5432,7 @@ async function postComment() {
     });
     window._cmtReplyTo = null;
     inp.placeholder = 'Add a comment…';
-    renderComments();
+    renderComments(json.comment.id);
     inp.value = '';
   } catch(e) {
     showToast('Failed to post comment: ' + e.message, 'err');
@@ -5377,6 +5453,7 @@ async function toggleLike(btn, entityId, entityType = 'event') {
   const cntEl = btn.querySelector('span:last-child');
   const currentNum = parseInt(cntEl.textContent.replace('k','')) * (cntEl.textContent.includes('k') ? 1000 : 1);
   ico.textContent = liked ? '❤️' : '🤍';
+  if (liked) { ico.style.animation = 'none'; void ico.offsetWidth; ico.style.animation = 'likePop .4s ease'; }
   cntEl.textContent = fn(liked ? currentNum + 1 : Math.max(0, currentNum - 1));
 
   try {
@@ -6005,15 +6082,14 @@ async function loadCommunityPosts() {
       const name = x(a.display_name || a.username || 'Pulsefy');
       const badge = p.post_type === 'business_update' ? '🏪' : '🎪';
       return `
-      <div onclick="openPost('${x(p.id)}')" style="width:170px;flex-shrink:0;border-radius:16px;overflow:hidden;background:var(--surf);border:1px solid var(--border);cursor:pointer">
-        <div style="height:110px;background:var(--surf2)">${img ? `<img src="${x(img)}" style="width:100%;height:100%;object-fit:cover;display:block" loading="lazy"/>` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:1.6rem">${badge}</div>`}</div>
-        <div style="padding:8px 10px">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+      <div onclick="openPost('${x(p.id)}')" style="width:160px;flex-shrink:0;border-radius:16px;overflow:hidden;background:var(--surf);border:1px solid var(--border);cursor:pointer">
+        <div class="comm-card-img" style="height:160px">${img ? `<img src="${x(img)}" loading="lazy"/>` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:2rem">${badge}</div>`}${p.caption ? `<div class="comm-card-caption">${x(p.caption)}</div>` : ''}</div>
+        <div style="padding:6px 10px 8px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
             <div style="width:18px;height:18px;border-radius:50%;overflow:hidden;background:var(--surf2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.6rem">${a.avatar_url ? `<img src="${x(a.avatar_url)}" style="width:100%;height:100%;object-fit:cover">` : badge}</div>
             <div style="font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
           </div>
-          ${p.caption ? `<div style="font-size:.68rem;color:var(--mu2);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${x(p.caption)}</div>` : ''}
-          <div style="font-size:.58rem;color:var(--mu);margin-top:4px">❤️ ${fn(p.like_count||0)} · 💬 ${fn(p.comment_count||0)} · ${timeAgoShort(p.created_at)}</div>
+          <div style="font-size:.58rem;color:var(--mu)">❤️ ${fn(p.like_count||0)} · 💬 ${fn(p.comment_count||0)} · ${timeAgoShort(p.created_at)}</div>
         </div>
       </div>`;
     }).join('');
