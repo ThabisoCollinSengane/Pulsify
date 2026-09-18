@@ -169,6 +169,119 @@ ALTER TABLE notifications     ENABLE ROW LEVEL SECURITY;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
 
+-- ═══════════════════════════════════════════════════════════
+-- SIZA AI ASSISTANT TABLES
+-- ═══════════════════════════════════════════════════════════
+
+-- Enable pgvector for semantic search
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Toggle Siza on events
+ALTER TABLE events ADD COLUMN IF NOT EXISTS siza_enabled BOOLEAN DEFAULT false;
+
+-- Knowledge base per event (parsed from organizer's pasted text)
+CREATE TABLE IF NOT EXISTS event_siza_knowledge (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id      TEXT REFERENCES events(id) ON DELETE CASCADE,
+  organizer_id  UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  kind          TEXT CHECK (kind IN ('product','faq','policy','hours')) NOT NULL,
+  title         TEXT NOT NULL,
+  body          TEXT NOT NULL,
+  price_cents   INTEGER,
+  in_stock      BOOLEAN DEFAULT true,
+  embedding     VECTOR(768),
+  created_at    TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_siza_knowledge_event ON event_siza_knowledge(event_id);
+CREATE INDEX IF NOT EXISTS idx_siza_knowledge_org   ON event_siza_knowledge(organizer_id);
+
+-- Conversations (web + WhatsApp)
+CREATE TABLE IF NOT EXISTS siza_conversations (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id            TEXT REFERENCES events(id) ON DELETE SET NULL,
+  customer_session_id TEXT,
+  customer_name       TEXT,
+  customer_email      TEXT,
+  customer_phone      TEXT,
+  channel             TEXT CHECK (channel IN ('web','whatsapp')) NOT NULL DEFAULT 'web',
+  state               TEXT CHECK (state IN ('bot','escalated','closed')) NOT NULL DEFAULT 'bot',
+  last_message_at     TIMESTAMPTZ,
+  created_at          TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_siza_conv_event   ON siza_conversations(event_id);
+CREATE INDEX IF NOT EXISTS idx_siza_conv_session ON siza_conversations(customer_session_id);
+
+-- Messages within conversations
+CREATE TABLE IF NOT EXISTS siza_messages (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID REFERENCES siza_conversations(id) ON DELETE CASCADE NOT NULL,
+  direction       TEXT CHECK (direction IN ('in','out')) NOT NULL,
+  body            TEXT NOT NULL,
+  is_ai           BOOLEAN DEFAULT true,
+  created_at      TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_siza_msg_conv ON siza_messages(conversation_id);
+
+-- Orders initiated through Siza
+CREATE TABLE IF NOT EXISTS siza_orders (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id            TEXT REFERENCES events(id) ON DELETE SET NULL,
+  conversation_id     UUID REFERENCES siza_conversations(id) ON DELETE SET NULL,
+  customer_name       TEXT,
+  customer_phone      TEXT,
+  customer_email      TEXT,
+  quantity            INTEGER NOT NULL DEFAULT 1,
+  total_cents         INTEGER NOT NULL,
+  state               TEXT CHECK (state IN ('pending','paid','failed')) NOT NULL DEFAULT 'pending',
+  paystack_reference  TEXT,
+  created_at          TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_siza_orders_event ON siza_orders(event_id);
+CREATE INDEX IF NOT EXISTS idx_siza_orders_ref   ON siza_orders(paystack_reference);
+
+-- RLS
+ALTER TABLE event_siza_knowledge ENABLE ROW LEVEL SECURITY;
+ALTER TABLE siza_conversations   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE siza_messages        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE siza_orders          ENABLE ROW LEVEL SECURITY;
+
+-- Organizers can manage their own knowledge
+CREATE POLICY IF NOT EXISTS "siza_knowledge_organizer" ON event_siza_knowledge
+  USING (organizer_id = auth.uid());
+
+-- Service role full access to all Siza tables
+CREATE POLICY IF NOT EXISTS "siza_knowledge_service"  ON event_siza_knowledge USING (auth.role() = 'service_role');
+CREATE POLICY IF NOT EXISTS "siza_conv_service"       ON siza_conversations   USING (auth.role() = 'service_role');
+CREATE POLICY IF NOT EXISTS "siza_msg_service"        ON siza_messages        USING (auth.role() = 'service_role');
+CREATE POLICY IF NOT EXISTS "siza_orders_service"     ON siza_orders          USING (auth.role() = 'service_role');
+
+-- pgvector similarity search for Siza knowledge retrieval
+CREATE OR REPLACE FUNCTION siza_match_knowledge(
+  p_event_id  TEXT,
+  p_embedding VECTOR(768),
+  p_limit     INT DEFAULT 3
+)
+RETURNS TABLE (
+  id          UUID,
+  kind        TEXT,
+  title       TEXT,
+  body        TEXT,
+  price_cents INTEGER,
+  similarity  FLOAT
+)
+LANGUAGE sql STABLE
+AS $$
+  SELECT
+    k.id, k.kind, k.title, k.body, k.price_cents,
+    1 - (k.embedding <=> p_embedding) AS similarity
+  FROM event_siza_knowledge k
+  WHERE k.event_id = p_event_id
+    AND k.in_stock = true
+    AND k.embedding IS NOT NULL
+  ORDER BY k.embedding <=> p_embedding
+  LIMIT p_limit;
+$$;
+
 -- Public read on posts
 CREATE POLICY IF NOT EXISTS "public_posts_read" ON posts FOR SELECT USING (visibility = 'public');
 CREATE POLICY IF NOT EXISTS "service_all_posts" ON posts USING (auth.role() = 'service_role');

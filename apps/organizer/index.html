@@ -174,6 +174,7 @@ select.inp option{background:#1C1140}
     <div class="tab" onclick="switchTab(this,'pane-sqpromos')">🎁 Deals</div>
     <div class="tab" onclick="switchTab(this,'pane-pricelist')">💲 Pricelist</div>
     <div class="tab" onclick="switchTab(this,'pane-settings')">⚙️ Settings</div>
+    <div class="tab" onclick="switchTab(this,'pane-lumi-orders')">🤖 Orders</div>
   </div>
 
   <div class="pane active" id="pane-post">
@@ -606,6 +607,17 @@ select.inp option{background:#1C1140}
       <div class="empty">Select an event to see check-ins</div>
     </div>
   </div>
+
+  <!-- LUMI ORDERS PANE -->
+  <div class="pane" id="pane-lumi-orders">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu)">Lumi Ticket Orders</div>
+      <div id="lumi-orders-count" style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;color:var(--or)"></div>
+    </div>
+    <div id="lumi-orders-list">
+      <div class="empty" style="padding:24px;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div>
+    </div>
+  </div>
 </div>
 
 <nav class="bn">
@@ -779,8 +791,19 @@ select.inp option{background:#1C1140}
       </div>
       <div style="display:flex;gap:10px;margin-top:14px">
         <button class="btn-sec" style="flex:1" onclick="closeOrgSheet('org-ev-preview-sheet')">← Edit</button>
-        <button class="btn-primary" style="flex:2" onclick="closeOrgSheet('org-ev-preview-sheet');submitEvent()">Create Event 🎉</button>
+        <button class="btn-primary" style="flex:2" onclick="closeOrgSheet('org-ev-preview-sheet');openSizaStepOrSubmit()">Create Event 🎉</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- SIZA SETUP SHEET -->
+<div class="sn-overlay" id="org-siza-sheet" onclick="if(event.target===this)closeOrgSheet('org-siza-sheet')">
+  <div class="sn-sheet" style="max-height:92vh">
+    <div class="sn-handle"></div>
+    <div class="sn-head"><div class="sn-title">🤖 Lumi AI Setup</div><button class="sn-close" onclick="closeOrgSheet('org-siza-sheet')">✕</button></div>
+    <div class="sn-body" style="padding-bottom:40px" id="siza-sheet-body">
+      <!-- filled by openSizaStep() -->
     </div>
   </div>
 </div>
@@ -821,6 +844,7 @@ select.inp option{background:#1C1140}
         <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Featured on map &amp; discovery</div><div style="font-size:.71rem;color:var(--mu)">Your events rank higher in search and map results</div></div></div>
         <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Analytics dashboard</div><div style="font-size:.71rem;color:var(--mu)">Views, saves, ticket sales by day</div></div></div>
         <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Priority support</div><div style="font-size:.71rem;color:var(--mu)">Faster response from the Pulsefy team</div></div></div>
+        <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Lumi AI Assistant</div><div style="font-size:.71rem;color:var(--mu)">AI handles customer questions & sells tickets while you sleep</div></div></div>
       </div>
       <button class="btn-primary" style="width:100%;padding:15px;font-size:.92rem" id="org-pay-btn" onclick="startOrgPayment()">Pay R220/month · Activate Premium 🚀</button>
       <div id="org-pay-msg" style="text-align:center;font-size:.68rem;color:var(--mu);margin-top:10px">🔒 Secured by Paystack · Cancel anytime · Monthly billing</div>
@@ -905,6 +929,18 @@ select.inp option{background:#1C1140}
           <button type="button" class="btn-sec" style="flex:1;padding:8px;font-size:.76rem" id="req-loc-btn" onclick="submitEventLocationRequest()">Submit Location ✓</button>
         </div>
         <div id="edit-ev-loc-msg" style="font-size:.7rem;color:var(--mu2);min-height:14px"></div>
+      </div>
+      <!-- Siza AI (premium only) -->
+      <div id="edit-siza-section" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">🤖 Lumi AI Assistant</div>
+        <label style="display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:14px">
+          <input type="checkbox" id="edit-siza-toggle" style="width:20px;height:20px;accent-color:var(--or);cursor:pointer">
+          <span style="font-size:.82rem">Enable Lumi for this event</span>
+        </label>
+        <div id="edit-siza-text-wrap" style="opacity:.45;pointer-events:none">
+          <div style="font-size:.72rem;color:var(--mu);margin-bottom:8px">Re-paste event details to update Lumi's knowledge (optional — leave blank to keep existing)</div>
+          <textarea id="edit-siza-knowledge-text" placeholder="Paste updated flyer text, FAQs, pricing, lineup…" style="width:100%;min-height:100px;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--txt);font-size:.78rem;line-height:1.5;resize:vertical;box-sizing:border-box"></textarea>
+        </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:10px">
         <button class="btn-sec" style="flex:1" onclick="closeOrgSheet('org-edit-event-sheet')">Cancel</button>
@@ -1381,6 +1417,125 @@ function previewEventForm() {
   openOrgSheet('org-ev-preview-sheet');
 }
 
+function openSizaStepOrSubmit() {
+  if (currentProfile?.subscription_type === 'premium') {
+    openSizaStep();
+  } else {
+    submitEvent();
+  }
+}
+
+function openSizaStep() {
+  const enabled = window._sizaEnabled || false;
+  const text = window._sizaKnowledgeText || '';
+  document.getElementById('siza-sheet-body').innerHTML = `
+    <div style="margin-bottom:18px">
+      <p style="font-size:.82rem;color:var(--mu);line-height:1.5;margin-bottom:16px">
+        Lumi AI handles customer questions, explains your event details, and sells tickets — automatically, 24/7 on web and WhatsApp.
+      </p>
+      <label style="display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:20px">
+        <input type="checkbox" id="siza-toggle" ${enabled ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--or);cursor:pointer">
+        <span style="font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700">Enable Lumi for this event</span>
+      </label>
+      <div id="siza-text-area-wrap" style="${enabled ? '' : 'opacity:.45;pointer-events:none'}">
+        <div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;margin-bottom:8px;color:var(--txt)">Paste your event details</div>
+        <div style="font-size:.72rem;color:var(--mu);margin-bottom:10px">Copy-paste your flyer text, WhatsApp post or event description. Lumi will extract FAQs, pricing, dress code, lineup and more.</div>
+        <textarea id="siza-knowledge-text" placeholder="e.g. Join us at Ultra Durban... Tickets: R250 General / R500 VIP... Dress code: smart casual... Lineup: DJ Maphorisa, Kabza De Small..." style="width:100%;min-height:140px;padding:12px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--txt);font-size:.8rem;line-height:1.5;resize:vertical;box-sizing:border-box">${x(text)}</textarea>
+      </div>
+    </div>
+    <div id="siza-wa-card" style="margin-bottom:18px;padding:14px;border-radius:14px;border:1px solid var(--bd);background:var(--card)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span style="font-size:1.3rem">📱</span>
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700">WhatsApp Setup</div>
+          <div style="font-size:.72rem;color:var(--mu)">Let Lumi answer customers on your own WhatsApp number</div>
+        </div>
+      </div>
+      <div id="siza-wa-status"><!-- filled by loadWaStatus() --></div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-secondary" style="flex:1" onclick="closeOrgSheet('org-siza-sheet');submitEvent()">Skip</button>
+      <button class="btn-primary" style="flex:2" onclick="saveSizaStep()">Save & Create Event 🎉</button>
+    </div>
+  `;
+  document.getElementById('siza-toggle').addEventListener('change', function() {
+    document.getElementById('siza-text-area-wrap').style.opacity = this.checked ? '1' : '.45';
+    document.getElementById('siza-text-area-wrap').style.pointerEvents = this.checked ? '' : 'none';
+  });
+  loadWaStatus();
+  openOrgSheet('org-siza-sheet');
+}
+
+function saveSizaStep() {
+  window._sizaEnabled = document.getElementById('siza-toggle')?.checked || false;
+  window._sizaKnowledgeText = document.getElementById('siza-knowledge-text')?.value || '';
+  closeOrgSheet('org-siza-sheet');
+  submitEvent();
+}
+
+async function loadWaStatus() {
+  const el = document.getElementById('siza-wa-status');
+  if (!el) return;
+  const { data: prof } = await getSB().from('profiles').select('whatsapp_display_number,whatsapp_verified').eq('id', currentProfile.id).single();
+  if (prof?.whatsapp_verified) {
+    el.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:.78rem;color:#22c55e">✔ Connected: ${x(prof.whatsapp_display_number)}</span>
+      <button onclick="disconnectWa()" style="font-size:.72rem;color:var(--mu);background:none;border:none;cursor:pointer;text-decoration:underline">Disconnect</button>
+    </div>`;
+  } else {
+    el.innerHTML = `<div id="siza-wa-reg-form">
+      <input id="siza-wa-phone" type="tel" placeholder="+27 82 000 0000" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:.82rem;box-sizing:border-box;margin-bottom:8px">
+      <button onclick="registerWa()" style="width:100%;padding:10px;border-radius:10px;background:var(--or);color:#fff;border:none;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer">Connect number →</button>
+    </div>
+    <div id="siza-wa-otp-form" hidden>
+      <div style="font-size:.75rem;color:var(--mu);margin-bottom:8px">Enter the OTP sent to your number via SMS</div>
+      <input id="siza-wa-otp" type="text" inputmode="numeric" placeholder="123456" maxlength="6" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--txt);font-size:.82rem;box-sizing:border-box;margin-bottom:8px">
+      <button onclick="verifyWa()" style="width:100%;padding:10px;border-radius:10px;background:var(--or);color:#fff;border:none;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer">Verify OTP</button>
+    </div>`;
+  }
+}
+
+async function registerWa() {
+  const phone = document.getElementById('siza-wa-phone')?.value?.trim();
+  if (!phone) return toast('Enter a phone number', 'err');
+  const btn = document.querySelector('#siza-wa-reg-form button');
+  btn.textContent = 'Sending OTP…'; btn.disabled = true;
+  try {
+    const r = await fetch('/api/siza/whatsapp/register', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${(await getSB().auth.getSession()).data.session?.access_token}` }, body: JSON.stringify({ phone_number: phone }) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    document.getElementById('siza-wa-reg-form').hidden = true;
+    document.getElementById('siza-wa-otp-form').hidden = false;
+  } catch (e) {
+    toast(e.message, 'err');
+    btn.textContent = 'Connect number →'; btn.disabled = false;
+  }
+}
+
+async function verifyWa() {
+  const code = document.getElementById('siza-wa-otp')?.value?.trim();
+  if (!code) return toast('Enter the OTP', 'err');
+  const btn = document.querySelector('#siza-wa-otp-form button');
+  btn.textContent = 'Verifying…'; btn.disabled = true;
+  try {
+    const r = await fetch('/api/siza/whatsapp/verify', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${(await getSB().auth.getSession()).data.session?.access_token}` }, body: JSON.stringify({ code }) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    toast('WhatsApp connected! Lumi will now respond on your number.');
+    loadWaStatus();
+  } catch (e) {
+    toast(e.message, 'err');
+    btn.textContent = 'Verify OTP'; btn.disabled = false;
+  }
+}
+
+async function disconnectWa() {
+  if (!confirm('Disconnect your WhatsApp number? Customers will no longer reach Lumi through it.')) return;
+  const r = await fetch('/api/siza/whatsapp/disconnect', { method: 'DELETE', headers: { Authorization: `Bearer ${(await getSB().auth.getSession()).data.session?.access_token}` } });
+  if (r.ok) { toast('WhatsApp disconnected.'); loadWaStatus(); }
+  else toast('Failed to disconnect — try again.', 'err');
+}
+
 function x(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function toast(m, t='') { const el=document.getElementById('toast'); el.textContent=m; el.className='toast '+t+' show'; setTimeout(()=>el.classList.remove('show'),4500); }
 async function safeJson(r) { try { const t = await r.text(); return t ? JSON.parse(t) : {}; } catch(e) { return {}; } }
@@ -1648,6 +1803,7 @@ function switchTab(btn, paneId, _noPush) {
     const sel = document.getElementById('scan-event-sel');
     if (sel.options.length <= 1) loadScanEvents(); else loadScanStats();
   }
+  if (paneId === 'pane-lumi-orders') loadLumiOrders();
 }
 
 async function loadPostUsage() {
@@ -2046,6 +2202,7 @@ async function submitEvent() {
         venue_lon: evLon,
         location_confidence: locConfidence,
         tiers,
+        siza_enabled: window._sizaEnabled || false,
       }),
     });
     const evData = await evRes.json();
@@ -2061,6 +2218,18 @@ async function submitEvent() {
         headers: { Authorization: 'Bearer ' + freshToken },
       }).catch(() => {});
     }
+
+    // If Siza was enabled and organizer pasted knowledge text, ingest it now
+    const sizaText = (window._sizaKnowledgeText || '').trim();
+    if (window._sizaEnabled && sizaText) {
+      fetch('/api/siza/ingest/' + eventId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + freshToken },
+        body: JSON.stringify({ text: sizaText }),
+      }).catch(() => {});
+    }
+    window._sizaEnabled = false;
+    window._sizaKnowledgeText = '';
 
     const priceLabel = allFree ? 'FREE' : (minPrice === maxPrice ? 'R' + minPrice : 'From R' + minPrice);
     await fetch('/api/posts', {
@@ -2247,6 +2416,25 @@ function openEditEventSheet(evId) {
   const imgThumb = document.getElementById('edit-ev-img-thumb');
   if (e.image_url) { imgThumb.src = e.image_url; imgPrev.style.display = 'block'; }
   else { imgPrev.style.display = 'none'; imgThumb.src = ''; }
+  const sizaSec = document.getElementById('edit-siza-section');
+  if (sizaSec) {
+    if (currentProfile?.subscription_type === 'premium') {
+      sizaSec.style.display = 'block';
+      const tog = document.getElementById('edit-siza-toggle');
+      const wrap = document.getElementById('edit-siza-text-wrap');
+      if (tog) {
+        tog.checked = e.siza_enabled || false;
+        if (wrap) { wrap.style.opacity = tog.checked ? '1' : '.45'; wrap.style.pointerEvents = tog.checked ? '' : 'none'; }
+        tog.onchange = function() {
+          if (wrap) { wrap.style.opacity = this.checked ? '1' : '.45'; wrap.style.pointerEvents = this.checked ? '' : 'none'; }
+        };
+      }
+      const ta = document.getElementById('edit-siza-knowledge-text');
+      if (ta) ta.value = '';
+    } else {
+      sizaSec.style.display = 'none';
+    }
+  }
   openOrgSheet('org-edit-event-sheet');
 }
 
@@ -2275,7 +2463,8 @@ async function saveEventEdit() {
     if (upErr) { toast('Image upload failed — saving other changes', 'err'); }
     else { newImgUrl = sb.storage.from('post-images').getPublicUrl(path).data.publicUrl; }
   }
-  const upd = { name, date_local: date, time_local: time||null, venue_name: venue, venue_city: city, genre: genre||null, description: desc||null };
+  const sizaToggle = document.getElementById('edit-siza-toggle');
+  const upd = { name, date_local: date, time_local: time||null, venue_name: venue, venue_city: city, genre: genre||null, description: desc||null, siza_enabled: sizaToggle ? sizaToggle.checked : false };
   if (newImgUrl) upd.image_url = newImgUrl;
 
   // Auto-geocode if the current edit clears or changes the venue and there are no existing coords
@@ -2302,6 +2491,14 @@ async function saveEventEdit() {
   if (_evMap[_editEvId]) Object.assign(_evMap[_editEvId], upd);
   closeOrgSheet('org-edit-event-sheet');
   toast('Event updated ✅', 'ok');
+  const editSizaText = (document.getElementById('edit-siza-knowledge-text')?.value || '').trim();
+  if (upd.siza_enabled && editSizaText) {
+    fetch('/api/siza/ingest/' + _editEvId, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + editSess?.access_token },
+      body: JSON.stringify({ text: editSizaText }),
+    }).catch(() => {});
+  }
   loadMyEvents();
 }
 
@@ -2552,6 +2749,53 @@ async function loadScanEvents() {
     });
   } catch(e) {}
   loadScanStats();
+}
+
+async function loadLumiOrders() {
+  const el = document.getElementById('lumi-orders-list');
+  const ct = document.getElementById('lumi-orders-count');
+  el.innerHTML = '<div class="empty" style="padding:24px;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div>';
+  try {
+    const uid = (await sb.auth.getUser()).data.user?.id;
+    if (!uid) { el.innerHTML = '<div class="empty" style="padding:24px;text-align:center;color:var(--mu)">Not signed in</div>'; return; }
+    const { data, error } = await sb
+      .from('siza_orders')
+      .select('id,event_id,customer_name,customer_email,customer_phone,quantity,total_cents,state,created_at,events!inner(name,organizer_id)')
+      .eq('events.organizer_id', uid)
+      .order('created_at', { ascending: false })
+      .limit(60);
+    if (error) throw error;
+    if (!data || !data.length) {
+      ct.textContent = '';
+      el.innerHTML = '<div class="empty" style="padding:24px;text-align:center;color:var(--mu);font-size:.82rem">No Lumi orders yet. Once customers buy tickets through the chat widget, orders appear here.</div>';
+      return;
+    }
+    const paidCount = data.filter(o => o.state === 'paid').length;
+    ct.textContent = `${paidCount} paid / ${data.length} total`;
+    const stateColor = { paid: 'var(--li)', pending: 'var(--or)', failed: 'var(--pk)' };
+    el.innerHTML = data.map(o => {
+      const evName = (Array.isArray(o.events) ? o.events[0]?.name : o.events?.name) || o.event_id;
+      const amt = o.total_cents ? `R${(o.total_cents / 100).toFixed(2)}` : '—';
+      const dt = new Date(o.created_at).toLocaleDateString('en-ZA', { day:'2-digit', month:'short', year:'numeric' });
+      const sc = stateColor[o.state] || 'var(--mu)';
+      return `<div class="card" style="margin-bottom:8px">
+        <div class="card-body" style="padding:12px 14px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
+            <div style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${x(evName)}</div>
+            <div style="font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:${sc};text-transform:uppercase;flex-shrink:0">${o.state}</div>
+          </div>
+          <div style="font-size:.78rem;color:var(--mu2);margin-bottom:4px">${x(o.customer_name || '—')} · ${x(o.customer_email || '—')}</div>
+          <div style="display:flex;gap:16px;font-size:.72rem;color:var(--mu)">
+            <span>🎟 ${o.quantity || 1}×</span>
+            <span>💰 ${amt}</span>
+            <span style="margin-left:auto">${dt}</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = `<div class="empty" style="padding:24px;text-align:center;color:var(--pk);font-size:.78rem">Error: ${e.message}</div>`;
+  }
 }
 
 async function loadScanStats() {
