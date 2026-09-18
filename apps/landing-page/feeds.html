@@ -612,6 +612,14 @@ function buildCard(post) {
         ? '<button class="ab" onclick="editPost(\u0027'+x(post.id)+'\u0027)" title="Edit post"><span class="ai">✏️</span></button>'
         : '<button class="ab" onclick="openReportPost(\u0027'+x(post.id)+'\u0027,\u0027'+x((post.caption||'').slice(0,80).replace(/\u0027/g,''))+'\u0027)" title="Report post"><span class="ai">🚩</span></button>') +
     '</div>' +
+    (() => {
+      const _myPR = (() => { try { return localStorage.getItem('p_pr_'+post.id)||''; } catch(e) { return ''; } })();
+      const _prcts = post.reactions || {};
+      return '<div class="cmt-react-bar" style="padding:4px 12px 6px">'+['\u2764\uFE0F','\uD83D\uDE02','\uD83D\uDD25','\uD83D\uDE2E','\uD83D\uDE4C'].map(e => {
+        const cnt = _prcts[e] || 0; const act = _myPR === e;
+        return '<button class="cmt-react-btn'+(act?' reacted':'')+'" onclick="doReactPost(\''+x(post.id)+'\',this)">'+e+(cnt?' <span>'+cnt+'</span>':'')+'</button>';
+      }).join('')+'</div>';
+    })() +
     '<div class="cmt-wrap" id="cmt-'+x(post.id)+'">' +
       '<div id="cmtl-'+x(post.id)+'">'+(_cmtCache[post.id]?buildCmts(_cmtCache[post.id],post.id):'<div style="padding:10px 14px;font-size:.74rem;color:var(--mu)">Tap to load comments…</div>')+'</div>' +
       '<div class="cir"><input class="ci" id="cmti-'+x(post.id)+'" placeholder="Add a comment…" maxlength="500" onkeydown="if(event.key===\u0027Enter\u0027)doComment(\u0027'+x(post.id)+'\u0027)"/><button class="csnd" onclick="doComment(\u0027'+x(post.id)+'\u0027)">➤</button></div>' +
@@ -743,6 +751,28 @@ function doReactComment(cmtId, btn) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
     body: JSON.stringify({ entity_type: 'comment', entity_id: cmtId, type: next }),
+  }).catch(()=>{});
+}
+
+function doReactPost(postId, btn) {
+  const bar  = btn.closest('.cmt-react-bar');
+  if (!bar) return;
+  const bEmoji = btn.textContent.trim().split(' ')[0];
+  let prev = ''; try { prev = localStorage.getItem('p_pr_'+postId)||''; } catch(e) {}
+  const next = prev === bEmoji ? '' : bEmoji;
+  try { if (next) localStorage.setItem('p_pr_'+postId, next); else localStorage.removeItem('p_pr_'+postId); } catch(e) {}
+  bar.querySelectorAll('.cmt-react-btn').forEach(b => {
+    const isNext = b.textContent.trim().split(' ')[0] === next;
+    const wasPrev = b.textContent.trim().split(' ')[0] === prev;
+    const sp = b.querySelector('span');
+    if (wasPrev && !isNext && sp) { const n=parseInt(sp.textContent,10)-1; if(n<=0)sp.remove(); else sp.textContent=n; }
+    if (!wasPrev && isNext) { let sp2=b.querySelector('span'); if(!sp2){sp2=document.createElement('span');b.appendChild(sp2);} sp2.textContent=(parseInt(sp2.textContent||'0',10)+1); }
+    b.classList.toggle('reacted', bEmoji === next && b === btn);
+  });
+  if (next) fetch('/api/reactions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
+    body: JSON.stringify({ entity_type: 'post', entity_id: postId, type: next }),
   }).catch(()=>{});
 }
 
