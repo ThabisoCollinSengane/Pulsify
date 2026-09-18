@@ -174,6 +174,7 @@ select.inp option{background:#1C1140}
     <div class="tab" onclick="switchTab(this,'pane-sqpromos')">🎁 Deals</div>
     <div class="tab" onclick="switchTab(this,'pane-pricelist')">💲 Pricelist</div>
     <div class="tab" onclick="switchTab(this,'pane-settings')">⚙️ Settings</div>
+    <div class="tab" onclick="switchTab(this,'pane-lumi-orders')">🤖 Orders</div>
   </div>
 
   <div class="pane active" id="pane-post">
@@ -604,6 +605,17 @@ select.inp option{background:#1C1140}
     <div class="section-label">Recent Check-ins</div>
     <div id="scan-checkins" class="card">
       <div class="empty">Select an event to see check-ins</div>
+    </div>
+  </div>
+
+  <!-- LUMI ORDERS PANE -->
+  <div class="pane" id="pane-lumi-orders">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu)">Lumi Ticket Orders</div>
+      <div id="lumi-orders-count" style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;color:var(--or)"></div>
+    </div>
+    <div id="lumi-orders-list">
+      <div class="empty" style="padding:24px;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div>
     </div>
   </div>
 </div>
@@ -1791,6 +1803,7 @@ function switchTab(btn, paneId, _noPush) {
     const sel = document.getElementById('scan-event-sel');
     if (sel.options.length <= 1) loadScanEvents(); else loadScanStats();
   }
+  if (paneId === 'pane-lumi-orders') loadLumiOrders();
 }
 
 async function loadPostUsage() {
@@ -2736,6 +2749,53 @@ async function loadScanEvents() {
     });
   } catch(e) {}
   loadScanStats();
+}
+
+async function loadLumiOrders() {
+  const el = document.getElementById('lumi-orders-list');
+  const ct = document.getElementById('lumi-orders-count');
+  el.innerHTML = '<div class="empty" style="padding:24px;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div>';
+  try {
+    const uid = (await sb.auth.getUser()).data.user?.id;
+    if (!uid) { el.innerHTML = '<div class="empty" style="padding:24px;text-align:center;color:var(--mu)">Not signed in</div>'; return; }
+    const { data, error } = await sb
+      .from('siza_orders')
+      .select('id,event_id,customer_name,customer_email,customer_phone,quantity,total_cents,state,created_at,events!inner(name,organizer_id)')
+      .eq('events.organizer_id', uid)
+      .order('created_at', { ascending: false })
+      .limit(60);
+    if (error) throw error;
+    if (!data || !data.length) {
+      ct.textContent = '';
+      el.innerHTML = '<div class="empty" style="padding:24px;text-align:center;color:var(--mu);font-size:.82rem">No Lumi orders yet. Once customers buy tickets through the chat widget, orders appear here.</div>';
+      return;
+    }
+    const paidCount = data.filter(o => o.state === 'paid').length;
+    ct.textContent = `${paidCount} paid / ${data.length} total`;
+    const stateColor = { paid: 'var(--li)', pending: 'var(--or)', failed: 'var(--pk)' };
+    el.innerHTML = data.map(o => {
+      const evName = (Array.isArray(o.events) ? o.events[0]?.name : o.events?.name) || o.event_id;
+      const amt = o.total_cents ? `R${(o.total_cents / 100).toFixed(2)}` : '—';
+      const dt = new Date(o.created_at).toLocaleDateString('en-ZA', { day:'2-digit', month:'short', year:'numeric' });
+      const sc = stateColor[o.state] || 'var(--mu)';
+      return `<div class="card" style="margin-bottom:8px">
+        <div class="card-body" style="padding:12px 14px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
+            <div style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${x(evName)}</div>
+            <div style="font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:${sc};text-transform:uppercase;flex-shrink:0">${o.state}</div>
+          </div>
+          <div style="font-size:.78rem;color:var(--mu2);margin-bottom:4px">${x(o.customer_name || '—')} · ${x(o.customer_email || '—')}</div>
+          <div style="display:flex;gap:16px;font-size:.72rem;color:var(--mu)">
+            <span>🎟 ${o.quantity || 1}×</span>
+            <span>💰 ${amt}</span>
+            <span style="margin-left:auto">${dt}</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = `<div class="empty" style="padding:24px;text-align:center;color:var(--pk);font-size:.78rem">Error: ${e.message}</div>`;
+  }
 }
 
 async function loadScanStats() {
