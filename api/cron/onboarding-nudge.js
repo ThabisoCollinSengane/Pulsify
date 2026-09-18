@@ -1,5 +1,5 @@
 const { sb, CORS } = require('../../lib/shared');
-const { sendNudgeDay2Email, sendNudgeDay7Email } = require('../email');
+const { sendNudgeDay2Email, sendNudgeDay7Email } = require('../../lib/email');
 
 module.exports = async (req, res) => {
   Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));

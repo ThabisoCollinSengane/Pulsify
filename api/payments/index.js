@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError } = require('../../lib/shared');
-const { sendPaymentConfirmEmail, sendTicketEmail } = require('../email');
+const { sendPaymentConfirmEmail, sendTicketEmail } = require('../../lib/email');
 
 module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));

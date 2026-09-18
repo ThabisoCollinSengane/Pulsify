@@ -1,6 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
-const { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail, sendTicketEmail, sendOrderEmail, unsubToken } = require('./email');
+const { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail, sendTicketEmail, sendOrderEmail, unsubToken } = require('../lib/email');
 const { rateLimited, captureError, corsHeaders, signQr, verifyQr, validate, flagEnabled } = require('../lib/shared');
 const { syncTicketPurchase, syncBusinessRegistration } = require('../lib/hubspot');
 
