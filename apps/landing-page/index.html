@@ -3194,6 +3194,7 @@ async function sendLumi() {
     if (_lumiConvId) body.conversationId = _lumiConvId;
     if (currentUser) { body.customer_name = currentUser.display_name || ''; body.customer_email = currentUser.email || ''; }
     const d = await Api.post('/siza/chat', body);
+    if (d._debug) console.error('[lumi] _debug:', d._debug);
     if (d.conversationId) _lumiConvId = d.conversationId;
     _lumiAddMsg('out', d.reply, d.suggestContact, d.suggestPurchase && _lumiBuyState !== 'done');
   } catch (e) {
