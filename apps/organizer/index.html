@@ -2760,8 +2760,8 @@ async function loadLumiOrders() {
     if (!uid) { el.innerHTML = '<div class="empty" style="padding:24px;text-align:center;color:var(--mu)">Not signed in</div>'; return; }
     const { data, error } = await sb
       .from('siza_orders')
-      .select('id,event_id,customer_name,customer_email,customer_phone,quantity,total_cents,state,created_at,events!inner(name,organizer_id)')
-      .eq('events.organizer_id', uid)
+      .select('id,event_id,customer_name,customer_email,customer_phone,quantity,total_cents,state,created_at,events!inner(name,organiser_id)')
+      .eq('events.organiser_id', uid)
       .order('created_at', { ascending: false })
       .limit(60);
     if (error) throw error;
