@@ -218,6 +218,10 @@ RULES: Do NOT make up specific event names, dates or prices. Encourage them to u
           reply = "Lumi's connection needs attention — please contact the organiser directly for now.";
         } else if (/Groq 429/.test(msg)) {
           reply = "Eish, Lumi is getting a LOT of messages right now! 🔥 Give me a moment and try again.";
+        } else if (/Groq 400/.test(msg)) {
+          reply = "Eish, something went sideways on my side 😅 Try again in a sec — I'm still learning!";
+        } else if (/Groq 404/.test(msg)) {
+          reply = "Lumi is still being set up — please contact the organiser directly for now.";
         } else if (/Groq [45]\d\d|overload|unavailable/i.test(msg)) {
           reply = "Lumi is a bit overloaded right now 😅 Try again in a moment!";
         } else {
