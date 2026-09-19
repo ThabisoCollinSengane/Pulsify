@@ -351,16 +351,17 @@ RULES: Do NOT make up specific event names, dates or prices. Encourage them to u
         organizerId = orgProfile?.id || null;
       }
 
-      // Find or create conversation for this phone number
+      // Find active conversation scoped to this WhatsApp number (prevents cross-organizer leakage)
       let { data: conv } = await sb().from('siza_conversations')
         .select('*')
         .eq('customer_phone', from)
         .eq('channel', 'whatsapp')
         .eq('state', 'bot')
+        .eq('customer_session_id', phoneId)
         .order('created_at', { ascending: false })
         .limit(1).single();
 
-      // If no active conversation, ask which event
+      // If no active conversation, handle event selection
       if (!conv) {
         // Look for active siza-enabled events; scope to organizer if matched
         let evQuery = sb().from('events')
@@ -368,7 +369,7 @@ RULES: Do NOT make up specific event names, dates or prices. Encourage them to u
           .eq('siza_enabled', true)
           .gte('date_local', new Date().toISOString().split('T')[0])
           .order('date_local', { ascending: true })
-          .limit(5);
+          .limit(9);
         if (organizerId) evQuery = evQuery.eq('organiser_id', organizerId);
         const { data: activeEvents } = await evQuery;
 
@@ -382,32 +383,61 @@ RULES: Do NOT make up specific event names, dates or prices. Encourage them to u
           const { data: newConv } = await sb().from('siza_conversations').insert({
             event_id: activeEvents[0].id,
             customer_phone: from,
+            customer_session_id: phoneId,
             channel: 'whatsapp',
             state: 'bot',
             last_message_at: new Date().toISOString(),
           }).select().single();
           conv = newConv;
         } else {
-          // Multiple events — ask which one
-          const list = activeEvents.map((e, i) => `${i + 1}. ${e.name}`).join('\n');
-          await sendWhatsApp(from, phoneId, token, `Hi! Which event are you asking about?\n\n${list}\n\nReply with the number.`);
-          return res.status(200).json({ received: true });
+          // Check if this message is a number selection from a previous list
+          const isNumberReply = /^[1-9]$/.test(text.trim());
+          if (isNumberReply) {
+            const idx = parseInt(text.trim(), 10) - 1;
+            if (idx >= 0 && idx < activeEvents.length) {
+              // Valid selection — start conversation for chosen event
+              const { data: newConv } = await sb().from('siza_conversations').insert({
+                event_id: activeEvents[idx].id,
+                customer_phone: from,
+                customer_session_id: phoneId,
+                channel: 'whatsapp',
+                state: 'bot',
+                last_message_at: new Date().toISOString(),
+              }).select().single();
+              conv = newConv;
+            } else {
+              // Out of range — re-send list
+              const list = activeEvents.map((e, i) => `${i + 1}. ${e.name}`).join('\n');
+              await sendWhatsApp(from, phoneId, token, `Please reply with a number between 1 and ${activeEvents.length}:\n\n${list}`);
+              return res.status(200).json({ received: true });
+            }
+          } else {
+            // Multiple events — ask which one
+            const list = activeEvents.map((e, i) => `${i + 1}. ${e.name}`).join('\n');
+            await sendWhatsApp(from, phoneId, token, `Hi! Which event are you asking about?\n\n${list}\n\nReply with the number.`);
+            return res.status(200).json({ received: true });
+          }
         }
       }
 
       if (!conv?.event_id) return res.status(200).json({ received: true });
 
-      // Re-use the chat handler logic inline
-      const fakeReq = { body: { eventId: conv.event_id, conversationId: conv.id, message: text, channel: 'whatsapp', sessionId: from } };
       let chatReply = "I'm having trouble right now. Please try again shortly.";
       let suggestContact = false;
       try {
-        // Minimal inline chat (avoids circular HTTP call)
         const { data: event } = await sb().from('events')
           .select('id,name,genre,siza_enabled')
           .eq('id', conv.event_id).single();
 
         await sb().from('siza_messages').insert({ conversation_id: conv.id, direction: 'in', body: text, is_ai: false });
+
+        // Load last 6 messages for context
+        const { data: history } = await sb().from('siza_messages')
+          .select('direction,body')
+          .eq('conversation_id', conv.id)
+          .order('created_at', { ascending: false })
+          .limit(7);
+        const recentMsgs = (history || []).reverse().slice(0, -1);
 
         const queryEmb = await groqEmbed(text).catch(() => null);
         let ctx = '';
@@ -421,10 +451,26 @@ RULES: Do NOT make up specific event names, dates or prices. Encourage them to u
             `[${i.kind.toUpperCase()}] ${i.title}: ${i.body}` +
             (i.price_cents ? ` (Price: R${(i.price_cents / 100).toFixed(2)})` : '')
           ).join('\n');
+        } else {
+          // Fallback: table scan when embed fails
+          const { data: items } = await sb().from('event_siza_knowledge')
+            .select('kind,title,body,price_cents')
+            .eq('event_id', conv.event_id)
+            .eq('in_stock', true)
+            .limit(10);
+          if (items?.length) ctx = '\n\nKNOWLEDGE BASE:\n' + items.map(i =>
+            `[${i.kind.toUpperCase()}] ${i.title}: ${i.body}` +
+            (i.price_cents ? ` (Price: R${(i.price_cents / 100).toFixed(2)})` : '')
+          ).join('\n');
         }
 
         const systemPrompt = buildLumiSystemPrompt(event, 'whatsapp') + ctx;
-        chatReply = await groqChat([{ role: 'user', content: text }], systemPrompt);
+        const chatMessages = recentMsgs.map(m => ({
+          role: m.direction === 'in' ? 'user' : 'assistant',
+          content: m.body,
+        }));
+        chatMessages.push({ role: 'user', content: text });
+        chatReply = await groqChat(chatMessages, systemPrompt);
         suggestContact = /don't have|contact|organis|not sure|I can't/i.test(chatReply);
 
         await sb().from('siza_messages').insert({ conversation_id: conv.id, direction: 'out', body: chatReply, is_ai: true });
