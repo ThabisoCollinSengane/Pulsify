@@ -266,9 +266,10 @@ Tracked work from the security, architecture and map briefs. Tackle in order:
       filtered to the current viewport bounds, sorted by distance from the user
       (map-center fallback). `#map-panel` is a full-screen modal, so the snapshot
       taken on open IS the synced view (you can't pan behind it).
-- [~] **User-location intelligence (#10)** — `toggleNearMe()` geolocation auto-centre +
-      proximity ranking + distance badges exist. Remaining: auto-prompt/centre on
-      first map open without a tap.
+- [x] **User-location intelligence (#10)** — `toggleNearMe()` geolocation auto-centre +
+      proximity ranking + distance badges exist. `_autoLocateOnce()` fires from the
+      map `load` event (first open) and from `showTab('map')` (re-opens); guarded by
+      `_mapAutoLocateDone` flag so it prompts only once per session.
 - [x] **Data cleaning (#11)** — daily 4am cron (`api/cron/event-cleanup.js`):
       deactivates past events, then calls `cleanup_map_data()`
       (`db/cleanup_map_data_fn.sql`) to null out-of-SA-bounds event coords and
