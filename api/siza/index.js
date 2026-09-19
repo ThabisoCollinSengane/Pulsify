@@ -15,12 +15,37 @@ module.exports = async (req, res) => {
     if (url === '/siza/health' && req.method === 'GET') {
       const key = process.env.GROQ_API_KEY || '';
       if (!key) return res.status(200).json({ ok: false, error: 'GROQ_API_KEY not set in environment' });
-      try {
-        const reply = await groqChat([{ role: 'user', content: 'ping' }], 'Reply with exactly: pong');
-        return res.status(200).json({ ok: true, reply, keyHint: '***' + key.slice(-4) });
-      } catch (e) {
-        return res.status(200).json({ ok: false, error: e.message, keyHint: '***' + key.slice(-4) });
+
+      // Test each model individually to show exactly which ones work
+      const MODELS_TO_TEST = [
+        'llama-3.3-70b-versatile',
+        'llama-3.1-8b-instant',
+        'llama-3.1-70b-versatile',
+        'llama3-70b-8192',
+        'qwen-qwq-32b',
+        'compound-beta-mini',
+      ];
+      const results = {};
+      let firstWorking = null;
+      for (const model of MODELS_TO_TEST) {
+        try {
+          const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+            body: JSON.stringify({ model, messages: [{ role: 'user', content: 'Reply with exactly: pong' }], max_tokens: 10 }),
+          });
+          if (r.ok) {
+            results[model] = 'OK';
+            if (!firstWorking) firstWorking = model;
+          } else {
+            const t = await r.text();
+            results[model] = `${r.status}: ${t.slice(0, 80)}`;
+          }
+        } catch (e) {
+          results[model] = `ERR: ${(e.message || '').slice(0, 80)}`;
+        }
       }
+      return res.status(200).json({ ok: !!firstWorking, firstWorking, models: results, keyHint: '***' + key.slice(-4) });
     }
 
     /* ─── GET /siza/whatsapp/webhook — Meta verification ─────── */
