@@ -96,20 +96,23 @@ ${text.slice(0, 4000)}`;
     /* ─── POST /siza/chat ─────────────────────────────────────── */
     if (url === '/siza/chat' && req.method === 'POST') {
       const { eventId, conversationId, message, channel = 'web', sessionId } = req.body || {};
-      if (!eventId || !message) return res.status(400).json({ error: 'eventId and message required' });
+      if (!message) return res.status(400).json({ error: 'message required' });
 
-      // Load event
-      const { data: event } = await sb().from('events')
-        .select('id,name,genre,siza_enabled,organizer_id')
-        .eq('id', eventId).single();
-      if (!event) return res.status(404).json({ error: 'Event not found' });
-      if (!event.siza_enabled) return res.status(403).json({ error: 'Lumi is not enabled for this event' });
+      // Load event (optional — null for discovery mode)
+      let event = null;
+      if (eventId) {
+        const { data: ev } = await sb().from('events')
+          .select('id,name,genre,organizer_id')
+          .eq('id', eventId).single();
+        if (!ev) return res.status(404).json({ error: 'Event not found' });
+        event = ev;
+      }
 
       // Get or create conversation
       let convId = conversationId;
       if (!convId) {
         const { data: conv } = await sb().from('siza_conversations').insert({
-          event_id: eventId,
+          event_id: eventId || null,
           customer_session_id: sessionId || null,
           channel,
           state: 'bot',
@@ -130,33 +133,35 @@ ${text.slice(0, 4000)}`;
         is_ai: false,
       });
 
-      // Retrieve top-3 knowledge items by semantic similarity
+      // Retrieve top-3 knowledge items by semantic similarity (event mode only)
       let knowledgeContext = '';
-      const queryEmbedding = await groqEmbed(message).catch(() => null);
-      if (queryEmbedding) {
-        const { data: items } = await sb().rpc('siza_match_knowledge', {
-          p_event_id: eventId,
-          p_embedding: `[${queryEmbedding.join(',')}]`,
-          p_limit: 3,
-        });
-        if (items && items.length > 0) {
-          knowledgeContext = '\n\nKNOWLEDGE BASE:\n' + items.map(i =>
-            `[${i.kind.toUpperCase()}] ${i.title}: ${i.body}` +
-            (i.price_cents ? ` (Price: R${(i.price_cents / 100).toFixed(2)})` : '')
-          ).join('\n');
-        }
-      } else {
-        // Fallback: fetch all knowledge for this event (no vector search)
-        const { data: items } = await sb().from('event_siza_knowledge')
-          .select('kind,title,body,price_cents')
-          .eq('event_id', eventId)
-          .eq('in_stock', true)
-          .limit(10);
-        if (items && items.length > 0) {
-          knowledgeContext = '\n\nKNOWLEDGE BASE:\n' + items.map(i =>
-            `[${i.kind.toUpperCase()}] ${i.title}: ${i.body}` +
-            (i.price_cents ? ` (Price: R${(i.price_cents / 100).toFixed(2)})` : '')
-          ).join('\n');
+      if (eventId) {
+        const queryEmbedding = await groqEmbed(message).catch(() => null);
+        if (queryEmbedding) {
+          const { data: items } = await sb().rpc('siza_match_knowledge', {
+            p_event_id: eventId,
+            p_embedding: `[${queryEmbedding.join(',')}]`,
+            p_limit: 3,
+          });
+          if (items && items.length > 0) {
+            knowledgeContext = '\n\nKNOWLEDGE BASE:\n' + items.map(i =>
+              `[${i.kind.toUpperCase()}] ${i.title}: ${i.body}` +
+              (i.price_cents ? ` (Price: R${(i.price_cents / 100).toFixed(2)})` : '')
+            ).join('\n');
+          }
+        } else {
+          // Fallback: fetch all knowledge for this event (no vector search)
+          const { data: items } = await sb().from('event_siza_knowledge')
+            .select('kind,title,body,price_cents')
+            .eq('event_id', eventId)
+            .eq('in_stock', true)
+            .limit(10);
+          if (items && items.length > 0) {
+            knowledgeContext = '\n\nKNOWLEDGE BASE:\n' + items.map(i =>
+              `[${i.kind.toUpperCase()}] ${i.title}: ${i.body}` +
+              (i.price_cents ? ` (Price: R${(i.price_cents / 100).toFixed(2)})` : '')
+            ).join('\n');
+          }
         }
       }
 
@@ -168,7 +173,9 @@ ${text.slice(0, 4000)}`;
         .limit(7);
       const recentMsgs = (history || []).reverse().slice(0, -1); // exclude the message we just inserted
 
-      const systemPrompt = buildLumiSystemPrompt(event, channel) + knowledgeContext;
+      const systemPrompt = eventId
+        ? buildLumiSystemPrompt(event, channel) + knowledgeContext
+        : "You are Lumi, a friendly event discovery assistant for Pulsify, South Africa's top event platform. Help users find events that match their vibe, location, and interests. Suggest event types, areas to explore, or direct them to use the search bar or map. Be warm, concise, and enthusiastic. Do not make up specific events — encourage them to browse the home feed or map.";
       const chatMessages = recentMsgs.map(m => ({
         role: m.direction === 'in' ? 'user' : 'assistant',
         content: m.body,
