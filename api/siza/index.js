@@ -106,34 +106,33 @@ ${text.slice(0, 4000)}`;
         event = ev;
       }
 
-      // Get or create conversation
+      // Get or create conversation (non-fatal — Lumi responds even without DB tracking)
       let convId = conversationId;
       if (!convId) {
-        const { data: conv } = await sb().from('siza_conversations').insert({
+        const { data: conv, error: convErr } = await sb().from('siza_conversations').insert({
           event_id: eventId || null,
           customer_session_id: sessionId || null,
           channel,
           state: 'bot',
           last_message_at: new Date().toISOString(),
         }).select('id').single();
-        convId = conv?.id;
-        if (!convId) {
-          console.error('[siza/chat] failed to create conversation');
-          return res.status(200).json({ reply: "Eish, I'm having trouble starting a new chat. Please try again!", conversationId: null });
-        }
+        if (convErr) console.error('[siza/chat] conv insert error', convErr.code, convErr.message);
+        convId = conv?.id || null;
       } else {
         await sb().from('siza_conversations')
           .update({ last_message_at: new Date().toISOString() })
           .eq('id', convId);
       }
 
-      // Store inbound message
-      await sb().from('siza_messages').insert({
-        conversation_id: convId,
-        direction: 'in',
-        body: message,
-        is_ai: false,
-      });
+      // Store inbound message (only when conversation tracking is working)
+      if (convId) {
+        await sb().from('siza_messages').insert({
+          conversation_id: convId,
+          direction: 'in',
+          body: message,
+          is_ai: false,
+        });
+      }
 
       // Retrieve top-3 knowledge items by semantic similarity (event mode only)
       let knowledgeContext = '';
@@ -168,12 +167,15 @@ ${text.slice(0, 4000)}`;
       }
 
       // Load last 6 messages for context
-      const { data: history } = await sb().from('siza_messages')
-        .select('direction,body')
-        .eq('conversation_id', convId)
-        .order('created_at', { ascending: false })
-        .limit(7);
-      const recentMsgs = (history || []).reverse().slice(0, -1); // exclude the message we just inserted
+      let recentMsgs = [];
+      if (convId) {
+        const { data: history } = await sb().from('siza_messages')
+          .select('direction,body')
+          .eq('conversation_id', convId)
+          .order('created_at', { ascending: false })
+          .limit(7);
+        recentMsgs = (history || []).reverse().slice(0, -1); // exclude the message we just inserted
+      }
 
       const systemPrompt = eventId
         ? buildLumiSystemPrompt(event, channel) + knowledgeContext
@@ -207,6 +209,7 @@ RULES: Do NOT make up specific event names, dates or prices. Encourage them to u
         // If Lumi says it doesn't know, flag for escalation UI
         suggestContact = /don't have|contact|organis|not sure|I can't/i.test(reply);
       } catch (e) {
+        // Always log the full error so it's visible in Vercel Function logs
         console.error('[siza/chat] groq error:', e.message);
         const msg = e.message || '';
         if (msg === 'GROQ_API_KEY_MISSING' || msg.includes('GROQ_API_KEY is not set')) {
@@ -219,16 +222,18 @@ RULES: Do NOT make up specific event names, dates or prices. Encourage them to u
           reply = "Eish, something went wrong on my side! 😅 Please try again or contact the organiser directly.";
         }
         suggestContact = true;
-        return res.status(200).json({ reply, conversationId: convId, suggestPurchase: false, suggestContact: true });
+        return res.status(200).json({ reply, conversationId: convId, suggestPurchase: false, suggestContact: true, _debug: msg });
       }
 
       // Store AI reply
-      await sb().from('siza_messages').insert({
-        conversation_id: convId,
-        direction: 'out',
-        body: reply,
-        is_ai: true,
-      });
+      if (convId) {
+        await sb().from('siza_messages').insert({
+          conversation_id: convId,
+          direction: 'out',
+          body: reply,
+          is_ai: true,
+        });
+      }
 
       return res.status(200).json({ reply, conversationId: convId, suggestPurchase, suggestContact });
     }
