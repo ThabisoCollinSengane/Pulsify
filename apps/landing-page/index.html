@@ -3075,8 +3075,8 @@ function openLumiChat(evId, evName) {
   document.getElementById('lumi-ev-label').textContent = isDiscover ? 'Event Discovery' : (evName || '');
   if (!_lumiMsgs.length) {
     const greeting = isDiscover
-      ? `Hey! I'm Lumi 👋 Tell me what kind of event you're looking for — a festival, a chill night out, something for the family — and I'll point you in the right direction!`
-      : `Hey! I'm Lumi 👋 I'm here to help with "${evName}". Ask me about tickets, lineup, dress code, or anything else!`;
+      ? `Lumi here — your SA events guide. Looking for something tonight, this weekend, or just exploring? Tell me a city or vibe and I'll sort you out.`
+      : `Lumi here — I've got the details on "${evName}". Ask me about tickets, the lineup, dress code, parking, anything.`;
     _lumiAddMsg('out', greeting);
   }
 }

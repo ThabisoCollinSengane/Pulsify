@@ -11,41 +11,35 @@ module.exports = async (req, res) => {
 
   try {
 
-    /* ─── GET /siza/health — Groq connectivity check ─────────── */
+    /* ─── GET /siza/health ───────────────────────────────────── */
     if (url === '/siza/health' && req.method === 'GET') {
-      const key = process.env.GROQ_API_KEY || '';
-      if (!key) return res.status(200).json({ ok: false, error: 'GROQ_API_KEY not set in environment' });
-
-      // Test each model individually to show exactly which ones work
-      const MODELS_TO_TEST = [
-        'llama-3.3-70b-versatile',
-        'llama-3.1-8b-instant',
-        'llama-3.1-70b-versatile',
-        'llama3-70b-8192',
-        'qwen-qwq-32b',
-        'compound-beta-mini',
-      ];
+      const groqKey = process.env.GROQ_API_KEY || '';
       const results = {};
-      let firstWorking = null;
-      for (const model of MODELS_TO_TEST) {
+
+      if (!groqKey) {
+        results.groq_chat = 'GROQ_API_KEY not set';
+        results.groq_embed = 'GROQ_API_KEY not set';
+      } else {
         try {
-          const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-            body: JSON.stringify({ model, messages: [{ role: 'user', content: 'Reply with exactly: pong' }], max_tokens: 10 }),
-          });
-          if (r.ok) {
-            results[model] = 'OK';
-            if (!firstWorking) firstWorking = model;
-          } else {
-            const t = await r.text();
-            results[model] = `${r.status}: ${t.slice(0, 80)}`;
-          }
+          await groqChat([{ role: 'user', content: 'Reply with exactly: pong' }], 'You are a test assistant. Reply with exactly: pong');
+          results.groq_chat = 'OK';
         } catch (e) {
-          results[model] = `ERR: ${(e.message || '').slice(0, 80)}`;
+          results.groq_chat = `ERR: ${(e.message || '').slice(0, 100)}`;
+        }
+        try {
+          const r = await fetch('https://api.groq.com/openai/v1/embeddings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groqKey}` },
+            body: JSON.stringify({ model: 'nomic-embed-text-v1.5', input: 'test' }),
+          });
+          results.groq_embed = r.ok ? 'OK' : `${r.status}`;
+        } catch (e) {
+          results.groq_embed = `ERR: ${(e.message || '').slice(0, 80)}`;
         }
       }
-      return res.status(200).json({ ok: !!firstWorking, firstWorking, models: results, keyHint: '***' + key.slice(-4) });
+
+      const ok = results.groq_chat === 'OK';
+      return res.status(200).json({ ok, model: 'compound-beta-mini', results });
     }
 
     /* ─── GET /siza/whatsapp/webhook — Meta verification ─────── */
@@ -93,7 +87,7 @@ ${text.slice(0, 4000)}`;
 
       let items;
       try {
-        const raw = await groqChat([], extractPrompt);
+        const raw = await groqChat([{ role: 'user', content: extractPrompt }], 'You are a structured data extractor. Return only valid JSON.');
         const cleaned = raw.replace(/```json|```/g, '').trim();
         items = JSON.parse(cleaned);
         if (!Array.isArray(items)) throw new Error('Not an array');
@@ -214,17 +208,86 @@ ${text.slice(0, 4000)}`;
         recentMsgs = (history || []).reverse().slice(0, -1); // exclude the message we just inserted
       }
 
-      const systemPrompt = eventId
-        ? buildLumiSystemPrompt(event, channel) + knowledgeContext
-        : `You are Lumi — a smart, outgoing young South African woman and the face of Pulsify, SA's top events platform. You know the local events scene inside out across Durban, Johannesburg, Cape Town, Pretoria and beyond.
+      let systemPrompt;
+      if (eventId) {
+        systemPrompt = buildLumiSystemPrompt(event, channel) + knowledgeContext;
+      } else {
+        // Discovery mode — query real upcoming events from DB
+        const msgLower = message.toLowerCase();
+        const isPriceQuery = /cheapest|cheap|affordable|price|how much|cost/.test(msgLower);
 
-Help the customer discover events that match their vibe, location, and interests. Suggest genres (Amapiano, Gqom, House, Afrobeats, Jazz, Gospel, etc.), areas to explore, or direct them to browse the home feed or map.
+        // Detect city/genre hints from message
+        const cityHints = { durban: 'Durban', joburg: 'Johannesburg', johannesburg: 'Johannesburg', 'cape town': 'Cape Town', pretoria: 'Pretoria', gqeberha: 'Gqeberha', bloemfontein: 'Bloemfontein' };
+        let cityFilter = null;
+        for (const [hint, city] of Object.entries(cityHints)) {
+          if (msgLower.includes(hint)) { cityFilter = city; break; }
+        }
 
-LANGUAGE: Detect the language the customer writes in and reply in the same language. Supported: English, isiZulu, isiXhosa, Afrikaans, Sesotho, Setswana, Xitsonga, Tshivenda, isiNdebele, siSwati. Default to English if unsure.
+        const genreHints = ['amapiano', 'gqom', 'afrobeats', 'house', 'hip-hop', 'hiphop', 'jazz', 'gospel', 'kwaito', 'r&b', 'rnb', 'festival', 'concert', 'comedy', 'food', 'art'];
+        let genreFilter = null;
+        for (const g of genreHints) {
+          if (msgLower.includes(g)) { genreFilter = g; break; }
+        }
 
-SAFETY: When relevant, naturally mention safety tips — arriving before dark, verified transport (Uber/Bolt), keeping valuables safe in crowds, sharing plans with someone.
+        let eventsQuery = sb().from('events')
+          .select('id,name,genre,city,date_local,venue_name')
+          .eq('is_active', true)
+          .gte('date_local', new Date().toISOString().split('T')[0])
+          .order('date_local', { ascending: true })
+          .limit(8);
+        if (cityFilter) eventsQuery = eventsQuery.ilike('city', `%${cityFilter}%`);
+        if (genreFilter) eventsQuery = eventsQuery.ilike('genre', `%${genreFilter}%`);
 
-RULES: Do NOT make up specific event names, dates or prices. Encourage them to use the search bar, browse the home feed, or tap the map to find what's on near them. Be warm, concise and enthusiastic — 2–3 sentences max.`;
+        const { data: upcomingEvents } = await eventsQuery;
+
+        let eventsContext = '';
+        if (upcomingEvents && upcomingEvents.length > 0) {
+          const eventIds = upcomingEvents.map(e => e.id);
+
+          // For price queries, also fetch ticket_tiers
+          let tiersMap = {};
+          if (isPriceQuery) {
+            const { data: tiers } = await sb().from('ticket_tiers')
+              .select('event_id,name,price')
+              .in('event_id', eventIds)
+              .order('price', { ascending: true });
+            if (tiers) {
+              for (const t of tiers) {
+                if (!tiersMap[t.event_id]) tiersMap[t.event_id] = t; // cheapest per event
+              }
+            }
+          }
+
+          eventsContext = '\n\nUPCOMING EVENTS ON PULSIFY:\n' + upcomingEvents.map(e => {
+            const tier = tiersMap[e.id];
+            const priceStr = tier ? ` | Tickets from R${tier.price}` : '';
+            const dateStr = e.date_local ? ` | ${e.date_local}` : '';
+            return `- ${e.name} (${e.genre || 'Event'}, ${e.city || 'SA'}${dateStr}${priceStr}) → https://pulsefy.co.za/event/${e.id}`;
+          }).join('\n');
+        }
+
+        const browseLine = cityFilter || genreFilter
+          ? `Browse more: https://pulsefy.co.za/?${genreFilter ? `genre=${encodeURIComponent(genreFilter)}` : ''}${cityFilter && genreFilter ? '&' : ''}${cityFilter ? `city=${encodeURIComponent(cityFilter)}` : ''}`
+          : 'Browse all events: https://pulsefy.co.za';
+
+        systemPrompt = `You are Lumi — a sharp, outgoing young South African woman and the face of Pulsify, SA's top events platform. You know the local scene across Durban, Johannesburg, Cape Town and Pretoria inside out.
+
+TONE: Confident, warm, concise — like a well-connected friend, not a bot. Light SA slang (lekker, sharp, eish) used once naturally, not every sentence.
+
+LANGUAGE: Match the language the customer writes in — English, isiZulu, isiXhosa, Afrikaans, or any other SA language. Code-switch if they do. Default to English.
+
+TASK: Help them discover events. Use the UPCOMING EVENTS list below when relevant — share real event names and Pulsify links. For price questions, use real ticket prices from the list.
+
+SAFETY: Mention at most once, only if a night event at an unfamiliar venue. Use verified transport (Uber/Bolt), park safely, keep valuables secure.
+
+RULES:
+1. Only share event names, prices and dates from the list below — never invent them.
+2. If the list is empty or doesn't match their query, say so and direct them to browse: ${browseLine}
+3. Keep replies to 3–4 sentences. No bullet-point dumps.
+4. Do NOT open with "Hey there!" — just answer.${eventsContext}
+
+${browseLine}`;
+      }
 
       const chatMessages = recentMsgs.map(m => ({
         role: m.direction === 'in' ? 'user' : 'assistant',
@@ -254,15 +317,15 @@ RULES: Do NOT make up specific event names, dates or prices. Encourage them to u
         } else if (/Groq 401/.test(msg)) {
           reply = "Lumi's connection needs attention — please contact the organiser directly for now.";
         } else if (/Groq 429/.test(msg)) {
-          reply = "Eish, Lumi is getting a LOT of messages right now! 🔥 Give me a moment and try again.";
+          reply = "Eish, Lumi is getting a LOT of messages right now! Give me a moment and try again.";
         } else if (/Groq 400/.test(msg)) {
-          reply = "Eish, something went sideways on my side 😅 Try again in a sec — I'm still learning!";
+          reply = "Eish, something went sideways on my side. Try again in a sec!";
         } else if (/Groq 404/.test(msg)) {
-          reply = "Lumi's AI model is updating — please try again in a moment or contact the organiser.";
+          reply = "Lumi's AI is updating — please try again in a moment or contact the organiser.";
         } else if (/Groq [45]\d\d|overload|unavailable/i.test(msg)) {
-          reply = "Lumi is a bit overloaded right now 😅 Try again in a moment!";
+          reply = "Lumi is a bit overloaded right now. Try again in a moment!";
         } else {
-          reply = "Eish, something went sideways on my side 😅 Try again in a sec — I'm still learning!";
+          reply = "Eish, something went sideways on my side. Try again in a sec!";
         }
         return res.status(200).json({ reply, conversationId: convId, suggestPurchase: false, suggestContact: true, _debug: msg });
       }
