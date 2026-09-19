@@ -8,6 +8,10 @@
 *.backup
 *.backup.*
 
+# TikTok leads cron — excluded until Pro plan (Hobby limit: 12 serverless functions)
+# Remove this line when upgrading to Pro and add RAPIDAPI_KEY to Vercel env vars.
+api/cron/tiktok-leads.js
+
 # Dev-only folders not needed for deployment
 _archive/
 db/

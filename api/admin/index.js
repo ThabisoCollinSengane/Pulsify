@@ -1,6 +1,7 @@
 const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError } = require('../../lib/shared');
 const { upsertContact } = require('../../lib/hubspot');
-const { sendVerifApprovedEmail, sendVerifRejectedEmail, sendLeadEmail, sendMarketingEmail, sendEventApprovedEmail, sendEventRejectedEmail, sendClaimLinkEmail, EMAIL_CONFIGURED } = require('../../lib/email');
+const { sendLeadEmail, sendMarketingEmail, sendEventApprovedEmail, sendEventRejectedEmail, sendClaimLinkEmail, EMAIL_CONFIGURED } = require('../../lib/email');
+const { queueEmail } = require('../../lib/email-queue');
 const PUBLIC_URL = process.env.PUBLIC_URL || 'https://pulsefy.co.za';
 
 module.exports = async (req, res) => {
@@ -467,9 +468,9 @@ module.exports = async (req, res) => {
       const targetName  = data?.display_name;
       if (targetEmail) {
         if (action === 'approve') {
-          sendVerifApprovedEmail(targetEmail, targetName).catch(e => console.error('[email/verif]', e.message));
+          queueEmail('verif_approved', targetEmail, { display_name: targetName }).catch(() => {});
         } else {
-          sendVerifRejectedEmail(targetEmail, targetName, notes).catch(e => console.error('[email/verif]', e.message));
+          queueEmail('verif_rejected', targetEmail, { display_name: targetName, notes }).catch(() => {});
         }
       }
 
