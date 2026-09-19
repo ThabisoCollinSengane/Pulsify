@@ -369,7 +369,7 @@ RULES: Do NOT make up specific event names, dates or prices. Encourage them to u
           .gte('date_local', new Date().toISOString().split('T')[0])
           .order('date_local', { ascending: true })
           .limit(5);
-        if (organizerId) evQuery = evQuery.eq('organizer_id', organizerId);
+        if (organizerId) evQuery = evQuery.eq('organiser_id', organizerId);
         const { data: activeEvents } = await evQuery;
 
         if (!activeEvents || activeEvents.length === 0) {
