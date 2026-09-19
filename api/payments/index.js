@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError } = require('../../lib/shared');
+const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError, validate } = require('../../lib/shared');
 const { sendPaymentConfirmEmail, sendTicketEmail } = require('../../lib/email');
 
 module.exports = async (req, res) => {
@@ -169,11 +169,14 @@ module.exports = async (req, res) => {
       const auth = await authUser(req);
       if (!auth) return res.status(401).json({ error: 'Unauthorized' });
       const { user, profile } = auth;
-      const { type, entity_id, amount, email } = req.body || {};
-      if (!type || !amount || !email) return res.status(400).json({ error: 'type, amount, and email required' });
-      if (!['ticket','subscription_organizer','subscription_business','promotion'].includes(type))
-        return res.status(400).json({ error: 'Invalid payment type' });
-      if (!Number.isInteger(amount) || amount < 1) return res.status(400).json({ error: 'amount must be a positive integer in cents' });
+      const pv = validate(req, res, {
+        type:   { required: true, enum: ['ticket','subscription_organizer','subscription_business','promotion'] },
+        amount: { required: true, type: 'int', min: 1 },
+        email:  { required: true, type: 'email' },
+      });
+      if (!pv) return;
+      const { type, amount, email } = pv;
+      const entity_id = req.body?.entity_id || null;
 
       const psRes = await fetch('https://api.paystack.co/transaction/initialize', {
         method: 'POST',
