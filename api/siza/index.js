@@ -11,6 +11,18 @@ module.exports = async (req, res) => {
 
   try {
 
+    /* ─── GET /siza/health — Groq connectivity check ─────────── */
+    if (url === '/siza/health' && req.method === 'GET') {
+      const key = process.env.GROQ_API_KEY || '';
+      if (!key) return res.status(200).json({ ok: false, error: 'GROQ_API_KEY not set in environment' });
+      try {
+        const reply = await groqChat([{ role: 'user', content: 'ping' }], 'Reply with exactly: pong');
+        return res.status(200).json({ ok: true, reply, keyHint: '***' + key.slice(-4) });
+      } catch (e) {
+        return res.status(200).json({ ok: false, error: e.message, keyHint: '***' + key.slice(-4) });
+      }
+    }
+
     /* ─── GET /siza/whatsapp/webhook — Meta verification ─────── */
     if (url === '/siza/whatsapp/webhook' && req.method === 'GET') {
       const q = Object.fromEntries(new URL(req.url, 'http://x').searchParams);
@@ -221,7 +233,7 @@ RULES: Do NOT make up specific event names, dates or prices. Encourage them to u
         } else if (/Groq 400/.test(msg)) {
           reply = "Eish, something went sideways on my side 😅 Try again in a sec — I'm still learning!";
         } else if (/Groq 404/.test(msg)) {
-          reply = "Lumi is still being set up — please contact the organiser directly for now.";
+          reply = "Lumi's AI model is updating — please try again in a moment or contact the organiser.";
         } else if (/Groq [45]\d\d|overload|unavailable/i.test(msg)) {
           reply = "Lumi is a bit overloaded right now 😅 Try again in a moment!";
         } else {
