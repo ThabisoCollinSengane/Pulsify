@@ -242,7 +242,7 @@ Tracked work from the security, architecture and map briefs. Tackle in order:
 - [x] **Infinite scroll (arch §6D)** — keep 10/page, load next page on scroll — PR #22
 - [ ] **Consistent request validation (arch §3)** — shared validator for API bodies.
 - [ ] **Frontend modularization (#14)** — split index.html into modules (big, later).
-- [ ] **Queue/background jobs (arch §8)** — emails/ticket confirmations off the request path.
+- [x] **Queue/background jobs (arch §8)** — async email queue (`pending_emails` table + `lib/email-queue.js` + `api/cron/email-queue.js` 7am cron) — PR #134
 
 ### D. Map (do AFTER architecture — `pulsefy_map_fixes.txt`)
 - [x] **Venues table (#1)** — `public.venues`, SA-bounds trigger, location_confidence, venue_id FK + back-fill — PR #23
