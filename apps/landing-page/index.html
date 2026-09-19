@@ -3152,13 +3152,7 @@ async function submitLumiBuy() {
     const email = currentUser?.email || document.getElementById('lumi-buy-email')?.value?.trim() || '';
     const phone = document.getElementById('lumi-buy-phone')?.value?.trim() || '';
     if (!email) { showToast('Please enter your email'); if (btn) { btn.disabled = false; btn.textContent = 'Get Payment Link →'; } return; }
-    const r = await fetch('/api/siza/order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ eventId: _lumiEvId, conversationId: _lumiConvId, customerName: name, customerEmail: email, customerPhone: phone, quantity: _lumiBuyQty }),
-    });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || 'Order failed');
+    const d = await Api.post('/siza/order', { eventId: _lumiEvId, conversationId: _lumiConvId, customerName: name, customerEmail: email, customerPhone: phone, quantity: _lumiBuyQty });
     cancelLumiBuy();
     _lumiBuyState = 'done';
     _lumiAddMsg('out', `Here's your payment link for ${d.quantity}× ${d.ticketName || 'ticket'} — total R${(d.totalCents / 100).toFixed(2)}:`);
@@ -3194,12 +3188,7 @@ async function sendLumi() {
     const body = { session_id: _lumiSessId, message: text };
     if (_lumiEvId) body.event_id = _lumiEvId;
     if (currentUser) { body.customer_name = currentUser.display_name || ''; body.customer_email = currentUser.email || ''; }
-    const token = (await getSB().auth.getSession()).data?.session?.access_token;
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) headers.Authorization = `Bearer ${token}`;
-    const r = await fetch('/api/siza/chat', { method: 'POST', headers, body: JSON.stringify(body) });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || 'Lumi is unavailable right now');
+    const d = await Api.post('/siza/chat', body);
     if (d.conversationId) _lumiConvId = d.conversationId;
     _lumiAddMsg('out', d.reply, d.suggestContact, d.suggestPurchase && _lumiBuyState !== 'done');
   } catch (e) {
