@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { sb, sbAs, corsHeaders, verifyToken, rateLimited, captureError } = require('../../lib/shared');
+const { sb, sbAs, corsHeaders, verifyToken, rateLimited, captureError, validate } = require('../../lib/shared');
 const { groqChat, groqEmbed, buildLumiSystemPrompt } = require('../../lib/groq');
 
 module.exports = async (req, res) => {
@@ -35,10 +35,8 @@ module.exports = async (req, res) => {
       if (!event) return res.status(404).json({ error: 'Event not found' });
       if (event.organizer_id !== user.id) return res.status(403).json({ error: 'Forbidden' });
 
+      if (!validate(req, res, { text: { required: true, type: 'string', minLength: 20 } })) return;
       const { text } = req.body || {};
-      if (!text || text.trim().length < 20) {
-        return res.status(400).json({ error: 'Please paste at least 20 characters of event details' });
-      }
 
       // Ask Groq to extract structured knowledge + FAQ from free-text
       const extractPrompt = `You are an event data extractor. Given the following event description, extract all useful information and return it as a JSON array of knowledge items.

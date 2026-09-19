@@ -2990,7 +2990,7 @@ async function openEv(evId) {
         <button class="rb" onclick="toggleSave('ev','${x(ev.id)}',this)"><span class="ri">${savedEv.includes(ev.id) ? '🔖' : '🏷'}</span><span class="rl">Save</span></button>
         <button class="rb" onclick="shareIt('${x(ev.name)}')"><span class="ri">🔗</span><span class="rl">Share</span></button>
         <button class="rb" onclick="openReportModal('${x(ev.id)}','${x(ev.name).replace(/'/g,'\\\'')}')"><span class="ri">🚩</span><span class="rl">Report</span></button>
-        <button class="rb act" id="lumi-open-btn" onclick="openLumiChat('${x(ev.id)}','${x(ev.name).replace(/'/g,"\\'")}')"><span class="ri" style="line-height:1;display:inline-flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><defs><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FF5C00"/><stop offset="100%" stop-color="#FF2D78"/></linearGradient></defs><path d="M12 2L14.2 9.8L22 12L14.2 14.2L12 22L9.8 14.2L2 12L9.8 9.8Z" fill="url(#lg1)"/></svg></span><span class="rl" style="color:var(--or)">Ask Lumi</span></button>
+        ${ev.siza_enabled ? `<button class="rb act" id="lumi-open-btn" onclick="openLumiChat('${x(ev.id)}','${x(ev.name).replace(/'/g,"\\'")}')"><span class="ri" style="line-height:1;display:inline-flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><defs><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FF5C00"/><stop offset="100%" stop-color="#FF2D78"/></linearGradient></defs><path d="M12 2L14.2 9.8L22 12L14.2 14.2L12 22L9.8 14.2L2 12L9.8 9.8Z" fill="url(#lg1)"/></svg></span><span class="rl" style="color:var(--or)">Ask Lumi</span></button>` : ''}
       </div>
       <div class="db">
         <div class="ig">
@@ -3185,8 +3185,9 @@ async function sendLumi() {
   const btn = document.getElementById('lumi-send-btn');
   if (btn) { btn.disabled = true; btn.textContent = '…'; }
   try {
-    const body = { session_id: _lumiSessId, message: text };
-    if (_lumiEvId) body.event_id = _lumiEvId;
+    const body = { sessionId: _lumiSessId, message: text };
+    if (_lumiEvId) body.eventId = _lumiEvId;
+    if (_lumiConvId) body.conversationId = _lumiConvId;
     if (currentUser) { body.customer_name = currentUser.display_name || ''; body.customer_email = currentUser.email || ''; }
     const d = await Api.post('/siza/chat', body);
     if (d.conversationId) _lumiConvId = d.conversationId;
