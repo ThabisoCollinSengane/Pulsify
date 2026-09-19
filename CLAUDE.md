@@ -236,11 +236,12 @@ Tracked work from the security, architecture and map briefs. Tackle in order:
       `status='pending'`. Only remaining step is **YOU**: set live Paystack keys
       (`PAYSTACK_SECRET_KEY` / `PAYSTACK_PUBLIC_KEY`) + point the webhook at
       `/api/paystack/webhook`. Free tickets still auto-confirm via `/ticket/purchase`.
-- [ ] **Frontend API service layer (arch §2)** — wrap `/api/*` + Supabase calls in one
-      `Api` module; stop scattering direct DB calls through the 7,200-line index.html.
-      (Incremental: migrate core event/booking calls first.)
+- [x] **Frontend API service layer (arch §2)** — `Api` object in index.html wraps all
+      `/api/*` calls with auth-token attachment, JSON encoding, and error handling; 74
+      call sites migrated; 1 remaining direct getSB() call is a client-only `menu_items`
+      query with no API equivalent.
 - [x] **Infinite scroll (arch §6D)** — keep 10/page, load next page on scroll — PR #22
-- [ ] **Consistent request validation (arch §3)** — shared validator for API bodies.
+- [x] **Consistent request validation (arch §3)** — `validate()` helper in `lib/shared.js` used across api/events, api/index, api/payments, api/siza — PR #135.
 - [ ] **Frontend modularization (#14)** — split index.html into modules (big, later).
 - [x] **Queue/background jobs (arch §8)** — async email queue (`pending_emails` table + `lib/email-queue.js` + `api/cron/email-queue.js` 7am cron) — PR #134
 
