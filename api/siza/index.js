@@ -207,6 +207,7 @@ RULES: Do NOT make up specific event names, dates or prices. Encourage them to u
         // If Lumi says it doesn't know, flag for escalation UI
         suggestContact = /don't have|contact|organis|not sure|I can't/i.test(reply);
       } catch (e) {
+        // Always log the full error so it's visible in Vercel Function logs
         console.error('[siza/chat] groq error:', e.message);
         const msg = e.message || '';
         if (msg === 'GROQ_API_KEY_MISSING' || msg.includes('GROQ_API_KEY is not set')) {
@@ -219,7 +220,7 @@ RULES: Do NOT make up specific event names, dates or prices. Encourage them to u
           reply = "Eish, something went wrong on my side! 😅 Please try again or contact the organiser directly.";
         }
         suggestContact = true;
-        return res.status(200).json({ reply, conversationId: convId, suggestPurchase: false, suggestContact: true });
+        return res.status(200).json({ reply, conversationId: convId, suggestPurchase: false, suggestContact: true, _debug: msg });
       }
 
       // Store AI reply
