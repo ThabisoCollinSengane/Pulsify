@@ -1,8 +1,8 @@
 // Cron: scrape Durban event TikTok creators → scraped_leads + HubSpot
 // Runs daily at 9am via Vercel cron (vercel.json). Requires RAPIDAPI_KEY env var.
-// RapidAPI product: "TikTok Scraper" (tiktok-scraper7.p.rapidapi.com)
-import { getSB } from '../shared.js';
-import { syncBusinessRegistration } from '../../lib/hubspot.js';
+// RapidAPI product: "TikTok Scraper" (tiktok-scraper2.p.rapidapi.com)
+const { sb: getSB, CORS } = require('../../lib/shared');
+const { syncBusinessRegistration } = require('../../lib/hubspot');
 
 const RAPIDAPI_HOST = 'tiktok-scraper2.p.rapidapi.com';
 
@@ -105,7 +105,9 @@ function scoreProfile(handle, bio, follower_count) {
   return total;
 }
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
+  Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
+  if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const sb = getSB();
@@ -189,4 +191,4 @@ export default async function handler(req, res) {
   }
 
   return res.status(200).json({ ok: true, found, qualified: found - disqualified, inserted, skipped, disqualified });
-}
+};
