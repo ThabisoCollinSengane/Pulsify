@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError, validate } = require('../../lib/shared');
-const { sendPaymentConfirmEmail, sendTicketEmail } = require('../../lib/email');
+const { queueEmail } = require('../../lib/email-queue');
 
 module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
@@ -68,8 +68,7 @@ module.exports = async (req, res) => {
         }
 
         if (confirmedBooking) {
-          sendTicketEmail(confirmedBooking.buyer_email, confirmedBooking.buyer_name, confirmedBooking.events?.name, confirmedBooking.events?.date_local, confirmedBooking.events?.venue_name, confirmedBooking.events?.venue_city, confirmedBooking.booking_ref, confirmedBooking.ticket_tiers?.name, confirmedBooking.quantity, confirmedBooking.total_paid, confirmedBooking.unit_price === 0, confirmedBooking.qr_data)
-            .catch(e => console.error('[email/ticket/webhook]', e.message));
+          queueEmail('ticket', confirmedBooking.buyer_email, { buyer_name: confirmedBooking.buyer_name, event_name: confirmedBooking.events?.name, event_date: confirmedBooking.events?.date_local, venue_name: confirmedBooking.events?.venue_name, venue_city: confirmedBooking.events?.venue_city, booking_ref: confirmedBooking.booking_ref, tier_name: confirmedBooking.ticket_tiers?.name, quantity: confirmedBooking.quantity, total_paid: confirmedBooking.total_paid, is_free: confirmedBooking.unit_price === 0, qr_data: confirmedBooking.qr_data }).catch(() => {});
           if (userId) {
             await sb().from('notifications').insert({
               user_id: userId, type: 'ticket', from_display_name: 'Pulsefy',
@@ -233,7 +232,7 @@ module.exports = async (req, res) => {
         await logAdminAction(user.id, profile.display_name || user.email, 'payment_success', payment.id,
           `${payment.type} — R${(payment.amount / 100).toFixed(2)}`, { reference: ref });
         const userEmail = profile.email || user.email;
-        if (userEmail) sendPaymentConfirmEmail(userEmail, profile.display_name, payment.amount, payment.type).catch(() => {});
+        if (userEmail) queueEmail('payment_confirm', userEmail, { display_name: profile.display_name, amount: payment.amount, payment_type: payment.type }).catch(() => {});
       }
       return res.status(200).json({ success: newStatus === 'success', payment: updated });
     }
@@ -269,7 +268,7 @@ module.exports = async (req, res) => {
         await logAdminAction(payment.user_id, meta.display_name || 'User', 'payment_success', payment.id,
           `${payment.type} — R${(payment.amount / 100).toFixed(2)}`, { reference: ref });
         const { data: prof } = await sb().from('profiles').select('email,display_name').eq('id', payment.user_id).single();
-        if (prof?.email) sendPaymentConfirmEmail(prof.email, prof.display_name, payment.amount, payment.type).catch(() => {});
+        if (prof?.email) queueEmail('payment_confirm', prof.email, { display_name: prof.display_name, amount: payment.amount, payment_type: payment.type }).catch(() => {});
       }
       return;
     }
