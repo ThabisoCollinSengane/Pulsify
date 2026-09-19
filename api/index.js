@@ -3218,10 +3218,11 @@ module.exports = async (req, res) => {
       const { data: admins } = await sb().from('profiles').select('id').eq('role', 'admin');
       for (const admin of admins || []) {
         await sb().from('notifications').insert({
-          user_id: admin.id, type: 'system',
-          from_display_name: 'Pulsefy System',
-          message: `New profile claim submitted for "${business_name}" by ${claimant_name} (${claimant_email}).`,
-          entity_type: 'claim', entity_id: data.id,
+          user_id: admin.id,
+          type: 'system',
+          title: 'New Profile Claim',
+          body: `New profile claim submitted for "${business_name}" by ${claimant_name} (${claimant_email}).`,
+          data: { claim_id: data.id, entity_type: 'claim' },
           read: false,
         }).catch(() => {});
       }

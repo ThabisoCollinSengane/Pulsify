@@ -30,10 +30,10 @@ module.exports = async (req, res) => {
 
       // Verify organizer owns this event
       const { data: event } = await sb().from('events')
-        .select('id,name,genre,organizer_id')
+        .select('id,name,genre,organiser_id')
         .eq('id', eventId).single();
       if (!event) return res.status(404).json({ error: 'Event not found' });
-      if (event.organizer_id !== user.id) return res.status(403).json({ error: 'Forbidden' });
+      if (event.organiser_id !== user.id) return res.status(403).json({ error: 'Forbidden' });
 
       if (!validate(req, res, { text: { required: true, type: 'string', minLength: 20 } })) return;
       const { text } = req.body || {};
@@ -100,7 +100,7 @@ ${text.slice(0, 4000)}`;
       let event = null;
       if (eventId) {
         const { data: ev } = await sb().from('events')
-          .select('id,name,genre,organizer_id')
+          .select('id,name,genre,organiser_id')
           .eq('id', eventId).single();
         if (!ev) return res.status(404).json({ error: 'Event not found' });
         event = ev;
@@ -117,6 +117,10 @@ ${text.slice(0, 4000)}`;
           last_message_at: new Date().toISOString(),
         }).select('id').single();
         convId = conv?.id;
+        if (!convId) {
+          console.error('[siza/chat] failed to create conversation');
+          return res.status(200).json({ reply: "Eish, I'm having trouble starting a new chat. Please try again!", conversationId: null });
+        }
       } else {
         await sb().from('siza_conversations')
           .update({ last_message_at: new Date().toISOString() })
