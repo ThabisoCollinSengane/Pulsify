@@ -190,14 +190,22 @@ ${text.slice(0, 4000)}`;
       let suggestContact = false;
 
       try {
+        if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY_MISSING');
         reply = await groqChat(chatMessages, systemPrompt);
         suggestPurchase = buyIntent || /how much|price|cost|r\d/i.test(message);
         // If Lumi says it doesn't know, flag for escalation UI
         suggestContact = /don't have|contact|organis|not sure|I can't/i.test(reply);
       } catch (e) {
         console.error('[siza/chat] groq error:', e.message);
-        reply = "I'm having a bit of trouble right now. Please contact the organiser directly for assistance.";
+        const isKeyMissing = e.message === 'GROQ_API_KEY_MISSING' || e.message?.includes('GROQ_API_KEY');
+        reply = isKeyMissing
+          ? "Lumi is still being configured. Please contact the organiser directly for now."
+          : "I'm having a bit of trouble right now. Please contact the organiser directly for assistance.";
         suggestContact = true;
+        // Surface error detail in non-prod for debugging
+        if (process.env.VERCEL_ENV !== 'production') {
+          return res.status(200).json({ reply, conversationId: convId, suggestPurchase: false, suggestContact: true, _debug: e.message });
+        }
       }
 
       // Store AI reply
