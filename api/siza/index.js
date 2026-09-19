@@ -421,20 +421,21 @@ ${text.slice(0, 4000)}`;
     }
 
     // POST /siza/whatsapp/register — start OTP flow for organizer's dedicated number
-    if (method === 'POST' && path === '/siza/whatsapp/register') {
-      const { data: { user } } = await sb().auth.getUser();
+    if (req.method === 'POST' && url === '/siza/whatsapp/register') {
+      const authHeader = (req.headers.authorization || '').replace('Bearer ', '');
+      const user = await verifyToken(authHeader);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
       const { phone_number } = req.body || {};
       if (!phone_number) return res.status(400).json({ error: 'phone_number required' });
 
-      const token = process.env.WHATSAPP_TOKEN;
+      const waToken = process.env.WHATSAPP_TOKEN;
       const bizId = process.env.WHATSAPP_BUSINESS_ID;
-      if (!token || !bizId) return res.status(503).json({ error: 'WhatsApp not configured' });
+      if (!waToken || !bizId) return res.status(503).json({ error: 'WhatsApp not configured' });
 
       // Register the number with Meta (triggers OTP to that number)
       const regRes = await fetch(`https://graph.facebook.com/v18.0/${bizId}/phone_numbers`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${waToken}` },
         body: JSON.stringify({ cc: '27', phone_number: phone_number.replace(/^\+/, ''), migrate_phone_number: false }),
       });
       const regData = await regRes.json();
@@ -450,7 +451,7 @@ ${text.slice(0, 4000)}`;
       // Trigger OTP delivery
       await fetch(`https://graph.facebook.com/v18.0/${regData.id}/request_code`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${waToken}` },
         body: JSON.stringify({ code_method: 'SMS', language: 'en_US' }),
       });
 
@@ -458,19 +459,20 @@ ${text.slice(0, 4000)}`;
     }
 
     // POST /siza/whatsapp/verify — confirm OTP, mark number as verified
-    if (method === 'POST' && path === '/siza/whatsapp/verify') {
-      const { data: { user } } = await sb().auth.getUser();
+    if (req.method === 'POST' && url === '/siza/whatsapp/verify') {
+      const authHeader = (req.headers.authorization || '').replace('Bearer ', '');
+      const user = await verifyToken(authHeader);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
       const { code } = req.body || {};
       if (!code) return res.status(400).json({ error: 'code required' });
 
-      const token = process.env.WHATSAPP_TOKEN;
+      const waToken = process.env.WHATSAPP_TOKEN;
       const { data: profile } = await sb().from('profiles').select('whatsapp_phone_id').eq('id', user.id).single();
       if (!profile?.whatsapp_phone_id) return res.status(400).json({ error: 'No pending number — call /register first' });
 
       const verRes = await fetch(`https://graph.facebook.com/v18.0/${profile.whatsapp_phone_id}/verify_code`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${waToken}` },
         body: JSON.stringify({ code }),
       });
       if (!verRes.ok) {
@@ -483,8 +485,9 @@ ${text.slice(0, 4000)}`;
     }
 
     // DELETE /siza/whatsapp/disconnect — deregister number from Meta, clear profile fields
-    if (method === 'DELETE' && path === '/siza/whatsapp/disconnect') {
-      const { data: { user } } = await sb().auth.getUser();
+    if (req.method === 'DELETE' && url === '/siza/whatsapp/disconnect') {
+      const authHeader = (req.headers.authorization || '').replace('Bearer ', '');
+      const user = await verifyToken(authHeader);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
       const token = process.env.WHATSAPP_TOKEN;
