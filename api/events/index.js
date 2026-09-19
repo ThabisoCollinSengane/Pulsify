@@ -1,4 +1,4 @@
-const { sb, corsHeaders, haverBox, geocodeSA, rateLimited, authUser, captureError } = require('../../lib/shared');
+const { sb, corsHeaders, haverBox, geocodeSA, rateLimited, authUser, captureError, validate } = require('../../lib/shared');
 
 module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
@@ -136,14 +136,15 @@ module.exports = async (req, res) => {
       if (!auth) return res.status(401).json({ error: 'Unauthorized' });
       if (auth.profile.role !== 'organizer') return res.status(403).json({ error: 'Organizer role required' });
 
+      const v = validate(req, res, {
+        name: { required: true },
+        date_local: { required: true },
+        venue_name: { required: true },
+        venue_city: { required: true },
+      });
+      if (!v) return;
+      const { name, date_local, venue_name, venue_city } = v;
       const b = req.body || {};
-      const name = (b.name || '').trim();
-      const date_local = (b.date_local || '').trim();
-      const venue_name = (b.venue_name || '').trim();
-      const venue_city = (b.venue_city || '').trim();
-      if (!name || !date_local || !venue_name || !venue_city) {
-        return res.status(400).json({ error: 'name, date_local, venue_name and venue_city are required' });
-      }
 
       let venue_lat = b.venue_lat != null ? parseFloat(b.venue_lat) : null;
       let venue_lon = b.venue_lon != null ? parseFloat(b.venue_lon) : null;
@@ -329,10 +330,9 @@ module.exports = async (req, res) => {
       }
       if (!owned) return res.status(403).json({ error: 'Not your business' });
 
-      const b = req.body || {};
-      const name = (b.name || '').trim();
-      const price = parseFloat(b.price);
-      if (!name || isNaN(price) || price < 0) return res.status(400).json({ error: 'name and a valid price are required' });
+      const mv = validate(req, res, { name: { required: true }, price: { required: true, type: 'number', min: 0 } });
+      if (!mv) return;
+      const { name, price } = mv;
 
       if (auth.profile.subscription_type !== 'premium' && auth.profile.subscription_type !== 'trial') {
         const { count } = await sb().from('menu_items').select('id', { count: 'exact', head: true }).eq('business_id', menuBizId);
