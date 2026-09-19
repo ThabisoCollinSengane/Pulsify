@@ -203,20 +203,19 @@ RULES: Do NOT make up specific event names, dates or prices. Encourage them to u
         // If Lumi says it doesn't know, flag for escalation UI
         suggestContact = /don't have|contact|organis|not sure|I can't/i.test(reply);
       } catch (e) {
-        // Always log the full error so it's visible in Vercel Function logs
         console.error('[siza/chat] groq error:', e.message);
-        const isKeyMissing = e.message === 'GROQ_API_KEY_MISSING' || e.message?.includes('GROQ_API_KEY');
-        reply = isKeyMissing
-          ? "Lumi is still being configured. Please contact the organiser directly for now."
-          : "I'm having a bit of trouble right now. Please contact the organiser directly for assistance.";
+        const msg = e.message || '';
+        if (msg === 'GROQ_API_KEY_MISSING' || msg.includes('GROQ_API_KEY is not set')) {
+          reply = "Lumi is still being set up. Please contact the organiser directly for now.";
+        } else if (/Groq 401/.test(msg)) {
+          reply = "Lumi's connection needs attention. Please contact the organiser directly for now.";
+        } else if (/Groq 429/.test(msg)) {
+          reply = "Eish, Lumi is getting a LOT of messages right now! 🔥 Give me a moment and try again.";
+        } else {
+          reply = "Eish, something went wrong on my side! 😅 Please try again or contact the organiser directly.";
+        }
         suggestContact = true;
-        return res.status(200).json({
-          reply,
-          conversationId: convId,
-          suggestPurchase: false,
-          suggestContact: true,
-          _debug: e.message, // always include so frontend/logs can diagnose
-        });
+        return res.status(200).json({ reply, conversationId: convId, suggestPurchase: false, suggestContact: true });
       }
 
       // Store AI reply
