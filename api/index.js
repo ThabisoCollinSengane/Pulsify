@@ -1,7 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 const { sendWelcomeEmail, sendVerifApprovedEmail, sendVerifRejectedEmail, sendPaymentConfirmEmail, sendTicketEmail, sendOrderEmail, unsubToken } = require('../lib/email');
-const { rateLimited, captureError, corsHeaders, signQr, verifyQr, validate, flagEnabled } = require('../lib/shared');
+const { rateLimited, captureError, corsHeaders, signQr, verifyQr, validate, flagEnabled, geocodeSA } = require('../lib/shared');
 const { syncTicketPurchase, syncBusinessRegistration } = require('../lib/hubspot');
 
 const SUPA_URL  = process.env.SUPABASE_URL  || 'https://cjzewfvtdayjgjdpdmln.supabase.co';
@@ -1046,7 +1046,18 @@ module.exports = async (req, res) => {
           phone:     b.phone    || null,
           is_verified: false,
         });
-        if (bizErr) console.error('[register-business] biz insert failed:', bizErr.message);
+        if (bizErr) {
+          console.error('[register-business] biz insert failed:', bizErr.message);
+        } else {
+          // Geocode address → lat/lon (non-blocking, best-effort)
+          const geoQuery = [b.address, b.suburb, b.city, b.province, 'South Africa'].filter(Boolean).join(', ');
+          geocodeSA(geoQuery).then(coords => {
+            if (coords) {
+              sb().from('businesses').update({ lat: coords.lat, lon: coords.lon })
+                .eq('owner_id', uid).catch(() => {});
+            }
+          }).catch(() => {});
+        }
       }
 
       // Auto-create Paystack subaccount if bank details provided
