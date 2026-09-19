@@ -209,21 +209,20 @@ RULES: Do NOT make up specific event names, dates or prices. Encourage them to u
         // If Lumi says it doesn't know, flag for escalation UI
         suggestContact = /don't have|contact|organis|not sure|I can't/i.test(reply);
       } catch (e) {
-        // Always log the full error so it's visible in Vercel Function logs
-        console.error('[siza/chat] groq error:', e.message);
         const msg = e.message || '';
+        console.error('[siza/chat] groq error:', msg);
+        let reply;
         if (msg === 'GROQ_API_KEY_MISSING' || msg.includes('GROQ_API_KEY is not set')) {
-          reply = "Lumi is still being set up. Please contact the organiser directly for now.";
+          reply = "Lumi is still being set up — please contact the organiser directly for now.";
         } else if (/Groq 401/.test(msg)) {
-          reply = "Lumi's connection needs attention. Please contact the organiser directly for now.";
+          reply = "Lumi's connection needs attention — please contact the organiser directly for now.";
         } else if (/Groq 429/.test(msg)) {
           reply = "Eish, Lumi is getting a LOT of messages right now! 🔥 Give me a moment and try again.";
-        } else if (/Groq 5\d\d|overload|unavailable/i.test(msg)) {
+        } else if (/Groq [45]\d\d|overload|unavailable/i.test(msg)) {
           reply = "Lumi is a bit overloaded right now 😅 Try again in a moment!";
         } else {
-          reply = "Eish, something went wrong on my side! 😅 Please try again or contact the organiser directly.";
+          reply = "Eish, something went sideways on my side 😅 Try again in a sec — I'm still learning!";
         }
-        suggestContact = true;
         return res.status(200).json({ reply, conversationId: convId, suggestPurchase: false, suggestContact: true, _debug: msg });
       }
 
