@@ -255,6 +255,10 @@ CREATE POLICY IF NOT EXISTS "siza_conv_service"       ON siza_conversations   US
 CREATE POLICY IF NOT EXISTS "siza_msg_service"        ON siza_messages        USING (auth.role() = 'service_role');
 CREATE POLICY IF NOT EXISTS "siza_orders_service"     ON siza_orders          USING (auth.role() = 'service_role');
 
+-- Organizers can read orders for their own events
+CREATE POLICY "siza_orders_organizer_read" ON siza_orders
+  FOR SELECT USING (event_id IN (SELECT id FROM events WHERE organiser_id = auth.uid()));
+
 -- pgvector similarity search for Siza knowledge retrieval
 CREATE OR REPLACE FUNCTION siza_match_knowledge(
   p_event_id  TEXT,
