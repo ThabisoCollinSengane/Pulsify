@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const { sb, sbAs, corsHeaders, verifyToken, rateLimited, captureError, validate } = require('../../lib/shared');
-const { groqChat, groqEmbed, buildLumiSystemPrompt } = require('../../lib/groq');
+const { groqEmbed, buildLumiSystemPrompt } = require('../../lib/groq');
+const { geminiChat } = require('../../lib/gemini');
 
 module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
@@ -13,19 +14,26 @@ module.exports = async (req, res) => {
 
     /* ─── GET /siza/health ───────────────────────────────────── */
     if (url === '/siza/health' && req.method === 'GET') {
+      const geminiKey = process.env.GEMINI_API_KEY || '';
       const groqKey = process.env.GROQ_API_KEY || '';
       const results = {};
 
-      if (!groqKey) {
-        results.groq_chat = 'GROQ_API_KEY not set';
-        results.groq_embed = 'GROQ_API_KEY not set';
+      // Test Gemini Flash (primary chat model)
+      if (!geminiKey) {
+        results.gemini_chat = 'GEMINI_API_KEY not set';
       } else {
         try {
-          await groqChat([{ role: 'user', content: 'Reply with exactly: pong' }], 'You are a test assistant. Reply with exactly: pong');
-          results.groq_chat = 'OK';
+          await geminiChat([{ role: 'user', content: 'Reply with exactly: pong' }], 'You are a test assistant. Reply with exactly: pong');
+          results.gemini_chat = 'OK';
         } catch (e) {
-          results.groq_chat = `ERR: ${(e.message || '').slice(0, 100)}`;
+          results.gemini_chat = `ERR: ${(e.message || '').slice(0, 100)}`;
         }
+      }
+
+      // Test Groq embeddings (still used for knowledge base search)
+      if (!groqKey) {
+        results.groq_embed = 'GROQ_API_KEY not set';
+      } else {
         try {
           const r = await fetch('https://api.groq.com/openai/v1/embeddings', {
             method: 'POST',
@@ -38,8 +46,8 @@ module.exports = async (req, res) => {
         }
       }
 
-      const ok = results.groq_chat === 'OK';
-      return res.status(200).json({ ok, model: 'compound-beta-mini', results });
+      const ok = results.gemini_chat === 'OK';
+      return res.status(200).json({ ok, model: 'gemini-2.0-flash', results });
     }
 
     /* ─── GET /siza/whatsapp/webhook — Meta verification ─────── */
@@ -87,7 +95,7 @@ ${text.slice(0, 4000)}`;
 
       let items;
       try {
-        const raw = await groqChat([{ role: 'user', content: extractPrompt }], 'You are a structured data extractor. Return only valid JSON.');
+        const raw = await geminiChat([{ role: 'user', content: extractPrompt }], 'You are a structured data extractor. Return only valid JSON.');
         const cleaned = raw.replace(/```json|```/g, '').trim();
         items = JSON.parse(cleaned);
         if (!Array.isArray(items)) throw new Error('Not an array');
@@ -333,8 +341,8 @@ ${browseLine}`;
       let suggestContact = false;
 
       try {
-        if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY_MISSING');
-        reply = await groqChat(chatMessages, systemPrompt);
+        if (!process.env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY_MISSING');
+        reply = await geminiChat(chatMessages, systemPrompt);
         suggestPurchase = buyIntent || /how much|price|cost|r\d/i.test(message);
         // If Lumi says it doesn't know, flag for escalation UI
         suggestContact = /don't have|contact|organis|not sure|I can't/i.test(reply);
@@ -605,7 +613,7 @@ ${browseLine}`;
           content: m.body,
         }));
         chatMessages.push({ role: 'user', content: text });
-        chatReply = await groqChat(chatMessages, systemPrompt);
+        chatReply = await geminiChat(chatMessages, systemPrompt);
         suggestContact = /don't have|contact|organis|not sure|I can't/i.test(chatReply);
 
         await sb().from('siza_messages').insert({ conversation_id: conv.id, direction: 'out', body: chatReply, is_ai: true });
