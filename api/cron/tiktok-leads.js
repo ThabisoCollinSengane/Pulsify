@@ -1,12 +1,9 @@
-// Cron: scrape Durban event TikTok creators → scraped_leads + HubSpot
-// Runs daily at 9am via Vercel cron (vercel.json). Requires RAPIDAPI_KEY env var.
-// RapidAPI product: "TikTok Scraper" (tiktok-scraper2.p.rapidapi.com)
+// Cron: scrape Durban event TikTok creators via Playwright → scraped_leads + HubSpot
+// Runs daily at 9am via Vercel cron (vercel.json).
+// Uses playwright-core + @sparticuz/chromium (serverless-compatible Chromium).
 const { sb: getSB, CORS } = require('../../lib/shared');
 const { syncBusinessRegistration } = require('../../lib/hubspot');
 
-const RAPIDAPI_HOST = 'tiktok-scraper2.p.rapidapi.com';
-
-// Hashtags ordered by specificity — event-organizer signals first
 const HASHTAGS = [
   'DurbanEventOrganizer',
   'DurbanEventPlanner',
@@ -21,7 +18,6 @@ const HASHTAGS = [
 
 const EMAIL_RE = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/;
 
-// Bio keywords that signal an actual event organizer / promoter
 const ORGANIZER_KEYWORDS = [
   'organis', 'organiz', 'promoter', 'promotions', 'events',
   'booking', 'bookings', 'tickets', 'entertainment', 'nightlife',
@@ -29,80 +25,173 @@ const ORGANIZER_KEYWORDS = [
   'productions', 'collective', 'agency',
 ];
 
-// Location signals — at least one must appear in bio or handle
 const DURBAN_KEYWORDS = ['durban', 'dbn', 'kzn', 'kwazulu', 'natal', 'umhlanga', 'pinetown', 'umlazi'];
 
-const MIN_FOLLOWERS = 500; // ignore micro-accounts with no reach
+const MIN_FOLLOWERS = 500;
 
-function rapidHeaders() {
-  return {
-    'X-RapidAPI-Key': process.env.RAPIDAPI_KEY || '',
-    'X-RapidAPI-Host': RAPIDAPI_HOST,
-  };
-}
+// Launch a serverless-compatible Chromium browser
+async function launchBrowser() {
+  let executablePath;
+  let chromiumArgs;
 
-// Returns up to `count` video objects for a hashtag.
-async function fetchHashtagPosts(tag, count = 30) {
-  if (!process.env.RAPIDAPI_KEY) return [];
   try {
-    const url = `https://${RAPIDAPI_HOST}/hashtag/posts?name=${encodeURIComponent(tag)}&count=${count}`;
-    const res = await fetch(url, { headers: rapidHeaders() });
-    if (!res.ok) return [];
-    const json = await res.json();
-    return json?.data?.videos || [];
+    const chromium = require('@sparticuz/chromium');
+    executablePath = await chromium.executablePath();
+    chromiumArgs = chromium.args;
   } catch {
-    return [];
+    // Local dev fallback — use system Playwright browser
+    executablePath = undefined;
+    chromiumArgs = [];
   }
+
+  const { chromium: pw } = require('playwright-core');
+  return pw.launch({
+    args: [
+      ...chromiumArgs,
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-blink-features=AutomationControlled',
+    ],
+    executablePath,
+    headless: true,
+  });
 }
 
-// Returns { follower_count, bio } for a TikTok handle, or null on failure.
-async function fetchUserProfile(handle) {
-  if (!process.env.RAPIDAPI_KEY) return null;
+// Scrape creator handles from a TikTok hashtag page by intercepting API responses.
+// Falls back to DOM extraction if the API interception yields nothing.
+async function scrapeHashtag(browser, tag) {
+  const handles = new Set();
+  const page = await browser.newPage();
+
   try {
-    const url = `https://${RAPIDAPI_HOST}/user/info?unique_id=${encodeURIComponent(handle)}`;
-    const res = await fetch(url, { headers: rapidHeaders() });
-    if (!res.ok) return null;
-    const json = await res.json();
-    const user = json?.data?.user || json?.userInfo?.user;
-    if (!user) return null;
-    return {
-      follower_count: json?.data?.stats?.followerCount ?? json?.userInfo?.stats?.followerCount ?? null,
-      bio: user.signature || null,
-    };
-  } catch {
-    return null;
+    // Spoof user-agent to reduce bot detection
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'en-US,en;q=0.9',
+    });
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+    );
+
+    // Intercept TikTok's internal API response for hashtag item lists
+    page.on('response', async resp => {
+      try {
+        if (resp.url().includes('/api/challenge/item_list') || resp.url().includes('/api/post/item_list')) {
+          const json = await resp.json().catch(() => null);
+          const items = json?.itemList || json?.item_list || [];
+          for (const item of items) {
+            const handle = item?.author?.uniqueId || item?.author?.unique_id;
+            if (handle) handles.add(handle);
+          }
+        }
+      } catch { /* ignore parse errors */ }
+    });
+
+    const url = `https://www.tiktok.com/tag/${encodeURIComponent(tag)}?lang=en`;
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 }).catch(() =>
+      page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 })
+    );
+
+    // Scroll once to trigger loading more content
+    await page.evaluate(() => window.scrollBy(0, 800)).catch(() => {});
+    await page.waitForTimeout(3000);
+
+    // DOM fallback: extract author links from video cards
+    if (handles.size === 0) {
+      const domHandles = await page.evaluate(() => {
+        const links = Array.from(document.querySelectorAll('a[href*="/@"]'));
+        return links.map(a => {
+          const m = a.href.match(/\/@([^/?#]+)/);
+          return m ? m[1] : null;
+        }).filter(Boolean);
+      }).catch(() => []);
+      for (const h of domHandles) handles.add(h);
+    }
+  } catch (err) {
+    console.error(`[tiktok-leads] scrapeHashtag(${tag}) error:`, err.message);
+  } finally {
+    await page.close().catch(() => {});
   }
+
+  return handles;
 }
 
-// Score 0–100: how likely this profile is a Durban event organizer.
-// Returns null if the profile clearly doesn't qualify (below floor).
+// Fetch bio + follower count from a TikTok user profile page.
+async function scrapeProfile(browser, handle) {
+  const page = await browser.newPage();
+  let result = null;
+
+  try {
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+    );
+
+    // Intercept user info API
+    page.on('response', async resp => {
+      try {
+        if (resp.url().includes('/api/user/detail') || resp.url().includes('/node/share/user')) {
+          const json = await resp.json().catch(() => null);
+          if (!json) return;
+          const user = json?.userInfo?.user || json?.user;
+          const stats = json?.userInfo?.stats || json?.stats;
+          if (user) {
+            result = {
+              bio: user.signature || null,
+              follower_count: stats?.followerCount ?? null,
+            };
+          }
+        }
+      } catch { /* ignore */ }
+    });
+
+    await page.goto(`https://www.tiktok.com/@${encodeURIComponent(handle)}`, {
+      waitUntil: 'networkidle',
+      timeout: 20000,
+    }).catch(() => {});
+
+    // DOM fallback for bio and follower count
+    if (!result) {
+      result = await page.evaluate(() => {
+        const bio = document.querySelector('h2[data-e2e="user-bio"]')?.textContent?.trim()
+          || document.querySelector('[class*="ShareDesc"]')?.textContent?.trim()
+          || null;
+        const fcEl = document.querySelector('[data-e2e="followers-count"]')
+          || document.querySelector('[title*="Followers"]');
+        const fcText = fcEl?.textContent?.trim() || '';
+        // Parse "1.2M" / "45.6K" / "1234"
+        let follower_count = null;
+        if (fcText) {
+          const n = parseFloat(fcText);
+          if (!isNaN(n)) {
+            if (fcText.toUpperCase().includes('M')) follower_count = Math.round(n * 1_000_000);
+            else if (fcText.toUpperCase().includes('K')) follower_count = Math.round(n * 1_000);
+            else follower_count = Math.round(n);
+          }
+        }
+        return { bio, follower_count };
+      }).catch(() => null);
+    }
+  } catch (err) {
+    console.error(`[tiktok-leads] scrapeProfile(${handle}) error:`, err.message);
+  } finally {
+    await page.close().catch(() => {});
+  }
+
+  return result;
+}
+
 function scoreProfile(handle, bio, follower_count) {
   const text = `${handle} ${bio || ''}`.toLowerCase();
-
-  // Must have Durban/KZN signal somewhere
   const hasDurban = DURBAN_KEYWORDS.some(k => text.includes(k));
   if (!hasDurban) return null;
-
-  // Must meet minimum follower threshold
   if (follower_count !== null && follower_count < MIN_FOLLOWERS) return null;
-
-  // Organizer keyword score (0–60)
   const orgMatches = ORGANIZER_KEYWORDS.filter(k => text.includes(k)).length;
+  if (orgMatches === 0) return null;
   const orgScore = Math.min(orgMatches * 15, 60);
-
-  // Follower score (0–30): log scale up to 100k
   const fc = follower_count || 0;
   const followerScore = fc > 0 ? Math.min(Math.log10(fc / MIN_FOLLOWERS + 1) * 20, 30) : 0;
-
-  // Email in bio bonus (0–10)
   const emailBonus = EMAIL_RE.test(bio || '') ? 10 : 0;
-
-  const total = Math.round(orgScore + followerScore + emailBonus);
-
-  // Require at least one organizer keyword to be considered
-  if (orgMatches === 0) return null;
-
-  return total;
+  return Math.round(orgScore + followerScore + emailBonus);
 }
 
 module.exports = async (req, res) => {
@@ -113,20 +202,27 @@ module.exports = async (req, res) => {
   const sb = getSB();
   if (!sb) return res.status(500).json({ error: 'No Supabase client' });
 
-  if (!process.env.RAPIDAPI_KEY) {
-    return res.status(200).json({ ok: false, reason: 'RAPIDAPI_KEY not set', inserted: 0, skipped: 0, found: 0, qualified: 0 });
+  let browser;
+  try {
+    browser = await launchBrowser();
+  } catch (err) {
+    console.error('[tiktok-leads] browser launch failed:', err.message);
+    return res.status(500).json({ error: 'Browser launch failed', detail: err.message });
   }
 
-  // Collect unique author handles across all hashtags
-  const authorMap = new Map(); // handle → { handle }
-  for (const tag of HASHTAGS) {
-    const posts = await fetchHashtagPosts(tag);
-    for (const v of posts) {
-      const handle = v.author?.unique_id;
-      if (handle && !authorMap.has(handle)) {
-        authorMap.set(handle, { handle });
+  const authorMap = new Map();
+
+  try {
+    for (const tag of HASHTAGS) {
+      const handles = await scrapeHashtag(browser, tag);
+      for (const h of handles) {
+        if (!authorMap.has(h)) authorMap.set(h, { handle: h });
       }
+      // Brief pause between hashtag pages
+      await new Promise(r => setTimeout(r, 2000));
     }
+  } finally {
+    await browser.close().catch(() => {});
   }
 
   const found = authorMap.size;
@@ -134,60 +230,75 @@ module.exports = async (req, res) => {
   let skipped = 0;
   let disqualified = 0;
 
-  for (const [handle] of authorMap) {
-    // Check if already in DB before hitting the profile API
-    const { data: existing } = await sb
-      .from('scraped_leads')
-      .select('id')
-      .eq('tiktok', handle)
-      .maybeSingle();
-    if (existing) { skipped++; continue; }
+  // Open a second browser session for profile lookups
+  let profBrowser;
+  try {
+    profBrowser = await launchBrowser();
+  } catch {
+    profBrowser = null;
+  }
 
-    // Fetch profile for follower count + bio
-    const profile = await fetchUserProfile(handle);
-    const bio = profile?.bio || null;
-    const follower_count = profile?.follower_count || null;
+  try {
+    for (const [handle] of authorMap) {
+      const { data: existing } = await sb
+        .from('scraped_leads')
+        .select('id')
+        .eq('tiktok', handle)
+        .maybeSingle();
+      if (existing) { skipped++; continue; }
 
-    // Filter: must look like a Durban event organizer
-    const score = scoreProfile(handle, bio, follower_count);
-    if (score === null) { disqualified++; continue; }
+      let bio = null;
+      let follower_count = null;
 
-    const email = bio ? (EMAIL_RE.exec(bio)?.[0] || null) : null;
+      if (profBrowser) {
+        const profile = await scrapeProfile(profBrowser, handle);
+        bio = profile?.bio || null;
+        follower_count = profile?.follower_count || null;
+      }
 
-    const row = {
-      name: handle,
-      tiktok: handle,
-      source: 'tiktok',
-      city: 'Durban',
-      province: 'KwaZulu-Natal',
-      category: 'event_organizer',
-      status: 'new',
-      follower_count,
-      description: bio,
-      score,
-      ...(email ? { email } : {}),
-    };
+      const score = scoreProfile(handle, bio, follower_count);
+      if (score === null) { disqualified++; continue; }
 
-    const { error } = await sb.from('scraped_leads').insert(row);
-    if (error) {
-      // Unique constraint violation = already exists (race), treat as skipped
-      if (error.code === '23505') { skipped++; continue; }
-      console.error('[tiktok-leads] insert error', handle, error.message);
-      skipped++;
-      continue;
-    }
-    inserted++;
+      const email = bio ? (EMAIL_RE.exec(bio)?.[0] || null) : null;
 
-    // Push to HubSpot as a company/organizer if we have an email
-    if (email) {
-      syncBusinessRegistration({
+      const row = {
         name: handle,
-        email,
+        tiktok: handle,
+        source: 'tiktok',
         city: 'Durban',
         province: 'KwaZulu-Natal',
         category: 'event_organizer',
-      });
+        status: 'new',
+        follower_count,
+        description: bio,
+        score,
+        ...(email ? { email } : {}),
+      };
+
+      const { error } = await sb.from('scraped_leads').insert(row);
+      if (error) {
+        if (error.code === '23505') { skipped++; continue; }
+        console.error('[tiktok-leads] insert error', handle, error.message);
+        skipped++;
+        continue;
+      }
+      inserted++;
+
+      if (email) {
+        syncBusinessRegistration({
+          name: handle,
+          email,
+          city: 'Durban',
+          province: 'KwaZulu-Natal',
+          category: 'event_organizer',
+        });
+      }
+
+      // Brief pause between profile visits
+      await new Promise(r => setTimeout(r, 1500));
     }
+  } finally {
+    if (profBrowser) await profBrowser.close().catch(() => {});
   }
 
   return res.status(200).json({ ok: true, found, qualified: found - disqualified, inserted, skipped, disqualified });

@@ -9,8 +9,10 @@
   },
   "dependencies": {
     "@sentry/node": "^7.120.0",
+    "@sparticuz/chromium": "^153.0.0",
     "@supabase/supabase-js": "^2.43.0",
     "nodemailer": "^6.9.14",
+    "playwright-core": "^1.63.0",
     "web-push": "^3.6.7"
   }
 }
