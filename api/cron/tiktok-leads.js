@@ -4,6 +4,8 @@
 const { sb: getSB, CORS } = require('../../lib/shared');
 const { syncBusinessRegistration } = require('../../lib/hubspot');
 
+const MONTH = new Date().toLocaleString('en-US', { month: 'long' }); // e.g. "September"
+
 const HASHTAGS = [
   'DurbanEventOrganizer',
   'DurbanEventPlanner',
@@ -14,6 +16,12 @@ const HASHTAGS = [
   'KZNNightlife',
   'DurbanVibes',
   'DurbanEntertainment',
+  // Month-specific tags (e.g. DurbanEventsSeptember, KZNSeptember)
+  `DurbanEvents${MONTH}`,
+  `KZN${MONTH}`,
+  `Durban${MONTH}`,
+  `${MONTH}Events`,
+  `${MONTH}Durban`,
 ];
 
 const EMAIL_RE = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/;
