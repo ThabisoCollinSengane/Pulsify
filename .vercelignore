@@ -8,6 +8,9 @@
 *.backup
 *.backup.*
 
+# Excluded cron to stay within Hobby plan 12-function limit (tiktok-leads takes the slot)
+api/cron/onboarding-nudge.js
+
 # Dev-only folders not needed for deployment
 _archive/
 db/
