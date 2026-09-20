@@ -3046,6 +3046,10 @@ let _lumiBuyQty = 1;
 function openLumiChat(evId, evName) {
   _lumiEvId = evId; _lumiEvName = evName;
   _lumiSessId = _lumiSessId || ('ls_' + Math.random().toString(36).slice(2));
+  // Restore persisted conversationId so memory survives widget close/reopen
+  if (!_lumiConvId) {
+    try { _lumiConvId = localStorage.getItem('lumi_conv_' + (evId || 'discovery')) || null; } catch(e) {}
+  }
   const isDiscover = !evId;
   const placeholder = isDiscover ? 'What kind of event are you looking for?' : 'Ask about this event…';
   let sheet = document.getElementById('lumi-chat-sheet');
@@ -3204,7 +3208,10 @@ async function sendLumi() {
     if (currentUser) { body.customer_name = currentUser.display_name || ''; body.customer_email = currentUser.email || ''; }
     const d = await Api.post('/siza/chat', body);
     if (d._debug) console.error('[lumi] _debug:', d._debug);
-    if (d.conversationId) _lumiConvId = d.conversationId;
+    if (d.conversationId) {
+      _lumiConvId = d.conversationId;
+      try { localStorage.setItem('lumi_conv_' + (_lumiEvId || 'discovery'), _lumiConvId); } catch(e) {}
+    }
     _lumiAddMsg('out', d.reply, d.suggestContact, d.suggestPurchase && _lumiBuyState !== 'done');
   } catch (e) {
     _lumiAddMsg('out', e.message || "Sorry, I couldn't connect. Try again.");
@@ -7120,6 +7127,15 @@ window.addEventListener('DOMContentLoaded', () => {
   // Push a base sentinel so the back button is always interceptable (PWA exit prevention)
   history.replaceState({ tab: '__base__', isBase: true }, '');
   history.pushState({ tab: _restoredTab, detail: false }, '');
+  // Apply ?genre= / ?city= URL params from Lumi filtered-browse links
+  (function() {
+    try {
+      const _qp = new URLSearchParams(location.search);
+      const _qg = _qp.get('genre'); const _qc = _qp.get('city');
+      if (_qg) feedGenre = _qg;
+      if (_qc) feedCity = _qc;
+    } catch(e) {}
+  })();
   // Always preload home feed data in the background
   loadFeed(true);
   _initFeedInfiniteScroll();
