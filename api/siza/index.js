@@ -229,6 +229,25 @@ ${text.slice(0, 4000)}`;
           if (msgLower.includes(g)) { genreFilter = g; break; }
         }
 
+        const isFoodQuery = /eat|drink|restaurant|food|bar|spot|place to go|where to go|nightlife|pub|cafe|coffee|lunch|dinner|breakfast|brunch|sushi|braai|cocktail/.test(msgLower);
+
+        // Query real businesses from Pulsify when food/drink/spots are mentioned
+        let bizContext = '';
+        if (isFoodQuery) {
+          let bizQuery = sb().from('businesses')
+            .select('id,name,category,city,description,address')
+            .eq('approved', true)
+            .limit(8);
+          if (cityFilter) bizQuery = bizQuery.ilike('city', `%${cityFilter}%`);
+          const { data: spots } = await bizQuery;
+          if (spots && spots.length > 0) {
+            bizContext = '\n\nPULSIFY SPOTS NEAR YOU:\n' + spots.map(b =>
+              `- ${b.name} (${b.category || 'Spot'}, ${b.city || 'SA'})${b.address ? ' — ' + b.address : ''}`
+            ).join('\n');
+            bizContext += '\nMore spots: https://pulsefy.co.za (scroll to "Spots near you")';
+          }
+        }
+
         let eventsQuery = sb().from('events')
           .select('id,name,genre,venue_city,date_local,venue_name')
           .eq('is_active', true)
@@ -283,11 +302,19 @@ TASK: Help them discover events. Use the UPCOMING EVENTS list below when relevan
 
 SAFETY: Mention at most once, only if a night event at an unfamiliar venue. Use verified transport (Uber/Bolt), park safely, keep valuables secure.
 
+PULSIFY BUSINESSES / SPOTS:
+Pulsify also lists local spots — restaurants, bars, entertainment venues. When someone asks about eating, drinking, or where to go before/after an event:
+- Durban: Joe Kool's (beachfront, family-friendly), Cargo Hold at uShaka (underwater aquarium dining), Wilson's Wharf (harbour restaurants), Spiga d'Oro (Florida Rd), BAT Centre, The Balmoral
+- Joburg: Neighbourgoods Market (Braamfontein, Saturdays), Sheds@1Fox, Melrose Arch restaurants, Vilakazi Street eateries (Soweto), Kitcheners (Braamfontein)
+- Cape Town: The Old Biscuit Mill (Woodstock, Saturdays), V&A Waterfront restaurants, Bree Street eateries, Harbour House (Kalk Bay), Shimmy Beach Club
+- Pretoria: Hazel Food Market, Irene Village Market, Menlyn Maine restaurants, Waterkloof restaurants
+Direct them to: https://pulsefy.co.za — home feed has a "Spots near you" section.
+
 RULES:
 1. Only share event names, prices and dates from the list below — never invent them.
 2. If the list is empty or doesn't match their query, say so warmly and direct them to browse: ${browseLine}
 3. Keep replies to 3–4 sentences max. No bullet-point dumps.
-4. Do NOT open with "Hey there!" — just answer.${eventsContext}
+4. Do NOT open with "Hey there!" — just answer.${eventsContext}${bizContext}
 
 ${browseLine}`;
       }
