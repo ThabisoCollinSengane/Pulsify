@@ -1,26 +1,47 @@
 // Cron: scrape Durban event TikTok creators via Playwright → scraped_leads + HubSpot
 // Runs daily at 9am via Vercel cron (vercel.json).
 // Uses playwright-core + @sparticuz/chromium (serverless-compatible Chromium).
+// Two lead categories: 'event_organizer' and 'venue' (nightclubs, shisanyamas, restaurants, etc.)
 const { sb: getSB, CORS } = require('../../lib/shared');
 const { syncBusinessRegistration } = require('../../lib/hubspot');
 
 const MONTH = new Date().toLocaleString('en-US', { month: 'long' }); // e.g. "September"
 
-const HASHTAGS = [
+// Organizer-focused hashtags
+const ORGANIZER_HASHTAGS = [
   'DurbanEventOrganizer',
   'DurbanEventPlanner',
   'DurbanEvents',
-  'DurbanNightlife',
   'DurbanParty',
   'KZNEvents',
-  'KZNNightlife',
-  'DurbanVibes',
   'DurbanEntertainment',
-  // Month-specific tags (e.g. DurbanEventsSeptember, KZNSeptember)
+  'DurbanPromoter',
+  'DurbanConcert',
+  'KZNEntertainment',
+  'DurbanTickets',
   `DurbanEvents${MONTH}`,
   `KZN${MONTH}`,
-  `Durban${MONTH}`,
   `${MONTH}Events`,
+];
+
+// Venue/business-focused hashtags (nightclubs, shisanyamas, restaurants, bars)
+const VENUE_HASHTAGS = [
+  'DurbanNightlife',
+  'DurbanNightclub',
+  'DurbanVibes',
+  'KZNNightlife',
+  'DurbanShisanyama',
+  'DurbanBraai',
+  'DurbanBar',
+  'DurbanRestaurant',
+  'DurbanEats',
+  'DurbanLounge',
+  'DurbanPub',
+  'DurbanClub',
+  'DurbanBeachBar',
+  'DurbanFoodAndDrinks',
+  'UmhlangaNightlife',
+  `Durban${MONTH}`,
   `${MONTH}Durban`,
 ];
 
@@ -28,12 +49,20 @@ const EMAIL_RE = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/;
 
 const ORGANIZER_KEYWORDS = [
   'organis', 'organiz', 'promoter', 'promotions', 'events',
-  'booking', 'bookings', 'tickets', 'entertainment', 'nightlife',
-  'parties', 'party', 'venue', 'host', 'hosting', 'management',
-  'productions', 'collective', 'agency',
+  'booking', 'bookings', 'tickets', 'entertainment',
+  'parties', 'party', 'host', 'hosting', 'management',
+  'productions', 'collective', 'agency', 'concert', 'festival',
 ];
 
-const DURBAN_KEYWORDS = ['durban', 'dbn', 'kzn', 'kwazulu', 'natal', 'umhlanga', 'pinetown', 'umlazi'];
+const VENUE_KEYWORDS = [
+  'nightclub', 'night club', 'shisanyama', 'restaurant', 'bar', 'pub',
+  'lounge', 'grill', 'braai', 'eatery', 'bistro', 'tavern', 'club',
+  'steakhouse', 'kitchen', 'beachfront', 'rooftop', 'cocktail', 'brunch',
+  'dining', 'food', 'drinks', 'venue', 'spot', 'place', 'diner',
+  'joe cool', 'joecool', 'ushaka', 'gateway', 'florida road',
+];
+
+const DURBAN_KEYWORDS = ['durban', 'dbn', 'kzn', 'kwazulu', 'natal', 'umhlanga', 'pinetown', 'umlazi', 'florida road'];
 
 const MIN_FOLLOWERS = 500;
 
@@ -188,18 +217,34 @@ async function scrapeProfile(browser, handle) {
   return result;
 }
 
-function scoreProfile(handle, bio, follower_count) {
+// Detect lead category from handle + bio text.
+// Returns 'event_organizer', 'venue', or null (disqualified).
+function detectCategory(handle, bio, sourceCategory) {
+  const text = `${handle} ${bio || ''}`.toLowerCase();
+  const orgCount = ORGANIZER_KEYWORDS.filter(k => text.includes(k)).length;
+  const venueCount = VENUE_KEYWORDS.filter(k => text.includes(k)).length;
+  // Needs at least one signal from either keyword set
+  if (orgCount === 0 && venueCount === 0) return null;
+  // Tie-break: if scraped from a venue hashtag and venue signals present → venue
+  if (venueCount > orgCount) return 'venue';
+  if (orgCount > venueCount) return 'event_organizer';
+  // Equal — defer to the source hashtag type
+  return sourceCategory || 'event_organizer';
+}
+
+function scoreProfile(handle, bio, follower_count, category) {
   const text = `${handle} ${bio || ''}`.toLowerCase();
   const hasDurban = DURBAN_KEYWORDS.some(k => text.includes(k));
   if (!hasDurban) return null;
   if (follower_count !== null && follower_count < MIN_FOLLOWERS) return null;
-  const orgMatches = ORGANIZER_KEYWORDS.filter(k => text.includes(k)).length;
-  if (orgMatches === 0) return null;
-  const orgScore = Math.min(orgMatches * 15, 60);
+  const keywords = category === 'venue' ? VENUE_KEYWORDS : ORGANIZER_KEYWORDS;
+  const kwMatches = keywords.filter(k => text.includes(k)).length;
+  if (kwMatches === 0) return null;
+  const kwScore = Math.min(kwMatches * 15, 60);
   const fc = follower_count || 0;
   const followerScore = fc > 0 ? Math.min(Math.log10(fc / MIN_FOLLOWERS + 1) * 20, 30) : 0;
   const emailBonus = EMAIL_RE.test(bio || '') ? 10 : 0;
-  return Math.round(orgScore + followerScore + emailBonus);
+  return Math.round(kwScore + followerScore + emailBonus);
 }
 
 module.exports = async (req, res) => {
@@ -218,15 +263,23 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: 'Browser launch failed', detail: err.message });
   }
 
+  // authorMap: handle → { handle, sourceCategory }
+  // sourceCategory is 'event_organizer' or 'venue' based on which hashtag bucket found it first.
   const authorMap = new Map();
 
   try {
-    for (const tag of HASHTAGS) {
+    for (const tag of ORGANIZER_HASHTAGS) {
       const handles = await scrapeHashtag(browser, tag);
       for (const h of handles) {
-        if (!authorMap.has(h)) authorMap.set(h, { handle: h });
+        if (!authorMap.has(h)) authorMap.set(h, { handle: h, sourceCategory: 'event_organizer' });
       }
-      // Brief pause between hashtag pages
+      await new Promise(r => setTimeout(r, 2000));
+    }
+    for (const tag of VENUE_HASHTAGS) {
+      const handles = await scrapeHashtag(browser, tag);
+      for (const h of handles) {
+        if (!authorMap.has(h)) authorMap.set(h, { handle: h, sourceCategory: 'venue' });
+      }
       await new Promise(r => setTimeout(r, 2000));
     }
   } finally {
@@ -247,7 +300,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    for (const [handle] of authorMap) {
+    for (const [handle, meta] of authorMap) {
       const { data: existing } = await sb
         .from('scraped_leads')
         .select('id')
@@ -264,7 +317,10 @@ module.exports = async (req, res) => {
         follower_count = profile?.follower_count || null;
       }
 
-      const score = scoreProfile(handle, bio, follower_count);
+      const category = detectCategory(handle, bio, meta.sourceCategory);
+      if (!category) { disqualified++; continue; }
+
+      const score = scoreProfile(handle, bio, follower_count, category);
       if (score === null) { disqualified++; continue; }
 
       const email = bio ? (EMAIL_RE.exec(bio)?.[0] || null) : null;
@@ -275,7 +331,7 @@ module.exports = async (req, res) => {
         source: 'tiktok',
         city: 'Durban',
         province: 'KwaZulu-Natal',
-        category: 'event_organizer',
+        category,
         status: 'new',
         follower_count,
         description: bio,
@@ -298,7 +354,7 @@ module.exports = async (req, res) => {
           email,
           city: 'Durban',
           province: 'KwaZulu-Natal',
-          category: 'event_organizer',
+          category,
         });
       }
 
