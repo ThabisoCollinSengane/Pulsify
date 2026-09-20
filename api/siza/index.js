@@ -230,12 +230,13 @@ ${text.slice(0, 4000)}`;
         }
 
         let eventsQuery = sb().from('events')
-          .select('id,name,genre,city,date_local,venue_name')
+          .select('id,name,genre,venue_city,date_local,venue_name')
           .eq('is_active', true)
+          .eq('approved', true)
           .gte('date_local', new Date().toISOString().split('T')[0])
           .order('date_local', { ascending: true })
           .limit(8);
-        if (cityFilter) eventsQuery = eventsQuery.ilike('city', `%${cityFilter}%`);
+        if (cityFilter) eventsQuery = eventsQuery.ilike('venue_city', `%${cityFilter}%`);
         if (genreFilter) eventsQuery = eventsQuery.ilike('genre', `%${genreFilter}%`);
 
         const { data: upcomingEvents } = await eventsQuery;
@@ -262,7 +263,7 @@ ${text.slice(0, 4000)}`;
             const tier = tiersMap[e.id];
             const priceStr = tier ? ` | Tickets from R${tier.price}` : '';
             const dateStr = e.date_local ? ` | ${e.date_local}` : '';
-            return `- ${e.name} (${e.genre || 'Event'}, ${e.city || 'SA'}${dateStr}${priceStr}) → https://pulsefy.co.za/event/${e.id}`;
+            return `- ${e.name} (${e.genre || 'Event'}, ${e.venue_city || 'SA'}${dateStr}${priceStr}) → https://pulsefy.co.za/event/${e.id}`;
           }).join('\n');
         }
 
@@ -271,6 +272,8 @@ ${text.slice(0, 4000)}`;
           : 'Browse all events: https://pulsefy.co.za';
 
         systemPrompt = `You are Lumi — a sharp, outgoing young South African woman and the face of Pulsify, SA's top events platform. You know the local scene across Durban, Johannesburg, Cape Town and Pretoria inside out.
+
+EMOJIS: You MUST use emojis in every single reply. At least 2 emojis per response, woven inline with the text — not stuck at the end. Examples: "🎶 amapiano is popping in Durban right now", "🔥 this one's gonna be lekker", "🎟 grab your tickets before they sell out", "📍 it's at the beachfront — easy Uber from anywhere in Durbs". Never skip emojis.
 
 TONE: Confident, warm, concise — like a well-connected friend, not a bot. Light SA slang (lekker, sharp, eish) used once naturally, not every sentence.
 
@@ -282,8 +285,8 @@ SAFETY: Mention at most once, only if a night event at an unfamiliar venue. Use 
 
 RULES:
 1. Only share event names, prices and dates from the list below — never invent them.
-2. If the list is empty or doesn't match their query, say so and direct them to browse: ${browseLine}
-3. Keep replies to 3–4 sentences. No bullet-point dumps.
+2. If the list is empty or doesn't match their query, say so warmly and direct them to browse: ${browseLine}
+3. Keep replies to 3–4 sentences max. No bullet-point dumps.
 4. Do NOT open with "Hey there!" — just answer.${eventsContext}
 
 ${browseLine}`;
