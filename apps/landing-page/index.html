@@ -3093,6 +3093,15 @@ function closeLumiChat() {
   if (sheet) { sheet.style.transform = 'translateY(100%)'; setTimeout(() => { sheet.style.display = 'none'; }, 300); }
 }
 
+function _lumiFormatText(text) {
+  // Escape HTML, then restore links and newlines
+  const escaped = x(text);
+  // Convert URLs to clickable links
+  const linked = escaped.replace(/(https?:\/\/[^\s<>"]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;word-break:break-all">$1</a>');
+  // Convert \n to <br>
+  return linked.replace(/\n/g, '<br>');
+}
+
 function _lumiAddMsg(dir, text, contact, buyBtn) {
   _lumiMsgs.push({ dir, text });
   const msgsEl = document.getElementById('lumi-msgs');
@@ -3100,7 +3109,7 @@ function _lumiAddMsg(dir, text, contact, buyBtn) {
   const isOut = dir === 'out';
   const bubble = document.createElement('div');
   bubble.style.cssText = `display:flex;flex-direction:column;align-items:${isOut ? 'flex-start' : 'flex-end'};gap:4px`;
-  bubble.innerHTML = `<div style="max-width:82%;padding:11px 14px;border-radius:${isOut ? '4px 18px 18px 18px' : '18px 4px 18px 18px'};background:${isOut ? 'var(--surf)' : 'var(--or)'};color:${isOut ? 'var(--tx)' : '#fff'};font-size:.84rem;line-height:1.5;white-space:pre-wrap">${x(text)}</div>
+  bubble.innerHTML = `<div style="max-width:82%;padding:11px 14px;border-radius:${isOut ? '4px 18px 18px 18px' : '18px 4px 18px 18px'};background:${isOut ? 'var(--surf)' : 'var(--or)'};color:${isOut ? 'var(--tx)' : '#fff'};font-size:.84rem;line-height:1.5">${_lumiFormatText(text)}</div>
     ${contact ? `<button onclick="openLumiContactOrganiser()" style="font-size:.72rem;color:var(--or);background:none;border:1px solid var(--or);border-radius:20px;padding:5px 12px;cursor:pointer;margin-top:2px">Contact Organiser →</button>` : ''}
     ${buyBtn ? `<button onclick="startLumiBuy()" style="font-size:.72rem;color:#fff;background:var(--or);border:none;border-radius:20px;padding:6px 16px;cursor:pointer;margin-top:2px;font-weight:600">🎟 Buy Tickets</button>` : ''}`;
   msgsEl.appendChild(bubble);
