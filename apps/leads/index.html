@@ -215,6 +215,8 @@ body{padding-top:58px}
       <option value="all">All Categories</option>
       <option value="business">Business</option>
       <option value="organizer">Organizer</option>
+      <option value="event_organizer">Event Organiser</option>
+      <option value="venue">Venue</option>
     </select>
     <select id="flt-source" class="filter-select" onchange="reloadKanban()">
       <option value="all">All Sources</option>
@@ -544,19 +546,23 @@ function fmtNum(n) { return n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n); }
 
 function cardHtml(l) {
   const ig  = l.instagram ? `https://instagram.com/${l.instagram.replace('@','')}` : null;
+  const tt  = l.tiktok    ? `https://www.tiktok.com/@${l.tiktok.replace('@','')}` : null;
   const wa  = l.phone ? `https://wa.me/${l.phone.replace(/\D/g,'')}` : null;
+  const catLabel = { event_organizer:'Organiser', venue:'Venue', business:'Business', organizer:'Organiser' };
   return `<div class="kb-card" data-id="${l.id}" onclick="openLead('${l.id}')">
     <div class="kb-card-top">
       <input type="checkbox" class="kb-check" data-id="${l.id}" onclick="event.stopPropagation()" onchange="toggleSelect('${l.id}',this.checked)"/>
       <span class="kb-src ${srcClass(l.source)}">${srcLabel(l.source)}</span>
     </div>
     <div class="kb-name" title="${escH(l.name)}">${escH(l.name)}</div>
+    ${l.category ? `<div style="font-size:.62rem;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);margin-bottom:3px">${catLabel[l.category]||l.category}</div>` : ''}
     ${l.city ? `<div class="kb-city">${escH(l.city)}${l.province ? ', '+escH(l.province) : ''}</div>` : ''}
     ${l.follower_count ? `<div class="kb-followers">👥 ${fmtNum(l.follower_count)}</div>` : ''}
     <div class="kb-actions">
       ${l.email ? `<a class="kb-act" href="mailto:${escH(l.email)}" onclick="event.stopPropagation()" title="Email">✉️</a>` : `<span class="kb-act dim">✉️</span>`}
       ${wa ? `<a class="kb-act" href="${wa}" target="_blank" onclick="event.stopPropagation();logWa('${l.id}')" title="WhatsApp">💬</a>` : `<span class="kb-act dim">💬</span>`}
       ${ig ? `<a class="kb-act" href="${ig}" target="_blank" onclick="event.stopPropagation()" title="Instagram">📸</a>` : `<span class="kb-act dim">📸</span>`}
+      ${tt ? `<a class="kb-act" href="${tt}" target="_blank" onclick="event.stopPropagation()" title="TikTok" style="font-size:.7rem;font-weight:700;color:#fff">TT</a>` : ''}
     </div>
   </div>`;
 }
@@ -610,6 +616,7 @@ function renderDetails() {
     ${l.phone    ? `<div class="dl"><div class="dl-label">Phone</div><div class="dl-val"><a href="tel:${escH(l.phone)}">${escH(l.phone)}</a></div></div>` : ''}
     ${l.website  ? `<div class="dl"><div class="dl-label">Website</div><div class="dl-val"><a href="${escH(l.website)}" target="_blank">${escH(l.website)}</a></div></div>` : ''}
     ${l.instagram? `<div class="dl"><div class="dl-label">Instagram</div><div class="dl-val"><a href="https://instagram.com/${escH(l.instagram.replace('@',''))}" target="_blank">@${escH(l.instagram.replace('@',''))}</a></div></div>` : ''}
+    ${l.tiktok   ? `<div class="dl"><div class="dl-label">TikTok</div><div class="dl-val"><a href="https://www.tiktok.com/@${escH(l.tiktok.replace('@',''))}" target="_blank">@${escH(l.tiktok.replace('@',''))}</a></div></div>` : ''}
     ${l.facebook ? `<div class="dl"><div class="dl-label">Facebook</div><div class="dl-val"><a href="${escH(l.facebook)}" target="_blank">${escH(l.facebook)}</a></div></div>` : ''}
     ${l.follower_count ? `<div class="dl"><div class="dl-label">Followers</div><div class="dl-val">👥 ${fmtNum(l.follower_count)}</div></div>` : ''}
     ${l.description ? `<div class="dl"><div class="dl-label">Description</div><div class="dl-val">${escH(l.description)}</div></div>` : ''}`;
@@ -821,7 +828,7 @@ async function openScrapeModal() {
 function exportToCSV() {
   const leads = Object.values(_cache);
   if (!leads.length) { toast('Load leads first', false); return; }
-  const cols = ['name','category','province','city','email','phone','website','instagram','facebook','source','status'];
+  const cols = ['name','category','province','city','email','phone','website','instagram','tiktok','facebook','source','status'];
   const rows = [cols.join(','), ...leads.map(l => cols.map(c => `"${(l[c]||'').toString().replace(/"/g,'""')}"`).join(','))];
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.join('\n')], { type:'text/csv' }));
   a.download = `pulsefy-leads-${new Date().toISOString().slice(0,10)}.csv`; a.click();
