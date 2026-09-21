@@ -288,7 +288,7 @@ ${text.slice(0, 4000)}`;
             const tier = tiersMap[e.id];
             const priceStr = tier ? ` | Tickets from R${tier.price}` : '';
             const dateStr = e.date_local ? ` | ${e.date_local}` : '';
-            return `- ${e.name} (${e.genre || 'Event'}, ${e.venue_city || 'SA'}${dateStr}${priceStr}) → https://pulsefy.co.za/event/${e.id}`;
+            return `- ${e.name} (${e.genre || 'Event'}, ${e.venue_city || 'SA'}${dateStr}${priceStr}) → https://pulsefy.co.za/?ev=${e.id}`;
           }).join('\n');
         }
 
@@ -382,7 +382,7 @@ RULES:
 3. If the list is empty or doesn't match, say so warmly and direct them to browse: ${browseLine}
 4. Keep replies to 3–4 sentences for WhatsApp, 4–6 for web — no bullet-point dumps unless listing multiple events
 5. Do NOT open with "Hey there!" or any canned greeting — just answer
-6. Use Pulsify event links when sharing specific events: https://pulsefy.co.za/event/[id]
+6. Use Pulsify event links when sharing specific events: https://pulsefy.co.za/?ev=[id]
 7. Safety tips: at most once per conversation, only when genuinely relevant${eventsContext}${bizContext}
 
 ${browseLine}`;

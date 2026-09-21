@@ -2228,6 +2228,12 @@ async function loadFeed(resetPage = false, append = false) {
         if (injected.length) { feedEl.innerHTML = injectPromos(cards, injected); _injectFeedBreaks(_feedFinal); }
       });
       loadQuicketEvents(feedCity, feedGenre);
+      // Fire ?ev= deep-link handler (set in DOMContentLoaded when URL has ?ev=)
+      if (typeof window._onFeedFirstLoad === 'function') {
+        const _cb = window._onFeedFirstLoad;
+        window._onFeedFirstLoad = null;
+        setTimeout(_cb, 300);
+      }
     }
 
   } catch(err) {
@@ -3078,6 +3084,20 @@ function openLumiChat(evId, evName) {
   }
   document.getElementById('lumi-ev-label').textContent = isDiscover ? 'Event Discovery' : (evName || '');
   if (!_lumiMsgs.length) {
+    // Try to restore persisted messages so chat history survives widget close/reopen
+    try {
+      const _saved = localStorage.getItem('lumi_msgs_' + (evId || 'discovery'));
+      if (_saved) {
+        const _parsed = JSON.parse(_saved);
+        if (Array.isArray(_parsed) && _parsed.length) {
+          const msgsEl = document.getElementById('lumi-msgs');
+          if (msgsEl) msgsEl.innerHTML = '';
+          _lumiMsgs = [];
+          _parsed.forEach(m => _lumiAddMsg(m.dir, m.text));
+          return;
+        }
+      }
+    } catch(e) {}
     const greeting = isDiscover
       ? `Lumi here — your SA events guide. Looking for something tonight, this weekend, or just exploring? Tell me a city or vibe and I'll sort you out.`
       : `Lumi here — I've got the details on "${evName}". Ask me about tickets, the lineup, dress code, parking, anything.`;
@@ -3089,6 +3109,8 @@ function openLumiDiscovery() {
   _lumiEvId = null; _lumiEvName = null; _lumiMsgs = [];
   _lumiConvId = null; _lumiBuyState = null;
   _lumiSessId = 'ls_' + Math.random().toString(36).slice(2);
+  // Clear persisted history so a fresh session doesn't restore old messages
+  try { localStorage.removeItem('lumi_msgs_discovery'); localStorage.removeItem('lumi_conv_discovery'); } catch(e) {}
   openLumiChat(null, null);
 }
 
@@ -3108,6 +3130,8 @@ function _lumiFormatText(text) {
 
 function _lumiAddMsg(dir, text, contact, buyBtn) {
   _lumiMsgs.push({ dir, text });
+  // Persist chat history to localStorage so it survives widget close/reopen
+  try { localStorage.setItem('lumi_msgs_' + (_lumiEvId || 'discovery'), JSON.stringify(_lumiMsgs.slice(-50))); } catch(e) {}
   const msgsEl = document.getElementById('lumi-msgs');
   if (!msgsEl) return;
   const isOut = dir === 'out';
@@ -7127,13 +7151,23 @@ window.addEventListener('DOMContentLoaded', () => {
   // Push a base sentinel so the back button is always interceptable (PWA exit prevention)
   history.replaceState({ tab: '__base__', isBase: true }, '');
   history.pushState({ tab: _restoredTab, detail: false }, '');
-  // Apply ?genre= / ?city= URL params from Lumi filtered-browse links
+  // Apply ?genre= / ?city= / ?ev= URL params from Lumi links
   (function() {
     try {
       const _qp = new URLSearchParams(location.search);
       const _qg = _qp.get('genre'); const _qc = _qp.get('city');
       if (_qg) feedGenre = _qg;
       if (_qc) feedCity = _qc;
+      const _evId = _qp.get('ev');
+      if (_evId) {
+        // Open the event panel after the feed has loaded its first page
+        const _origLoadFeedCb = window._onFeedFirstLoad;
+        window._onFeedFirstLoad = function() {
+          if (_origLoadFeedCb) _origLoadFeedCb();
+          openEv(_evId);
+          if (_qp.get('buy') === '1') setTimeout(() => { const b = document.getElementById('ev-buy-btn'); if (b) b.click(); }, 600);
+        };
+      }
     } catch(e) {}
   })();
   // Always preload home feed data in the background
