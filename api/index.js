@@ -2845,8 +2845,8 @@ module.exports = async (req, res) => {
       const placingToken = tokenFrom(req);
       if (placingToken) {
         try {
-          const { data: { user } } = await createClient(SUPA_URL, SUPA_ANON).auth.getUser(placingToken);
-          if (user) { placing_user_id = user.id; placing_user_email = user.email; }
+          const { data } = await createClient(SUPA_URL, SUPA_ANON).auth.getUser(placingToken);
+          if (data?.user) { placing_user_id = data.user.id; placing_user_email = data.user.email; }
         } catch(_) {}
       }
       const { data: order, error: oErr } = await sb().from('pickup_orders').insert({
@@ -2890,7 +2890,8 @@ module.exports = async (req, res) => {
     if (url === '/user/pickup-orders' && req.method === 'GET') {
       const token = tokenFrom(req);
       if (!token) return res.status(401).json({ error: 'Unauthorised' });
-      const { data: { user } } = await createClient(SUPA_URL, SUPA_ANON).auth.getUser(token);
+      const authResult = await createClient(SUPA_URL, SUPA_ANON).auth.getUser(token);
+      const user = authResult?.data?.user;
       if (!user) return res.status(401).json({ error: 'Unauthorised' });
       const { data: orders, error } = await sb().from('pickup_orders')
         .select('order_ref,status,items,total,pickup_time,created_at,business_id')

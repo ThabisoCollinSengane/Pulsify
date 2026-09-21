@@ -219,23 +219,24 @@ ${text.slice(0, 4000)}`;
         systemPrompt = buildLumiSystemPrompt(event, channel) + knowledgeContext;
       } else {
         // Discovery mode — query real upcoming events from DB
-        const msgLower = message.toLowerCase();
-        const isPriceQuery = /cheapest|cheap|affordable|price|how much|cost/.test(msgLower);
+        // Scan full conversation history so city/genre mentioned in earlier turns are remembered
+        const allText = [...recentMsgs.map(m => m.body), message].join(' ').toLowerCase();
+        const isPriceQuery = /cheapest|cheap|affordable|price|how much|cost/.test(allText);
 
-        // Detect city/genre hints from message
+        // Detect city/genre hints from ALL conversation turns (not just current message)
         const cityHints = { durban: 'Durban', joburg: 'Johannesburg', johannesburg: 'Johannesburg', 'cape town': 'Cape Town', pretoria: 'Pretoria', gqeberha: 'Gqeberha', bloemfontein: 'Bloemfontein' };
         let cityFilter = null;
         for (const [hint, city] of Object.entries(cityHints)) {
-          if (msgLower.includes(hint)) { cityFilter = city; break; }
+          if (allText.includes(hint)) { cityFilter = city; break; }
         }
 
         const genreHints = ['amapiano', 'gqom', 'afrobeats', 'house', 'hip-hop', 'hiphop', 'jazz', 'gospel', 'kwaito', 'r&b', 'rnb', 'festival', 'concert', 'comedy', 'food', 'art'];
         let genreFilter = null;
         for (const g of genreHints) {
-          if (msgLower.includes(g)) { genreFilter = g; break; }
+          if (allText.includes(g)) { genreFilter = g; break; }
         }
 
-        const isFoodQuery = /eat|drink|restaurant|food|bar|spot|place to go|where to go|nightlife|pub|cafe|coffee|lunch|dinner|breakfast|brunch|sushi|braai|cocktail/.test(msgLower);
+        const isFoodQuery = /eat|drink|restaurant|food|bar|spot|place to go|where to go|nightlife|pub|cafe|coffee|lunch|dinner|breakfast|brunch|sushi|braai|cocktail/.test(allText);
 
         // Query real businesses from Pulsify when food/drink/spots are mentioned
         let bizContext = '';
