@@ -5431,14 +5431,14 @@ async function renderPickupOrders() {
         const showQr = o.status !== 'completed' && o.status !== 'cancelled';
         const qrRow = showQr ? `<div style="display:flex;align-items:center;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
             <img src="${_orderQrUrl(o.order_ref, 120)}" width="72" height="72" alt="Collection QR" style="border-radius:8px;background:#090D1A;flex-shrink:0"/>
-            <div style="font-size:.7rem;color:var(--mu2);line-height:1.4">Show this QR at <strong style="color:var(--tx)">${esc(o.business_name || 'the venue')}</strong> to collect your order.</div>
+            <div style="font-size:.7rem;color:var(--mu2);line-height:1.4">Show this QR at <strong style="color:var(--tx)">${x(o.business_name || 'the venue')}</strong> to collect your order.</div>
           </div>` : '';
         return `<div style="margin:0 12px 10px;padding:14px;background:var(--surf);border:1px solid var(--border);border-radius:16px">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-            <div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.84rem">${esc(o.business_name || 'Venue')}</div><div style="font-size:.65rem;color:var(--mu);margin-top:2px">Ref: ${esc(o.order_ref)}</div></div>
+            <div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.84rem">${x(o.business_name || 'Venue')}</div><div style="font-size:.65rem;color:var(--mu);margin-top:2px">Ref: ${x(o.order_ref)}</div></div>
             <span style="flex-shrink:0;font-size:.62rem;font-weight:700;padding:4px 10px;border-radius:50px;background:${bg};color:${col};${pulse}">${statusLabels[o.status] || o.status}</span>
           </div>
-          <div style="font-size:.76rem;color:var(--mu2);margin-bottom:4px">${esc(itemsSummary)}</div>
+          <div style="font-size:.76rem;color:var(--mu2);margin-bottom:4px">${x(itemsSummary)}</div>
           <div style="display:flex;justify-content:space-between;font-size:.68rem;color:var(--mu)"><span>${dateStr}</span><span style="font-weight:700;color:var(--or)">R${parseFloat(o.total||0).toFixed(2)}</span></div>
           ${qrRow}
         </div>`;
