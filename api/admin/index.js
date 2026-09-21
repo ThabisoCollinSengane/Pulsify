@@ -160,6 +160,33 @@ module.exports = async (req, res) => {
       return res.status(200).json({ lead: data, success: true });
     }
 
+
+    /* ─── DELETE /leads/:id ──────────────────────────────────── */
+    if (leadId && req.method === 'DELETE') {
+      const auth3 = await authUser(req);
+      if (!auth3 || auth3.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const delToken = tokenFrom(req);
+      const { error } = await sbAs(delToken).from('scraped_leads').delete().eq('id', leadId);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ success: true });
+    }
+
+    /* ─── POST /leads/:id/push-hubspot ── push scraped lead to HubSpot CRM ─ */
+    const hsMatch = url.match(/^\/leads\/([^/]+)\/push-hubspot$/);
+    if (hsMatch && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      const { data: lead, error: lErr } = await sb().from('scraped_leads')
+        .select('id,name,email,phone,city,province,category').eq('id', hsMatch[1]).single();
+      if (lErr || !lead) return res.status(404).json({ error: 'Lead not found' });
+      if (!lead.email) return res.status(400).json({ error: 'Lead has no email address' });
+      const contactId = await upsertContact({ email: lead.email, name: lead.name, phone: lead.phone });
+      if (!contactId) return res.status(500).json({ error: 'HubSpot push failed — check HUBSPOT_TOKEN' });
+      await sb().from('scraped_leads').update({ updated_at: new Date().toISOString() }).eq('id', lead.id);
+      return res.status(200).json({ success: true, hubspot_contact_id: contactId });
+    }
+
+
     /* ─── GET /leads/:id/events ─── list events for one lead ─ */
     const leadEventsListMatch = url.match(/^\/leads\/([^/]+)\/events$/);
     if (leadEventsListMatch && req.method === 'GET') {
