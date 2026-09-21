@@ -3729,6 +3729,28 @@ function _orderQrUrl(ref, size) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(ref)}&bgcolor=090D1A&color=FF5C00&margin=2`;
 }
 
+function openBookingQrModal(qrData, eventName, bookingRef) {
+  document.getElementById('booking-qr-modal')?.remove();
+  const ov = document.createElement('div');
+  ov.id = 'booking-qr-modal';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:3200;background:rgba(0,0,0,.88);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.onclick = e => { if (e.target === ov) ov.remove(); };
+  const qUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(qrData)}&bgcolor=090D1A&color=B026FF&margin=2`;
+  ov.innerHTML = `
+    <div style="width:100%;max-width:380px;background:var(--bg2);border-radius:22px;border:1px solid rgba(255,255,255,.1);padding:24px 20px 28px;text-align:center">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem">${esc(eventName) || 'Event Ticket'}</div>
+        <button onclick="document.getElementById('booking-qr-modal').remove()" style="background:rgba(255,255,255,.08);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;color:var(--tx);font-size:.8rem">✕</button>
+      </div>
+      <div style="background:#090D1A;border:1px solid var(--border2);border-radius:16px;padding:16px;display:inline-block;margin-bottom:14px">
+        <img src="${qUrl}" width="260" height="260" alt="Ticket QR" style="display:block;border-radius:8px"/>
+      </div>
+      <div style="font-family:monospace;font-size:.72rem;color:var(--mu);margin-bottom:6px">Ref: ${esc(bookingRef)}</div>
+      <div style="font-size:.72rem;color:var(--mu)">Show this QR at the door to scan your ticket.</div>
+    </div>`;
+  document.body.appendChild(ov);
+}
+
 function openOrderQrModal(orderRef, bizName, itemsSummary, total) {
   document.getElementById('order-qr-modal')?.remove();
   const ov = document.createElement('div');
@@ -5415,7 +5437,7 @@ async function renderBookings() {
               <div style="font-size:.65rem;color:var(--mu);font-family:monospace">Ref: ${esc(b.booking_ref)}</div>
               ${checkedIn}
             </div>
-            ${qrUrl ? `<div style="flex-shrink:0"><img src="${qrUrl}" width="80" height="80" style="border-radius:10px;background:var(--surf)" loading="lazy"/></div>` : ''}
+            ${qrUrl ? `<div style="flex-shrink:0"><img src="${qrUrl}" width="80" height="80" style="border-radius:10px;background:var(--surf);cursor:pointer" loading="lazy" onclick="openBookingQrModal('${esc(b.qr_data||b.booking_ref)}','${esc(ev.name||'')}','${esc(b.booking_ref)}')"/></div>` : ''}
           </div>
         </div>
       </div>`;
@@ -7183,6 +7205,10 @@ document.addEventListener('DOMContentLoaded', initSupabaseSession);
     if (s && s.id) {
       var btn = document.getElementById('auth-btn');
       if (btn) { btn.textContent = 'Feed'; btn.onclick = function(){ window.location.href='/feeds'; }; }
+      // Seed currentUser from cache so tabs opened before initSupabaseSession
+      // resolves (async) don't falsely show "Sign in to see your tickets".
+      // initSupabaseSession will overwrite this with the real session object.
+      currentUser = s;
     }
   } catch(e) {}
 })();
