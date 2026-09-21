@@ -389,7 +389,20 @@ module.exports = async (req, res) => {
         (profiles || []).forEach(p => { profileMap[p.id] = p; });
       }
 
-      const result = (posts || []).map(p => ({ ...p, profile: profileMap[p.user_id] || null }));
+      // Fetch event images as fallback for posts that have event_id but no image_url
+      const eventIds = [...new Set((posts || []).filter(p => p.event_id && !p.image_url).map(p => p.event_id))];
+      let eventImageMap = {};
+      if (eventIds.length) {
+        const { data: evs } = await sb().from('events')
+          .select('id,image_url,banner_url').in('id', eventIds);
+        (evs || []).forEach(e => { eventImageMap[e.id] = e.image_url || e.banner_url || null; });
+      }
+
+      const result = (posts || []).map(p => ({
+        ...p,
+        profile: profileMap[p.user_id] || null,
+        image_url: p.image_url || (p.event_id ? eventImageMap[p.event_id] : null) || null,
+      }));
       return res.status(200).json({ posts: result, total: count || 0, page, limit, has_next: offset + limit < (count || 0) });
     }
 
@@ -3052,11 +3065,12 @@ module.exports = async (req, res) => {
       const latN = parseFloat(lat), lonN = parseFloat(lon);
       if (latN < -35 || latN > -22 || lonN < 16 || lonN > 33)
         return res.status(400).json({ error: 'Coordinates must be within South Africa (lat −35 to −22, lon 16 to 33)' });
+      const userSb = sbAs(req.headers.authorization?.replace('Bearer ', ''));
       // Cancel any existing pending request for this entity so there's only one at a time
-      await sb().from('location_requests')
+      await userSb.from('location_requests')
         .update({ status: 'rejected', notes: 'Superseded by new request' })
         .eq('entity_id', entity_id).eq('entity_type', entity_type).eq('status', 'pending');
-      const { data, error } = await sb().from('location_requests')
+      const { data, error } = await userSb.from('location_requests')
         .insert({ entity_type, entity_id, entity_name: entity_name || null, user_id: auth.user.id, lat: latN, lon: lonN })
         .select().single();
       if (error) return res.status(400).json({ error: error.message });

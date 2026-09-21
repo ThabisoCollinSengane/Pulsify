@@ -1,4 +1,4 @@
-const { sb, corsHeaders, haverBox, geocodeSA, rateLimited, authUser, captureError, validate } = require('../../lib/shared');
+const { sb, sbAs, corsHeaders, haverBox, geocodeSA, rateLimited, authUser, captureError, validate } = require('../../lib/shared');
 
 module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
@@ -388,14 +388,15 @@ module.exports = async (req, res) => {
       const auth = await authUser(req);
       if (!auth) return res.status(401).json({ error: 'Sign in to like events' });
 
-      const { data: existing } = await sb()
+      const userSb = sbAs(req.headers.authorization?.replace('Bearer ', ''));
+      const { data: existing } = await userSb
         .from('event_likes').select('user_id')
         .eq('user_id', auth.user.id).eq('event_id', likeEvId).maybeSingle();
 
       if (existing) {
-        await sb().from('event_likes').delete().eq('user_id', auth.user.id).eq('event_id', likeEvId);
+        await userSb.from('event_likes').delete().eq('user_id', auth.user.id).eq('event_id', likeEvId);
       } else {
-        const { error: insErr } = await sb().from('event_likes').insert({ user_id: auth.user.id, event_id: likeEvId });
+        const { error: insErr } = await userSb.from('event_likes').insert({ user_id: auth.user.id, event_id: likeEvId });
         if (insErr) return res.status(400).json({ error: insErr.message });
       }
       const { data: ev } = await sb().from('events').select('like_count').eq('id', likeEvId).single();
