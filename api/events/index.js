@@ -422,6 +422,68 @@ module.exports = async (req, res) => {
       return res.status(200).json({ going: !existing, attendance_count: ev?.attendance_count ?? 0 });
     }
 
+    /* ─── GET /events/:id/analytics ─────────────────────── */
+    const analyticsEvId = url.match(/^\/events\/([^/]+)\/analytics$/)?.[1];
+    if (analyticsEvId && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Sign in required' });
+
+      const { data: evRow } = await sb()
+        .from('events')
+        .select('id,name,organiser_id,tickets_sold,attendance_count,like_count,comment_count,hype_score')
+        .eq('id', analyticsEvId)
+        .maybeSingle();
+      if (!evRow) return res.status(404).json({ error: 'Event not found' });
+      if (evRow.organiser_id !== auth.user.id) return res.status(403).json({ error: 'Forbidden' });
+
+      const { data: profile } = await sb()
+        .from('profiles')
+        .select('subscription_type')
+        .eq('id', auth.user.id)
+        .maybeSingle();
+      const isPremium = profile?.subscription_type === 'premium' || profile?.subscription_type === 'trial';
+      if (!isPremium) return res.status(403).json({ error: 'Premium subscription required' });
+
+      // Bookings with date for sales-by-day chart
+      const { data: bookings } = await sb()
+        .from('bookings')
+        .select('created_at,quantity,total_amount_cents')
+        .eq('event_id', analyticsEvId)
+        .eq('status', 'confirmed');
+
+      // Lumi orders count
+      const { count: lumiCount } = await sb()
+        .from('siza_orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_id', analyticsEvId)
+        .eq('state', 'paid');
+
+      // Aggregate sales by day
+      const byDay = {};
+      let totalRevenue = 0;
+      for (const b of bookings || []) {
+        const day = (b.created_at || '').slice(0, 10);
+        if (!byDay[day]) byDay[day] = { date: day, tickets: 0, revenue_cents: 0 };
+        byDay[day].tickets += b.quantity || 1;
+        byDay[day].revenue_cents += b.total_amount_cents || 0;
+        totalRevenue += b.total_amount_cents || 0;
+      }
+      const sales_by_day = Object.values(byDay).sort((a, b) => a.date.localeCompare(b.date));
+
+      return res.status(200).json({
+        event_name: evRow.name,
+        total_sold: evRow.tickets_sold || 0,
+        total_revenue_cents: totalRevenue,
+        checkin_count: evRow.attendance_count || 0,
+        lumi_orders: lumiCount || 0,
+        likes: evRow.like_count || 0,
+        rsvps: evRow.attendance_count || 0,
+        comments: evRow.comment_count || 0,
+        hype_score: evRow.hype_score || 0,
+        sales_by_day,
+      });
+    }
+
     return res.status(404).json({ error: 'Not found' });
   } catch (e) {
     captureError(e, { url });

@@ -175,6 +175,7 @@ select.inp option{background:#1C1140}
     <div class="tab" onclick="switchTab(this,'pane-pricelist')">💲 Pricelist</div>
     <div class="tab" onclick="switchTab(this,'pane-settings')">⚙️ Settings</div>
     <div class="tab" onclick="switchTab(this,'pane-lumi-orders')">🤖 Orders</div>
+    <div class="tab" onclick="switchTab(this,'pane-analytics')">📊 Analytics</div>
   </div>
 
   <div class="pane active" id="pane-post">
@@ -616,6 +617,21 @@ select.inp option{background:#1C1140}
     </div>
     <div id="lumi-orders-list">
       <div class="empty" style="padding:24px;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div>
+    </div>
+  </div>
+
+  <!-- ANALYTICS PANE -->
+  <div class="pane" id="pane-analytics">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu)">Event Analytics</div>
+      <div id="analytics-premium-badge" style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;color:var(--or)"></div>
+    </div>
+    <select id="analytics-event-sel" onchange="loadEventAnalytics(this.value)"
+      style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--br);background:var(--cs);color:var(--tx);font-size:.84rem;margin-bottom:16px;outline:none">
+      <option value="">— Select an event —</option>
+    </select>
+    <div id="analytics-body">
+      <div class="empty" style="padding:24px;text-align:center;color:var(--mu);font-size:.82rem">Select an event to view analytics</div>
     </div>
   </div>
 </div>
@@ -1804,6 +1820,7 @@ function switchTab(btn, paneId, _noPush) {
     if (sel.options.length <= 1) loadScanEvents(); else loadScanStats();
   }
   if (paneId === 'pane-lumi-orders') loadLumiOrders();
+  if (paneId === 'pane-analytics') loadAnalyticsEvents();
 }
 
 async function loadPostUsage() {
@@ -2795,6 +2812,100 @@ async function loadLumiOrders() {
     }).join('');
   } catch(e) {
     el.innerHTML = `<div class="empty" style="padding:24px;text-align:center;color:var(--pk);font-size:.78rem">Error: ${e.message}</div>`;
+  }
+}
+
+async function loadAnalyticsEvents() {
+  const sel = document.getElementById('analytics-event-sel');
+  if (!sel || sel.options.length > 1) return;
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return;
+    const { data: evs } = await sb.from('events').select('id,name,date_local')
+      .eq('organiser_id', user.id).order('date_local', { ascending: false }).limit(50);
+    (evs || []).forEach(ev => {
+      const o = document.createElement('option');
+      o.value = ev.id;
+      o.textContent = `${xe(ev.name)} (${ev.date_local || ''})`;
+      sel.appendChild(o);
+    });
+  } catch(e) { /* ignore */ }
+}
+
+async function loadEventAnalytics(evId) {
+  const body = document.getElementById('analytics-body');
+  if (!evId) {
+    body.innerHTML = '<div class="empty" style="padding:24px;text-align:center;color:var(--mu);font-size:.82rem">Select an event to view analytics</div>';
+    return;
+  }
+  body.innerHTML = '<div class="empty" style="padding:24px;text-align:center;color:var(--mu);font-size:.82rem">Loading…</div>';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session?.access_token;
+    const res = await fetch(`/api/events/${encodeURIComponent(evId)}/analytics`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.status === 403) {
+      const err = await res.json().catch(() => ({}));
+      if ((err.error || '').includes('Premium')) {
+        body.innerHTML = `<div class="empty" style="padding:24px;text-align:center;color:var(--mu);font-size:.82rem">📊 Analytics is a <strong>premium feature</strong>. Upgrade to unlock event insights.</div>`;
+        return;
+      }
+      body.innerHTML = `<div class="empty" style="padding:24px;text-align:center;color:var(--pk);font-size:.82rem">Access denied.</div>`;
+      return;
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      body.innerHTML = `<div class="empty" style="padding:24px;text-align:center;color:var(--pk);font-size:.78rem">Error: ${xe(err.error || res.statusText)}</div>`;
+      return;
+    }
+    const d = await res.json();
+    const rev = d.total_revenue_cents ? `R${(d.total_revenue_cents/100).toFixed(2)}` : 'R0.00';
+    const tiles = [
+      { label: 'Tickets Sold', value: d.total_sold, icon: '🎟' },
+      { label: 'Revenue', value: rev, icon: '💰' },
+      { label: 'Check-ins', value: d.checkin_count, icon: '✅' },
+      { label: 'Lumi Orders', value: d.lumi_orders, icon: '🤖' },
+      { label: 'Likes', value: d.likes, icon: '❤️' },
+      { label: 'RSVPs', value: d.rsvps, icon: '📌' },
+      { label: 'Comments', value: d.comments, icon: '💬' },
+      { label: 'Hype Score', value: d.hype_score, icon: '🔥' },
+    ];
+    const tileHtml = tiles.map(t => `
+      <div style="background:var(--cs);border-radius:12px;padding:14px 12px;text-align:center;border:1px solid var(--br)">
+        <div style="font-size:1.4rem">${t.icon}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--tx);margin:4px 0">${xe(String(t.value))}</div>
+        <div style="font-size:.7rem;color:var(--mu)">${t.label}</div>
+      </div>`).join('');
+
+    // Sales by day chart (CSS bars, no library)
+    let chartHtml = '';
+    if (d.sales_by_day && d.sales_by_day.length > 0) {
+      const maxTix = Math.max(...d.sales_by_day.map(r => r.tickets), 1);
+      const bars = d.sales_by_day.map(r => {
+        const pct = Math.round((r.tickets / maxTix) * 100);
+        const label = r.date.slice(5); // MM-DD
+        return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:32px">
+          <div style="font-size:.65rem;color:var(--tx);font-weight:600">${r.tickets}</div>
+          <div style="width:22px;height:${Math.max(pct,4)}px;background:var(--or);border-radius:4px 4px 0 0;transition:height .3s"></div>
+          <div style="font-size:.6rem;color:var(--mu);writing-mode:vertical-rl;transform:rotate(180deg);max-height:40px;overflow:hidden">${xe(label)}</div>
+        </div>`;
+      }).join('');
+      chartHtml = `
+        <div style="margin-top:20px">
+          <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Ticket Sales by Day</div>
+          <div style="display:flex;align-items:flex-end;gap:6px;overflow-x:auto;padding-bottom:8px;min-height:100px">
+            ${bars}
+          </div>
+        </div>`;
+    }
+
+    body.innerHTML = `
+      <div style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;color:var(--tx);margin-bottom:12px">${xe(d.event_name)}</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">${tileHtml}</div>
+      ${chartHtml}`;
+  } catch(e) {
+    body.innerHTML = `<div class="empty" style="padding:24px;text-align:center;color:var(--pk);font-size:.78rem">Error: ${xe(e.message)}</div>`;
   }
 }
 
