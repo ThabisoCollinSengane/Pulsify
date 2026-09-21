@@ -3729,6 +3729,29 @@ function _orderQrUrl(ref, size) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(ref)}&bgcolor=090D1A&color=FF5C00&margin=2`;
 }
 
+function openOrderQrModal(orderRef, bizName, itemsSummary, total) {
+  document.getElementById('order-qr-modal')?.remove();
+  const ov = document.createElement('div');
+  ov.id = 'order-qr-modal';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:3200;background:rgba(0,0,0,.88);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.onclick = e => { if (e.target === ov) ov.remove(); };
+  ov.innerHTML = `
+    <div style="width:100%;max-width:380px;background:var(--bg2);border-radius:22px;border:1px solid rgba(255,255,255,.1);padding:24px 20px 28px;text-align:center">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem">${x(bizName) || 'Collection QR'}</div>
+        <button onclick="document.getElementById('order-qr-modal').remove()" style="background:rgba(255,255,255,.08);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;color:var(--tx);font-size:.8rem">✕</button>
+      </div>
+      <div style="background:#090D1A;border:1px solid var(--border2);border-radius:16px;padding:16px;display:inline-block;margin-bottom:14px">
+        <img src="${_orderQrUrl(orderRef, 260)}" width="260" height="260" alt="Order QR" style="display:block;border-radius:8px"/>
+      </div>
+      ${itemsSummary ? `<div style="font-size:.75rem;color:var(--mu2);margin-bottom:6px">${x(itemsSummary)}</div>` : ''}
+      <div style="font-family:monospace;font-size:.7rem;color:var(--mu);margin-bottom:6px">Ref: ${x(orderRef)}</div>
+      ${total ? `<div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;color:var(--or);margin-bottom:4px">R${(+total).toFixed(2)}</div>` : ''}
+      <div style="font-size:.72rem;color:var(--mu)">Show this QR at the venue to collect your order.</div>
+    </div>`;
+  document.body.appendChild(ov);
+}
+
 function showOrderConfirmation(orderRef, bizName, total, items) {
   document.getElementById('order-confirm-overlay')?.remove();
   const summary = (items || []).map(i => `${i.qty}× ${x(i.name)}`).join(', ');
@@ -5430,8 +5453,8 @@ async function renderPickupOrders() {
         // Active orders show the collection QR (payload = order_ref, scanned at the venue)
         const showQr = o.status !== 'completed' && o.status !== 'cancelled';
         const qrRow = showQr ? `<div style="display:flex;align-items:center;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-            <img src="${_orderQrUrl(o.order_ref, 120)}" width="72" height="72" alt="Collection QR" style="border-radius:8px;background:#090D1A;flex-shrink:0"/>
-            <div style="font-size:.7rem;color:var(--mu2);line-height:1.4">Show this QR at <strong style="color:var(--tx)">${x(o.business_name || 'the venue')}</strong> to collect your order.</div>
+            <img src="${_orderQrUrl(o.order_ref, 120)}" width="72" height="72" alt="Collection QR" style="border-radius:8px;background:#090D1A;flex-shrink:0;cursor:pointer" onclick="openOrderQrModal('${x(o.order_ref)}','${x(o.business_name||'')}','${x(itemsSummary)}',${parseFloat(o.total||0).toFixed(2)})"/>
+            <div style="font-size:.7rem;color:var(--mu2);line-height:1.4">Show this QR at <strong style="color:var(--tx)">${x(o.business_name || 'the venue')}</strong> to collect your order. <span style="color:var(--or);cursor:pointer" onclick="openOrderQrModal('${x(o.order_ref)}','${x(o.business_name||'')}','${x(itemsSummary)}',${parseFloat(o.total||0).toFixed(2)})">Tap to enlarge</span></div>
           </div>` : '';
         return `<div style="margin:0 12px 10px;padding:14px;background:var(--surf);border:1px solid var(--border);border-radius:16px">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
