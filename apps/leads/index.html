@@ -563,6 +563,7 @@ function cardHtml(l) {
       ${wa ? `<a class="kb-act" href="${wa}" target="_blank" onclick="event.stopPropagation();logWa('${l.id}')" title="WhatsApp">💬</a>` : `<span class="kb-act dim">💬</span>`}
       ${ig ? `<a class="kb-act" href="${ig}" target="_blank" onclick="event.stopPropagation()" title="Instagram">📸</a>` : `<span class="kb-act dim">📸</span>`}
       ${tt ? `<a class="kb-act" href="${tt}" target="_blank" onclick="event.stopPropagation()" title="TikTok" style="font-size:.7rem;font-weight:700;color:#fff">TT</a>` : ''}
+      ${l.email ? `<button class="kb-act" onclick="event.stopPropagation();pushToHubSpot('${l.id}',this)" title="Push to HubSpot CRM" style="font-size:.65rem;font-weight:700;font-family:'Syne',sans-serif;color:var(--or)">HS</button>` : ''}
     </div>
   </div>`;
 }
@@ -813,6 +814,16 @@ async function logWa(leadId) {
       .then(() => { if (_cache[leadId]) _cache[leadId].status = 'contacted'; })
       .catch(()=>{});
   }
+}
+
+// ── HubSpot CRM push ──────────────────────────────────────────────────────────
+async function pushToHubSpot(leadId, btn) {
+  const orig = btn.textContent;
+  btn.textContent = '…'; btn.disabled = true;
+  const r = await fetch(`${API}/leads/${leadId}/push-hubspot`, { method:'POST', headers:authHeaders() });
+  const j = await safeJson(r);
+  if (r.ok) { toast('Pushed to HubSpot ✓', true); btn.textContent = '✓'; btn.style.color='var(--li)'; }
+  else { toast('HubSpot push failed: '+(j.error||''), false); btn.textContent = orig; btn.disabled = false; }
 }
 
 // ── Scrape modal (simple trigger) ─────────────────────────────────────────────
