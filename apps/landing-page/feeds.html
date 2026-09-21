@@ -306,7 +306,7 @@ async function fetchPosts() {
   const limit = 12, offset = (_page - 1) * limit;
   const isTrending = _filter === 'trending';
   let q = sb.from('posts')
-    .select('id,user_id,post_type,image_url,caption,event_name,like_count,comment_count,created_at,profiles:user_id(username,display_name,avatar_url,role,is_verified)', { count: 'exact' })
+    .select('id,user_id,post_type,image_url,caption,event_id,event_name,like_count,comment_count,created_at,profiles:user_id(username,display_name,avatar_url,role,is_verified)', { count: 'exact' })
     .order(isTrending ? 'like_count' : 'created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
@@ -334,7 +334,16 @@ async function fetchPosts() {
   }
   const { data, error, count } = await q;
   if (error) throw new Error(error.message);
-  return { posts: data || [], total: count || 0 };
+  const rows = data || [];
+  // Enrich posts that have event_id but no image_url with event image
+  const missingImgIds = [...new Set(rows.filter(p => p.event_id && !p.image_url).map(p => p.event_id))];
+  if (missingImgIds.length) {
+    const { data: evs } = await sb.from('events').select('id,image_url,banner_url').in('id', missingImgIds);
+    const evMap = {};
+    (evs || []).forEach(e => { evMap[e.id] = e.image_url || e.banner_url || null; });
+    rows.forEach(p => { if (p.event_id && !p.image_url) p.image_url = evMap[p.event_id] || null; });
+  }
+  return { posts: rows, total: count || 0 };
 }
 
 function mapPost(p) {
@@ -349,6 +358,7 @@ function mapPost(p) {
     post_type:    p.post_type || 'attended_photo',
     image_url:    p.image_url || null,
     caption:      p.caption   || '',
+    event_id:     p.event_id  || null,
     event_name:   p.event_name || null,
     like_count:   p.likes_count || p.like_count || 0,
     comment_count: p.comments_count || p.comment_count || 0,
