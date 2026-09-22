@@ -325,7 +325,7 @@ async function fetchPosts() {
     // Fan posts only — exclude organizer/business roles
     const { data: orgRows } = await sb.from('profiles').select('id').in('role', ['organizer','business']);
     const orgIds = (orgRows || []).map(r => r.id);
-    if (orgIds.length) q = q.not('user_id', 'in', `(${orgIds.map(id=>`"${id}"`).join(',')})`);
+    if (orgIds.length) q = q.not('user_id', 'in', `(${orgIds.join(',')})`);
   } else if (_filter === 'trending') {
     // Last 30 days, sorted by like_count DESC — already ordered above
     const since = new Date(Date.now() - 30*24*60*60*1000).toISOString();
