@@ -287,6 +287,7 @@ let _profile  = null;
 let _token    = null;
 try { _session = JSON.parse(localStorage.getItem('p_user'));   } catch(e) {}
 try { _profile = JSON.parse(localStorage.getItem('p_profile')); } catch(e) {}
+try { _token = localStorage.getItem('p_token') || null; } catch(e) {}
 let _uid = _session?.id || null;
 
 let _posts      = [];
@@ -338,9 +339,9 @@ async function fetchPosts() {
   // Enrich posts that have event_id but no image_url with event image
   const missingImgIds = [...new Set(rows.filter(p => p.event_id && !p.image_url).map(p => p.event_id))];
   if (missingImgIds.length) {
-    const { data: evs } = await sb.from('events').select('id,image_url,banner_url').in('id', missingImgIds);
+    const { data: evs } = await sb.from('events').select('id,image_url').in('id', missingImgIds);
     const evMap = {};
-    (evs || []).forEach(e => { evMap[e.id] = e.image_url || e.banner_url || null; });
+    (evs || []).forEach(e => { evMap[e.id] = e.image_url || null; });
     rows.forEach(p => { if (p.event_id && !p.image_url) p.image_url = evMap[p.event_id] || null; });
   }
   return { posts: rows, total: count || 0 };
