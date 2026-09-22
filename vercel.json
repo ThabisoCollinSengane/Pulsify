@@ -86,6 +86,24 @@
       ]
     },
     {
+      "source": "/(.*)\\.(?:png|ico|webp|svg|jpg|jpeg|gif|avif)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/manifest\\.json",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400" }
+      ]
+    },
+    {
+      "source": "/sw\\.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    },
+    {
       "source": "/",
       "headers": [
         { "key": "Content-Type", "value": "text/html; charset=utf-8" }
