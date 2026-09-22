@@ -90,10 +90,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
-<link href="https://api.mapbox.com/mapbox-gl-js/v3.8.0/mapbox-gl.css" rel="stylesheet"/>
-<script src="https://api.mapbox.com/mapbox-gl-js/v3.8.0/mapbox-gl.js"></script>
-<link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.css" rel="stylesheet"/>
-<script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+<!-- Mapbox loaded on demand when map tab is first opened -->
 <script>
 function openAvatarLightbox() {
   const av = document.getElementById('profile-av');
@@ -105,8 +102,8 @@ function openAvatarLightbox() {
   lb.style.display = 'flex';
 }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="https://js.paystack.co/v1/inline.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+<script src="https://js.paystack.co/v1/inline.js" defer></script>
 <!-- Error monitoring (Sentry) — inert until a DSN is set.
      To enable: paste your Sentry project DSN into PULSIFY_SENTRY_DSN below. -->
 <script>window.PULSIFY_SENTRY_DSN = window.PULSIFY_SENTRY_DSN || '';</script>
@@ -568,9 +565,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 @keyframes msLogoIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
 @keyframes msLogoGlow{0%,100%{filter:drop-shadow(0 0 18px rgba(176,38,255,.4))}50%{filter:drop-shadow(0 0 30px rgba(176,38,255,.7))}}
 /* ── Pulsefy verified badge ── */
-.puls-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);box-shadow:0 0 10px rgba(255,92,0,.85),0 0 20px rgba(255,45,120,.55);position:relative;vertical-align:middle;margin-left:5px;flex-shrink:0;cursor:default;font-size:10px;font-weight:900;color:#fff;line-height:1;animation:puls-glow 1.6s ease-in-out infinite}
+.puls-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);box-shadow:0 0 10px rgba(255,92,0,.85),0 0 20px rgba(255,45,120,.55);position:relative;vertical-align:middle;margin-left:5px;flex-shrink:0;cursor:default;font-size:12px;font-weight:900;color:#fff;line-height:1;animation:puls-glow 1.6s ease-in-out infinite}
 .puls-badge::before{content:'';position:absolute;inset:-5px;border-radius:50%;background:radial-gradient(circle,rgba(255,92,0,.55),rgba(255,45,120,.25),transparent 70%);animation:puls-ring 1.8s ease-out infinite;z-index:-1}
-.puls-badge::after{content:'\2713';font-size:10px;font-weight:900;color:#fff;line-height:1;text-shadow:0 0 3px rgba(0,0,0,.5)}
+.puls-badge::after{content:'\2713';font-size:12px;font-weight:900;color:#fff;line-height:1;text-shadow:0 0 3px rgba(0,0,0,.5)}
 .verified-pill{display:inline-flex;align-items:center;gap:2px;vertical-align:middle;margin-left:4px}
 .verified-pill .puls-badge{margin-left:0;width:12px;height:12px}
 .verified-pill .puls-badge::after{font-size:7px}
@@ -1772,6 +1769,23 @@ const Api = {
   del(path, body, opts)    { return this._req('DELETE', path, { ...opts, body }); },
 };
 
+/* ── Lazy Mapbox loader ── */
+let _mapboxReady = false, _mapboxQueue = [];
+function _loadMapboxLibs(cb) {
+  if (_mapboxReady) { cb(); return; }
+  _mapboxQueue.push(cb);
+  if (_mapboxQueue.length > 1) return;
+  function addLink(href) { const l=document.createElement('link');l.rel='stylesheet';l.href=href;document.head.appendChild(l); }
+  function addScript(src, onload) { const s=document.createElement('script');s.src=src;s.onload=onload;document.head.appendChild(s); }
+  addLink('https://api.mapbox.com/mapbox-gl-js/v3.8.0/mapbox-gl.css');
+  addLink('https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.css');
+  addScript('https://api.mapbox.com/mapbox-gl-js/v3.8.0/mapbox-gl.js', function() {
+    addScript('https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js', function() {
+      _mapboxReady=true; _mapboxQueue.forEach(fn=>fn()); _mapboxQueue=[];
+    });
+  });
+}
+
 /* ── NAVIGATION ── */
 function showTab(name, _noPush) {
   sessionStorage.setItem('p_last_tab', name);
@@ -1793,10 +1807,12 @@ function showTab(name, _noPush) {
     const citySel = document.getElementById('map-city-jump');
     if (citySel) citySel.value = cityKey;
     if (!mapInited) {
-      // First open — show splash, init map, ensure business pins
+      // First open — load Mapbox on demand, show splash, init map, ensure business pins
       showMapSplash();
       _pendingCityJump = cityKey; // applied once the map's load event fires
-      requestAnimationFrame(() => { initMap(); ensureBizForMap(); ensureEventsForMap(); ensurePoisForMap(); });
+      _loadMapboxLibs(function() {
+        requestAnimationFrame(() => { initMap(); ensureBizForMap(); ensureEventsForMap(); ensurePoisForMap(); });
+      });
     } else if (mapObj) {
       setTimeout(() => mapObj.resize(), 50);
       ensureEventsForMap(); // no-op if already loaded; loads if Supabase wasn't ready on first open
@@ -2390,7 +2406,7 @@ function buildCard(ev, idx) {
       <div class="fl">📍 ${x(ev.venue_city)} · ${fdt(ev.date_local, ev.time_local)}</div></div>${badge}</div>
     <div class="fb" style="background:${bg};position:relative">
       <span class="fb-emo">${emo}</span>
-      ${ev.image_url ? `<img src="${x(iU(ev.image_url, 800))}" loading="${idx < 3 ? 'eager' : 'lazy'}" onload="this.style.opacity=1" onerror="this.style.display='none'" style="position:relative;z-index:1;opacity:0;transition:opacity .45s ease"/>` : ''}
+      ${ev.image_url ? `<img src="${x(iU(ev.image_url, 500))}" loading="${idx < 3 ? 'eager' : 'lazy'}" onload="this.style.opacity=1" onerror="this.style.display='none'" style="position:relative;z-index:1;opacity:0;transition:opacity .45s ease"/>` : ''}
       ${srcLabel ? `<span style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.82);backdrop-filter:blur(6px);border:1px solid ${srcClr}88;border-radius:50px;padding:3px 10px;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;color:${srcClr};z-index:3;pointer-events:none">${srcIco} ${srcLabel}</span>` : ''}
       <div class="fg" style="z-index:2"><div class="ft2">${x(ev.name)}</div>
         <div class="fp ${iF ? 'fr' : ''}">${pr}</div></div>
