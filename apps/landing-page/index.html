@@ -16,7 +16,7 @@
   } catch(e) {}
 })();
 </script>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="theme-color" content="#05080F"/>
 <meta name="description" content="Pulsefy — South Africa's live event discovery platform. Find concerts, festivals, shisanyamas, hotels, restaurants and nightlife near you. Book tickets, follow organisers, plan outings with your squad."/>
 <meta name="keywords" content="events south africa, concerts SA, festivals south africa, shisanyama, nightlife johannesburg, durban events, cape town events, tickets, event discovery, gigs, live music, restaurants, hotels, venues, pulsefy"/>
@@ -33,11 +33,10 @@
 <link rel="manifest" href="/manifest.json"/>
 <link rel="preconnect" href="https://cjzewfvtdayjgjdpdmln.supabase.co" crossorigin/>
 <link rel="dns-prefetch" href="https://cjzewfvtdayjgjdpdmln.supabase.co"/>
-<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin/>
-<link rel="dns-prefetch" href="https://cdnjs.cloudflare.com"/>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin/>
 <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link rel="preconnect" href="https://api.mapbox.com" crossorigin/>
+<link rel="dns-prefetch" href="https://cdnjs.cloudflare.com"/>
 <link rel="dns-prefetch" href="https://api.mapbox.com"/>
 
 <!-- Open Graph / Facebook -->
@@ -92,10 +91,9 @@
   ]
 }
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link rel="preload" as="image" href="/hero-tonight.jpg" fetchpriority="high">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=optional" rel="stylesheet"/>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=optional" onload="this.onload=null;this.rel='stylesheet'"/>
+<noscript><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=optional" rel="stylesheet"/></noscript>
 <!-- Mapbox loaded on demand when map tab is first opened -->
 <script>
 function openAvatarLightbox() {
@@ -625,7 +623,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 <!-- ══ HOME ══ -->
 <style>
 /* ══ HOMEPAGE REDESIGN (experimental — branch claude/homepage-redesign-experiment) ══ */
-.rd-hero{position:relative;min-height:480px;display:flex;align-items:flex-end;overflow:hidden;background:url('/hero-tonight.jpg') center 40%/cover no-repeat,url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1100&q=70') center 40%/cover no-repeat,#0c0722}
+.rd-hero{position:relative;min-height:480px;display:flex;align-items:flex-end;overflow:hidden;background:url('/hero-tonight.jpg') center 40%/cover no-repeat,#0c0722}
 .rd-hero-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(22,12,50,0) 0%,rgba(22,12,50,.08) 45%,rgba(22,12,50,.65) 72%,rgba(22,12,50,.96) 100%)}
 .rd-hero-inner{position:relative;z-index:1;padding:12px 18px 16px;width:100%}
 .rd-hero-h{font-family:'Bebas Neue',sans-serif;font-size:1.55rem;line-height:.96;letter-spacing:.01em;color:#fff;margin:0 0 4px;text-shadow:0 2px 22px rgba(0,0,0,.9)}
@@ -668,10 +666,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 
     <!-- ══ SEARCH + LOCATION ══ -->
     <div class="sw"><span class="sic">🔍</span>
-      <input class="si" type="search" id="search-inp" placeholder="Search events, venues, artists…" autocomplete="off" oninput="handleSearch(this.value)"/>
+      <input class="si" type="search" id="search-inp" aria-label="Search events, venues, artists" placeholder="Search events, venues, artists…" autocomplete="off" oninput="handleSearch(this.value)"/>
     </div>
     <div class="lb">
-      <select class="ls" id="sel-province" onchange="onProvChange(this.value)">
+      <select class="ls" id="sel-province" aria-label="Filter by province" onchange="onProvChange(this.value)">
         <option value="">🗺 Province</option>
         <option value="KZN">KwaZulu-Natal</option>
         <option value="GP">Gauteng</option>
@@ -683,7 +681,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
         <option value="FS">Free State</option>
         <option value="NC">Northern Cape</option>
       </select>
-      <select class="ls" id="sel-city" onchange="onCityChange(this.value)">
+      <select class="ls" id="sel-city" aria-label="Filter by city" onchange="onCityChange(this.value)">
         <option value="">🏙 All Cities</option>
         <option value="Durban">🏖 Durban</option>
         <option value="Cape Town">🌊 Cape Town</option>
@@ -692,7 +690,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
         <option value="Gqeberha">Gqeberha</option>
         <option value="East London">East London</option>
       </select>
-      <select class="ls" id="sel-area" disabled style="display:none"><option value="">📍 Area</option></select>
+      <select class="ls" id="sel-area" aria-label="Filter by area" disabled style="display:none"><option value="">📍 Area</option></select>
     </div>
 
     <!-- ══ QUICK ACTIONS ══ -->
@@ -7299,9 +7297,8 @@ window.addEventListener('DOMContentLoaded', () => {
   if (_restoredTab !== 'home') showTab(_restoredTab, true);
   else triggerRev();
 
-  // Preload the map splash hero during idle time so it's ready before the user
-  // opens the Map tab (large image — don't let it compete with the home feed).
-  setTimeout(() => { new Image().src = '/map-splash.png'; new Image().src = '/pulsefy-wordmark.png'; }, 2500);
+  // Map splash (2.3MB) loads lazily when the Map tab is first opened — not
+  // prefetched on the landing page, where most visitors never open the map.
 
   // First-run welcome tour — fires for every new visitor (incl. PWA, where
   // localStorage is partitioned separately from the browser, and signed-out
