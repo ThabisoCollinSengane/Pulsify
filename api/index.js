@@ -1184,6 +1184,31 @@ module.exports = async (req, res) => {
       return res.status(200).json({ success: true });
     }
 
+    /* ─── GET /reactions/aggregate ───────────────────────────
+       Per-entity emoji reaction counts + the viewer's own reaction.
+       Needs service-role reads because RLS on `reactions` only exposes
+       a user's own rows, so clients can't aggregate across users. */
+    if (url === '/reactions/aggregate' && req.method === 'GET') {
+      const entity_type = q.entity_type || 'post';
+      const ids = String(q.ids || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 100);
+      if (!ids.length) return res.status(200).json({ counts: {}, mine: {} });
+
+      const { data: rx } = await sb().from('reactions')
+        .select('entity_id,type,user_id').eq('entity_type', entity_type).in('entity_id', ids);
+
+      const token  = tokenFrom(req);
+      const viewer = token ? await verifyToken(token) : null;
+
+      const counts = {}, mine = {};
+      (rx || []).forEach(r => {
+        if (r.type === 'like') return; // plain likes tracked via like_count
+        (counts[r.entity_id] = counts[r.entity_id] || {})[r.type] =
+          (counts[r.entity_id][r.type] || 0) + 1;
+        if (viewer && r.user_id === viewer.id) mine[r.entity_id] = r.type;
+      });
+      return res.status(200).json({ counts, mine });
+    }
+
     /* ─── POST /reactions ────────────────────────────────── */
     if (url === '/reactions' && req.method === 'POST') {
       const token = tokenFrom(req);
