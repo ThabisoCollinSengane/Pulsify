@@ -31,3 +31,6 @@ create policy "admin_delete" on public.tiktok_leads
   for delete using (
     exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
   );
+
+-- Required Data API grants (Supabase Oct 30 change)
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.tiktok_leads TO service_role;

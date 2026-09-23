@@ -169,6 +169,38 @@ ALTER TABLE notifications     ENABLE ROW LEVEL SECURITY;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
 
+-- Required Data API grants (Supabase Oct 30 change)
+-- Public-read tables: anon + authenticated can SELECT; authenticated can write own rows (RLS enforces ownership)
+GRANT SELECT ON public.posts TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.posts TO authenticated;
+
+GRANT SELECT ON public.reposts TO anon;
+GRANT SELECT, INSERT, DELETE ON public.reposts TO authenticated;
+
+GRANT SELECT ON public.reactions TO anon;
+GRANT SELECT, INSERT, DELETE ON public.reactions TO authenticated;
+
+GRANT SELECT ON public.follows TO anon;
+GRANT SELECT, INSERT, DELETE ON public.follows TO authenticated;
+
+GRANT SELECT ON public.event_attendances TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.event_attendances TO authenticated;
+
+GRANT SELECT ON public.saved_items TO anon;
+GRANT SELECT, INSERT, DELETE ON public.saved_items TO authenticated;
+
+GRANT SELECT ON public.menu_items TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.menu_items TO authenticated;
+
+GRANT SELECT ON public.pickup_orders TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.pickup_orders TO authenticated;
+
+GRANT SELECT ON public.business_hours TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.business_hours TO authenticated;
+
+-- Notifications: authenticated users see their own (RLS enforces); anon has no access
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.notifications TO authenticated;
+
 -- ═══════════════════════════════════════════════════════════
 -- SIZA AI ASSISTANT TABLES
 -- ═══════════════════════════════════════════════════════════

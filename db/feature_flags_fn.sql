@@ -35,3 +35,8 @@ INSERT INTO public.feature_flags (key, enabled, notes) VALUES
   ('event_likes',      true,  'Event like/RSVP endpoints and UI'),
   ('map_bounds_load',  true,  'Load events by map viewport bounds (?bounds=)')
 ON CONFLICT (key) DO NOTHING;
+
+-- Required Data API grants (Supabase Oct 30 change)
+GRANT SELECT ON public.feature_flags TO anon;
+GRANT SELECT ON public.feature_flags TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.feature_flags TO service_role;

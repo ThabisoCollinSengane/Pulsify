@@ -18,3 +18,6 @@ CREATE INDEX IF NOT EXISTS idx_pending_emails_status
 
 ALTER TABLE pending_emails ENABLE ROW LEVEL SECURITY;
 -- No policies — service_role only.
+
+-- Required Data API grants (Supabase Oct 30 change)
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.pending_emails TO service_role;
