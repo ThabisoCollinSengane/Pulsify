@@ -53,6 +53,10 @@ body{padding-bottom:32px}
 .post-date{font-size:.68rem;color:var(--mu)}
 .post-actions{display:flex;gap:12px}
 .pa{background:none;border:none;font-size:.78rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px}
+.pa.rp{color:var(--li)}
+.up-react-bar{display:flex;gap:4px;flex-wrap:wrap;margin-top:10px}
+.up-react-btn{background:none;border:1px solid var(--border);border-radius:50px;padding:3px 9px;font-size:.74rem;cursor:pointer;transition:background .15s;display:inline-flex;align-items:center;gap:3px;color:var(--mu2);line-height:1.5}
+.up-react-btn.reacted{background:rgba(255,92,0,.12);border-color:rgba(255,92,0,.35);color:var(--or)}
 .ev-card{display:flex;gap:12px;align-items:flex-start;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:10px;cursor:pointer}
 .ev-card:active{border-color:rgba(255,92,0,.3)}
 .ev-thumb{width:54px;height:54px;border-radius:10px;flex-shrink:0;overflow:hidden;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.4rem}
@@ -182,6 +186,9 @@ let _upToken = '';
 const _upCmtCache = {};
 const _upLiked = {};
 const _upReplyTo = {};
+const _upMyReact = {};   // postId → viewer's current emoji reaction
+const _upReposted = {};  // postId → viewer reposted?
+const _UP_REACTS = ['❤️','😂','🔥','😮','🙌'];
 
 const GENRE_LABELS = {
   amapiano: '🎶 Amapiano', gqom: '🔊 Gqom', hiphop: '🎤 Hip Hop',
@@ -499,16 +506,35 @@ async function renderPosts(userId) {
       el.innerHTML = '<div class="empty"><div class="empty-ico">📸</div><div class="empty-title">No posts yet</div></div>';
       return;
     }
+    const _pids = posts.map(p => p.id);
+    // Emoji reaction counts (server aggregate — RLS hides other users' rows)
+    const _rCounts = {};
+    try {
+      const agg = await (await fetch('/api/reactions/aggregate?entity_type=post&ids=' + encodeURIComponent(_pids.join(',')))).json();
+      Object.assign(_rCounts, agg.counts || {});
+    } catch (e) { /* non-critical */ }
     if (currentUser && posts.length) {
-      const { data: myLikes } = await sb.from('reactions').select('entity_id').eq('user_id', currentUser.id).eq('entity_type', 'post').eq('type', 'like').in('entity_id', posts.map(p => p.id));
+      const { data: myLikes } = await sb.from('reactions').select('entity_id').eq('user_id', currentUser.id).eq('entity_type', 'post').eq('type', 'like').in('entity_id', _pids);
       (myLikes || []).forEach(r => { _upLiked[r.entity_id] = true; });
+      // The viewer's own emoji reaction (own rows are readable under RLS)
+      const { data: myRx } = await sb.from('reactions').select('entity_id,type').eq('user_id', currentUser.id).eq('entity_type', 'post').neq('type', 'like').in('entity_id', _pids);
+      (myRx || []).forEach(r => { _upMyReact[r.entity_id] = r.type; });
+      const { data: myRp } = await sb.from('reposts').select('post_id').eq('user_id', currentUser.id).in('post_id', _pids);
+      (myRp || []).forEach(r => { _upReposted[r.post_id] = true; });
     }
     el.innerHTML = posts.map(p => {
       const img = _firstImageUrl(p.image_url);
       const likes = p.like_count || 0;
       const cmts  = p.comment_count || 0;
       const lk = _upLiked[p.id] ? ' lk' : '';
+      const rp = _upReposted[p.id] ? ' rp' : '';
       const pid = escHtml(p.id);
+      const _rc = _rCounts[p.id] || {};
+      const _mine = _upMyReact[p.id] || '';
+      const reactBar = '<div class="up-react-bar">' + _UP_REACTS.map(e => {
+        const cnt = _rc[e] || 0;
+        return '<button class="up-react-btn' + (_mine === e ? ' reacted' : '') + '" onclick="upReactPost(\'' + pid + '\',this)">' + e + (cnt ? ' <span>' + cnt + '</span>' : '') + '</button>';
+      }).join('') + '</div>';
       return `
       <div class="post" id="post-${pid}">
         ${img ? `<img class="post-img" src="${escHtml(img)}" loading="lazy" onerror="this.style.display='none'"/>` : '<div class="post-img-placeholder">📸</div>'}
@@ -520,8 +546,11 @@ async function renderPosts(userId) {
             <div class="post-actions">
               <button class="pa${lk}" id="up-lk-${pid}" onclick="upLike('${pid}',this)">❤️ <span id="up-lkc-${pid}">${likes}</span></button>
               <button class="pa" onclick="upToggleCmt('${pid}')">💬 <span id="up-cmc-${pid}">${cmts}</span></button>
+              <button class="pa${rp}" id="up-rp-${pid}" onclick="upRepost('${pid}',this)">🔁</button>
+              <button class="pa" onclick="upShare('${pid}')">🔗</button>
             </div>
           </div>
+          ${reactBar}
         </div>
         <div class="up-cmt-wrap" id="up-cmt-${pid}">
           <div class="up-reply-banner" id="up-rb-${pid}" style="display:none">
@@ -559,6 +588,47 @@ async function upLike(postId, btn) {
     await sb.from('reactions').upsert({ user_id: currentUser.id, entity_id: postId, entity_type: 'post', type: 'like' }, { onConflict: 'user_id,entity_id,entity_type,type' });
     await sb.from('posts').update({ like_count: cur + 1 }).eq('id', postId);
   }
+}
+
+// One emoji reaction per user: tap active to remove, tap another to switch.
+async function upReactPost(postId, btn) {
+  if (!currentUser) { showToast('Sign in to react', ''); return; }
+  const bar = btn.closest('.up-react-bar');
+  if (!bar) return;
+  const emoji = btn.textContent.trim().split(' ')[0];
+  const prev  = _upMyReact[postId] || '';
+  const next  = prev === emoji ? '' : emoji;
+  _upMyReact[postId] = next;
+  bar.querySelectorAll('.up-react-btn').forEach(b => {
+    const be = b.textContent.trim().split(' ')[0];
+    const sp = b.querySelector('span');
+    if (be === prev && be !== next && sp) { const n = parseInt(sp.textContent, 10) - 1; if (n <= 0) sp.remove(); else sp.textContent = n; }
+    if (be === next && be !== prev) { let s = b.querySelector('span'); if (!s) { s = document.createElement('span'); b.appendChild(s); } s.textContent = (parseInt(s.textContent || '0', 10) + 1); }
+    b.classList.toggle('reacted', be === next);
+  });
+  if (prev) await sb.from('reactions').delete().eq('user_id', currentUser.id).eq('entity_id', postId).eq('entity_type', 'post').eq('type', prev);
+  if (next) await sb.from('reactions').insert({ user_id: currentUser.id, entity_id: postId, entity_type: 'post', type: next }).catch(() => {});
+}
+
+async function upRepost(postId, btn) {
+  if (!currentUser) { showToast('Sign in to repost', ''); return; }
+  const on = !_upReposted[postId];
+  _upReposted[postId] = on;
+  btn.classList.toggle('rp', on);
+  if (on) {
+    showToast('🔁 Reposted!', 'ok');
+    await sb.from('reposts').insert({ post_id: postId, user_id: currentUser.id }).catch(() => {});
+  } else {
+    await sb.from('reposts').delete().eq('post_id', postId).eq('user_id', currentUser.id).catch(() => {});
+  }
+}
+
+async function upShare(postId) {
+  const url = location.origin + '/feeds?post=' + encodeURIComponent(postId);
+  try {
+    if (navigator.share) { await navigator.share({ title: 'Pulsefy', url }); }
+    else { await navigator.clipboard.writeText(url); showToast('🔗 Link copied', 'ok'); }
+  } catch (e) { /* user cancelled */ }
 }
 
 function upToggleCmt(postId) {

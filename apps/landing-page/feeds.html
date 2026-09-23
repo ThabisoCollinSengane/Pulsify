@@ -344,6 +344,16 @@ async function fetchPosts() {
     (evs || []).forEach(e => { evMap[e.id] = e.image_url || null; });
     rows.forEach(p => { if (p.event_id && !p.image_url) p.image_url = evMap[p.event_id] || null; });
   }
+  // Emoji reaction counts + the viewer's own reaction (server aggregates —
+  // RLS blocks reading other users' reactions from the client directly).
+  const rIds = rows.map(p => p.id);
+  if (rIds.length) {
+    try {
+      const agg = await (await fetch('/api/reactions/aggregate?entity_type=post&ids=' + encodeURIComponent(rIds.join(',')),
+        { headers: _token ? { Authorization: 'Bearer ' + _token } : {} })).json();
+      rows.forEach(p => { p.reactions = (agg.counts || {})[p.id] || {}; p.my_reaction = (agg.mine || {})[p.id] || ''; });
+    } catch (e) { /* reactions are non-critical */ }
+  }
   return { posts: rows, total: count || 0 };
 }
 
@@ -363,6 +373,8 @@ function mapPost(p) {
     event_name:   p.event_name || null,
     like_count:   p.likes_count || p.like_count || 0,
     comment_count: p.comments_count || p.comment_count || 0,
+    reactions:    p.reactions || {},
+    my_reaction:  p.my_reaction || '',
     likes: [], reposts: [], comments: [],
     ts: p.created_at,
   };
@@ -624,7 +636,7 @@ function buildCard(post) {
         : '<button class="ab" onclick="openReportPost(\u0027'+x(post.id)+'\u0027,\u0027'+x((post.caption||'').slice(0,80).replace(/\u0027/g,''))+'\u0027)" title="Report post"><span class="ai">🚩</span></button>') +
     '</div>' +
     (() => {
-      const _myPR = (() => { try { return localStorage.getItem('p_pr_'+post.id)||''; } catch(e) { return ''; } })();
+      const _myPR = post.my_reaction || '';
       const _prcts = post.reactions || {};
       return '<div class="cmt-react-bar" style="padding:4px 12px 6px">'+['\u2764\uFE0F','\uD83D\uDE02','\uD83D\uDD25','\uD83D\uDE2E','\uD83D\uDE4C'].map(e => {
         const cnt = _prcts[e] || 0; const act = _myPR === e;
@@ -764,26 +776,27 @@ function doReactComment(cmtId, btn) {
   }).catch(()=>{});
 }
 
+// One reaction per user per post: tapping the active emoji removes it,
+// tapping another switches (old removed server-side, new added).
 function doReactPost(postId, btn) {
-  const bar  = btn.closest('.cmt-react-bar');
+  if (!_uid) return showToast('Sign in to react');
+  const bar = btn.closest('.cmt-react-bar');
   if (!bar) return;
-  const bEmoji = btn.textContent.trim().split(' ')[0];
-  let prev = ''; try { prev = localStorage.getItem('p_pr_'+postId)||''; } catch(e) {}
-  const next = prev === bEmoji ? '' : bEmoji;
-  try { if (next) localStorage.setItem('p_pr_'+postId, next); else localStorage.removeItem('p_pr_'+postId); } catch(e) {}
+  const emoji = btn.textContent.trim().split(' ')[0];
+  const post  = _posts.find(p => p.id === postId);
+  const prev  = post ? (post.my_reaction || '') : '';
+  const next  = prev === emoji ? '' : emoji;
+  if (post) post.my_reaction = next;
   bar.querySelectorAll('.cmt-react-btn').forEach(b => {
-    const isNext = b.textContent.trim().split(' ')[0] === next;
-    const wasPrev = b.textContent.trim().split(' ')[0] === prev;
+    const be = b.textContent.trim().split(' ')[0];
     const sp = b.querySelector('span');
-    if (wasPrev && !isNext && sp) { const n=parseInt(sp.textContent,10)-1; if(n<=0)sp.remove(); else sp.textContent=n; }
-    if (!wasPrev && isNext) { let sp2=b.querySelector('span'); if(!sp2){sp2=document.createElement('span');b.appendChild(sp2);} sp2.textContent=(parseInt(sp2.textContent||'0',10)+1); }
-    b.classList.toggle('reacted', bEmoji === next && b === btn);
+    if (be === prev && be !== next && sp) { const n = parseInt(sp.textContent, 10) - 1; if (n <= 0) sp.remove(); else sp.textContent = n; }
+    if (be === next && be !== prev) { let s = b.querySelector('span'); if (!s) { s = document.createElement('span'); b.appendChild(s); } s.textContent = (parseInt(s.textContent || '0', 10) + 1); }
+    b.classList.toggle('reacted', be === next);
   });
-  if (next) fetch('/api/reactions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
-    body: JSON.stringify({ entity_type: 'post', entity_id: postId, type: next }),
-  }).catch(()=>{});
+  const hdr = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` };
+  if (prev) fetch('/api/reactions', { method: 'DELETE', headers: hdr, body: JSON.stringify({ entity_type: 'post', entity_id: postId, type: prev }) }).catch(()=>{});
+  if (next) fetch('/api/reactions', { method: 'POST',   headers: hdr, body: JSON.stringify({ entity_type: 'post', entity_id: postId, type: next }) }).catch(()=>{});
 }
 
 // Threaded comments — lazy-load from DB on first open
