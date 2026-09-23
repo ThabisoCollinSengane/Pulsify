@@ -73,6 +73,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .cmt-text{font-size:.78rem;color:var(--mu2);line-height:1.45;white-space:pre-wrap;word-break:break-word}
 .cmt-time{font-size:.6rem;color:var(--mu);margin-top:3px}
 .cir{display:flex;gap:8px;padding:9px 14px;border-top:1px solid var(--border);align-items:center}
+.cmt-emoji-btn{background:none;border:none;font-size:1.15rem;cursor:pointer;padding:0 2px;opacity:.75;flex-shrink:0}
+.cmt-emoji-btn:hover{opacity:1}
+.cmt-emoji-pick{display:none;flex-wrap:wrap;gap:8px;padding:8px 14px 2px}
+.cmt-emoji-pick span{font-size:1.35rem;cursor:pointer;line-height:1}
 .ci{flex:1;background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:8px 14px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none;transition:border-color .2s}
 .ci:focus{border-color:var(--or)!important}
 .ci::placeholder{color:var(--mu)}
@@ -343,16 +347,6 @@ async function fetchPosts() {
     const evMap = {};
     (evs || []).forEach(e => { evMap[e.id] = e.image_url || null; });
     rows.forEach(p => { if (p.event_id && !p.image_url) p.image_url = evMap[p.event_id] || null; });
-  }
-  // Emoji reaction counts + the viewer's own reaction (server aggregates —
-  // RLS blocks reading other users' reactions from the client directly).
-  const rIds = rows.map(p => p.id);
-  if (rIds.length) {
-    try {
-      const agg = await (await fetch('/api/reactions/aggregate?entity_type=post&ids=' + encodeURIComponent(rIds.join(',')),
-        { headers: _token ? { Authorization: 'Bearer ' + _token } : {} })).json();
-      rows.forEach(p => { p.reactions = (agg.counts || {})[p.id] || {}; p.my_reaction = (agg.mine || {})[p.id] || ''; });
-    } catch (e) { /* reactions are non-critical */ }
   }
   return { posts: rows, total: count || 0 };
 }
@@ -635,17 +629,10 @@ function buildCard(post) {
         ? '<button class="ab" onclick="editPost(\u0027'+x(post.id)+'\u0027)" title="Edit post"><span class="ai">✏️</span></button>'
         : '<button class="ab" onclick="openReportPost(\u0027'+x(post.id)+'\u0027,\u0027'+x((post.caption||'').slice(0,80).replace(/\u0027/g,''))+'\u0027)" title="Report post"><span class="ai">🚩</span></button>') +
     '</div>' +
-    (() => {
-      const _myPR = post.my_reaction || '';
-      const _prcts = post.reactions || {};
-      return '<div class="cmt-react-bar" style="padding:4px 12px 6px">'+['\u2764\uFE0F','\uD83D\uDE02','\uD83D\uDD25','\uD83D\uDE2E','\uD83D\uDE4C'].map(e => {
-        const cnt = _prcts[e] || 0; const act = _myPR === e;
-        return '<button class="cmt-react-btn'+(act?' reacted':'')+'" onclick="doReactPost(\''+x(post.id)+'\',this)">'+e+(cnt?' <span>'+cnt+'</span>':'')+'</button>';
-      }).join('')+'</div>';
-    })() +
     '<div class="cmt-wrap" id="cmt-'+x(post.id)+'">' +
       '<div id="cmtl-'+x(post.id)+'">'+(_cmtCache[post.id]?buildCmts(_cmtCache[post.id],post.id):'<div style="padding:10px 14px;font-size:.74rem;color:var(--mu)">Tap to load comments…</div>')+'</div>' +
-      '<div class="cir"><input class="ci" id="cmti-'+x(post.id)+'" placeholder="Add a comment…" maxlength="500" onkeydown="if(event.key===\u0027Enter\u0027)doComment(\u0027'+x(post.id)+'\u0027)"/><button class="csnd" onclick="doComment(\u0027'+x(post.id)+'\u0027)">➤</button></div>' +
+      '<div class="cmt-emoji-pick" id="cep-'+x(post.id)+'">'+CMT_EMOJIS.map(e => '<span onclick="cmtEmojiPick(\u0027'+x(post.id)+'\u0027,\u0027'+e+'\u0027)">'+e+'</span>').join('')+'</div>' +
+      '<div class="cir"><button class="cmt-emoji-btn" onclick="cmtEmojiToggle(\u0027'+x(post.id)+'\u0027)" title="Emoji">🙂</button><input class="ci" id="cmti-'+x(post.id)+'" placeholder="Add a comment…" maxlength="500" onkeydown="if(event.key===\u0027Enter\u0027)doComment(\u0027'+x(post.id)+'\u0027)"/><button class="csnd" onclick="doComment(\u0027'+x(post.id)+'\u0027)">➤</button></div>' +
     '</div>';
   return el;
 }
@@ -667,19 +654,13 @@ function buildCmts(comments, postId) {
       ? '<div class="cmt-replies">'+c.replies.map(r => renderOne(r, true)).join('')+'</div>'
       : '';
     const body = c.body || c.content || c.text || '';
-    const _clLiked = (() => { try { return JSON.parse(localStorage.getItem('p_cl_'+c.id)||'false'); } catch(e) { return false; } })();
-    const _clCnt = Math.max(0,(c.like_count||0)+(_clLiked&&!c.liked_by_me?1:0));
-    const _myR = (() => { try { return localStorage.getItem('p_cr_'+c.id)||''; } catch(e) { return ''; } })();
-    const _rcts = c.reactions||{};
-    const _likeBtn = '<button class="cmt-like-btn'+(_clLiked?' liked':'')+'" id="cl-'+x(c.id)+'" onclick="doLikeComment(\''+x(c.id)+'\')">'+(_clLiked?'❤️':'🤍')+' <span id="clc-'+x(c.id)+'">'+(_clCnt||'')+'</span></button>';
-    const _reactBar = '<div class="cmt-react-bar">'+['❤️','😂','🔥','😮'].map(e=>{const cnt=_rcts[e]||0;const act=_myR===e;return '<button class="cmt-react-btn'+(act?' reacted':'')+'" onclick="doReactComment(\''+x(c.id)+'\',this)">'+e+(cnt?' <span>'+cnt+'</span>':'')+'</button>';}).join('')+'</div>';
     return ''+
       '<div class="cmt-item" id="c-'+x(c.id)+'">'+avEl+
         '<div style="flex:1;min-width:0">'+
           '<div class="cmt-name" style="cursor:pointer" onclick="openProfile(\''+x(c.user_id||'')+'\')">'+x(name)+'</div>'+
           '<div class="cmt-text">'+x(body)+'</div>'+
           '<div class="cmt-time">'+timeAgo(ts)+'</div>'+
-          '<div style="display:flex;align-items:center;gap:4px;margin-top:3px">'+replyBtn+_likeBtn+'</div>'+
+          '<div style="display:flex;align-items:center;gap:4px;margin-top:3px">'+replyBtn+'</div>'+
         '</div>'+
       '</div>'+repliesHtml;
   };
@@ -776,27 +757,21 @@ function doReactComment(cmtId, btn) {
   }).catch(()=>{});
 }
 
-// One reaction per user per post: tapping the active emoji removes it,
-// tapping another switches (old removed server-side, new added).
-function doReactPost(postId, btn) {
-  if (!_uid) return showToast('Sign in to react');
-  const bar = btn.closest('.cmt-react-bar');
-  if (!bar) return;
-  const emoji = btn.textContent.trim().split(' ')[0];
-  const post  = _posts.find(p => p.id === postId);
-  const prev  = post ? (post.my_reaction || '') : '';
-  const next  = prev === emoji ? '' : emoji;
-  if (post) post.my_reaction = next;
-  bar.querySelectorAll('.cmt-react-btn').forEach(b => {
-    const be = b.textContent.trim().split(' ')[0];
-    const sp = b.querySelector('span');
-    if (be === prev && be !== next && sp) { const n = parseInt(sp.textContent, 10) - 1; if (n <= 0) sp.remove(); else sp.textContent = n; }
-    if (be === next && be !== prev) { let s = b.querySelector('span'); if (!s) { s = document.createElement('span'); b.appendChild(s); } s.textContent = (parseInt(s.textContent || '0', 10) + 1); }
-    b.classList.toggle('reacted', be === next);
-  });
-  const hdr = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` };
-  if (prev) fetch('/api/reactions', { method: 'DELETE', headers: hdr, body: JSON.stringify({ entity_type: 'post', entity_id: postId, type: prev }) }).catch(()=>{});
-  if (next) fetch('/api/reactions', { method: 'POST',   headers: hdr, body: JSON.stringify({ entity_type: 'post', entity_id: postId, type: next }) }).catch(()=>{});
+// Comment emoji picker — tapping an emoji inserts it into that post's
+// comment box (landing-page style); the emoji becomes part of the comment.
+const CMT_EMOJIS = ['😂','❤️','🔥','🙌','👀','💯','🎉','👏','😍','💪'];
+function cmtEmojiToggle(postId) {
+  const p = document.getElementById('cep-' + postId);
+  if (p) p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+}
+function cmtEmojiPick(postId, emoji) {
+  const inp = document.getElementById('cmti-' + postId);
+  if (!inp) return;
+  const s = inp.selectionStart != null ? inp.selectionStart : inp.value.length;
+  inp.value = inp.value.slice(0, s) + emoji + inp.value.slice(s);
+  inp.focus();
+  const p = document.getElementById('cep-' + postId);
+  if (p) p.style.display = 'none';
 }
 
 // Threaded comments — lazy-load from DB on first open
