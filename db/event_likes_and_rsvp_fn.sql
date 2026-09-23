@@ -60,3 +60,12 @@ CREATE POLICY "attendances_delete" ON public.event_attendances
 
 CREATE POLICY "attendances_update" ON public.event_attendances
   FOR UPDATE USING (auth.uid() = user_id);
+
+-- Required Data API grants (Supabase Oct 30 change)
+GRANT SELECT ON public.event_likes TO anon;
+GRANT SELECT, INSERT, DELETE ON public.event_likes TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.event_likes TO service_role;
+
+GRANT SELECT ON public.event_attendances TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.event_attendances TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.event_attendances TO service_role;
