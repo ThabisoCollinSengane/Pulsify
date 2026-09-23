@@ -49,14 +49,17 @@ body{padding-bottom:32px}
 .post-body{padding:14px}
 .post-ev{font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--or);margin-bottom:5px}
 .post-cap{font-size:.86rem;line-height:1.5;color:var(--mu2);margin-bottom:10px}
+.post-cap-lg{font-size:1.05rem;line-height:1.5;color:var(--tx);font-weight:500;margin-bottom:12px;white-space:pre-wrap;word-break:break-word}
+.post.post-text{background:linear-gradient(135deg,var(--surf),var(--surf2))}
+.post.post-text .post-body{padding:18px 16px 14px}
 .post-foot{display:flex;align-items:center;justify-content:space-between}
 .post-date{font-size:.68rem;color:var(--mu)}
 .post-actions{display:flex;gap:12px}
 .pa{background:none;border:none;font-size:.78rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px}
 .pa.rp{color:var(--li)}
-.up-react-bar{display:flex;gap:4px;flex-wrap:wrap;margin-top:10px}
-.up-react-btn{background:none;border:1px solid var(--border);border-radius:50px;padding:3px 9px;font-size:.74rem;cursor:pointer;transition:background .15s;display:inline-flex;align-items:center;gap:3px;color:var(--mu2);line-height:1.5}
-.up-react-btn.reacted{background:rgba(255,92,0,.12);border-color:rgba(255,92,0,.35);color:var(--or)}
+.up-cmt-emoji-btn{background:none;border:none;font-size:1.15rem;cursor:pointer;padding:0 2px;opacity:.75;flex-shrink:0}
+.up-cmt-emoji-pick{display:none;flex-wrap:wrap;gap:8px;padding:8px 14px 2px}
+.up-cmt-emoji-pick span{font-size:1.35rem;cursor:pointer;line-height:1}
 .ev-card{display:flex;gap:12px;align-items:flex-start;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:10px;cursor:pointer}
 .ev-card:active{border-color:rgba(255,92,0,.3)}
 .ev-thumb{width:54px;height:54px;border-radius:10px;flex-shrink:0;overflow:hidden;background:var(--surf2);display:flex;align-items:center;justify-content:center;font-size:1.4rem}
@@ -186,9 +189,8 @@ let _upToken = '';
 const _upCmtCache = {};
 const _upLiked = {};
 const _upReplyTo = {};
-const _upMyReact = {};   // postId → viewer's current emoji reaction
 const _upReposted = {};  // postId → viewer reposted?
-const _UP_REACTS = ['❤️','😂','🔥','😮','🙌'];
+const _UP_CMT_EMOJIS = ['😂','❤️','🔥','🙌','👀','💯','🎉','👏','😍','💪'];
 
 const GENRE_LABELS = {
   amapiano: '🎶 Amapiano', gqom: '🔊 Gqom', hiphop: '🎤 Hip Hop',
@@ -507,18 +509,9 @@ async function renderPosts(userId) {
       return;
     }
     const _pids = posts.map(p => p.id);
-    // Emoji reaction counts (server aggregate — RLS hides other users' rows)
-    const _rCounts = {};
-    try {
-      const agg = await (await fetch('/api/reactions/aggregate?entity_type=post&ids=' + encodeURIComponent(_pids.join(',')))).json();
-      Object.assign(_rCounts, agg.counts || {});
-    } catch (e) { /* non-critical */ }
     if (currentUser && posts.length) {
       const { data: myLikes } = await sb.from('reactions').select('entity_id').eq('user_id', currentUser.id).eq('entity_type', 'post').eq('type', 'like').in('entity_id', _pids);
       (myLikes || []).forEach(r => { _upLiked[r.entity_id] = true; });
-      // The viewer's own emoji reaction (own rows are readable under RLS)
-      const { data: myRx } = await sb.from('reactions').select('entity_id,type').eq('user_id', currentUser.id).eq('entity_type', 'post').neq('type', 'like').in('entity_id', _pids);
-      (myRx || []).forEach(r => { _upMyReact[r.entity_id] = r.type; });
       const { data: myRp } = await sb.from('reposts').select('post_id').eq('user_id', currentUser.id).in('post_id', _pids);
       (myRp || []).forEach(r => { _upReposted[r.post_id] = true; });
     }
@@ -529,18 +522,12 @@ async function renderPosts(userId) {
       const lk = _upLiked[p.id] ? ' lk' : '';
       const rp = _upReposted[p.id] ? ' rp' : '';
       const pid = escHtml(p.id);
-      const _rc = _rCounts[p.id] || {};
-      const _mine = _upMyReact[p.id] || '';
-      const reactBar = '<div class="up-react-bar">' + _UP_REACTS.map(e => {
-        const cnt = _rc[e] || 0;
-        return '<button class="up-react-btn' + (_mine === e ? ' reacted' : '') + '" onclick="upReactPost(\'' + pid + '\',this)">' + e + (cnt ? ' <span>' + cnt + '</span>' : '') + '</button>';
-      }).join('') + '</div>';
       return `
-      <div class="post" id="post-${pid}">
-        ${img ? `<img class="post-img" src="${escHtml(img)}" loading="lazy" onerror="this.style.display='none'"/>` : '<div class="post-img-placeholder">📸</div>'}
+      <div class="post${img ? '' : ' post-text'}" id="post-${pid}">
+        ${img ? `<img class="post-img" src="${escHtml(img)}" loading="lazy" onerror="this.style.display='none'"/>` : ''}
         <div class="post-body">
           ${p.event_name ? `<div class="post-ev">🎟 ${escHtml(p.event_name)}</div>` : ''}
-          ${p.caption ? `<div class="post-cap">${escHtml(p.caption)}</div>` : ''}
+          ${p.caption ? `<div class="post-cap${img ? '' : ' post-cap-lg'}">${escHtml(p.caption)}</div>` : (img ? '' : '<div class="post-cap post-cap-lg" style="color:var(--mu)">📸 Photo</div>')}
           <div class="post-foot">
             <span class="post-date">${new Date(p.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})}</span>
             <div class="post-actions">
@@ -550,7 +537,6 @@ async function renderPosts(userId) {
               <button class="pa" onclick="upShare('${pid}')">🔗</button>
             </div>
           </div>
-          ${reactBar}
         </div>
         <div class="up-cmt-wrap" id="up-cmt-${pid}">
           <div class="up-reply-banner" id="up-rb-${pid}" style="display:none">
@@ -558,7 +544,9 @@ async function renderPosts(userId) {
             <button onclick="upCancelReply('${pid}')">✕</button>
           </div>
           <div id="up-cmt-list-${pid}"></div>
+          <div class="up-cmt-emoji-pick" id="up-cep-${pid}">${_UP_CMT_EMOJIS.map(e => `<span onclick="upCmtEmoji('${pid}','${e}')">${e}</span>`).join('')}</div>
           <div class="up-cmt-input-row">
+            <button class="up-cmt-emoji-btn" onclick="upCmtEmojiToggle('${pid}')" title="Emoji">🙂</button>
             <input class="up-cmt-inp" id="up-cmt-inp-${pid}" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')upDoComment('${pid}')"/>
             <button class="up-cmt-snd" onclick="upDoComment('${pid}')">➤</button>
           </div>
@@ -590,24 +578,19 @@ async function upLike(postId, btn) {
   }
 }
 
-// One emoji reaction per user: tap active to remove, tap another to switch.
-async function upReactPost(postId, btn) {
-  if (!currentUser) { showToast('Sign in to react', ''); return; }
-  const bar = btn.closest('.up-react-bar');
-  if (!bar) return;
-  const emoji = btn.textContent.trim().split(' ')[0];
-  const prev  = _upMyReact[postId] || '';
-  const next  = prev === emoji ? '' : emoji;
-  _upMyReact[postId] = next;
-  bar.querySelectorAll('.up-react-btn').forEach(b => {
-    const be = b.textContent.trim().split(' ')[0];
-    const sp = b.querySelector('span');
-    if (be === prev && be !== next && sp) { const n = parseInt(sp.textContent, 10) - 1; if (n <= 0) sp.remove(); else sp.textContent = n; }
-    if (be === next && be !== prev) { let s = b.querySelector('span'); if (!s) { s = document.createElement('span'); b.appendChild(s); } s.textContent = (parseInt(s.textContent || '0', 10) + 1); }
-    b.classList.toggle('reacted', be === next);
-  });
-  if (prev) await sb.from('reactions').delete().eq('user_id', currentUser.id).eq('entity_id', postId).eq('entity_type', 'post').eq('type', prev);
-  if (next) await sb.from('reactions').insert({ user_id: currentUser.id, entity_id: postId, entity_type: 'post', type: next }).catch(() => {});
+// Comment emoji picker — inserts the emoji into that post's comment box.
+function upCmtEmojiToggle(postId) {
+  const p = document.getElementById('up-cep-' + postId);
+  if (p) p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+}
+function upCmtEmoji(postId, emoji) {
+  const inp = document.getElementById('up-cmt-inp-' + postId);
+  if (!inp) return;
+  const s = inp.selectionStart != null ? inp.selectionStart : inp.value.length;
+  inp.value = inp.value.slice(0, s) + emoji + inp.value.slice(s);
+  inp.focus();
+  const p = document.getElementById('up-cep-' + postId);
+  if (p) p.style.display = 'none';
 }
 
 async function upRepost(postId, btn) {
