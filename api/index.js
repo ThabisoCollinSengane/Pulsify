@@ -1270,6 +1270,48 @@ module.exports = async (req, res) => {
       return res.status(200).json({ liked: false });
     }
 
+    /* ─── POST /reposts ──────────────────────────────────── */
+    // Toggle a repost. The browser Supabase client is anon-only (no session
+    // token attached), so a direct client insert fails RLS — reposts must go
+    // through here with the user's JWT, like reactions.
+    if (url === '/reposts' && req.method === 'POST') {
+      const token = tokenFrom(req);
+      const user  = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { post_id } = req.body || {};
+      if (!post_id) return res.status(400).json({ error: 'post_id required' });
+
+      const userClient = sbAs(token);
+      const { data: existing } = await userClient.from('reposts')
+        .select('id').eq('user_id', user.id).eq('post_id', post_id).maybeSingle();
+
+      let reposted;
+      if (existing) {
+        await userClient.from('reposts').delete().eq('user_id', user.id).eq('post_id', post_id);
+        reposted = false;
+      } else {
+        const { error: insErr } = await userClient.from('reposts').insert({ user_id: user.id, post_id });
+        if (insErr && insErr.code !== '23505') return res.status(400).json({ error: insErr.message });
+        reposted = true;
+        // Notify the original author (best-effort)
+        const { data: p } = await sb().from('posts').select('user_id').eq('id', post_id).single();
+        if (p && p.user_id !== user.id) {
+          const { data: prof } = await sb().from('profiles').select('display_name').eq('id', user.id).single();
+          const name = prof?.display_name || 'Someone';
+          await sb().from('notifications').insert({
+            user_id: p.user_id, type: 'repost', from_user_id: user.id,
+            from_display_name: name, entity_id: post_id, entity_type: 'post',
+            message: `${name} reposted your post`,
+          }).catch(() => {});
+        }
+      }
+
+      const { count } = await sb().from('reposts')
+        .select('id', { count: 'exact', head: true }).eq('post_id', post_id);
+      return res.status(200).json({ reposted, count: count || 0 });
+    }
+
     /* ─── POST /follows ──────────────────────────────────── */
     if (url === '/follows' && req.method === 'POST') {
       const token = tokenFrom(req);
