@@ -47,6 +47,8 @@ body{padding-bottom:32px}
 .post-img{width:100%;height:220px;object-fit:cover;display:block;background:var(--surf2)}
 .post-img-placeholder{height:220px;background:linear-gradient(135deg,var(--surf),var(--surf2));display:flex;align-items:center;justify-content:center;font-size:3rem}
 .post-body{padding:14px}
+.up-repost-tag{font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.04em;color:var(--mu);padding:8px 14px 0;display:flex;align-items:center;gap:5px}
+.up-repost-tag strong{color:var(--mu2)}
 .post-ev{font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--or);margin-bottom:5px}
 .post-cap{font-size:.86rem;line-height:1.5;color:var(--mu2);margin-bottom:10px}
 .post-cap-lg{font-size:1.05rem;line-height:1.5;color:var(--tx);font-weight:500;margin-bottom:12px;white-space:pre-wrap;word-break:break-word}
@@ -504,26 +506,45 @@ async function renderPosts(userId) {
     const { data: posts, error, count } = await sb.from('posts').select('id,caption,image_url,event_name,like_count,comment_count,created_at', { count: 'exact' }).eq('user_id', userId).order('created_at', { ascending: false }).limit(30);
     if (error) throw error;
     document.getElementById('stat-posts').textContent = count || 0;
-    if (!posts?.length) {
+
+    // Posts this user reposted — surfaced on their own timeline.
+    const { data: reposts } = await sb.from('reposts').select('post_id,created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(30);
+    const ownIds = new Set((posts || []).map(p => p.id));
+    const rpTs = {};
+    (reposts || []).forEach(r => { if (rpTs[r.post_id] == null) rpTs[r.post_id] = r.created_at; });
+    const rpIds = [...new Set((reposts || []).map(r => r.post_id))].filter(id => !ownIds.has(id));
+    let repostItems = [];
+    if (rpIds.length) {
+      const { data: rposts } = await sb.from('posts')
+        .select('id,caption,image_url,event_name,like_count,comment_count,created_at,profiles:user_id(display_name,username,avatar_url)')
+        .in('id', rpIds);
+      repostItems = (rposts || []).map(p => ({ ...p, _repost: true, _sortTs: rpTs[p.id] || p.created_at, _author: p.profiles || null }));
+    }
+    const ownItems = (posts || []).map(p => ({ ...p, _repost: false, _sortTs: p.created_at }));
+    const items = [...ownItems, ...repostItems].sort((a, b) => new Date(b._sortTs) - new Date(a._sortTs));
+
+    if (!items.length) {
       el.innerHTML = '<div class="empty"><div class="empty-ico">📸</div><div class="empty-title">No posts yet</div></div>';
       return;
     }
-    const _pids = posts.map(p => p.id);
-    if (currentUser && posts.length) {
+    const _pids = items.map(p => p.id);
+    if (currentUser && _pids.length) {
       const { data: myLikes } = await sb.from('reactions').select('entity_id').eq('user_id', currentUser.id).eq('entity_type', 'post').eq('type', 'like').in('entity_id', _pids);
       (myLikes || []).forEach(r => { _upLiked[r.entity_id] = true; });
       const { data: myRp } = await sb.from('reposts').select('post_id').eq('user_id', currentUser.id).in('post_id', _pids);
       (myRp || []).forEach(r => { _upReposted[r.post_id] = true; });
     }
-    el.innerHTML = posts.map(p => {
+    el.innerHTML = items.map(p => {
       const img = _firstImageUrl(p.image_url);
       const likes = p.like_count || 0;
       const cmts  = p.comment_count || 0;
       const lk = _upLiked[p.id] ? ' lk' : '';
       const rp = _upReposted[p.id] ? ' rp' : '';
       const pid = escHtml(p.id);
+      const author = p._repost ? (p._author?.display_name || p._author?.username || 'User') : '';
       return `
       <div class="post${img ? '' : ' post-text'}" id="post-${pid}">
+        ${p._repost ? `<div class="up-repost-tag">🔁 Reposted${author ? ` · <strong>${escHtml(author)}</strong>` : ''}</div>` : ''}
         ${img ? `<img class="post-img" src="${escHtml(img)}" loading="lazy" onerror="this.style.display='none'"/>` : ''}
         <div class="post-body">
           ${p.event_name ? `<div class="post-ev">🎟 ${escHtml(p.event_name)}</div>` : ''}
@@ -642,10 +663,10 @@ function upBuildCmts(postId) {
   const top = cmts.filter(c => !c.parent_id);
   function renderOne(c, depth) {
     const replies = cmts.filter(r => r.parent_id === c.id);
-    const av = c.profiles?.avatar_url
-      ? `<img src="${escHtml(c.profiles.avatar_url)}" alt=""/>`
-      : escHtml((c.profiles?.display_name || '?')[0].toUpperCase());
-    const name = escHtml(c.profiles?.display_name || c.profiles?.username || 'User');
+    const av = c.profile?.avatar_url
+      ? `<img src="${escHtml(c.profile.avatar_url)}" alt=""/>`
+      : escHtml((c.profile?.display_name || c.profile?.username || '?')[0].toUpperCase());
+    const name = escHtml(c.profile?.display_name || c.profile?.username || 'User');
     const t = new Date(c.created_at);
     const timeStr = t.toLocaleDateString('en-ZA',{day:'numeric',month:'short'}) + ' ' + t.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});
     const cid = escHtml(c.id);
