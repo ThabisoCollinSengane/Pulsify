@@ -697,21 +697,35 @@ async function doLike(postId) {
 async function doRepost(postId) {
   if (!_uid) return showToast('Sign in to repost');
   const reposts = _getReposts(postId) || [];
-  const rp      = reposts.includes(_uid);
-  const newRp   = rp ? reposts.filter(r=>r!==_uid) : [...reposts, _uid];
-  _setReposts(postId, newRp);
+  const wasRp   = reposts.includes(_uid);
+  // Optimistic UI
+  const optimistic = wasRp ? reposts.filter(r=>r!==_uid) : [...reposts, _uid];
+  _setReposts(postId, optimistic);
   const btn = document.getElementById('rb-'+postId);
   const cnt = document.getElementById('rc-'+postId);
-  if (btn) btn.classList.toggle('rp', !rp);
-  if (cnt) cnt.textContent = fn(newRp.length);
-  if (!rp) showToast('🔁 Reposted!', 'ok');
-  const sb = getSB();
-  if (sb && _uid) {
-    if (rp) {
-      await sb.from('reposts').delete().eq('post_id', postId).eq('user_id', _uid).catch(()=>{});
-    } else {
-      await sb.from('reposts').insert({post_id: postId, user_id: _uid}).catch(()=>{});
-    }
+  if (btn) btn.classList.toggle('rp', !wasRp);
+  if (cnt) cnt.textContent = fn(optimistic.length);
+  if (!wasRp) showToast('🔁 Reposted!', 'ok');
+  // Persist via the API (browser SB client is anon-only, so a direct insert
+  // fails RLS). The server toggles and returns the true count.
+  try {
+    const r = await fetch('/api/reposts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
+      body: JSON.stringify({ post_id: postId }),
+    });
+    const j = await safeJson(r);
+    if (!r.ok) throw new Error(j.error || 'repost failed');
+    // Reconcile local state + count with the server truth
+    _setReposts(postId, j.reposted ? [...new Set([...optimistic, _uid])] : optimistic.filter(x=>x!==_uid));
+    if (btn) btn.classList.toggle('rp', !!j.reposted);
+    if (cnt && typeof j.count === 'number') cnt.textContent = fn(j.count);
+  } catch (e) {
+    // Roll back optimistic UI on failure
+    _setReposts(postId, reposts);
+    if (btn) btn.classList.toggle('rp', wasRp);
+    if (cnt) cnt.textContent = fn(reposts.length);
+    showToast('Could not repost — try again');
   }
 }
 

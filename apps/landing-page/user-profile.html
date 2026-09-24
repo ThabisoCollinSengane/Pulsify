@@ -616,14 +616,27 @@ function upCmtEmoji(postId, emoji) {
 
 async function upRepost(postId, btn) {
   if (!currentUser) { showToast('Sign in to repost', ''); return; }
-  const on = !_upReposted[postId];
+  const was = !!_upReposted[postId];
+  const on  = !was;
   _upReposted[postId] = on;
   btn.classList.toggle('rp', on);
-  if (on) {
-    showToast('🔁 Reposted!', 'ok');
-    await sb.from('reposts').insert({ post_id: postId, user_id: currentUser.id }).catch(() => {});
-  } else {
-    await sb.from('reposts').delete().eq('post_id', postId).eq('user_id', currentUser.id).catch(() => {});
+  if (on) showToast('🔁 Reposted!', 'ok');
+  // Persist via the API (the client SB session may be anon under RLS).
+  try {
+    const token = (await sb.auth.getSession())?.data?.session?.access_token || '';
+    const r = await fetch('/api/reposts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ post_id: postId }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'repost failed');
+    _upReposted[postId] = !!j.reposted;
+    btn.classList.toggle('rp', !!j.reposted);
+  } catch (e) {
+    _upReposted[postId] = was;
+    btn.classList.toggle('rp', was);
+    showToast('Could not repost — try again', '');
   }
 }
 
