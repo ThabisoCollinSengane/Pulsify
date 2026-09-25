@@ -706,12 +706,18 @@ async function doRepost(postId) {
   if (btn) btn.classList.toggle('rp', !wasRp);
   if (cnt) cnt.textContent = fn(optimistic.length);
   if (!wasRp) showToast('🔁 Reposted!', 'ok');
-  // Persist via the API (browser SB client is anon-only, so a direct insert
-  // fails RLS). The server toggles and returns the true count.
+  // Persist via the API. Use a FRESH access token from the live session —
+  // the cached _token in localStorage can be expired (Supabase tokens last
+  // ~1h), which the server rejects with 401.
   try {
+    let token = _token || '';
+    try {
+      const { data: { session } } = await getSB().auth.getSession();
+      if (session?.access_token) { token = session.access_token; _token = token; try { localStorage.setItem('p_token', token); } catch(e) {} }
+    } catch(e) {}
     const r = await fetch('/api/reposts', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ post_id: postId }),
     });
     const j = await safeJson(r);
@@ -725,7 +731,8 @@ async function doRepost(postId) {
     _setReposts(postId, reposts);
     if (btn) btn.classList.toggle('rp', wasRp);
     if (cnt) cnt.textContent = fn(reposts.length);
-    showToast('Could not repost — try again');
+    const msg = (e && e.message) ? String(e.message) : '';
+    showToast(/unauth/i.test(msg) ? 'Please sign in again to repost' : ('Could not repost — ' + (msg || 'try again')));
   }
 }
 
