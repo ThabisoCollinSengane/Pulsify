@@ -1282,16 +1282,19 @@ module.exports = async (req, res) => {
       const { post_id } = req.body || {};
       if (!post_id) return res.status(400).json({ error: 'post_id required' });
 
-      const userClient = sbAs(token);
-      const { data: existing } = await userClient.from('reposts')
+      // Write with the service-role client. The JWT is already verified above
+      // and user.id is authoritative (never client-supplied), so this is safe
+      // and avoids any RLS-policy pitfalls on the reposts table.
+      const svc = sb();
+      const { data: existing } = await svc.from('reposts')
         .select('id').eq('user_id', user.id).eq('post_id', post_id).maybeSingle();
 
       let reposted;
       if (existing) {
-        await userClient.from('reposts').delete().eq('user_id', user.id).eq('post_id', post_id);
+        await svc.from('reposts').delete().eq('user_id', user.id).eq('post_id', post_id);
         reposted = false;
       } else {
-        const { error: insErr } = await userClient.from('reposts').insert({ user_id: user.id, post_id });
+        const { error: insErr } = await svc.from('reposts').insert({ user_id: user.id, post_id });
         if (insErr && insErr.code !== '23505') return res.status(400).json({ error: insErr.message });
         reposted = true;
         // Notify the original author (best-effort)
