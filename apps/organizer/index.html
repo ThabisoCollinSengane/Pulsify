@@ -2256,6 +2256,7 @@ async function submitEvent() {
         caption: '🎟 ' + name + ' — ' + venue + ', ' + city + ' · ' + date + ' · ' + priceLabel + (desc ? '\n'+desc : ''),
         event_id: eventId,
         event_name: name,
+        image_url: imgUrl || null,
         post_type: 'organizer'
       })
     }).catch(() => {});
