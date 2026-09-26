@@ -47,8 +47,16 @@ body{padding-bottom:32px}
 .post-img{width:100%;height:220px;object-fit:cover;display:block;background:var(--surf2)}
 .post-img-placeholder{height:220px;background:linear-gradient(135deg,var(--surf),var(--surf2));display:flex;align-items:center;justify-content:center;font-size:3rem}
 .post-body{padding:14px}
-.up-repost-tag{font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.04em;color:var(--mu);padding:8px 14px 0;display:flex;align-items:center;gap:5px}
-.up-repost-tag strong{color:var(--mu2)}
+.post.is-repost{border:1px solid rgba(255,92,0,.18)}
+.up-repost-eyebrow{font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);padding:10px 14px 0;display:flex;align-items:center;gap:5px}
+.up-post-head{display:flex;align-items:center;gap:10px;padding:8px 14px 10px}
+.up-ph-av{width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,var(--or),#ff2d78);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:1rem;border:1.5px solid rgba(255,92,0,.35)}
+.up-ph-av img{width:100%;height:100%;object-fit:cover}
+.up-ph-meta{min-width:0}
+.up-ph-name{font-weight:800;font-size:.95rem;color:var(--tx);display:flex;align-items:center;gap:6px;line-height:1.2}
+.up-ph-user{font-size:.75rem;color:var(--mu);margin-top:1px}
+.up-verified{color:var(--or);font-size:.72rem}
+.up-page-tag{font-size:.58rem;font-weight:700;letter-spacing:.04em;color:var(--or);border:1px solid rgba(255,92,0,.4);border-radius:20px;padding:1px 6px}
 .post-ev{font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--or);margin-bottom:5px}
 .post-cap{font-size:.86rem;line-height:1.5;color:var(--mu2);margin-bottom:10px}
 .post-cap-lg{font-size:1.05rem;line-height:1.5;color:var(--tx);font-weight:500;margin-bottom:12px;white-space:pre-wrap;word-break:break-word}
@@ -516,7 +524,7 @@ async function renderPosts(userId) {
     let repostItems = [];
     if (rpIds.length) {
       const { data: rposts } = await sb.from('posts')
-        .select('id,caption,image_url,event_name,like_count,comment_count,created_at,profiles:user_id(display_name,username,avatar_url)')
+        .select('id,caption,image_url,event_name,like_count,comment_count,created_at,profiles:user_id(id,display_name,username,avatar_url,role,is_verified)')
         .in('id', rpIds);
       repostItems = (rposts || []).map(p => ({ ...p, _repost: true, _sortTs: rpTs[p.id] || p.created_at, _author: p.profiles || null }));
     }
@@ -541,10 +549,31 @@ async function renderPosts(userId) {
       const lk = _upLiked[p.id] ? ' lk' : '';
       const rp = _upReposted[p.id] ? ' rp' : '';
       const pid = escHtml(p.id);
-      const author = p._repost ? (p._author?.display_name || p._author?.username || 'User') : '';
+      let headHtml = '';
+      if (p._repost) {
+        const a = p._author || {};
+        const aName = a.display_name || a.username || 'User';
+        const aUser = a.username ? '@' + a.username : '';
+        const aId = escHtml(a.id || '');
+        const isOrg = ['organizer','business','admin'].includes(a.role);
+        const verified = a.is_verified ? '<span class="up-verified" title="Verified">✔</span>' : '';
+        const pageTag = isOrg ? '<span class="up-page-tag">📢 Page</span>' : '';
+        const avInner = a.avatar_url
+          ? `<img src="${escHtml(a.avatar_url)}" alt="" onerror="this.style.display='none'"/>`
+          : escHtml((aName[0] || '?').toUpperCase());
+        headHtml = `
+        <div class="up-repost-eyebrow">🔁 You reposted</div>
+        <div class="up-post-head" ${aId ? `onclick="location.href='/user-profile?id=${aId}'" style="cursor:pointer"` : ''}>
+          <div class="up-ph-av">${avInner}</div>
+          <div class="up-ph-meta">
+            <div class="up-ph-name">${escHtml(aName)}${verified}${pageTag}</div>
+            ${aUser ? `<div class="up-ph-user">${escHtml(aUser)}</div>` : ''}
+          </div>
+        </div>`;
+      }
       return `
-      <div class="post${img ? '' : ' post-text'}" id="post-${pid}">
-        ${p._repost ? `<div class="up-repost-tag">🔁 Reposted${author ? ` · <strong>${escHtml(author)}</strong>` : ''}</div>` : ''}
+      <div class="post${img ? '' : ' post-text'}${p._repost ? ' is-repost' : ''}" id="post-${pid}">
+        ${headHtml}
         ${img ? `<img class="post-img" src="${escHtml(img)}" loading="lazy" onerror="this.style.display='none'"/>` : ''}
         <div class="post-body">
           ${p.event_name ? `<div class="post-ev">🎟 ${escHtml(p.event_name)}</div>` : ''}
