@@ -1297,17 +1297,21 @@ module.exports = async (req, res) => {
         const { error: insErr } = await svc.from('reposts').insert({ user_id: user.id, post_id });
         if (insErr && insErr.code !== '23505') return res.status(400).json({ error: insErr.message });
         reposted = true;
-        // Notify the original author (best-effort)
-        const { data: p } = await sb().from('posts').select('user_id').eq('id', post_id).single();
-        if (p && p.user_id !== user.id) {
-          const { data: prof } = await sb().from('profiles').select('display_name').eq('id', user.id).single();
-          const name = prof?.display_name || 'Someone';
-          await sb().from('notifications').insert({
-            user_id: p.user_id, type: 'repost', from_user_id: user.id,
-            from_display_name: name, entity_id: post_id, entity_type: 'post',
-            message: `${name} reposted your post`,
-          }).catch(() => {});
-        }
+        // Notify the original author (best-effort — never let this fail the
+        // repost). NB: the Supabase query builder is a thenable with no
+        // .catch(), so use try/await, not .catch().
+        try {
+          const { data: p } = await sb().from('posts').select('user_id').eq('id', post_id).single();
+          if (p && p.user_id !== user.id) {
+            const { data: prof } = await sb().from('profiles').select('display_name').eq('id', user.id).single();
+            const name = prof?.display_name || 'Someone';
+            await sb().from('notifications').insert({
+              user_id: p.user_id, type: 'repost', from_user_id: user.id,
+              from_display_name: name, entity_id: post_id, entity_type: 'post',
+              message: `${name} reposted your post`,
+            });
+          }
+        } catch (e) { /* notification is non-critical */ }
       }
 
       const { count } = await sb().from('reposts')
