@@ -284,6 +284,34 @@ function getSB() {
   return _sbClient;
 }
 
+// Client-side image compression before upload. Supabase Free plan has no
+// server-side image transform, so full-size originals would otherwise bloat
+// feeds. Fail-safe: returns the ORIGINAL file on any error, on non-photo types
+// (gif/svg), or if re-encoding wouldn't shrink it.
+async function compressImage(file, maxDim = 1600, quality = 0.82) {
+  try {
+    if (!file || !file.type || !file.type.startsWith('image/')) return file;
+    if (file.type === 'image/gif' || file.type === 'image/svg+xml') return file;
+    if (file.size <= 150 * 1024) return file;
+    let bmp;
+    try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+    catch { bmp = await createImageBitmap(file); }
+    const scale = Math.min(1, maxDim / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * scale));
+    const h = Math.max(1, Math.round(bmp.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
+    if (bmp.close) bmp.close();
+    const base = (file.name || 'image').replace(/\.[^.]+$/, '');
+    let blob = await new Promise(r => canvas.toBlob(r, 'image/webp', quality));
+    let type = 'image/webp', ext = 'webp';
+    if (!blob) { blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', quality)); type = 'image/jpeg'; ext = 'jpg'; }
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], base + '.' + ext, { type });
+  } catch { return file; }
+}
+
 async function safeJson(r) { try { const t = await r.text(); return t ? JSON.parse(t) : {}; } catch(e) { return {}; } }
 
 let _session = null;
@@ -1132,9 +1160,10 @@ async function submitPost() {
 
   try {
     if (_cImg && _cImgFile && sb && _uid) {
-      const ext  = _cImgFile.name.split('.').pop() || 'jpg';
+      const _cf  = await compressImage(_cImgFile);
+      const ext  = _cf.name.split('.').pop() || 'jpg';
       const path = _uid + '/' + Date.now() + '.' + ext;
-      const { data: up, error: upErr } = await sb.storage.from('post-images').upload(path, _cImgFile, { upsert: false });
+      const { data: up, error: upErr } = await sb.storage.from('post-images').upload(path, _cf, { upsert: false, contentType: _cf.type });
       // Don't silently post text-only when the user attached a photo — abort and let them retry.
       if (upErr) throw new Error('Photo upload failed: ' + upErr.message);
       const { data: { publicUrl } } = sb.storage.from('post-images').getPublicUrl(path);
