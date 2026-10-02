@@ -82,20 +82,30 @@ const GENRES = [
 // First match wins, scanning the newest user message first, then older ones.
 function firstHit(texts, fn) { for (const t of texts) { const v = fn(t); if (v) return v; } return null; }
 
+// A city means its metro — same idea as the events API's province lists.
+const METROS = {
+  Durban: ['Durban', 'Umhlanga', 'Ballito', 'Pinetown', 'Westville', 'Hillcrest', 'La Lucia', 'Umdloti', 'Tongaat', 'Salt Rock', 'Amanzimtoti'],
+  Johannesburg: ['Johannesburg', 'Joburg', 'Sandton', 'Midrand', 'Soweto', 'Randburg', 'Roodepoort', 'Fourways', 'Rosebank', 'Germiston', 'Benoni', 'Boksburg', 'Tembisa'],
+  'Cape Town': ['Cape Town', 'Bellville', 'Tygervalley', 'Somerset West', 'Mitchells Plain', 'Sea Point', 'Camps Bay', 'Woodstock', 'Paarl'],
+  Pretoria: ['Pretoria', 'Centurion', 'Hatfield', 'Menlyn'],
+  Gqeberha: ['Gqeberha', 'Port Elizabeth'],
+};
+
 async function findEvents({ city, genres, range, free }, limit = 10) {
   let q = sb().from('events')
     .select('id,name,genre,venue_name,venue_city,date_local,time_local,is_free,price_min,description,lineup,attendance_count,hype_score')
     .eq('is_active', true).eq('approved', true)
     .gte('date_local', range?.from || saToday())
     .order('date_local', { ascending: true })
-    .limit(limit);
+    .limit(genres?.length ? 60 : limit); // genre is filtered below, so over-fetch
   if (range?.to) q = q.lte('date_local', range.to);
-  if (city) q = q.ilike('venue_city', `%${city}%`);
-  if (genres?.length) q = q.or(genres.map(g => `genre.ilike.%${g}%`).join(','));
+  if (city) q = q.or((METROS[city] || [city]).map(n => `venue_city.ilike.%${n}%`).join(','));
   if (free) q = q.eq('is_free', true);
   const { data, error } = await q;
   if (error) console.error('[lumi] events query:', error.message);
-  return data || [];
+  let rows = data || [];
+  if (genres?.length) rows = rows.filter(e => genres.some(g => String(e.genre || '').toLowerCase().includes(g)));
+  return rows.slice(0, limit);
 }
 
 const clip = (s, n) => { s = (s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
@@ -312,6 +322,18 @@ ${text.slice(0, 4000)}`;
           .limit(7);
         recentMsgs = (history || []).reverse().slice(0, -1); // exclude the message we just inserted
       }
+      // Fallback memory: the widget also sends its recent transcript, used when the
+      // DB has no history for this conversation (new/failed conversation record).
+      if (!recentMsgs.length && Array.isArray(req.body?.history)) {
+        recentMsgs = req.body.history.slice(-10)
+          .filter(m => m && (m.dir === 'in' || m.dir === 'out') && typeof m.text === 'string' && m.text.trim())
+          .map(m => ({ direction: m.dir, body: m.text.slice(0, 1500) }));
+      }
+      const userTextsAll = [message, ...recentMsgs.filter(m => m.direction === 'in').map(m => m.body).reverse()].map(t => String(t || '').toLowerCase());
+      const topics = {
+        app: /\b(pulsi?fy|pulsefy|the app|website|account|sign ?up|log ?in|register\w*|list(ing)? (my|an?) events?|organi[sz]\w*|sell\w* tickets?|refund\w*|cancel\w*|reschedul\w*|my tickets?|tickets? (didn'?t|not|never|missing)|didn'?t (get|receive)|qr( code)?|payment\w*|pay(ing)?|card|eft|fees?|commission|support|help ?desk|contact (you|pulsi?fy|pulsefy)|resell\w*|transfer\w*|lumi|who are you|what are you|how (does|do|can) (it|this|i|you))\b/.test(userTextsAll[0]),
+        food: /\b(eat|drink|restaurant|food|bar|spot|place to go|where to go|pub|cafe|coffee|lunch|dinner|breakfast|brunch|sushi|braai|cocktail|shisa ?nyama|lounge|before|after ?party)\b/.test(userTextsAll[0]),
+      };
 
       const { customer_name, lat, lon, city: feedCity } = req.body || {};
       const firstName = clip(String(customer_name || '').split(' ')[0], 30);
@@ -337,12 +359,12 @@ ${text.slice(0, 4000)}`;
           e.attendance_count > 0 && `${e.attendance_count} people on Pulsify are going`,
           e.description && `About: ${clip(e.description, 600)}`,
         ].filter(Boolean);
-        systemPrompt = buildLumiSystemPrompt(event, channel)
+        systemPrompt = buildLumiSystemPrompt(event, channel, { city: e.venue_city, genres: [e.genre], topics })
           + '\nEVENT FACTS (from Pulsify — reliable):\n' + facts.join('\n')
           + knowledgeContext + todayLine() + personLine;
       } else {
         // Discovery mode — work out what the person wants, then query real events.
-        const userTexts = [message, ...recentMsgs.filter(m => m.direction === 'in').map(m => m.body).reverse()].map(t => String(t || '').toLowerCase());
+        const userTexts = userTextsAll;
         const allText = userTexts.join(' ');
 
         let city = firstHit(userTexts, t => { for (const [re, c] of CITY_ALIASES) if (re.test(t)) return c; return null; });
@@ -356,7 +378,7 @@ ${text.slice(0, 4000)}`;
         const range = firstHit(userTexts, detectDateRange);
         const free = /\bfree\b/.test(userTexts[0]);
         const isPriceQuery = /cheap|affordable|budget|price|how much|cost|free/.test(allText);
-        const isFoodQuery = /\b(eat|drink|restaurant|food|bar|spot|place to go|where to go|pub|cafe|coffee|lunch|dinner|breakfast|brunch|sushi|braai|cocktail|shisa ?nyama|lounge)\b/.test(userTexts[0]);
+        const isFoodQuery = topics.food;
 
         // Try the full ask, then relax one constraint at a time so Lumi always has
         // something real to offer — and is told honestly when it's not an exact match.
@@ -421,7 +443,7 @@ ${text.slice(0, 4000)}`;
           isPriceQuery && 'price-conscious',
         ].filter(Boolean).join('; ') || 'nothing specific yet — vague ask';
 
-        systemPrompt = buildLumiSystemPrompt(null, channel)
+        systemPrompt = buildLumiSystemPrompt(null, channel, { city, genres: genres || [], topics })
           + '\n\nMODE: DISCOVERY — help this person decide what to do, using real events and spots on Pulsify.'
           + `\nWHAT THEY WANT (so far): ${understood}`
           + '\nDISCOVERY RULES:'
@@ -453,6 +475,7 @@ ${text.slice(0, 4000)}`;
       try {
         if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY_MISSING');
         reply = await groqChat(chatMessages, systemPrompt);
+        if (channel === 'whatsapp') reply = reply.replace(/\*\*(.+?)\*\*/g, '*$1*');
         // Buy / contact-organiser buttons only make sense when chatting about one event
         suggestPurchase = !!eventId && (buyIntent || /how much|price|cost|r\d/i.test(message));
         suggestContact = !!eventId && /don't have|contact|organis|not sure|I can't/i.test(reply);
