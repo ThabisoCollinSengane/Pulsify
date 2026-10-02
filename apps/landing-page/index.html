@@ -3298,6 +3298,9 @@ async function sendLumi() {
     if (_lumiEvId) body.eventId = _lumiEvId;
     if (_lumiConvId) body.conversationId = _lumiConvId;
     if (currentUser) { body.customer_name = currentUser.display_name || ''; body.customer_email = currentUser.email || ''; }
+    // Lets Lumi suggest events near the user when they don't name a city
+    if (userLat != null && userLon != null) { body.lat = userLat; body.lon = userLon; }
+    if (feedCity && feedCity !== 'all') body.city = feedCity;
     const d = await Api.post('/siza/chat', body);
     if (d._debug) console.error('[lumi] _debug:', d._debug);
     if (d.conversationId) {

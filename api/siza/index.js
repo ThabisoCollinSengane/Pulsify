@@ -1,6 +1,105 @@
 const crypto = require('crypto');
 const { sb, sbAs, corsHeaders, verifyToken, rateLimited, captureError, validate } = require('../../lib/shared');
-const { groqChat, groqEmbed, buildLumiSystemPrompt } = require('../../lib/groq');
+const { groqChat, groqEmbed, buildLumiSystemPrompt, lastGroqModel } = require('../../lib/groq');
+
+/* ─── Lumi context helpers ─────────────────────────────────── */
+// Dates are handled as SA-local YYYY-MM-DD strings (events.date_local is too).
+const saToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Johannesburg', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const dowOf   = iso => new Date(iso + 'T12:00:00Z').getUTCDay();
+const fmtDay  = iso => new Date(iso + 'T12:00:00Z').toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+const todayLine = () => {
+  const t = saToday();
+  const long = new Date(t + 'T12:00:00Z').toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  return `\n\nTODAY IS ${long} (South Africa). Use it to interpret "tonight", "this weekend", "next week", and say dates naturally ("this Saturday", "tomorrow night") instead of raw dates.`;
+};
+
+const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+function detectDateRange(text) {
+  const t = saToday(), dow = dowOf(t);
+  if (/\b(tonight|today|this evening|right now)\b/.test(text)) return { from: t, to: t, label: 'tonight' };
+  if (/\btomorrow\b/.test(text)) { const d = addDays(t, 1); return { from: d, to: d, label: 'tomorrow' }; }
+  if (/\bnext weekend\b/.test(text)) { const fri = addDays(t, ((5 - dow + 7) % 7) + 7); return { from: fri, to: addDays(fri, 2), label: 'next weekend' }; }
+  if (/\bnext week\b/.test(text)) { const mon = addDays(t, ((1 - dow + 7) % 7) || 7); return { from: mon, to: addDays(mon, 6), label: 'next week' }; }
+  if (/\bweekend\b/.test(text)) {
+    const from = (dow === 6 || dow === 0) ? t : addDays(t, (5 - dow + 7) % 7);
+    return { from, to: addDays(t, (7 - dow) % 7), label: 'this weekend' };
+  }
+  if (/\bthis week\b/.test(text)) return { from: t, to: addDays(t, (7 - dow) % 7), label: 'this week' };
+  for (let i = 0; i < 7; i++) {
+    if (new RegExp('\\b' + WEEKDAYS[i] + '\\b').test(text)) { const d = addDays(t, (i - dow + 7) % 7); return { from: d, to: d, label: WEEKDAYS[i] }; }
+  }
+  if (/\b(this month|next few weeks)\b/.test(text)) return { from: t, to: addDays(t, 30), label: 'the next month' };
+  return null;
+}
+
+const CITY_ALIASES = [
+  [/\b(durban|dbn|durbs|ethekwini|umhlanga|ballito|berea|glenwood|morningside|kzn|kwazulu)\b/, 'Durban'],
+  [/\b(pietermaritzburg|pmb|maritzburg)\b/, 'Pietermaritzburg'],
+  [/\b(johannesburg|joburg|jozi|jhb|egoli|sandton|rosebank|soweto|braamfontein|maboneng|midrand|fourways|randburg|melville|parkhurst)\b/, 'Johannesburg'],
+  [/\b(pretoria|pta|tshwane|centurion|hatfield|menlyn|brooklyn)\b/, 'Pretoria'],
+  [/\b(cape town|cpt|kaapstad|ikapa|camps bay|woodstock|sea point|green point|observatory|long street)\b/, 'Cape Town'],
+  [/\b(stellenbosch|stellies)\b/, 'Stellenbosch'],
+  [/\b(gqeberha|port elizabeth|nelson mandela bay)\b/, 'Gqeberha'],
+  [/\b(east london|buffalo city)\b/, 'East London'],
+  [/\b(bloemfontein|bloem|mangaung)\b/, 'Bloemfontein'],
+  [/\b(polokwane)\b/, 'Polokwane'],
+  [/\b(mbombela|nelspruit)\b/, 'Mbombela'],
+];
+const CITY_CENTERS = {
+  Durban: [-29.86, 31.03], Johannesburg: [-26.20, 28.05], Pretoria: [-25.75, 28.19], 'Cape Town': [-33.92, 18.42],
+  Gqeberha: [-33.96, 25.60], 'East London': [-33.02, 27.91], Bloemfontein: [-29.12, 26.21],
+  Pietermaritzburg: [-29.60, 30.38], Polokwane: [-23.90, 29.45], Mbombela: [-25.47, 30.97], Stellenbosch: [-33.93, 18.86],
+};
+function nearestCity(lat, lon) {
+  if (!(lat >= -35 && lat <= -22 && lon >= 16 && lon <= 33)) return null; // SA bounds
+  let best = null, bestKm = 80;
+  for (const [city, [clat, clon]] of Object.entries(CITY_CENTERS)) {
+    const km = Math.hypot((lat - clat) * 111, (lon - clon) * 111 * Math.cos(lat * Math.PI / 180));
+    if (km < bestKm) { best = city; bestKm = km; }
+  }
+  return best;
+}
+
+// Same vibe → genre mapping as the home-feed vibe chips (VIBE_MAP in index.html).
+const VIBES = [
+  [/\b(party|turn ?up|jol|dance|dancing|lit|rave|club(bing)?|groove)\b/, 'party', ['nightlife', 'gqom', 'amapiano', 'house', 'club', 'festival', 'student']],
+  [/\b(chill|relax(ed|ing)?|laid ?back|calm|mellow|low[- ]key)\b/, 'chill', ['jazz', 'wellness', 'outdoor', 'comedy', 'art']],
+  [/\b(luxury|upmarket|classy|fancy|vip|bougie|exclusive|premium)\b/, 'luxury', ['nightlife', 'festival', 'food']],
+  [/\b(social|meet (new )?people|date night|with friends|squad)\b/, 'social', ['food', 'market', 'sport', 'comedy', 'social']],
+  [/\b(cultur(e|al)|heritage|traditional)\b/, 'cultural', ['cultural', 'gospel', 'art']],
+];
+const GENRES = [
+  [/\bamapiano|\bpiano\b/, 'amapiano'], [/\bgqom\b/, 'gqom'], [/\bafro ?beats?\b/, 'afrobeats'],
+  [/\b(deep |afro |soulful )?house\b/, 'house'], [/\bhip[- ]?hop|\btrap\b|\brap\b/, 'hip-hop'], [/\bjazz\b/, 'jazz'],
+  [/\bgospel|\bworship\b/, 'gospel'], [/\bkwaito\b/, 'kwaito'], [/\br ?(&|n) ?b\b|\brnb\b|\bneo ?soul\b/, 'r&b'],
+  [/\bfestival/, 'festival'], [/\bconcert|\blive music\b|\bgig\b/, 'concert'], [/\bcomedy|stand[- ]?up\b/, 'comedy'],
+  [/\bmarket\b/, 'market'], [/\b(art|exhibition|gallery)\b/, 'art'], [/\btheat(re|er)|\bplay\b/, 'theatre'],
+  [/\bsport|\bmarathon|\brugby|\bsoccer|\bfootball/, 'sport'], [/\bwellness|\byoga\b/, 'wellness'],
+  [/\bfamily|\bkids\b/, 'family'], [/\bstudent/, 'student'], [/\bnightlife\b/, 'nightlife'],
+];
+
+// First match wins, scanning the newest user message first, then older ones.
+function firstHit(texts, fn) { for (const t of texts) { const v = fn(t); if (v) return v; } return null; }
+
+async function findEvents({ city, genres, range, free }, limit = 10) {
+  let q = sb().from('events')
+    .select('id,name,genre,venue_name,venue_city,date_local,time_local,is_free,price_min,description,lineup,attendance_count,hype_score')
+    .eq('is_active', true).eq('approved', true)
+    .gte('date_local', range?.from || saToday())
+    .order('date_local', { ascending: true })
+    .limit(limit);
+  if (range?.to) q = q.lte('date_local', range.to);
+  if (city) q = q.ilike('venue_city', `%${city}%`);
+  if (genres?.length) q = q.or(genres.map(g => `genre.ilike.%${g}%`).join(','));
+  if (free) q = q.eq('is_free', true);
+  const { data, error } = await q;
+  if (error) console.error('[lumi] events query:', error.message);
+  return data || [];
+}
+
+const clip = (s, n) => { s = (s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+
 
 module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
@@ -45,7 +144,7 @@ module.exports = async (req, res) => {
       }
 
       const ok = results.groq_chat === 'OK';
-      return res.status(200).json({ ok, model: 'groq-compound-beta-mini', results });
+      return res.status(200).json({ ok, model: lastGroqModel() || null, results });
     }
 
     /* ─── GET /siza/whatsapp/webhook — Meta verification ─────── */
@@ -137,7 +236,7 @@ ${text.slice(0, 4000)}`;
       let event = null;
       if (eventId) {
         const { data: ev } = await sb().from('events')
-          .select('id,name,genre,organiser_id')
+          .select('id,name,genre,organiser_id,organiser_name,description,date_local,time_local,end_date_local,end_time_local,venue_name,venue_address,venue_city,is_free,lineup,dress_code,age_restriction,attendance_count')
           .eq('id', eventId).single();
         if (!ev) return res.status(404).json({ error: 'Event not found' });
         event = ev;
@@ -214,95 +313,128 @@ ${text.slice(0, 4000)}`;
         recentMsgs = (history || []).reverse().slice(0, -1); // exclude the message we just inserted
       }
 
+      const { customer_name, lat, lon, city: feedCity } = req.body || {};
+      const firstName = clip(String(customer_name || '').split(' ')[0], 30);
+      const personLine = firstName ? `\n\nYou're chatting with ${firstName} — use their name now and then, not every message.` : '';
+
       let systemPrompt;
       if (eventId) {
-        systemPrompt = buildLumiSystemPrompt(event, channel) + knowledgeContext;
+        // Event mode — ground Lumi in the event's real data, so it can answer the basics
+        // (when/where/how much/who's playing) even if the organiser never pasted a knowledge doc.
+        const { data: tiers } = await sb().from('ticket_tiers')
+          .select('name,price,sold_out,description').eq('event_id', eventId).order('sort_order', { ascending: true });
+        const e = event;
+        const facts = [
+          e.date_local && `When: ${fmtDay(e.date_local)} ${e.date_local}${e.time_local ? ' from ' + String(e.time_local).slice(0, 5) : ''}${e.end_date_local && e.end_date_local !== e.date_local ? ' until ' + fmtDay(e.end_date_local) : ''}${e.end_time_local ? ' (ends ' + String(e.end_time_local).slice(0, 5) + ')' : ''}`,
+          (e.venue_name || e.venue_city) && `Where: ${[e.venue_name, e.venue_address, e.venue_city].filter(Boolean).join(', ')}`,
+          e.genre && `Genre: ${e.genre}`,
+          e.organiser_name && `Organiser: ${e.organiser_name}`,
+          e.lineup && `Lineup: ${clip(e.lineup, 300)}`,
+          e.dress_code && `Dress code: ${e.dress_code}`,
+          e.age_restriction && `Age restriction: ${e.age_restriction}`,
+          tiers?.length ? `Tickets: ${tiers.map(t => `${t.name || 'Ticket'} ${Number(t.price) > 0 ? 'R' + t.price : 'FREE'}${t.sold_out ? ' (SOLD OUT)' : ''}`).join('; ')} — buy at https://pulsefy.co.za/?ev=${e.id}&buy=1`
+            : (e.is_free ? 'Tickets: FREE entry' : 'Tickets: price not listed on Pulsify yet'),
+          e.attendance_count > 0 && `${e.attendance_count} people on Pulsify are going`,
+          e.description && `About: ${clip(e.description, 600)}`,
+        ].filter(Boolean);
+        systemPrompt = buildLumiSystemPrompt(event, channel)
+          + '\nEVENT FACTS (from Pulsify — reliable):\n' + facts.join('\n')
+          + knowledgeContext + todayLine() + personLine;
       } else {
-        // Discovery mode — query real upcoming events from DB
-        // Scan full conversation history so city/genre mentioned in earlier turns are remembered
-        const allText = [...recentMsgs.map(m => m.body), message].join(' ').toLowerCase();
-        const isPriceQuery = /cheapest|cheap|affordable|price|how much|cost/.test(allText);
+        // Discovery mode — work out what the person wants, then query real events.
+        const userTexts = [message, ...recentMsgs.filter(m => m.direction === 'in').map(m => m.body).reverse()].map(t => String(t || '').toLowerCase());
+        const allText = userTexts.join(' ');
 
-        // Detect city/genre hints from ALL conversation turns (not just current message)
-        const cityHints = { durban: 'Durban', joburg: 'Johannesburg', johannesburg: 'Johannesburg', 'cape town': 'Cape Town', pretoria: 'Pretoria', gqeberha: 'Gqeberha', bloemfontein: 'Bloemfontein' };
-        let cityFilter = null;
-        for (const [hint, city] of Object.entries(cityHints)) {
-          if (allText.includes(hint)) { cityFilter = city; break; }
+        let city = firstHit(userTexts, t => { for (const [re, c] of CITY_ALIASES) if (re.test(t)) return c; return null; });
+        let citySource = city ? 'what they said' : null;
+        if (!city && lat != null && lon != null) { city = nearestCity(Number(lat), Number(lon)); if (city) citySource = 'their location'; }
+        if (!city && feedCity && feedCity !== 'all') { city = String(feedCity); citySource = 'their feed filter'; }
+
+        const vibe = firstHit(userTexts, t => { for (const [re, name, genres] of VIBES) if (re.test(t)) return { name, genres }; return null; });
+        const genre = firstHit(userTexts, t => { for (const [re, g] of GENRES) if (re.test(t)) return g; return null; });
+        const genres = genre ? [genre] : (vibe ? vibe.genres : null);
+        const range = firstHit(userTexts, detectDateRange);
+        const free = /\bfree\b/.test(userTexts[0]);
+        const isPriceQuery = /cheap|affordable|budget|price|how much|cost|free/.test(allText);
+        const isFoodQuery = /\b(eat|drink|restaurant|food|bar|spot|place to go|where to go|pub|cafe|coffee|lunch|dinner|breakfast|brunch|sushi|braai|cocktail|shisa ?nyama|lounge)\b/.test(userTexts[0]);
+
+        // Try the full ask, then relax one constraint at a time so Lumi always has
+        // something real to offer — and is told honestly when it's not an exact match.
+        const attempts = [
+          { f: { city, genres, range, free }, note: null },
+          genres && { f: { city, range, free }, note: `nothing matching the ${genre || vibe.name} vibe` },
+          range && { f: { city, genres, free }, note: `nothing ${range.label}` },
+          range && genres && { f: { city, free }, note: `nothing matching the ${genre || vibe.name} vibe ${range.label}` },
+          city && { f: { genres, range }, note: `nothing in ${city}` },
+          city && { f: {}, note: `nothing matching in ${city}` },
+        ].filter(Boolean);
+        let events = [], fallbackNote = null;
+        for (const a of attempts) {
+          events = await findEvents(a.f);
+          if (events.length) { fallbackNote = a.note; break; }
         }
-
-        const genreHints = ['amapiano', 'gqom', 'afrobeats', 'house', 'hip-hop', 'hiphop', 'jazz', 'gospel', 'kwaito', 'r&b', 'rnb', 'festival', 'concert', 'comedy', 'food', 'art'];
-        let genreFilter = null;
-        for (const g of genreHints) {
-          if (allText.includes(g)) { genreFilter = g; break; }
-        }
-
-        const isFoodQuery = /eat|drink|restaurant|food|bar|spot|place to go|where to go|nightlife|pub|cafe|coffee|lunch|dinner|breakfast|brunch|sushi|braai|cocktail/.test(allText);
-
-        // Query real businesses from Pulsify when food/drink/spots are mentioned
-        let bizContext = '';
-        if (isFoodQuery) {
-          let bizQuery = sb().from('businesses')
-            .select('id,name,category,city,description,address')
-            .eq('approved', true)
-            .limit(8);
-          if (cityFilter) bizQuery = bizQuery.ilike('city', `%${cityFilter}%`);
-          const { data: spots } = await bizQuery;
-          if (spots && spots.length > 0) {
-            bizContext = '\n\nPULSIFY SPOTS NEAR YOU:\n' + spots.map(b =>
-              `- ${b.name} (${b.category || 'Spot'}, ${b.city || 'SA'})${b.address ? ' — ' + b.address : ''}`
-            ).join('\n');
-            bizContext += '\nMore spots: https://pulsefy.co.za (scroll to "Spots near you")';
-          }
-        }
-
-        let eventsQuery = sb().from('events')
-          .select('id,name,genre,venue_city,date_local,venue_name')
-          .eq('is_active', true)
-          .eq('approved', true)
-          .gte('date_local', new Date().toISOString().split('T')[0])
-          .order('date_local', { ascending: true })
-          .limit(8);
-        if (cityFilter) eventsQuery = eventsQuery.ilike('venue_city', `%${cityFilter}%`);
-        if (genreFilter) eventsQuery = eventsQuery.ilike('genre', `%${genreFilter}%`);
-
-        const { data: upcomingEvents } = await eventsQuery;
 
         let eventsContext = '';
-        if (upcomingEvents && upcomingEvents.length > 0) {
-          const eventIds = upcomingEvents.map(e => e.id);
-
-          // For price queries, also fetch ticket_tiers
-          let tiersMap = {};
-          if (isPriceQuery) {
-            const { data: tiers } = await sb().from('ticket_tiers')
-              .select('event_id,name,price')
-              .in('event_id', eventIds)
-              .order('price', { ascending: true });
-            if (tiers) {
-              for (const t of tiers) {
-                if (!tiersMap[t.event_id]) tiersMap[t.event_id] = t; // cheapest per event
-              }
-            }
-          }
-
-          eventsContext = '\n\nUPCOMING EVENTS ON PULSIFY:\n' + upcomingEvents.map(e => {
-            const tier = tiersMap[e.id];
-            const priceStr = tier ? ` | Tickets from R${tier.price}` : '';
-            const dateStr = e.date_local ? ` | ${e.date_local}` : '';
-            return `- ${e.name} (${e.genre || 'Event'}, ${e.venue_city || 'SA'}${dateStr}${priceStr}) → https://pulsefy.co.za/?ev=${e.id}`;
+        if (events.length) {
+          const { data: tiers } = await sb().from('ticket_tiers')
+            .select('event_id,price,sold_out').in('event_id', events.map(e => e.id)).order('price', { ascending: true });
+          const cheapest = {};
+          for (const t of tiers || []) if (!t.sold_out && cheapest[t.event_id] == null) cheapest[t.event_id] = Number(t.price);
+          eventsContext = (fallbackNote
+            ? `\n\nNO EXACT MATCH (${fallbackNote}). CLOSEST ALTERNATIVES ON PULSIFY:\n`
+            : '\n\nMATCHING EVENTS ON PULSIFY:\n') + events.map(e => {
+            const p = cheapest[e.id];
+            const price = p === 0 || (p == null && e.is_free) ? 'FREE' : p != null ? `from R${p}` : 'price on event page';
+            const when = `${fmtDay(e.date_local)}${e.time_local ? ' ' + String(e.time_local).slice(0, 5) : ''}`;
+            const going = e.attendance_count > 0 ? ` | ${e.attendance_count} going` : '';
+            const extra = clip(e.lineup ? 'Lineup: ' + e.lineup : e.description, 140);
+            return `- ${e.name} — ${when} @ ${e.venue_name || 'venue TBA'}, ${e.venue_city || 'SA'} | ${e.genre || 'event'} | ${price}${going} → https://pulsefy.co.za/?ev=${e.id}${extra ? `\n  (${extra})` : ''}`;
           }).join('\n');
         }
 
-        const browseLine = cityFilter || genreFilter
-          ? `Browse more: https://pulsefy.co.za/?${genreFilter ? `genre=${encodeURIComponent(genreFilter)}` : ''}${cityFilter && genreFilter ? '&' : ''}${cityFilter ? `city=${encodeURIComponent(cityFilter)}` : ''}`
-          : 'Browse all events: https://pulsefy.co.za';
+        // Spots (restaurants/bars) when they ask about food, drinks or where to go.
+        let bizContext = '';
+        if (isFoodQuery) {
+          let bq = sb().from('businesses')
+            .select('name,category,suburb,city,tagline,price_range,rating')
+            .eq('is_active', true)
+            .order('is_frontline', { ascending: false })
+            .order('rating', { ascending: false, nullsFirst: false })
+            .limit(6);
+          if (city) bq = bq.ilike('city', `%${city}%`);
+          const { data: spots, error: bErr } = await bq;
+          if (bErr) console.error('[lumi] spots query:', bErr.message);
+          if (spots?.length) {
+            bizContext = '\n\nSPOTS ON PULSIFY:\n' + spots.map(b =>
+              `- ${b.name} (${b.category || 'spot'}, ${[b.suburb, b.city].filter(Boolean).join(', ') || 'SA'})${b.price_range ? ' ' + b.price_range : ''}${b.rating ? ' ★' + b.rating : ''}${b.tagline ? ' — ' + clip(b.tagline, 80) : ''}`
+            ).join('\n') + '\nMore spots: https://pulsefy.co.za ("Spots near you" on the home feed)';
+          }
+        }
+
+        const qs = [genre && `genre=${encodeURIComponent(genre)}`, city && `city=${encodeURIComponent(city)}`].filter(Boolean).join('&');
+        const browseLine = `Browse more: https://pulsefy.co.za${qs ? '/?' + qs : ''}`;
+        const understood = [
+          city && `city: ${city} (from ${citySource})`,
+          (genre || vibe) && `vibe: ${genre || vibe.name}`,
+          range && `when: ${range.label} (${range.from}${range.to !== range.from ? ' to ' + range.to : ''})`,
+          free && 'wants free events',
+          isPriceQuery && 'price-conscious',
+        ].filter(Boolean).join('; ') || 'nothing specific yet — vague ask';
 
         systemPrompt = buildLumiSystemPrompt(null, channel)
-          + '\n\nMODE: DISCOVERY — help this person find events and spots on Pulsify across SA.'
-          + '\nDISCOVERY RULES:\n1. Only share event names, dates, venues and prices from the UPCOMING EVENTS list below — never invent events\n2. Never state a price unless it appears in that list\n3. If the list is empty or doesn\'t match, say so warmly and direct them to browse: ' + browseLine
-          + eventsContext
+          + '\n\nMODE: DISCOVERY — help this person decide what to do, using real events and spots on Pulsify.'
+          + `\nWHAT THEY WANT (so far): ${understood}`
+          + '\nDISCOVERY RULES:'
+          + '\n1. Recommend ONLY events from the list below — never invent events, dates, venues, lineups or prices.'
+          + '\n2. Pick the 2–3 best fits, not the whole list, and say in a few words WHY each fits (vibe, lineup, price, how soon). Put each event\'s Pulsify link right after its name.'
+          + '\n3. If the list is headed NO EXACT MATCH, say so honestly in one line, then offer the alternatives.'
+          + '\n4. If the ask is vague (no city and no vibe), tease ONE standout event from the list and ask one short question to narrow it down (city, vibe or when).'
+          + '\n5. If there are no events at all, say so warmly, suggest a spot if any are listed, and share: ' + browseLine
+          + '\n6. If location came from their device/feed rather than their words, mention the city lightly ("near you in Durban") so they can correct you.'
+          + (eventsContext || '\n\nNO UPCOMING EVENTS FOUND on Pulsify for this right now.')
           + bizContext
-          + '\n\n' + browseLine;
+          + '\n\n' + browseLine
+          + todayLine() + personLine;
       }
 
       const chatMessages = recentMsgs.map(m => ({
@@ -321,9 +453,9 @@ ${text.slice(0, 4000)}`;
       try {
         if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY_MISSING');
         reply = await groqChat(chatMessages, systemPrompt);
-        suggestPurchase = buyIntent || /how much|price|cost|r\d/i.test(message);
-        // If Lumi says it doesn't know, flag for escalation UI
-        suggestContact = /don't have|contact|organis|not sure|I can't/i.test(reply);
+        // Buy / contact-organiser buttons only make sense when chatting about one event
+        suggestPurchase = !!eventId && (buyIntent || /how much|price|cost|r\d/i.test(message));
+        suggestContact = !!eventId && /don't have|contact|organis|not sure|I can't/i.test(reply);
       } catch (e) {
         const msg = e.message || '';
         console.error('[siza/chat] groq error:', msg);
@@ -343,7 +475,7 @@ ${text.slice(0, 4000)}`;
         } else {
           reply = "Eish, something went sideways on my side. Try again in a sec!";
         }
-        return res.status(200).json({ reply, conversationId: convId, suggestPurchase: false, suggestContact: true, _debug: msg });
+        return res.status(200).json({ reply, conversationId: convId, suggestPurchase: false, suggestContact: !!eventId, _debug: msg });
       }
 
       // Store AI reply
