@@ -53,7 +53,7 @@ const CASES = [
   { n: 33, title: 'City with no events this weekend', turns: ['anything on in durban this weekend?'], forbid: [/(wizkid|jazz festival|drake|beyonc)[^.\n]{0,80}\bin durban\b/i] },
 ];
 
-const FALLBACK = /went sideways|is updating|overloaded|being set up|connection needs attention|couldn'?t connect/i;
+const FALLBACK = /went sideways|is updating|overloaded|being set up|connection needs attention|couldn'?t connect|lot of messages/i;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Johannesburg' }).format(new Date());
 const evCache = {};
@@ -123,7 +123,9 @@ async function send(body) {
         const seg = reply.slice(lastIdx, m.index).toLowerCase(); lastIdx = m.index + m[0].length;
         if (ev.status !== 'ok') { problems.push(`turn ${i + 1}: links event ${m[1]} which is ${ev.status}`); continue; }
         const words = String(ev.name).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 3 && !/^(live|tour|world|festival|concert|night|show|2026|2027)$/.test(w));
-        if (m[1] !== c.opts?.eventId && words.length && !words.some(w => seg.includes(w))) problems.push(`turn ${i + 1}: link ${m[1]} ("${ev.name}") is attached to text describing something else`);
+        const otherNamed = Object.entries(evCache).some(([id, o]) => id !== m[1] && o.status === 'ok' && (() => { const ow = String(o.name).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 3 && !/^(live|tour|world|festival|concert|night|show|2026|2027)$/.test(w)); return ow.length && ow.every(w => seg.includes(w)); })());
+        if (m[1] !== c.opts?.eventId && words.length && !words.every(w => seg.includes(w)) && otherNamed) problems.push(`turn ${i + 1}: link ${m[1]} ("${ev.name}") sits under a different event's name`);
+        else if (m[1] !== c.opts?.eventId && words.length && !words.some(w => seg.includes(w))) problems.push(`turn ${i + 1}: link ${m[1]} ("${ev.name}") is attached to text describing something else`);
         if (c.linksWithin === 'weekend' && ev.date > SUNDAY) problems.push(`turn ${i + 1}: "${ev.name}" (${ev.date}) isn't this weekend`);
       }
       for (const m of reply.matchAll(/\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*,?\s+(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/g)) {

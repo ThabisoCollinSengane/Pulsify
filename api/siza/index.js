@@ -158,8 +158,20 @@ function guardReply(reply, allowed, currentId) {
       if (id === currentId && allowed.has(id)) return false;
       if (!allowed.has(id)) return true;
       const w = nameWords(allowed.get(id));
-      return w.length && !w.some(x => lineN.includes(x) || prevN.includes(x));
+      if (!w.length || w.some(x => lineN.includes(x))) return false;
+      // Line names a different event of ours → link belongs to that one, not this
+      const other = [...allowed].some(([oid, n]) => oid !== id && nameWords(n).filter(x => !w.includes(x)).some(x => lineN.includes(x)));
+      return other || !w.some(x => prevN.includes(x));
     });
+    if (badLink && allowed.has(badLink[1]) && !isFake(line)) {
+      // Link points at the wrong one of our events: repoint it if the line names exactly one
+      const named = [...allowed].filter(([, n]) => { const w = nameWords(n); return w.length && w.every(x => lineN.includes(x)); });
+      if (named.length === 1) {
+        removed++; console.warn('[lumi] repointed event link', badLink[1], '->', named[0][0]);
+        out.push(line.replace(badLink[0], badLink[0].replace(`ev=${badLink[1]}`, `ev=${named[0][0]}`)));
+        continue;
+      }
+    }
     if (badLink || (links.length && isFake(line))) {
       removed++; console.warn('[lumi] removed unverified event line', badLink ? badLink[1] : '(invented name)');
       if (/^\s*\*\*[^*]+\*\*\s*$/.test(out[out.length - 1] || '')) out.pop();
@@ -577,6 +589,13 @@ ${text.slice(0, 4000)}`;
           reply = reply.split('\n').map(l => l.split(/(?<=[.!?])\s+(?=\S)/).filter(sn => !/\b(18|21)\s?\+/.test(sn)).join(' ')).join('\n').trim();
           if (/\bage\b/i.test(message)) reply += "\n\nThe age limit isn't listed yet — check the event page before you go.";
         }
+        // Same link twice → keep the first
+        const seenLinks = new Set();
+        reply = reply.replace(/https?:\/\/(?:www\.)?pulsefy\.co\.za\/\?\S*\bev=[^\s)]+/g, u => {
+          const k = u.replace(/[.,!?]+$/, '');
+          if (seenLinks.has(k)) return '';
+          seenLinks.add(k); return u;
+        }).replace(/[ \t]+$/gm, '').replace(/\n{3,}/g, '\n\n');
         // Bolded event names from our data that came without a link get their link
         reply = reply.split('\n').map(l => {
           if (/pulsefy\.co\.za\/\?\S*\bev=/.test(l)) return l;
