@@ -55,9 +55,13 @@
 
   function injectStyles() {
     const css = `
-.lp-fab{position:fixed;right:16px;bottom:calc(var(--bh,70px) + 16px + env(safe-area-inset-bottom,0px));z-index:850;width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,#FF5C00,#FF2D78);box-shadow:0 6px 22px rgba(255,92,0,.45);display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+.lp-fab{position:fixed;right:14px;bottom:calc(var(--bh,70px) + 14px + env(safe-area-inset-bottom,0px));z-index:850;width:46px;height:46px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,#FF5C00,#FF2D78);box-shadow:0 6px 22px rgba(255,92,0,.45);display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;transition:opacity .2s,transform .2s}
+.lp-fab.lp-hide{opacity:0;transform:scale(.6);pointer-events:none}
+/* Room at the end of each scroll area so the last row/button can scroll clear of the Lumi button */
+html.lp-on-business .panel{padding-bottom:72px}
+html.lp-on-organizer body{padding-bottom:calc(var(--bh,70px) + env(safe-area-inset-bottom,0px) + 88px)!important}
 .lp-fab:focus-visible{outline:2px solid #fff;outline-offset:3px}
-.lp-fab svg{width:22px;height:22px}
+.lp-fab svg{width:20px;height:20px}
 .lp-sheet{position:fixed;top:0;left:0;right:0;bottom:0;z-index:4500;display:none;flex-direction:column;background:var(--bg,#160C32);color:var(--tx,#F4EDFF);font-family:'DM Sans',sans-serif;transition:transform .3s ease;transform:translateY(100%)}
 @media (min-width:760px){.lp-sheet{left:auto;width:420px;border-left:1px solid var(--border,rgba(168,108,255,.16));box-shadow:-12px 0 40px rgba(0,0,0,.35)}}
 .lp-head{display:flex;align-items:center;gap:12px;padding:calc(14px + env(safe-area-inset-top,0px)) 18px 12px;border-bottom:1px solid var(--border,rgba(168,108,255,.16));flex-shrink:0}
@@ -85,7 +89,7 @@
 .lp-in:focus{border-color:var(--or,#FF6B00)}
 .lp-send{width:42px;height:42px;border-radius:50%;background:var(--or,#FF6B00);border:none;color:#fff;font-size:1.05rem;cursor:pointer;flex-shrink:0}
 .lp-send:disabled{opacity:.5;cursor:default}
-@media (prefers-reduced-motion:reduce){.lp-sheet{transition:none}.lp-typing i{animation:none}}`;
+@media (prefers-reduced-motion:reduce){.lp-sheet,.lp-fab{transition:none}.lp-typing i{animation:none}}`;
     const st = document.createElement('style');
     st.textContent = css;
     document.head.appendChild(st);
@@ -117,6 +121,11 @@
     fab.innerHTML = SPARK;
     fab.onclick = open;
     document.body.appendChild(fab);
+    document.documentElement.classList.add('lp-on-' + cfg.role);
+    // Tuck the button away while a form field outside Lumi is focused (keyboard up, button would cover inputs)
+    const isField = t => t && t.matches && t.matches('input,textarea,select') && !t.closest('.lp-sheet');
+    document.addEventListener('focusin', e => { if (isField(e.target)) fab.classList.add('lp-hide'); });
+    document.addEventListener('focusout', e => { if (isField(e.target)) fab.classList.remove('lp-hide'); });
 
     const sheet = document.createElement('div');
     sheet.className = 'lp-sheet';
