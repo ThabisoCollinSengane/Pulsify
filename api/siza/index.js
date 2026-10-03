@@ -135,25 +135,44 @@ function detectLanguage(text) {
 }
 
 // Removes any event the model mentions that isn't backed by the data it was given.
-// Each Pulsify event link must point at an event we supplied, and the text leading up
-// to it must name that event — this catches invented events wearing a real link.
+// A line with a Pulsify event link must point at an event we supplied and name it
+// (on that line or the line above); a sentence that bolds an unknown name next to a
+// date/time is an invented event. The current event page's own link is always fine.
 const NAME_STOP = new Set(['live', 'tour', 'world', 'festival', 'concert', 'night', 'party', 'show', 'event', 'with', 'from', 'summer', 'edition', 'presents', 'sessions', 'session', '2025', '2026', '2027', 'the', 'and']);
 const nameWords = n => String(n).toLowerCase().normalize('NFKD').replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 3 && !NAME_STOP.has(w));
-function guardReply(reply, allowed) {
-  const re = /https?:\/\/(?:www\.)?pulsefy\.co\.za\/\?[^\s)]*?\bev=([A-Za-z0-9_\-]+)[^\s)]*\)?/g;
-  let out = '', last = 0, removed = 0, m;
-  while ((m = re.exec(reply))) {
-    const id = m[1];
-    const seg = reply.slice(last, re.lastIndex);
-    const name = allowed.get(id);
-    const words = name ? nameWords(name) : [];
-    const segN = seg.toLowerCase().normalize('NFKD');
-    const ok = name && (!words.length || words.some(w => segN.includes(w)));
-    if (ok) out += seg; else { removed++; console.warn('[lumi] removed unverified event mention', id); }
-    last = re.lastIndex;
+const EV_LINK = /https?:\/\/(?:www\.)?pulsefy\.co\.za\/\?[^\s)]*?\bev=([A-Za-z0-9_\-]+)/g;
+const DATEISH = /\b\d{1,2}[:h]\d{2}\b|\b(mon|tue|wed|thu|fri|sat|sun)[a-z]*,? \d{1,2}\b|\b\d{1,2} (jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b|\btonight\b/i;
+function guardReply(reply, allowed, currentId) {
+  const known = new Set([...allowed.values()].flatMap(nameWords));
+  const out = [];
+  let removed = 0;
+  for (const line of String(reply).split('\n')) {
+    const lineN = line.toLowerCase().normalize('NFKD');
+    const prevN = line.includes('**') ? '' : (out[out.length - 1] || '').toLowerCase().normalize('NFKD');
+    const links = [...line.matchAll(EV_LINK)];
+    const isFake = sn => [...sn.matchAll(/\*\*([^*]+)\*\*/g)].find(([, b]) => {
+      const w = nameWords(b);
+      return w.length && !w.some(x => known.has(x)) && DATEISH.test(sn);
+    });
+    const badLink = links.find(([, id]) => {
+      if (id === currentId && allowed.has(id)) return false;
+      if (!allowed.has(id)) return true;
+      const w = nameWords(allowed.get(id));
+      return w.length && !w.some(x => lineN.includes(x) || prevN.includes(x));
+    });
+    if (badLink || (links.length && isFake(line))) {
+      removed++; console.warn('[lumi] removed unverified event line', badLink ? badLink[1] : '(invented name)');
+      if (/^\s*\*\*[^*]+\*\*\s*$/.test(out[out.length - 1] || '')) out.pop();
+      continue;
+    }
+    const sents = line.split(/(?<=[.!?])\s+(?=\S)/).filter(sn => {
+      const fake = isFake(sn);
+      if (fake) { removed++; console.warn('[lumi] removed invented event', fake[1]); }
+      return !fake;
+    });
+    if (sents.length || !line.trim()) out.push(sents.join(' '));
   }
-  out += reply.slice(last);
-  return { text: out.replace(/\n{3,}/g, '\n\n').trim(), removed };
+  return { text: out.join('\n').replace(/\n{3,}/g, '\n\n').trim(), removed };
 }
 
 const clip = (s, n) => { s = (s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
@@ -389,6 +408,7 @@ ${text.slice(0, 4000)}`;
 
       let systemPrompt;
       const allowedEvents = new Map(); // id -> name of events Lumi may link to
+      const altLines = []; // real events to fall back on if the guard strips invented ones
       if (eventId) {
         allowedEvents.set(event.id, event.name);
         // Event mode — ground Lumi in the event's real data, so it can answer the basics
@@ -402,8 +422,8 @@ ${text.slice(0, 4000)}`;
           e.genre && `Genre: ${e.genre}`,
           e.organiser_name && `Organiser: ${e.organiser_name}`,
           lineupText(e.lineup) && `Lineup: ${clip(lineupText(e.lineup), 300)}`,
-          e.dress_code && `Dress code: ${e.dress_code}`,
-          e.age_restriction && `Age restriction: ${e.age_restriction}`,
+          e.dress_code ? `Dress code: ${e.dress_code}` : 'Dress code: not listed — say so; do not guess typical dress codes',
+          e.age_restriction ? `Age restriction: ${e.age_restriction}` : 'Age restriction: not listed — say so; do not guess (no "usually 18+")',
           tiers?.length ? `Tickets: ${tiers.map(t => `${t.name || 'Ticket'} ${Number(t.price) > 0 ? 'R' + t.price : 'FREE'}${t.sold_out ? ' (SOLD OUT)' : ''}`).join('; ')} — buy at https://pulsefy.co.za/?ev=${e.id}&buy=1`
             : (e.is_free ? 'Tickets: FREE entry' : 'Tickets: price not listed on Pulsify yet — tell them to check the event page, where tickets will go on sale'),
           e.attendance_count > 0 && `${e.attendance_count} people on Pulsify are going`,
@@ -448,14 +468,17 @@ ${text.slice(0, 4000)}`;
         }
 
         let eventsContext = '';
-        for (const e of events) allowedEvents.set(e.id, e.name);
+        for (const e of events) {
+          allowedEvents.set(e.id, e.name);
+          altLines.push(`**${e.name}** — ${fmtDay(e.date_local)}${e.time_local ? ' ' + String(e.time_local).slice(0, 5) : ''} @ ${e.venue_name || 'venue TBA'}, ${e.venue_city || 'SA'} https://pulsefy.co.za/?ev=${e.id}`);
+        }
         if (events.length) {
           const { data: tiers } = await sb().from('ticket_tiers')
             .select('event_id,price,sold_out').in('event_id', events.map(e => e.id)).order('price', { ascending: true });
           const cheapest = {};
           for (const t of tiers || []) if (!t.sold_out && cheapest[t.event_id] == null) cheapest[t.event_id] = Number(t.price);
           eventsContext = (fallbackNote
-            ? `\n\n[not an exact match — ${fallbackNote}] CLOSEST ALTERNATIVES ON PULSIFY:\n`
+            ? `\n\nNone of these is an exact match (${fallbackNote}). Closest alternatives on Pulsify:\n`
             : '\n\nMATCHING EVENTS ON PULSIFY:\n') + events.map(e => {
             const p = cheapest[e.id];
             const price = p === 0 || (p == null && e.is_free) ? 'FREE' : p != null ? `from R${p}` : 'price on event page';
@@ -501,7 +524,7 @@ ${text.slice(0, 4000)}`;
           + '\nDISCOVERY RULES:'
           + '\n1. Recommend ONLY events from the list below — never invent events, dates, venues, lineups or prices.'
           + '\n2. Pick the 2–3 best fits, not the whole list, and say in a few words WHY each fits (vibe, lineup, price, how soon). Put each event\'s Pulsify link right after its name.'
-          + '\n3. If the list is marked "not an exact match", say so honestly in one line, then offer the alternatives.'
+          + '\n3. If the list says none is an exact match, say so honestly in one line, then offer the alternatives.'
           + '\n4. If the ask is vague (no city and no vibe), tease ONE standout event from the list and ask one short question to narrow it down (city, vibe or when).'
           + '\n5. If there are no events at all, say so warmly, suggest a spot if any are listed, and share: ' + browseLine
           + '\n6. If location came from their device/feed rather than their words, mention the city lightly ("near you in Durban") so they can correct you.'
@@ -518,7 +541,7 @@ ${text.slice(0, 4000)}`;
         + '\n- You have no live data: no weather, traffic, load-shedding schedules or news. Say you can\'t check that and suggest a weather/traffic app — never make it up.'
         + '\n- Clubs, bars and restaurants from the city guide or spots list are places, not events: never give them a day, time, lineup or "tonight" — only events from the event list have dates.'
         + '\n- Don\'t re-ask anything already answered in this conversation.'
-        + '\n- Never copy labels or headings from these instructions into your reply; write naturally.'
+        + '\n- Never copy labels, headings or raw list lines (with | separators or arrows) from these instructions — rewrite each pick in your own words.'
         + (replyLang ? `\n- LANGUAGE: they wrote in ${replyLang}. Write your ENTIRE reply in ${replyLang} (keep event names, venues and links exactly as given).` : '\n- Reply in the language of their latest message.');
 
       const chatMessages = recentMsgs.map(m => ({
@@ -537,8 +560,13 @@ ${text.slice(0, 4000)}`;
       try {
         if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY_MISSING');
         reply = (await groqChat(chatMessages, systemPrompt)).replace(/\\n/g, '\n');
-        const g = guardReply(reply, allowedEvents);
-        if (g.removed) reply = g.text || "I couldn't find a matching event on Pulsify right now — browse everything here: https://pulsefy.co.za";
+        reply = reply.replace(/\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g, (m, label, href) => label.trim() === href ? href : `${label} ${href}`);
+        const g = guardReply(reply, allowedEvents, eventId);
+        if (g.removed) {
+          reply = g.text;
+          if (!/pulsefy\.co\.za\/\?\S*\bev=/.test(reply) && altLines.length) reply = (reply ? reply + '\n\n' : '') + "Here's what's actually on Pulsify:\n" + altLines.slice(0, 2).join('\n');
+          if (!reply) reply = "I couldn't find a matching event on Pulsify right now — browse everything here: https://pulsefy.co.za";
+        }
         if (channel === 'whatsapp') reply = reply.replace(/\*\*(.+?)\*\*/g, '*$1*');
         // Buy / contact-organiser buttons only make sense when chatting about one event
         suggestPurchase = !!eventId && (buyIntent || /how much|price|cost|r\d/i.test(message));
