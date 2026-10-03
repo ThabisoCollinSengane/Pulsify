@@ -14,7 +14,7 @@ const ONLY = args.only ? String(args.only).split(',').map(Number) : null;
 const DURBAN = { lat: -29.85, lon: 31.02 };
 
 // expect/forbid apply to the LAST reply of the case.
-const PRICE_TALK = /\b(modest|early[- ]?bird|pretty cheap|higher side|premium price|budget[- ]friendly)\b/i;
+const PRICE_TALK = /\b(modest|early[- ]?bird|pretty cheap|higher side|premium price|budget[- ]friendly|pricier)\b/i;
 const CASES = [
   { n: 1,  title: 'Greeting', turns: ['hi'] },
   { n: 2,  title: 'Vague ask, location = Durban', turns: ["I'm looking for a vibe"], opts: DURBAN, expect: [/durban/i], forbid: [/(fiction|tings n times|origin|balmoral|bat centre)[^.\n]{0,60}(\d{1,2}[:h]\d{2}|tonight|friday|saturday)/i] },
