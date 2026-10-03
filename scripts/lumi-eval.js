@@ -14,6 +14,7 @@ const ONLY = args.only ? String(args.only).split(',').map(Number) : null;
 const DURBAN = { lat: -29.85, lon: 31.02 };
 
 // expect/forbid apply to the LAST reply of the case.
+const PRICE_TALK = /\b(modest|early[- ]?bird|pretty cheap|higher side|premium price|budget[- ]friendly)\b/i;
 const CASES = [
   { n: 1,  title: 'Greeting', turns: ['hi'] },
   { n: 2,  title: 'Vague ask, location = Durban', turns: ["I'm looking for a vibe"], opts: DURBAN, expect: [/durban/i] },
@@ -50,7 +51,6 @@ const CASES = [
   { n: 33, title: 'City with no events this weekend', turns: ['anything on in durban this weekend?'], forbid: [/(wizkid|jazz festival|drake|beyonc)[^.\n]{0,80}\bin durban\b/i] },
 ];
 
-const PRICE_TALK = /\b(modest|early[- ]?bird|pretty cheap|higher side|premium price|budget[- ]friendly)\b/i;
 const FALLBACK = /went sideways|is updating|overloaded|being set up|connection needs attention|couldn'?t connect/i;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Johannesburg' }).format(new Date());
