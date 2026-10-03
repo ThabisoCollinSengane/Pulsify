@@ -94,6 +94,7 @@ async function send(body) {
     const h = await (await fetch(`${BASE}/api/siza/health`)).json();
     console.log('HEALTH:', JSON.stringify(h));
   } catch (e) { console.log('HEALTH: unavailable', e.message); }
+  try { console.log('HUBSPOT:', JSON.stringify(await (await fetch(`${BASE}/api/admin/hubspot-status`)).json())); } catch (e) { console.log('HUBSPOT: unavailable', e.message); }
   const report = [];
   let pass = 0, fail = 0;
   for (const c of CASES.filter(c => !ONLY || ONLY.includes(c.n))) {

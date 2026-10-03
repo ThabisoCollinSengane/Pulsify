@@ -349,7 +349,7 @@ module.exports = async (req, res) => {
       inserted++;
 
       if (email) {
-        syncBusinessRegistration({
+        await syncBusinessRegistration({
           name: handle,
           email,
           city: 'Durban',

@@ -1,5 +1,5 @@
 const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError } = require('../../lib/shared');
-const { upsertContact } = require('../../lib/hubspot');
+const { upsertContact, pushLead, hubspotStatus } = require('../../lib/hubspot');
 const { sendLeadEmail, sendMarketingEmail, sendEventApprovedEmail, sendEventRejectedEmail, sendClaimLinkEmail, EMAIL_CONFIGURED } = require('../../lib/email');
 const { queueEmail } = require('../../lib/email-queue');
 const PUBLIC_URL = process.env.PUBLIC_URL || 'https://pulsefy.co.za';
@@ -176,14 +176,17 @@ module.exports = async (req, res) => {
     if (hsMatch && req.method === 'POST') {
       const auth = await authUser(req);
       if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      if (!process.env.HUBSPOT_TOKEN) return res.status(400).json({ error: 'HUBSPOT_TOKEN env var not set on Vercel' });
       const { data: lead, error: lErr } = await sb().from('scraped_leads')
-        .select('id,name,email,phone,city,province,category').eq('id', hsMatch[1]).single();
+        .select('id,name,email,phone,website,city,province,category').eq('id', hsMatch[1]).single();
       if (lErr || !lead) return res.status(404).json({ error: 'Lead not found' });
-      if (!lead.email) return res.status(400).json({ error: 'Lead has no email address' });
-      const contactId = await upsertContact({ email: lead.email, name: lead.name, phone: lead.phone });
-      if (!contactId) return res.status(500).json({ error: 'HubSpot push failed — check HUBSPOT_TOKEN' });
-      await sb().from('scraped_leads').update({ updated_at: new Date().toISOString() }).eq('id', lead.id);
-      return res.status(200).json({ success: true, hubspot_contact_id: contactId });
+      try {
+        const { companyId, contactId } = await pushLead(lead);
+        await sb().from('scraped_leads').update({ updated_at: new Date().toISOString() }).eq('id', lead.id);
+        return res.status(200).json({ success: true, hubspot_company_id: companyId, hubspot_contact_id: contactId });
+      } catch (e) {
+        return res.status(502).json({ error: e.message });
+      }
     }
 
 
@@ -1117,14 +1120,14 @@ module.exports = async (req, res) => {
       if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
       if (!process.env.HUBSPOT_TOKEN) return res.status(400).json({ error: 'HUBSPOT_TOKEN env var not set' });
 
-      let synced = 0, skipped = 0, errors = 0;
+      let synced = 0, skipped = 0, errors = 0, lastError = null;
       let page = 0;
       const BATCH = 100;
 
       while (true) {
         const { data: profiles, error: dbErr } = await sb()
           .from('profiles')
-          .select('email, display_name, phone, city, province')
+          .select('email, display_name, phone, city, province, role')
           .not('email', 'is', null)
           .range(page * BATCH, (page + 1) * BATCH - 1);
 
@@ -1134,9 +1137,9 @@ module.exports = async (req, res) => {
         for (const p of profiles) {
           if (!p.email) { skipped++; continue; }
           try {
-            const id = await upsertContact({ email: p.email, name: p.display_name || null, phone: p.phone || null });
-            id ? synced++ : errors++;
-          } catch { errors++; }
+            await upsertContact({ email: p.email, name: p.display_name || null, phone: p.phone || null, city: p.city || null, lifecycle: ['organizer', 'business'].includes(p.role) ? 'lead' : 'subscriber' });
+            synced++;
+          } catch (e) { errors++; lastError = e.message; }
         }
 
         if (profiles.length < BATCH) break;
@@ -1144,7 +1147,35 @@ module.exports = async (req, res) => {
       }
 
       await logAdminAction(auth.user.id, auth.profile.display_name || 'Admin', 'hubspot_bulk_sync', null, null, { synced, skipped, errors });
-      return res.status(200).json({ success: true, synced, skipped, errors });
+      return res.status(200).json({ success: true, synced, skipped, errors, lastError });
+    }
+
+    /* ─── GET /admin/hubspot-status ── is HubSpot connected? (no secrets returned) ─ */
+    if (url === '/admin/hubspot-status' && req.method === 'GET') {
+      return res.status(200).json(await hubspotStatus());
+    }
+
+    /* ─── POST /admin/hubspot-sync-leads?offset=N ── push scraped leads in pages ─ */
+    // 15 leads per call keeps each request well inside the 30s function limit;
+    // the leads dashboard calls it repeatedly until `done`.
+    if (url === '/admin/hubspot-sync-leads' && req.method === 'POST') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+      if (!process.env.HUBSPOT_TOKEN) return res.status(400).json({ error: 'HUBSPOT_TOKEN env var not set on Vercel' });
+      const offset = Math.max(0, parseInt(new URL(req.url, 'http://x').searchParams.get('offset'), 10) || 0);
+      const PAGE = 15;
+      const { data: leads, count, error: dbErr } = await sb().from('scraped_leads')
+        .select('id,name,email,phone,website,city,province,category', { count: 'exact' })
+        .order('created_at', { ascending: true })
+        .range(offset, offset + PAGE - 1);
+      if (dbErr) return res.status(500).json({ error: dbErr.message });
+      let pushed = 0, failed = 0, lastError = null;
+      for (const lead of leads || []) {
+        try { await pushLead(lead); pushed++; }
+        catch (e) { failed++; lastError = e.message; if (/40[13]/.test(e.message)) break; }
+      }
+      const next = offset + (leads?.length || 0);
+      return res.status(200).json({ pushed, failed, lastError, next, total: count || 0, done: !leads?.length || next >= (count || 0) || /40[13]/.test(lastError || '') });
     }
 
     return res.status(404).json({ error: 'Not found' });

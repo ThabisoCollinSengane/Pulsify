@@ -188,6 +188,7 @@ body{padding-top:58px}
       <button class="btn-sm" onclick="openTemplatesModal()">📋 Templates</button>
       <button class="btn-sm" onclick="exportToCSV()">📎 Export CSV</button>
       <button class="btn-sm" onclick="openScrapeModal()">🔍 Scrape OSM</button>
+      <button class="btn-sm" id="hs-sync-btn" onclick="syncAllToHubSpot(this)">⇪ Sync all to HubSpot</button>
     </div>
   </div>
 
@@ -563,7 +564,7 @@ function cardHtml(l) {
       ${wa ? `<a class="kb-act" href="${wa}" target="_blank" onclick="event.stopPropagation();logWa('${l.id}')" title="WhatsApp">💬</a>` : `<span class="kb-act dim">💬</span>`}
       ${ig ? `<a class="kb-act" href="${ig}" target="_blank" onclick="event.stopPropagation()" title="Instagram">📸</a>` : `<span class="kb-act dim">📸</span>`}
       ${tt ? `<a class="kb-act" href="${tt}" target="_blank" onclick="event.stopPropagation()" title="TikTok" style="font-size:.7rem;font-weight:700;color:#fff">TT</a>` : ''}
-      ${l.email ? `<button class="kb-act" onclick="event.stopPropagation();pushToHubSpot('${l.id}',this)" title="Push to HubSpot CRM" style="font-size:.65rem;font-weight:700;font-family:'Syne',sans-serif;color:var(--or)">HS</button>` : ''}
+<button class="kb-act" onclick="event.stopPropagation();pushToHubSpot('${l.id}',this)" title="Push to HubSpot CRM" style="font-size:.65rem;font-weight:700;font-family:'Syne',sans-serif;color:var(--or)">HS</button>
     </div>
   </div>`;
 }
@@ -824,6 +825,26 @@ async function pushToHubSpot(leadId, btn) {
   const j = await safeJson(r);
   if (r.ok) { toast('Pushed to HubSpot ✓', true); btn.textContent = '✓'; btn.style.color='var(--li)'; }
   else { toast('HubSpot push failed: '+(j.error||''), false); btn.textContent = orig; btn.disabled = false; }
+}
+
+async function syncAllToHubSpot(btn) {
+  const st = await safeJson(await fetch(`${API}/admin/hubspot-status`));
+  if (!st.configured) return toast('HubSpot isn\'t connected — add HUBSPOT_TOKEN in Vercel → Settings → Environment Variables', false);
+  if (!st.ok) return toast(`HubSpot rejected the token (contacts ${st.contacts}, companies ${st.companies}) — check the private app's scopes`, false);
+  const orig = btn.textContent; btn.disabled = true;
+  let offset = 0, pushed = 0, failed = 0, lastError = null, total = 0;
+  try {
+    while (true) {
+      btn.textContent = `Syncing… ${offset}${total ? '/' + total : ''}`;
+      const r = await fetch(`${API}/admin/hubspot-sync-leads?offset=${offset}`, { method:'POST', headers:authHeaders() });
+      const j = await safeJson(r);
+      if (!r.ok) { lastError = j.error || `HTTP ${r.status}`; break; }
+      pushed += j.pushed; failed += j.failed; total = j.total; offset = j.next;
+      if (j.lastError) lastError = j.lastError;
+      if (j.done) break;
+    }
+  } finally { btn.textContent = orig; btn.disabled = false; }
+  toast(`HubSpot: ${pushed} leads synced${failed ? `, ${failed} failed` : ''}${lastError ? ' — ' + lastError : ''}`, !lastError);
 }
 
 // ── Scrape modal (simple trigger) ─────────────────────────────────────────────
