@@ -544,6 +544,7 @@ ${text.slice(0, 4000)}`;
         + '\n- Never describe a price as cheap, modest, affordable, early-bird or expensive unless an actual price is listed.'
         + '\n- You have no live data: no weather, traffic, load-shedding schedules or news. Say you can\'t check that and suggest a weather/traffic app — never make it up.'
         + '\n- Clubs, bars and restaurants from the city guide or spots list are places, not events: never give them a day, time, lineup or "tonight" — only events from the event list have dates.'
+        + '\n- Give dates as listed (e.g. "Sat 17 Oct"). Only say "tonight", "tomorrow" or "this Saturday" when the date really is that, counting from today.'
         + '\n- Don\'t re-ask anything already answered in this conversation.'
         + '\n- Never copy labels, headings or raw list lines (with | separators or arrows) from these instructions — rewrite each pick in your own words.'
         + (replyLang ? `\n- LANGUAGE: they wrote in ${replyLang}. Write your ENTIRE reply in ${replyLang} (keep event names, venues and links exactly as given).` : '\n- Reply in the language of their latest message.');
@@ -576,8 +577,19 @@ ${text.slice(0, 4000)}`;
           reply = reply.split('\n').map(l => l.split(/(?<=[.!?])\s+(?=\S)/).filter(sn => !/\b(18|21)\s?\+/.test(sn)).join(' ')).join('\n').trim();
           if (/\bage\b/i.test(message)) reply += "\n\nThe age limit isn't listed yet — check the event page before you go.";
         }
+        // Bolded event names from our data that came without a link get their link
+        reply = reply.split('\n').map(l => {
+          if (/pulsefy\.co\.za\/\?\S*\bev=/.test(l)) return l;
+          for (const [, b] of l.matchAll(/\*\*([^*]+)\*\*/g)) {
+            const w = nameWords(b);
+            const hit = [...allowedEvents].find(([id, n]) => id !== eventId && w.length && nameWords(n).filter(x => w.includes(x)).length >= Math.min(2, w.length));
+            if (hit) return `${l.trimEnd()} https://pulsefy.co.za/?ev=${hit[0]}`;
+          }
+          return l;
+        }).join('\n');
         if (nearCity && !reply.toLowerCase().includes(nearCity.toLowerCase())) {
           reply = `Nothing's listed near you in ${nearCity} right now — here's the closest on Pulsify.\n\n` + reply;
+          if (!/pulsefy\.co\.za\/\?\S*\bev=/.test(reply) && altLines.length) reply += '\n\n' + altLines.slice(0, 2).join('\n');
         }
         if (channel === 'whatsapp') reply = reply.replace(/\*\*(.+?)\*\*/g, '*$1*');
         // Buy / contact-organiser buttons only make sense when chatting about one event
