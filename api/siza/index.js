@@ -405,13 +405,14 @@ ${text.slice(0, 4000)}`;
           e.dress_code && `Dress code: ${e.dress_code}`,
           e.age_restriction && `Age restriction: ${e.age_restriction}`,
           tiers?.length ? `Tickets: ${tiers.map(t => `${t.name || 'Ticket'} ${Number(t.price) > 0 ? 'R' + t.price : 'FREE'}${t.sold_out ? ' (SOLD OUT)' : ''}`).join('; ')} — buy at https://pulsefy.co.za/?ev=${e.id}&buy=1`
-            : (e.is_free ? 'Tickets: FREE entry' : 'Tickets: price not listed on Pulsify yet'),
+            : (e.is_free ? 'Tickets: FREE entry' : 'Tickets: price not listed on Pulsify yet — tell them to check the event page, where tickets will go on sale'),
           e.attendance_count > 0 && `${e.attendance_count} people on Pulsify are going`,
           e.description && `About: ${clip(e.description, 600)}`,
         ].filter(Boolean);
         systemPrompt = buildLumiSystemPrompt(event, channel, { city: e.venue_city, genres: [e.genre], topics })
           + '\nEVENT FACTS (from Pulsify — reliable):\n' + facts.join('\n')
-          + knowledgeContext + todayLine() + personLine;
+          + knowledgeContext + todayLine() + personLine
+          + (channel === 'web' ? `\nBUYING: tickets are sold on Pulsify itself — tell them to tap "Get Tickets" on this page or use https://pulsefy.co.za/?ev=${e.id}&buy=1. Never say to buy from the organiser, and never ask for their name, email or phone in chat (checkout collects that).` : '');
       } else {
         // Discovery mode — work out what the person wants, then query real events.
         const userTexts = userTextsAll;
@@ -454,7 +455,7 @@ ${text.slice(0, 4000)}`;
           const cheapest = {};
           for (const t of tiers || []) if (!t.sold_out && cheapest[t.event_id] == null) cheapest[t.event_id] = Number(t.price);
           eventsContext = (fallbackNote
-            ? `\n\nNO EXACT MATCH (${fallbackNote}). CLOSEST ALTERNATIVES ON PULSIFY:\n`
+            ? `\n\n[not an exact match — ${fallbackNote}] CLOSEST ALTERNATIVES ON PULSIFY:\n`
             : '\n\nMATCHING EVENTS ON PULSIFY:\n') + events.map(e => {
             const p = cheapest[e.id];
             const price = p === 0 || (p == null && e.is_free) ? 'FREE' : p != null ? `from R${p}` : 'price on event page';
@@ -478,7 +479,7 @@ ${text.slice(0, 4000)}`;
           const { data: spots, error: bErr } = await bq;
           if (bErr) console.error('[lumi] spots query:', bErr.message);
           if (spots?.length) {
-            bizContext = '\n\nSPOTS ON PULSIFY:\n' + spots.map(b =>
+            bizContext = '\n\nSPOTS ON PULSIFY (places, not events — they have no dates or showtimes):\n' + spots.map(b =>
               `- ${b.name} (${b.category || 'spot'}, ${[b.suburb, b.city].filter(Boolean).join(', ') || 'SA'})${b.price_range ? ' ' + b.price_range : ''}${b.rating ? ' ★' + b.rating : ''}${b.tagline ? ' — ' + clip(b.tagline, 80) : ''}`
             ).join('\n') + '\nMore spots: https://pulsefy.co.za ("Spots near you" on the home feed)';
           }
@@ -500,7 +501,7 @@ ${text.slice(0, 4000)}`;
           + '\nDISCOVERY RULES:'
           + '\n1. Recommend ONLY events from the list below — never invent events, dates, venues, lineups or prices.'
           + '\n2. Pick the 2–3 best fits, not the whole list, and say in a few words WHY each fits (vibe, lineup, price, how soon). Put each event\'s Pulsify link right after its name.'
-          + '\n3. If the list is headed NO EXACT MATCH, say so honestly in one line, then offer the alternatives.'
+          + '\n3. If the list is marked "not an exact match", say so honestly in one line, then offer the alternatives.'
           + '\n4. If the ask is vague (no city and no vibe), tease ONE standout event from the list and ask one short question to narrow it down (city, vibe or when).'
           + '\n5. If there are no events at all, say so warmly, suggest a spot if any are listed, and share: ' + browseLine
           + '\n6. If location came from their device/feed rather than their words, mention the city lightly ("near you in Durban") so they can correct you.'
@@ -515,7 +516,9 @@ ${text.slice(0, 4000)}`;
         + '\n- Only events, dates, weekdays, times, venues, prices, age limits, dress codes and lineups that appear in the data above. If a detail isn\'t there, say you don\'t have it — never guess.'
         + '\n- Never describe a price as cheap, modest, affordable, early-bird or expensive unless an actual price is listed.'
         + '\n- You have no live data: no weather, traffic, load-shedding schedules or news. Say you can\'t check that and suggest a weather/traffic app — never make it up.'
+        + '\n- Clubs, bars and restaurants from the city guide or spots list are places, not events: never give them a day, time, lineup or "tonight" — only events from the event list have dates.'
         + '\n- Don\'t re-ask anything already answered in this conversation.'
+        + '\n- Never copy labels or headings from these instructions into your reply; write naturally.'
         + (replyLang ? `\n- LANGUAGE: they wrote in ${replyLang}. Write your ENTIRE reply in ${replyLang} (keep event names, venues and links exactly as given).` : '\n- Reply in the language of their latest message.');
 
       const chatMessages = recentMsgs.map(m => ({
@@ -533,7 +536,7 @@ ${text.slice(0, 4000)}`;
 
       try {
         if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY_MISSING');
-        reply = await groqChat(chatMessages, systemPrompt);
+        reply = (await groqChat(chatMessages, systemPrompt)).replace(/\\n/g, '\n');
         const g = guardReply(reply, allowedEvents);
         if (g.removed) reply = g.text || "I couldn't find a matching event on Pulsify right now — browse everything here: https://pulsefy.co.za";
         if (channel === 'whatsapp') reply = reply.replace(/\*\*(.+?)\*\*/g, '*$1*');
