@@ -213,7 +213,7 @@ async function saveSession(session) {
   const user = session.user;
   localStorage.setItem('p_token', session.access_token);
   let profile = {};
-  const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  const { data, error } = await sb.rpc('my_profile').single();
   if (error) {
     console.warn('profiles query failed:', error.message);
     // Preserve any previously stored role rather than overwriting with 'user'

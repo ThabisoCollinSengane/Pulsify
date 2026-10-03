@@ -1190,7 +1190,7 @@ async function loadOrgSettingsStatus() {
   } catch(e) { console.warn('[verif status]', e); }
   // Payment status — prefer live profile data, fallback to localStorage
   try {
-    const { data: payProf } = await sb.from('profiles').select('paystack_bank_name,paystack_account_number,paystack_subaccount_code').eq('id', (await sb.auth.getSession()).data.session?.user.id).single();
+    const { data: payProf } = await sb.rpc('my_profile').single();
     const el = document.getElementById('org-payment-status');
     const btn = document.getElementById('org-payment-btn');
     if (payProf?.paystack_bank_name) {
@@ -2033,7 +2033,7 @@ async function init() {
   currentUser = session.user;
   _token = session.access_token;
 
-  const { data: profile, error: profErr } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  const { data: profile, error: profErr } = await sb.rpc('my_profile').single();
   currentProfile = profile || {};
 
   // If RLS blocks the profile read, fall back to localStorage role rather than kicking user out
