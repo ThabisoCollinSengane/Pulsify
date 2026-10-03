@@ -17,7 +17,7 @@ const DURBAN = { lat: -29.85, lon: 31.02 };
 const PRICE_TALK = /\b(modest|early[- ]?bird|pretty cheap|higher side|premium price|budget[- ]friendly)\b/i;
 const CASES = [
   { n: 1,  title: 'Greeting', turns: ['hi'] },
-  { n: 2,  title: 'Vague ask, location = Durban', turns: ["I'm looking for a vibe"], opts: DURBAN, expect: [/durban/i] },
+  { n: 2,  title: 'Vague ask, location = Durban', turns: ["I'm looking for a vibe"], opts: DURBAN, expect: [/durban/i], forbid: [/(fiction|tings n times|origin|balmoral|bat centre)[^.\n]{0,60}(\d{1,2}[:h]\d{2}|tonight|friday|saturday)/i] },
   { n: 3,  title: 'City only', turns: ['anything happening in cape town?'], expect: [/pulsefy\.co\.za\/\?ev=/], forbid: [/which city|what city/i] },
   { n: 4,  title: 'Memory: city then vibe', turns: ['anything happening in cape town?', 'something chill'], forbid: [/which city|what city|where are you/i] },
   { n: 5,  title: 'Memory: user pushes back', turns: ["what's on in joburg", 'vibe', 'I asked what is on in joburg?'], expect: [/pulsefy\.co\.za\/\?ev=/], forbid: [/which city|what city/i] },
@@ -48,6 +48,8 @@ const CASES = [
   { n: 30, title: 'Slang', turns: ['yoh where is the jol tonight in jozi?'] },
   { n: 31, title: 'Event page: lineup', turns: ['who is performing?'], opts: { eventId: 'tm_jhb_001' } },
   { n: 32, title: 'Event page: detail not in data', turns: ["what's the dress code and age limit?"], opts: { eventId: 'tm_jhb_001' } },
+  { n: 34, title: 'Event page: how to buy', turns: ['how do I buy tickets for this?'], opts: { eventId: 'tm_jhb_001' }, forbid: [/(buy|purchase|get)[^.\n]{0,40}from the organi[sz]er/i, /(your|give me)[^.\n]{0,30}(email|phone number)/i] },
+  { n: 35, title: 'Organiser pricing', turns: ['is it free to sell tickets on pulsify?'], expect: [/8\s?%/] },
   { n: 33, title: 'City with no events this weekend', turns: ['anything on in durban this weekend?'], forbid: [/(wizkid|jazz festival|drake|beyonc)[^.\n]{0,80}\bin durban\b/i] },
 ];
 
@@ -111,6 +113,8 @@ async function send(body) {
       if (FALLBACK.test(reply)) problems.push(`turn ${i + 1}: fallback/error reply${d._debug ? ` (${String(d._debug).slice(0, 120)})` : ''}`);
       if (/^\s{0,3}#{1,6}\s/m.test(reply)) problems.push(`turn ${i + 1}: markdown heading`);
       if (/(^|\s)\*(?!\*)[^*\n]+\*(?!\*)/.test(reply) || /^\s*\*\s/m.test(reply)) problems.push(`turn ${i + 1}: stray single-asterisk markdown`);
+      if (/\\n/.test(reply)) problems.push(`turn ${i + 1}: literal \\n in reply`);
+      if (/NO EXACT MATCH|MATCHING EVENTS|WHAT THEY WANT|DISCOVERY RULES|EVENT FACTS/.test(reply)) problems.push(`turn ${i + 1}: leaked prompt label`);
       if (reply.length > 1200) problems.push(`turn ${i + 1}: too long (${reply.length} chars)`);
       if (i > 0 && /^(hey there|hi!|hello!|hey!)/i.test(reply.trim())) problems.push(`turn ${i + 1}: generic greeting on a follow-up`);
       let lastIdx = 0;
