@@ -2,17 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="theme-color" content="#160C32"/>
+<meta name="description" content="Pulsefy Business Dashboard — manage your venue, events, menu, orders and ticket sales."/>
 <meta name="build-version" content="v2.1.0-20260513"/>
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
-<meta http-equiv="Pragma" content="no-cache"/>
-<meta http-equiv="Expires" content="0"/>
 <title>Pulsefy Business Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="preconnect" href="https://cjzewfvtdayjgjdpdmln.supabase.co" crossorigin/>
+<link rel="dns-prefetch" href="https://cjzewfvtdayjgjdpdmln.supabase.co"/>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=optional" onload="this.onload=null;this.rel='stylesheet'"/>
+<noscript><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=optional" rel="stylesheet"/></noscript>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-<script src="https://js.paystack.co/v1/inline.js"></script>
+<!-- jsQR + Paystack inline.js are loaded on demand (loadScript) when the scanner / checkout opens -->
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#160C32;--bg2:#1C1140;--surf:#241652;--surf2:#2E1C66;--border:rgba(168,108,255,.16);--border2:rgba(168,108,255,.32);--or:#FF6B00;--li:#6EFF47;--pk:#FF2D88;--cy:#00EEFF;--pu:#CC44FF;--te:#00FFB8;--tx:#F4EDFF;--mu:#8575AE;--mu2:#B09CC8;--th:58px;--bh:68px}
@@ -200,6 +202,8 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 .chip.active,.chip:active{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.08)}
 .info-box{background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.18);border-radius:12px;padding:10px 14px;font-size:.76rem;color:var(--cy);margin-bottom:12px;line-height:1.5}
 .section-label{font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--mu);margin-bottom:10px}
+/* iOS Safari zooms on focus when an input's font-size < 16px (zoom lock removed from viewport for a11y) */
+@supports (-webkit-touch-callout:none){input,select,textarea{font-size:16px!important}}
 </style>
 </head>
 <body>
@@ -640,7 +644,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <div class="overlay" id="post-sheet" onclick="if(event.target===this)closeSheet('post-sheet')">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-head"><div class="sheet-title">New Post</div><button class="sheet-close" onclick="closeSheet('post-sheet')">✕</button></div>
+    <div class="sheet-head"><div class="sheet-title">New Post</div><button class="sheet-close" aria-label="Close" onclick="closeSheet('post-sheet')">✕</button></div>
     <div class="sheet-body">
       <div class="info-box">Posts appear on the Pulsefy feed for all your followers.</div>
       <label class="ff-label">Photos (up to 5)</label>
@@ -665,7 +669,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <div class="overlay" id="event-sheet" onclick="if(event.target===this)closeSheet('event-sheet')">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-head"><div class="sheet-title" id="ev-sheet-title">New Event</div><button class="sheet-close" onclick="closeSheet('event-sheet')">✕</button></div>
+    <div class="sheet-head"><div class="sheet-title" id="ev-sheet-title">New Event</div><button class="sheet-close" aria-label="Close" onclick="closeSheet('event-sheet')">✕</button></div>
     <div class="sheet-body">
       <input type="hidden" id="ev-edit-id"/>
       <div class="info-box">Events appear on the shared Pulsefy discover feed for all users.</div>
@@ -690,7 +694,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
       <label class="ff-label">Lineup (comma separated)</label>
       <input class="ff" type="text" id="ev-lineup" placeholder="DJ Lag, Bello No Gallo"/>
       <label class="ff-label">Banner Image (optional)</label>
-      <div id="ev-img-preview" style="display:none;border-radius:10px;overflow:hidden;height:90px;background:#111;margin-bottom:8px"><img id="ev-img-thumb" style="width:100%;height:100%;object-fit:cover"/></div>
+      <div id="ev-img-preview" style="display:none;border-radius:10px;overflow:hidden;height:90px;background:#111;margin-bottom:8px"><img id="ev-img-thumb" alt="Event image preview" style="width:100%;height:100%;object-fit:cover"/></div>
       <div style="display:flex;gap:8px;align-items:center">
         <button type="button" class="btn-primary" style="padding:8px 14px;font-size:.78rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--tx)" onclick="document.getElementById('ev-img-file').click()">📷 Choose Image</button>
         <span id="ev-img-name" style="font-size:.72rem;color:var(--mu2)">No file chosen</span>
@@ -725,7 +729,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <div class="overlay" id="menu-sheet" onclick="if(event.target===this)closeSheet('menu-sheet')">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-head"><div class="sheet-title" id="mi-sheet-title">Add Menu Item</div><button class="sheet-close" onclick="closeSheet('menu-sheet')">✕</button></div>
+    <div class="sheet-head"><div class="sheet-title" id="mi-sheet-title">Add Menu Item</div><button class="sheet-close" aria-label="Close" onclick="closeSheet('menu-sheet')">✕</button></div>
     <div class="sheet-body">
       <input type="hidden" id="mi-edit-id"/>
       <input type="hidden" id="mi-existing-img"/>
@@ -770,7 +774,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <div class="overlay" id="verify-sheet" onclick="if(event.target===this)closeSheet('verify-sheet')">
   <div class="sheet" style="max-height:92vh">
     <div class="sheet-handle"></div>
-    <div class="sheet-head"><div class="sheet-title">Verify Profile</div><button class="sheet-close" onclick="closeSheet('verify-sheet')">✕</button></div>
+    <div class="sheet-head"><div class="sheet-title">Verify Profile</div><button class="sheet-close" aria-label="Close" onclick="closeSheet('verify-sheet')">✕</button></div>
     <div class="sheet-body">
       <div class="info-box">⏱ Verification takes <strong>1–3 business days</strong>. You'll be notified once reviewed. Verified accounts get a ✅ badge visible to all Pulsefy users.</div>
       <div id="verif-msg" class="msg"></div>
@@ -812,7 +816,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
         <div style="position:relative;border-radius:14px;overflow:hidden;background:#000;margin-bottom:8px;min-height:150px;display:flex;align-items:center;justify-content:center">
           <video id="vf-video" autoplay playsinline muted style="width:100%;border-radius:14px;display:none"></video>
           <canvas id="vf-canvas" style="display:none"></canvas>
-          <img id="vf-preview" style="width:100%;border-radius:14px;display:none"/>
+          <img id="vf-preview" alt="Selfie preview" style="width:100%;border-radius:14px;display:none"/>
           <div id="vf-cam-placeholder" style="color:var(--mu);font-size:.78rem;padding:20px;text-align:center">📸 Take a selfie to confirm your identity</div>
         </div>
         <div style="display:flex;gap:8px">
@@ -828,7 +832,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
           <span id="vf-id-doc-label">📄 Tap to upload ID document (JPG, PNG or PDF)</span>
         </div>
         <input type="file" id="vf-id-doc" accept="image/*,application/pdf" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none" onchange="previewVfIdDoc(event)"/>
-        <img id="vf-id-doc-preview" style="display:none;width:100%;border-radius:10px;margin-top:8px;max-height:140px;object-fit:contain"/>
+        <img id="vf-id-doc-preview" alt="ID document preview" style="display:none;width:100%;border-radius:10px;margin-top:8px;max-height:140px;object-fit:contain"/>
       </div>
       <button class="btn-primary" style="width:100%;margin-top:6px" onclick="submitVerification()">Submit for Verification 🏆</button>
     </div>
@@ -839,7 +843,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <div class="overlay" id="payment-sheet" onclick="if(event.target===this)closeSheet('payment-sheet')">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-head"><div class="sheet-title">Payment Method</div><button class="sheet-close" onclick="closeSheet('payment-sheet')">✕</button></div>
+    <div class="sheet-head"><div class="sheet-title">Payment Method</div><button class="sheet-close" aria-label="Close" onclick="closeSheet('payment-sheet')">✕</button></div>
     <div class="sheet-body">
       <div class="info-box">💳 Your banking details are stored securely for payout processing only. We use them to create your Paystack payout account.</div>
       <div class="info-box" style="margin-top:8px">⏱ <b>When you get paid:</b> Payouts go directly to this bank account via Paystack. You receive your share (92% — after Pulsefy's 8% platform fee) and Paystack settles to South African bank accounts on its standard schedule, usually within 1–2 business days of each completed order or booking.</div>
@@ -875,7 +879,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <div class="overlay" id="preview-sheet" onclick="if(event.target===this)closeSheet('preview-sheet')">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-head"><div class="sheet-title">Preview Post</div><button class="sheet-close" onclick="closeSheet('preview-sheet')">✕</button></div>
+    <div class="sheet-head"><div class="sheet-title">Preview Post</div><button class="sheet-close" aria-label="Close" onclick="closeSheet('preview-sheet')">✕</button></div>
     <div class="sheet-body">
       <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">How it'll appear in the feed</div>
       <div style="background:var(--surf2);border:1px solid var(--border);border-radius:16px;overflow:hidden">
@@ -903,11 +907,11 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <div class="overlay" id="biz-ev-preview-sheet" onclick="if(event.target===this)closeSheet('biz-ev-preview-sheet')">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-head"><div class="sheet-title">Preview Event</div><button class="sheet-close" onclick="closeSheet('biz-ev-preview-sheet')">✕</button></div>
+    <div class="sheet-head"><div class="sheet-title">Preview Event</div><button class="sheet-close" aria-label="Close" onclick="closeSheet('biz-ev-preview-sheet')">✕</button></div>
     <div class="sheet-body">
       <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">How it'll look on the Discover feed</div>
       <div style="background:var(--surf2);border:1px solid var(--border);border-radius:16px;overflow:hidden">
-        <div id="biz-ev-preview-banner" style="display:none;height:130px;background:#111"><img id="biz-ev-preview-banner-img" style="width:100%;height:100%;object-fit:cover"/></div>
+        <div id="biz-ev-preview-banner" style="display:none;height:130px;background:#111"><img id="biz-ev-preview-banner-img" alt="Event banner preview" style="width:100%;height:100%;object-fit:cover"/></div>
         <div style="padding:14px">
           <div style="font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:.03em;line-height:1.1;margin-bottom:6px" id="biz-ev-preview-name"></div>
           <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
@@ -929,7 +933,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <div class="overlay" id="biz-upgrade-sheet" onclick="if(event.target===this)closeSheet('biz-upgrade-sheet')">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-head"><div class="sheet-title">💎 Upgrade to Premium</div><button class="sheet-close" onclick="closeSheet('biz-upgrade-sheet')">✕</button></div>
+    <div class="sheet-head"><div class="sheet-title">💎 Upgrade to Premium</div><button class="sheet-close" aria-label="Close" onclick="closeSheet('biz-upgrade-sheet')">✕</button></div>
     <div class="sheet-body" style="padding-bottom:40px">
       <div style="text-align:center;padding:20px 0 16px;background:linear-gradient(135deg,rgba(176,38,255,.15),rgba(255,92,0,.1));border-radius:16px;margin-bottom:18px;border:1px solid rgba(176,38,255,.2)">
         <div style="font-size:2rem;margin-bottom:4px">💎</div>
@@ -955,7 +959,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <div class="overlay" id="biz-location-sheet" onclick="if(event.target===this)closeSheet('biz-location-sheet')">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-head"><div class="sheet-title">📍 Set Business Location</div><button class="sheet-close" onclick="closeSheet('biz-location-sheet')">✕</button></div>
+    <div class="sheet-head"><div class="sheet-title">📍 Set Business Location</div><button class="sheet-close" aria-label="Close" onclick="closeSheet('biz-location-sheet')">✕</button></div>
     <div class="sheet-body" style="padding-bottom:32px">
       <div style="font-size:.78rem;color:var(--mu2);margin-bottom:12px;line-height:1.5">Pin your business exactly where customers find you on the map. Admin reviews and approves the change before it goes live.</div>
       <div id="biz-loc-current-coords" style="font-size:.72rem;color:var(--mu);background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:12px"></div>
@@ -975,7 +979,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <div class="overlay" id="edit-post-sheet" onclick="if(event.target===this)closeSheet('edit-post-sheet')">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-head"><div class="sheet-title">✏️ Edit Post</div><button class="sheet-close" onclick="closeSheet('edit-post-sheet')">✕</button></div>
+    <div class="sheet-head"><div class="sheet-title">✏️ Edit Post</div><button class="sheet-close" aria-label="Close" onclick="closeSheet('edit-post-sheet')">✕</button></div>
     <div class="sheet-body">
       <label class="ff-label">Caption</label>
       <textarea class="ff" id="edit-biz-post-cap" placeholder="Update your post caption…" rows="4"></textarea>
@@ -988,6 +992,22 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 </div>
 
 <script>
+// On-demand third-party script loader (cached per src) — jsQR / Paystack are only
+// needed when the QR scanner or checkout opens, so they stay off the critical path.
+const _scriptCache = {};
+function loadScript(src) {
+  if (!_scriptCache[src]) _scriptCache[src] = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src; s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => { delete _scriptCache[src]; s.remove(); reject(new Error('Failed to load ' + src)); };
+    document.head.appendChild(s);
+  });
+  return _scriptCache[src];
+}
+const JSQR_SRC = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+const PAYSTACK_SRC = 'https://js.paystack.co/v1/inline.js';
+
 // ════════════════════════════════════════════════════════════
 //  STATE & SESSION
 // ════════════════════════════════════════════════════════════
@@ -1260,6 +1280,7 @@ function previewPost() {
         const div = document.createElement('div');
         div.style.cssText = 'aspect-ratio:1;overflow:hidden;background:#000';
         const img = document.createElement('img');
+        img.alt = '';
         img.style.cssText = 'width:100%;height:100%;object-fit:cover';
         const rd = new FileReader(); rd.onload = e => { img.src = e.target.result; }; rd.readAsDataURL(f);
         div.appendChild(img); imgArea.appendChild(div);
@@ -1475,7 +1496,7 @@ function renderDiscoverCard(ev) {
   const time = ev.time_local ? ev.time_local.slice(0,5) : '';
   const url = '/?eid=' + encodeURIComponent(ev.id);
   const img = ev.image_url
-    ? `<img src="${xe(ev.image_url)}" loading="lazy" style="width:100%;height:120px;object-fit:cover;border-radius:12px;margin-bottom:8px" onerror="this.style.display='none'"/>`
+    ? `<img src="${xe(ev.image_url)}" alt="" loading="lazy" decoding="async" style="width:100%;height:120px;object-fit:cover;border-radius:12px;margin-bottom:8px" onerror="this.style.display='none'"/>`
     : `<div style="width:100%;height:120px;background:linear-gradient(135deg,rgba(176,38,255,.18),rgba(255,92,0,.14));border-radius:12px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:2.4rem">🎟</div>`;
   return `<a href="${url}" target="_blank" rel="noopener" style="display:block;background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:10px;text-decoration:none;color:inherit">
     ${img}
@@ -1565,6 +1586,8 @@ async function startBizPayment() {
   const msg = document.getElementById('biz-pay-msg');
   if (btn) { btn.disabled = true; btn.textContent = 'Preparing checkout…'; }
   if (msg) msg.textContent = '';
+  const paystackReady = loadScript(PAYSTACK_SRC);
+  paystackReady.catch(() => {});
   try {
     const r = await fetch('/api/payments/initiate', {
       method: 'POST',
@@ -1573,6 +1596,7 @@ async function startBizPayment() {
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Could not start payment');
+    await paystackReady;
     if (btn) { btn.disabled = false; btn.textContent = 'Pay R360/month · Activate Premium 🚀'; }
     PaystackPop.resumeTransaction(d.access_code, {
       onSuccess: async function() {
@@ -1759,7 +1783,7 @@ async function openBizFollowersSheet() {
     const { data } = await sb2.from('follows').select('follower_id,profiles!follows_follower_id_fkey(id,display_name,username,avatar_url)').eq('following_id', session.user.id).limit(100);
     const followers = (data || []).map(r => r.profiles).filter(Boolean);
     if (!followers.length) { body.innerHTML = '<div style="padding:30px;text-align:center;color:var(--mu2);font-size:.8rem">No followers yet</div>'; return; }
-    body.innerHTML = followers.map(p => `<div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)"><div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);overflow:hidden;flex-shrink:0">${p.avatar_url?`<img src="${xe(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>`:''}</div><div><div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700">${xe(p.display_name||'User')}</div><div style="font-size:.68rem;color:var(--mu2)">@${xe(p.username||p.id.slice(0,8))}</div></div></div>`).join('');
+    body.innerHTML = followers.map(p => `<div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)"><div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);overflow:hidden;flex-shrink:0">${p.avatar_url?`<img src="${xe(p.avatar_url)}" alt="" loading="lazy" decoding="async" width="38" height="38" style="width:100%;height:100%;object-fit:cover"/>`:''}</div><div><div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700">${xe(p.display_name||'User')}</div><div style="font-size:.68rem;color:var(--mu2)">@${xe(p.username||p.id.slice(0,8))}</div></div></div>`).join('');
   } catch(e) { body.innerHTML = '<div style="padding:30px;text-align:center;color:var(--pk);font-size:.8rem">Failed to load</div>'; }
 }
 
@@ -1889,7 +1913,7 @@ async function renderAnalytics() {
     <div style="margin-bottom:22px">
       <div class="section-label">Top Performing Post</div>
       <div style="background:var(--surf);border:1px solid var(--border);border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px">
-        ${topPost.image_url ? `<img src="${xe2(topPost.image_url)}" style="width:60px;height:60px;border-radius:10px;object-fit:cover;flex-shrink:0" onerror="this.style.display='none'"/>` : '<div style="width:60px;height:60px;border-radius:10px;background:rgba(255,255,255,.06);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.5rem">📸</div>'}
+        ${topPost.image_url ? `<img src="${xe2(topPost.image_url)}" alt="" loading="lazy" decoding="async" width="60" height="60" style="width:60px;height:60px;border-radius:10px;object-fit:cover;flex-shrink:0" onerror="this.style.display='none'"/>` : '<div style="width:60px;height:60px;border-radius:10px;background:rgba(255,255,255,.06);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.5rem">📸</div>'}
         <div style="flex:1;min-width:0">
           <div style="font-size:.8rem;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px">${xe2((topPost.caption || 'No caption').slice(0, 80))}</div>
           <div style="display:flex;gap:14px;font-size:.72rem;color:var(--mu)">
@@ -1973,10 +1997,12 @@ function _buildImgGrid(files, gridId, onRemove) {
     const cell = document.createElement('div');
     cell.style.cssText = 'position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#111';
     const img = document.createElement('img');
+    img.alt = '';
     img.style.cssText = 'width:100%;height:100%;object-fit:cover';
     const rd = new FileReader(); rd.onload = e => { img.src = e.target.result; }; rd.readAsDataURL(f);
     const rm = document.createElement('button');
     rm.textContent = '✕';
+    rm.setAttribute('aria-label', 'Remove image');
     rm.style.cssText = 'position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.6rem;cursor:pointer;padding:0;line-height:1';
     rm.onclick = (ev) => { ev.stopPropagation(); onRemove(i); };
     cell.appendChild(img); cell.appendChild(rm);
@@ -2025,7 +2051,7 @@ async function renderPosts() {
   posts.forEach(p => { _bizPostMap[p.id] = p; });
   el.innerHTML = posts.map(p => `
     <div class="post-card" id="biz-post-${p.id}">
-      ${p.img ? `<img class="post-img" src="${xe(p.img)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : '<div class="post-img-placeholder">📷</div>'}
+      ${p.img ? `<img class="post-img" src="${xe(p.img)}" loading="lazy" decoding="async" onerror="this.style.display='none'" alt=""/>` : '<div class="post-img-placeholder">📷</div>'}
       <div class="post-body"><div class="post-cap" id="biz-post-cap-${p.id}">${xe(p.cap||'')}</div><div class="post-meta">${fmtDate(p.created)} · ${xe(BIZ.name)}</div></div>
       <div class="post-actions">
         <button class="btn-ghost" onclick="openEditBizPostSheet('${p.id}')">Edit</button>
@@ -2203,7 +2229,7 @@ async function renderEvents(filter = 'upcoming') {
         ? `<span style="background:rgba(0,229,100,.12);color:#00e564;border:1px solid rgba(0,229,100,.3);border-radius:20px;padding:2px 8px;font-size:.6rem;font-weight:700">✅ Live</span>`
         : `<span style="background:rgba(255,180,0,.1);color:#FFB400;border:1px solid rgba(255,180,0,.25);border-radius:20px;padding:2px 8px;font-size:.6rem;font-weight:700">⏳ Under review</span>`;
       return `<div class="ev-row">
-        <div class="ev-thumb">${ev.image_url ? `<img src="${xe(ev.image_url)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : ''}${emo}</div>
+        <div class="ev-thumb">${ev.image_url ? `<img src="${xe(ev.image_url)}" loading="lazy" decoding="async" onerror="this.style.display='none'" alt=""/>` : ''}${emo}</div>
         <div class="ev-info">
           <div class="ev-name">${xe(ev.name)}</div>
           <div class="ev-sub">${ev.date_local || 'Date TBD'} ${ev.time_local ? '· '+ev.time_local : ''} · ${xe(ev.venue_name || ev.venue_city || 'Venue TBD')}</div>
@@ -2213,7 +2239,7 @@ async function renderEvents(filter = 'upcoming') {
           <span class="ev-price">${ev.is_free || !ev.price_min ? 'FREE' : 'R' + ev.price_min}</span>
           <div style="display:flex;gap:5px">
             <button class="btn-ghost" onclick="editEvent('${ev.id}')">Edit</button>
-            <button class="btn-danger" onclick="deleteEvent('${ev.id}',this)">🗑</button>
+            <button class="btn-danger" aria-label="Delete event" onclick="deleteEvent('${ev.id}',this)">🗑</button>
           </div>
         </div>
       </div>`;
@@ -2555,7 +2581,7 @@ async function renderMenu() {
       return `
       <div class="menu-item-card" style="animation-delay:${delay}ms">
         <div class="mi-img">
-          ${item.image_url ? `<img src="${xe(item.image_url)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : ''}
+          ${item.image_url ? `<img src="${xe(item.image_url)}" loading="lazy" decoding="async" onerror="this.style.display='none'" alt=""/>` : ''}
           ${item.image_url ? '' : '🍽️'}
         </div>
         <div class="mi-info">
@@ -2565,7 +2591,7 @@ async function renderMenu() {
         </div>
         <div class="mi-actions">
           <button class="btn-ghost" onclick="editMenuItem('${item.id}')">Edit</button>
-          <button class="btn-danger" onclick="deleteMenuItem('${item.id}',this)">🗑</button>
+          <button class="btn-danger" aria-label="Delete menu item" onclick="deleteMenuItem('${item.id}',this)">🗑</button>
         </div>
       </div>`;
     }).join('')
@@ -2659,7 +2685,7 @@ async function editMenuItem(id) {
   _menuImgFiles = [];
   const grid = document.getElementById('mi-img-grid');
   if (grid) {
-    grid.innerHTML = item.image_url ? `<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;background:#111"><img src="${xe(item.image_url)}" style="width:100%;height:100%;object-fit:cover" loading="lazy"/></div>` : '';
+    grid.innerHTML = item.image_url ? `<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;background:#111"><img src="${xe(item.image_url)}" alt="" style="width:100%;height:100%;object-fit:cover" loading="lazy" decoding="async"/></div>` : '';
   }
   openSheet('menu-sheet');
 }
@@ -2848,7 +2874,7 @@ function renderProfile() {
   const typeEmoji = { club:'🌙', shisanyama:'🥩', restaurant:'🍽️', bar:'🍺', hotel:'🏨', venue:'🎪', food:'🍔', other:'📍' };
   const emo = typeEmoji[pf.type || BIZ.type] || '🏪';
   document.getElementById('profile-hero').innerHTML = `
-    <div class="profile-logo">${pf.logo ? `<img src="${xe(pf.logo)}" loading="lazy" onerror="this.style.display='none'" alt=""/>` : ''}${emo}</div>
+    <div class="profile-logo">${pf.logo ? `<img src="${xe(pf.logo)}" loading="lazy" decoding="async" onerror="this.style.display='none'" alt=""/>` : ''}${emo}</div>
     <div>
       <div class="pf-name">${xe(pf.name || BIZ.name)}</div>
       <div class="pf-type">${pf.type || BIZ.type}</div>
@@ -2967,7 +2993,7 @@ async function openSNPanel() {
         msgHtml = `<span style="color:var(--mu2)">${xe(rawMsg)}</span>`;
       }
       const avatarEl = av
-        ? `<img src="${xe(av)}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+        ? `<img src="${xe(av)}" alt="" loading="lazy" decoding="async" width="48" height="48" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0">`
         : `<div style="width:48px;height:48px;border-radius:50%;background:${c}1a;border:1px solid ${c}40;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">${ico}</div>`;
       const ts = new Date(n.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
       return `<div style="display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);border-left:3px solid ${n.read?'transparent':c};padding-left:${n.read?'0':'10px'};background:${n.read?'transparent':c+'0d'}">
@@ -2995,10 +3021,12 @@ async function openQrScanner() {
   _qrScanned = false;
   document.getElementById('qr-result').innerHTML = '';
   document.getElementById('qr-overlay').style.display = 'flex';
+  const jsqrReady = loadScript(JSQR_SRC).catch(() => {});
   try {
     _qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
     const video = document.getElementById('qr-video');
     video.srcObject = _qrStream;
+    await jsqrReady;
     video.addEventListener('loadedmetadata', () => { video.play(); _qrScanLoop(); });
   } catch(e) {
     document.getElementById('qr-result').innerHTML = `<div style="color:var(--pk);font-size:.8rem;text-align:center;padding:16px">Camera access denied: ${xe(e.message)}</div>`;
@@ -3148,7 +3176,7 @@ function previewBizPromo() {
     document.body.appendChild(card);
   }
   card.innerHTML = `<div style="width:100%;max-width:440px;background:#0D1424;border:1px solid rgba(255,255,255,.14);border-top-left-radius:20px;border-top-right-radius:20px;padding:18px 18px 24px;max-height:88vh;overflow-y:auto;color:#F0EEF8">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-family:'Syne',sans-serif;font-size:.9rem;font-weight:800">👁 Promotion Preview</div><button onclick="document.getElementById('promo-preview-overlay').remove()" style="background:none;border:none;color:#9997B0;font-size:1.2rem;cursor:pointer">✕</button></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-family:'Syne',sans-serif;font-size:.9rem;font-weight:800">👁 Promotion Preview</div><button aria-label="Close" onclick="document.getElementById('promo-preview-overlay').remove()" style="background:none;border:none;color:#9997B0;font-size:1.2rem;cursor:pointer">✕</button></div>
     <div style="font-size:.7rem;color:#9997B0;margin-bottom:12px">How your promo will appear in the ${placement === 'banner' ? 'banner carousel' : 'home feed'} for users in <strong style="color:#FF5C00">${cities}</strong></div>
     <div style="background:linear-gradient(135deg,#1a0d2e,#0f0a1f);border:1px solid rgba(176,38,255,.3);border-radius:14px;padding:14px;position:relative;margin-bottom:14px">
       <div style="position:absolute;top:8px;right:10px;background:#FF5C00;color:#fff;border-radius:50px;padding:2px 8px;font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;letter-spacing:.06em">⭐ FEATURED</div>
@@ -3559,7 +3587,7 @@ async function loadMyBizSquadPromos() {
 <div class="overlay" id="qr-overlay" onclick="if(event.target===this)closeQrScanner()" style="display:none">
   <div class="sheet" style="max-height:90vh">
     <div class="sheet-handle"></div>
-    <div class="sheet-head"><div class="sheet-title">📷 Scan QR</div><button class="sheet-close" onclick="closeQrScanner()">✕</button></div>
+    <div class="sheet-head"><div class="sheet-title">📷 Scan QR</div><button class="sheet-close" aria-label="Close scanner" onclick="closeQrScanner()">✕</button></div>
     <div class="sheet-body">
       <p style="font-size:.78rem;color:var(--mu);margin-bottom:14px">Scan an order QR to mark it collected, or a ticket QR to check in an attendee.</p>
       <div style="position:relative;border-radius:16px;overflow:hidden;background:#000;margin-bottom:14px">
@@ -3578,7 +3606,7 @@ async function loadMyBizSquadPromos() {
 <div class="overlay" id="sn-overlay" onclick="if(event.target===this)closeSNPanel()">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-head"><div class="sheet-title">Notifications</div><button class="sheet-close" onclick="closeSNPanel()">✕</button></div>
+    <div class="sheet-head"><div class="sheet-title">Notifications</div><button class="sheet-close" aria-label="Close" onclick="closeSNPanel()">✕</button></div>
     <div class="sheet-body" id="sn-list"></div>
   </div>
 </div>
@@ -3642,11 +3670,34 @@ setTimeout(startOnboardingBiz, 1500);
     <div style="width:36px;height:4px;border-radius:2px;background:var(--border2);margin:10px auto 0;flex-shrink:0"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.03em">👥 Followers</div>
-      <button onclick="document.getElementById('biz-followers-sheet').classList.remove('open')" style="width:28px;height:28px;border-radius:50%;background:var(--surf);border:none;color:var(--mu2);cursor:pointer;font-size:.9rem">✕</button>
+      <button aria-label="Close" onclick="document.getElementById('biz-followers-sheet').classList.remove('open')" style="width:28px;height:28px;border-radius:50%;background:var(--surf);border:none;color:var(--mu2);cursor:pointer;font-size:.9rem">✕</button>
     </div>
     <div id="biz-followers-body" style="overflow-y:auto;padding:0 18px 32px;flex:1;scrollbar-width:none"></div>
   </div>
 </div>
 
+<script src="/apps/shared/lumi-partner.js" defer></script>
+<script>
+// Lumi for partners — floating assistant (apps/shared/lumi-partner.js)
+window.addEventListener('load', async () => {
+  try {
+    const c = getSB();
+    if (!c || !window.LumiPartner) return;
+    const start = async session => {
+      if (!session) return;
+      // Only show Lumi to accounts this dashboard is for (the page shows a gate screen otherwise)
+      const { data: prof } = await c.from('profiles').select('role').eq('id', session.user.id).single();
+      if (!['business', 'admin'].includes(prof?.role)) return;
+      LumiPartner.init({
+      role: 'business',
+      userId: session.user.id,
+      getToken: async () => (await c.auth.getSession()).data.session?.access_token || null,
+      });
+    };
+    start((await c.auth.getSession()).data.session);
+    c.auth.onAuthStateChange((_e, session) => start(session)); // signed in after load
+  } catch (e) { console.warn('[lumi-partner]', e.message); }
+});
+</script>
 </body>
 </html>
