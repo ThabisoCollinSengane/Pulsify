@@ -605,8 +605,8 @@ module.exports = async (req, res) => {
       // Queue ticket email (non-blocking, retried by cron)
       queueEmail('ticket', buyer_email, { buyer_name, event_name: ev.name, event_date: ev.date_local, venue_name: ev.venue_name, venue_city: ev.venue_city, booking_ref, tier_name: tier?.name || null, quantity: qty, total_paid, is_free: unit_price === 0, qr_data }).catch(() => {});
 
-      // Sync to HubSpot CRM (non-blocking)
-      syncTicketPurchase({ buyerName: buyer_name, buyerEmail: buyer_email, buyerPhone: buyer_phone || null, eventName: ev.name, totalPaid: total_paid, bookingRef: booking_ref });
+      // Sync to HubSpot CRM (awaited — Vercel freezes the function after the response)
+      await syncTicketPurchase({ buyerName: buyer_name, buyerEmail: buyer_email, buyerPhone: buyer_phone || null, eventName: ev.name, totalPaid: total_paid, bookingRef: booking_ref });
 
       // Notify the buyer if they're a registered user
       const user_id = v.user_id;
@@ -778,8 +778,8 @@ module.exports = async (req, res) => {
       // Queue ticket email (non-blocking, retried by cron)
       queueEmail('ticket', confirmed.buyer_email, { buyer_name: confirmed.buyer_name, event_name: confirmed.events?.name, event_date: confirmed.events?.date_local, venue_name: confirmed.events?.venue_name, venue_city: confirmed.events?.venue_city, booking_ref: confirmed.booking_ref, tier_name: confirmed.ticket_tiers?.name, quantity: confirmed.quantity, total_paid: confirmed.total_paid, is_free: confirmed.unit_price === 0, qr_data: confirmed.qr_data }).catch(() => {});
 
-      // Sync to HubSpot CRM (non-blocking)
-      syncTicketPurchase({ buyerName: confirmed.buyer_name, buyerEmail: confirmed.buyer_email, buyerPhone: null, eventName: confirmed.events?.name, totalPaid: confirmed.total_paid, bookingRef: confirmed.booking_ref });
+      // Sync to HubSpot CRM (awaited — Vercel freezes the function after the response)
+      await syncTicketPurchase({ buyerName: confirmed.buyer_name, buyerEmail: confirmed.buyer_email, buyerPhone: null, eventName: confirmed.events?.name, totalPaid: confirmed.total_paid, bookingRef: confirmed.booking_ref });
 
       if (confirmed.user_id) {
         await sb().from('notifications').insert({
@@ -1081,8 +1081,8 @@ module.exports = async (req, res) => {
 
       queueEmail('welcome', email, { display_name: name }).catch(() => {});
 
-      // Sync to HubSpot CRM (non-blocking)
-      syncBusinessRegistration({ name, email, phone: b.phone || null, city: b.city || null, province: b.province || null, category: b.category || b.type || null, role });
+      // Sync to HubSpot CRM (awaited — Vercel freezes the function after the response)
+      await syncBusinessRegistration({ name, email, phone: b.phone || null, city: b.city || null, province: b.province || null, category: b.category || b.type || null, role });
 
       return res.status(200).json({ ok: true, user_id: uid, paystack_subaccount_code: subCode });
     }
