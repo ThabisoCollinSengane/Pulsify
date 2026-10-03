@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { sb, sbAs, corsHeaders, verifyToken, rateLimited, captureError, validate } = require('../../lib/shared');
-const { groqChat, groqEmbed, buildLumiSystemPrompt, lastGroqModel } = require('../../lib/groq');
+const { groqChat, groqEmbed, buildLumiSystemPrompt, buildPartnerPrompt, lastGroqModel } = require('../../lib/groq');
 
 /* ─── Lumi context helpers ─────────────────────────────────── */
 // Dates are handled as SA-local YYYY-MM-DD strings (events.date_local is too).
@@ -314,6 +314,82 @@ ${text.slice(0, 4000)}`;
       }
 
       return res.status(200).json({ items: stored });
+    }
+
+    /* ─── POST /siza/partner-chat ── Lumi inside the organizer/business dashboards ─ */
+    // Stateless: the dashboard keeps the conversation and sends the last few turns.
+    if (url === '/siza/partner-chat' && req.method === 'POST') {
+      const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+      const user = await verifyToken(token);
+      if (!user) return res.status(401).json({ error: 'Please sign in again.' });
+      const { message, history } = req.body || {};
+      if (!message || typeof message !== 'string' || message.length > 1000)
+        return res.status(400).json({ error: 'Message is required (max 1000 characters).' });
+
+      const { data: profile } = await sb().from('profiles')
+        .select('display_name,role,city,subscription_type').eq('id', user.id).single();
+      const role = profile?.role === 'business' ? 'business' : profile?.role === 'organizer' ? 'organizer' : profile?.role === 'admin' ? 'organizer' : null;
+      if (!role) return res.status(403).json({ error: 'Lumi for partners is available to organizer and business accounts.' });
+
+      const lines = [`Account: ${profile.display_name || 'Unnamed'} (${role}${profile.subscription_type ? ', plan: ' + profile.subscription_type : ', free plan'})${profile.city ? ', ' + profile.city : ''}`];
+      const since = addDays(saToday(), -30);
+      const { data: evs } = await sb().from('events')
+        .select('id,name,date_local,time_local,venue_name,venue_city,approved,is_active,like_count')
+        .eq('organiser_id', user.id).gte('date_local', since)
+        .order('date_local', { ascending: true }).limit(15);
+      if (evs?.length) {
+        const { data: bks } = await sb().from('bookings')
+          .select('event_id,quantity,unit_price,checked_in').eq('status', 'confirmed').in('event_id', evs.map(e => e.id));
+        const agg = {};
+        for (const b of bks || []) {
+          const a = agg[b.event_id] || (agg[b.event_id] = { tickets: 0, revenue: 0, checkedIn: 0 });
+          a.tickets += b.quantity || 0;
+          a.revenue += (Number(b.unit_price) || 0) * (b.quantity || 0);
+          if (b.checked_in) a.checkedIn += b.quantity || 0;
+        }
+        const today = saToday();
+        lines.push('Events (last 30 days + upcoming):');
+        for (const e of evs) {
+          const a = agg[e.id] || { tickets: 0, revenue: 0, checkedIn: 0 };
+          const state = !e.is_active ? 'inactive' : e.approved === false ? 'awaiting admin approval' : e.date_local < today ? 'past' : 'live';
+          lines.push(`- ${e.name} — ${fmtDay(e.date_local)} ${e.date_local}${e.time_local ? ' ' + String(e.time_local).slice(0, 5) : ''} @ ${e.venue_name || 'venue TBA'}${e.venue_city ? ', ' + e.venue_city : ''} | ${state} | ${a.tickets} tickets sold, R${a.revenue.toFixed(0)} ticket revenue (before fees), ${a.checkedIn} checked in | ${e.like_count || 0} likes | https://pulsefy.co.za/?ev=${e.id}`);
+        }
+      } else {
+        lines.push('Events: none in the last 30 days or upcoming.');
+      }
+      if (role === 'business') {
+        const { data: biz } = await sb().from('businesses')
+          .select('id,name,category,city,rating,is_active').eq('owner_id', user.id).limit(1).maybeSingle();
+        if (biz) {
+          const [{ count: items }, { data: orders }] = await Promise.all([
+            sb().from('menu_items').select('id', { count: 'exact', head: true }).eq('business_id', biz.id),
+            sb().from('pickup_orders').select('status').eq('business_id', biz.id).gte('created_at', since + 'T00:00:00Z'),
+          ]);
+          const byStatus = {};
+          for (const o of orders || []) byStatus[o.status || 'unknown'] = (byStatus[o.status || 'unknown'] || 0) + 1;
+          lines.push(`Business: ${biz.name} (${biz.category || 'spot'}, ${biz.city || 'SA'})${biz.rating ? ' ★' + biz.rating : ''}${biz.is_active === false ? ' — not active/listed' : ''} | ${items || 0} menu items | pickup orders last 30 days: ${Object.entries(byStatus).map(([k, v]) => `${v} ${k}`).join(', ') || 'none'}`);
+        } else {
+          lines.push('Business listing: not found for this account yet.');
+        }
+      }
+
+      const msgs = (Array.isArray(history) ? history : []).slice(-8)
+        .filter(h => h && typeof h.text === 'string' && h.text.trim())
+        .map(h => ({ role: h.dir === 'in' ? 'user' : 'assistant', content: clip(h.text, 800) }));
+      msgs.push({ role: 'user', content: message });
+      const system = buildPartnerPrompt(role, profile.display_name, lines.join('\n')) + todayLine();
+      try {
+        if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY_MISSING');
+        let reply = (await groqChat(msgs, system)).replace(/\\n/g, '\n');
+        reply = reply.replace(/\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g, (m, label, href) => label.trim() === href ? href : `${label} ${href}`);
+        return res.status(200).json({ reply });
+      } catch (e) {
+        console.error('[siza/partner-chat]', e.message);
+        const busy = /429|rate/i.test(e.message);
+        return res.status(200).json({ reply: busy
+          ? "Lumi is getting a lot of messages right now — give me a moment and try again."
+          : "I couldn't reach my brain just now — try again in a moment, or email support@pulsefy.co.za." });
+      }
     }
 
     /* ─── POST /siza/chat ─────────────────────────────────────── */
