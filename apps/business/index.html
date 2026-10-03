@@ -38,13 +38,18 @@ html,body{height:100%;overflow:hidden;max-width:100%;background:var(--bg);color:
 /* ── BOTTOM NAV ── */
 .bn{position:fixed;bottom:0;left:0;right:0;height:auto;min-height:var(--bh);padding-bottom:env(safe-area-inset-bottom, 0px);z-index:900;background:rgba(22,12,50,.96);backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;align-items:stretch;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .bn::-webkit-scrollbar{display:none}
-.bb{flex:1 0 70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:transparent;border:none;cursor:pointer;padding:8px 2px 10px;position:relative;-webkit-tap-highlight-color:transparent}
+.bb{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:transparent;border:none;cursor:pointer;padding:8px 2px 10px;position:relative;-webkit-tap-highlight-color:transparent}
 .bb svg{width:22px;height:22px;stroke:var(--mu);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;transition:stroke .2s,transform .2s;flex-shrink:0}
 .bb.active svg{stroke:var(--or);transform:scale(1.12)}
 .bb-lbl{font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);transition:color .2s;white-space:nowrap}
 .bb.active .bb-lbl{color:var(--or)}
 .bb-badge{position:absolute;top:4px;right:calc(50% - 20px);background:var(--or);color:#fff;font-size:.56rem;font-weight:800;min-width:16px;height:16px;border-radius:8px;border:1.5px solid var(--bg);box-shadow:0 0 8px rgba(255,92,0,.6);display:none;align-items:center;justify-content:center;padding:0 4px;line-height:1;font-family:'Syne',sans-serif}
 .bb-badge.show{display:flex}
+.more-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.more-item{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 6px;background:var(--surf);border:1px solid var(--border);border-radius:16px;color:var(--tx);cursor:pointer;font:inherit}
+.more-item svg{width:24px;height:24px;stroke:var(--mu2);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.more-item.active{border-color:var(--or)}.more-item.active svg{stroke:var(--or)}
+.more-lbl{font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 
 /* ── PANELS ── */
 .panel{display:none;position:fixed;top:var(--th);left:0;right:0;bottom:var(--bh);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:var(--bg);z-index:10;padding-bottom:88px}
@@ -252,15 +257,26 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 <!-- BOTTOM NAV -->
 <nav class="bn">
   <button class="bb active" data-tab="home" onclick="showTab('home')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C12 3 4 9.5 4 15a8 8 0 0016 0C20 9.5 12 3 12 3Z"/><path d="M12 10v5M9.5 13h5"/></svg><span class="bb-lbl">Home</span></button>
-  <button class="bb" data-tab="posts" onclick="showTab('posts')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8.5A2.5 2.5 0 015.5 6h1.8l1.5-2h6.4l1.5 2h1.8A2.5 2.5 0 0121 8.5v9a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 17.5z"/><circle cx="12" cy="13" r="3.5"/></svg><span class="bb-lbl">Posts</span></button>
-  <button class="bb" data-tab="events" onclick="showTab('events')"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M16 7v-.5a3.5 3.5 0 00-7 0V7M16 17v.5a3.5 3.5 0 01-7 0V17"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span class="bb-lbl">Events</span></button>
-  <button class="bb" data-tab="menu-mgr" onclick="showTab('menu-mgr')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v18M4.5 3v5a2.5 2.5 0 005 0V3"/><path d="M18 21V3c-2.2 1.3-3.5 4-3.5 7.5V13H18"/></svg><span class="bb-lbl">Menu</span></button>
   <button class="bb" data-tab="orders" onclick="showTab('orders')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 7.5l-9-4.5-9 4.5v9l9 4.5 9-4.5z"/><path d="M3 7.5l9 4.5 9-4.5M12 12v9"/></svg><span class="bb-lbl">Orders</span><span class="bb-badge" id="orders-badge">0</span></button>
-  <button class="bb" data-tab="analytics" onclick="showTab('analytics')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M7 16v-5M12 16V6M17 16v-8"/></svg><span class="bb-lbl">Analytics</span></button>
-  <button class="bb" data-tab="promote" onclick="showTab('promote')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5v3a1 1 0 001 1h3l6 4.5v-14L7 9.5H4a1 1 0 00-1 1z"/><path d="M16.5 9a4.5 4.5 0 010 6M19 6.5a8 8 0 010 11"/></svg><span class="bb-lbl">Promote</span></button>
-  <button class="bb" data-tab="sqpromos" onclick="showTab('sqpromos')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4l-7.2 7.2a2 2 0 01-2.8 0L3 13V3h10l7.6 7.6a2 2 0 010 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span class="bb-lbl">Deals</span></button>
-  <button class="bb" data-tab="profile" onclick="showTab('profile')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5L5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 005.33 0 2.67 2.67 0 005.34 0 2.67 2.67 0 005.33 0"/><path d="M5 11.5V20h14v-8.5M10 20v-5h4v5"/></svg><span class="bb-lbl">Profile</span></button>
+  <button class="bb" data-tab="menu-mgr" onclick="showTab('menu-mgr')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v18M4.5 3v5a2.5 2.5 0 005 0V3"/><path d="M18 21V3c-2.2 1.3-3.5 4-3.5 7.5V13H18"/></svg><span class="bb-lbl">Menu</span></button>
+  <button class="bb" data-tab="events" onclick="showTab('events')"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M16 7v-.5a3.5 3.5 0 00-7 0V7M16 17v.5a3.5 3.5 0 01-7 0V17"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span class="bb-lbl">Events</span></button>
+  <button class="bb" id="bb-more" data-tab="more" aria-haspopup="dialog" onclick="openSheet('more-sheet')"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span class="bb-lbl">More</span></button>
 </nav>
+
+<!-- MORE (secondary tabs) -->
+<div class="overlay" id="more-sheet" onclick="if(event.target===this)closeSheet('more-sheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div class="sheet-title">More</div><button class="sheet-close" aria-label="Close" onclick="closeSheet('more-sheet')">✕</button></div>
+    <div class="sheet-body more-grid">
+      <button class="more-item" data-tab="posts" onclick="showTab('posts')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8.5A2.5 2.5 0 015.5 6h1.8l1.5-2h6.4l1.5 2h1.8A2.5 2.5 0 0121 8.5v9a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 17.5z"/><circle cx="12" cy="13" r="3.5"/></svg><span class="more-lbl">Posts</span></button>
+      <button class="more-item" data-tab="analytics" onclick="showTab('analytics')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M7 16v-5M12 16V6M17 16v-8"/></svg><span class="more-lbl">Analytics</span></button>
+      <button class="more-item" data-tab="promote" onclick="showTab('promote')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5v3a1 1 0 001 1h3l6 4.5v-14L7 9.5H4a1 1 0 00-1 1z"/><path d="M16.5 9a4.5 4.5 0 010 6M19 6.5a8 8 0 010 11"/></svg><span class="more-lbl">Promote</span></button>
+      <button class="more-item" data-tab="sqpromos" onclick="showTab('sqpromos')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4l-7.2 7.2a2 2 0 01-2.8 0L3 13V3h10l7.6 7.6a2 2 0 010 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span class="more-lbl">Deals</span></button>
+      <button class="more-item" data-tab="profile" onclick="showTab('profile')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5L5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 005.33 0 2.67 2.67 0 005.34 0 2.67 2.67 0 005.33 0"/><path d="M5 11.5V20h14v-8.5M10 20v-5h4v5"/></svg><span class="more-lbl">Profile</span></button>
+    </div>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -878,7 +894,7 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
     <div class="sheet-head"><div class="sheet-title">Payment Method</div><button class="sheet-close" aria-label="Close" onclick="closeSheet('payment-sheet')">✕</button></div>
     <div class="sheet-body">
       <div class="info-box">💳 Your banking details are stored securely for payout processing only. We use them to create your Paystack payout account.</div>
-      <div class="info-box" style="margin-top:8px">⏱ <b>When you get paid:</b> Payouts go directly to this bank account via Paystack. You receive your share (92% — after Pulsefy's 8% platform fee) and Paystack settles to South African bank accounts on its standard schedule, usually within 1–2 business days of each completed order or booking.</div>
+      <div class="info-box" style="margin-top:8px">⏱ <b>When you get paid:</b> Payouts go to this bank account via Paystack. You receive your share (92% — after Pulsefy's 8% platform fee). Funds are held until the event or booking is completed, then released <b>2 business days after the event</b>.</div>
       <div id="payment-msg" class="msg"></div>
       <label class="ff-label">Bank Name *</label>
       <select class="ff" id="pm-bank">
@@ -1067,7 +1083,7 @@ const BIZ_FAQ = [
   { q: 'How do Squad Deals work?', a: 'Tap <b>🎁 Deals</b> in the bottom nav to create a group discount. Examples: "Table for 8 — 15% off", "Buy 4 get 1 free platter", "Ladies get in free before 10pm". Deals appear directly in the planning feeds of squads deciding where to go. Groups book immediately, spend more, and bring their friends back. Fill in the deal name, description, and validity period to create one. 💰' },
   { q: 'How do I get my verified badge?', a: 'Tap <b>⚙️ Profile → Verify Profile</b>. Upload a selfie (for identity) and your business registration documents or trading licence. Submission takes about 2 minutes — review is done within 1–3 business days. Verified businesses rank higher in search, display a trust badge, and get priority in map discovery. ✅' },
   { q: 'How much does a Business subscription cost?', a: 'The Business account plan is <b>R360/month</b>. It gives you featured placement on the live map, unlimited menu items, full analytics, pickup-order management, event posting, promotions, and Squad Deals. Billing is monthly via Paystack and you can cancel anytime. 💎' },
-  { q: 'When do I get paid for orders and bookings?', a: 'Add your bank account under <b>⚙️ Profile → Payment Method</b> to create your Paystack payout account. Payments go straight to that account — you receive <b>92%</b> of each order or booking (Pulsefy keeps an 8% platform fee). Paystack settles to South African bank accounts on its standard schedule, usually within <b>1–2 business days</b> of each completed transaction. 💳' },
+  { q: 'When do I get paid for orders and bookings?', a: 'Add your bank account under <b>⚙️ Profile → Payment Method</b> to create your Paystack payout account. You receive <b>92%</b> of each order or booking (Pulsefy keeps an 8% platform fee). Funds are held until the event or booking is completed, then released to your bank account <b>2 business days after the event</b>. 💳' },
 ];
 function renderBizFAQ() {
   const el = document.getElementById('faq-biz');
@@ -1483,7 +1499,11 @@ function initDashboard() {
 function showTab(name, _noPush) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.bb').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
-  const ab = document.querySelector('.bb.active'); if (ab) ab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  // Secondary tabs live in the More sheet: highlight More in the bar and the item in the sheet.
+  const inMore = !!document.querySelector(`.more-item[data-tab="${name}"]`);
+  document.querySelectorAll('.more-item').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.getElementById('bb-more')?.classList.toggle('active', inMore);
+  closeSheet('more-sheet');
   const p = document.getElementById('tab-' + name);
   if (p) { p.classList.add('active'); p.scrollTop = 0; }
   if (!_noPush) history.pushState({ tab: name }, '');
