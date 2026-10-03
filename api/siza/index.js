@@ -148,7 +148,7 @@ function guardReply(reply, allowed, currentId) {
   let removed = 0;
   for (const line of String(reply).split('\n')) {
     const lineN = line.toLowerCase().normalize('NFKD');
-    const prevN = line.includes('**') ? '' : (out[out.length - 1] || '').toLowerCase().normalize('NFKD');
+    const prevN = line.includes('**') ? '' : out.slice(-2).join(' ').toLowerCase().normalize('NFKD');
     const links = [...line.matchAll(EV_LINK)];
     const isFake = sn => [...sn.matchAll(/\*\*([^*]+)\*\*/g)].find(([, b]) => {
       const w = nameWords(b);
@@ -409,8 +409,11 @@ ${text.slice(0, 4000)}`;
       let systemPrompt;
       const allowedEvents = new Map(); // id -> name of events Lumi may link to
       const altLines = []; // real events to fall back on if the guard strips invented ones
+      let nearCity = null;  // city we inferred (not typed) and found nothing in
+      let ageUnknown = false;
       if (eventId) {
         allowedEvents.set(event.id, event.name);
+        ageUnknown = !event.age_restriction;
         // Event mode — ground Lumi in the event's real data, so it can answer the basics
         // (when/where/how much/who's playing) even if the organiser never pasted a knowledge doc.
         const { data: tiers } = await sb().from('ticket_tiers')
@@ -466,6 +469,7 @@ ${text.slice(0, 4000)}`;
           events = await findEvents(a.f);
           if (events.length) { fallbackNote = a.note; break; }
         }
+        if (city && citySource !== 'what they said' && fallbackNote && fallbackNote.includes(city)) nearCity = city;
 
         let eventsContext = '';
         for (const e of events) {
@@ -566,6 +570,14 @@ ${text.slice(0, 4000)}`;
           reply = g.text;
           if (!/pulsefy\.co\.za\/\?\S*\bev=/.test(reply) && altLines.length) reply = (reply ? reply + '\n\n' : '') + "Here's what's actually on Pulsify:\n" + altLines.slice(0, 2).join('\n');
           if (!reply) reply = "I couldn't find a matching event on Pulsify right now — browse everything here: https://pulsefy.co.za";
+        }
+        if (ageUnknown && /\b(18|21)\s?\+/.test(reply)) {
+          // No age limit in the data: drop any guessed one
+          reply = reply.split('\n').map(l => l.split(/(?<=[.!?])\s+(?=\S)/).filter(sn => !/\b(18|21)\s?\+/.test(sn)).join(' ')).join('\n').trim();
+          if (/\bage\b/i.test(message)) reply += "\n\nThe age limit isn't listed yet — check the event page before you go.";
+        }
+        if (nearCity && !reply.toLowerCase().includes(nearCity.toLowerCase())) {
+          reply = `Nothing's listed near you in ${nearCity} right now — here's the closest on Pulsify.\n\n` + reply;
         }
         if (channel === 'whatsapp') reply = reply.replace(/\*\*(.+?)\*\*/g, '*$1*');
         // Buy / contact-organiser buttons only make sense when chatting about one event
