@@ -17,11 +17,11 @@ const todayLine = () => {
 const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 function detectDateRange(text) {
   const t = saToday(), dow = dowOf(t);
-  if (/\b(tonight|today|this evening|right now)\b/.test(text)) return { from: t, to: t, label: 'tonight' };
-  if (/\btomorrow\b/.test(text)) { const d = addDays(t, 1); return { from: d, to: d, label: 'tomorrow' }; }
-  if (/\bnext weekend\b/.test(text)) { const fri = addDays(t, ((5 - dow + 7) % 7) + 7); return { from: fri, to: addDays(fri, 2), label: 'next weekend' }; }
+  if (/\b(tonight|today|this evening|right now|vanaand|vandag|namhlanje|namuhla|kusihlwa|kajeno|bosiu)\b/.test(text)) return { from: t, to: t, label: 'tonight' };
+  if (/\b(tomorrow|kusasa|ngomso|hosane)\b/.test(text) || /(^|\s)môre(\s|$)/.test(text)) { const d = addDays(t, 1); return { from: d, to: d, label: 'tomorrow' }; }
+  if (/\b(next weekend|volgende naweek)\b/.test(text)) { const fri = addDays(t, ((5 - dow + 7) % 7) + 7); return { from: fri, to: addDays(fri, 2), label: 'next weekend' }; }
   if (/\bnext week\b/.test(text)) { const mon = addDays(t, ((1 - dow + 7) % 7) || 7); return { from: mon, to: addDays(mon, 6), label: 'next week' }; }
-  if (/\bweekend\b/.test(text)) {
+  if (/\b(weekend|naweek|mpelasonto|impelaveki)\b/.test(text)) {
     const from = (dow === 6 || dow === 0) ? t : addDays(t, (5 - dow + 7) % 7);
     return { from, to: addDays(t, (7 - dow) % 7), label: 'this weekend' };
   }
@@ -106,6 +106,54 @@ async function findEvents({ city, genres, range, free }, limit = 10) {
   let rows = data || [];
   if (genres?.length) rows = rows.filter(e => genres.some(g => String(e.genre || '').toLowerCase().includes(g)));
   return rows.slice(0, limit);
+}
+
+// events.lineup is jsonb — usually an array of names or {name} objects
+function lineupText(v) {
+  if (!v) return '';
+  if (typeof v === 'string') return v;
+  if (Array.isArray(v)) return v.map(x => (x && typeof x === 'object') ? (x.name || x.artist || x.title || '') : String(x)).filter(Boolean).join(', ');
+  if (typeof v === 'object') return Object.values(v).map(lineupText).filter(Boolean).join(', ');
+  return String(v);
+}
+
+// Reply-language detection for SA languages (needs 2+ hits to avoid false positives
+// from slang like "lekker" in English sentences).
+const LANGS = [
+  ['isiZulu', /\b(ngifuna|ngicela|ngiyacela|ukujaiva|ukuzijabulisa|kule|lena|mpelasonto|sawubona|yebo|kanjani|ngiyabonga|kusasa|namuhla|namhlanje|kusihlwa|kuphi|uphi|umcimbi|imicimbi|ngiyafuna|ethekwini|egoli|ngakhona|kukhona|yini)\b/gi],
+  ['isiXhosa', /\b(ndifuna|ndicela|molo|molweni|enkosi|impelaveki|ngomso|phi|ndingathanda|kukho|umsitho|imisitho|ekapa|ndiyafuna)\b/gi],
+  ['Afrikaans', /\b(waar|hierdie|naweek|vanaand|asseblief|dankie|ek|jy|wat|gaan|uitgaan|wil|kan|daar|iets|geleenthede|vir|met|kaapstad|die)\b/gi],
+  ['Sesotho', /\b(ke batla|kae|dumela|kea leboha|ke a leboha|beke|bosiu|hosane|kajeno|mokete|mekete)\b/gi],
+];
+function detectLanguage(text) {
+  let best = null, bestHits = 1;
+  for (const [lang, re] of LANGS) {
+    const hits = (String(text).match(re) || []).length;
+    if (hits > bestHits) { best = lang; bestHits = hits; }
+  }
+  return best;
+}
+
+// Removes any event the model mentions that isn't backed by the data it was given.
+// Each Pulsify event link must point at an event we supplied, and the text leading up
+// to it must name that event — this catches invented events wearing a real link.
+const NAME_STOP = new Set(['live', 'tour', 'world', 'festival', 'concert', 'night', 'party', 'show', 'event', 'with', 'from', 'summer', 'edition', 'presents', 'sessions', 'session', '2025', '2026', '2027', 'the', 'and']);
+const nameWords = n => String(n).toLowerCase().normalize('NFKD').replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 3 && !NAME_STOP.has(w));
+function guardReply(reply, allowed) {
+  const re = /https?:\/\/(?:www\.)?pulsefy\.co\.za\/\?[^\s)]*?\bev=([A-Za-z0-9_\-]+)[^\s)]*\)?/g;
+  let out = '', last = 0, removed = 0, m;
+  while ((m = re.exec(reply))) {
+    const id = m[1];
+    const seg = reply.slice(last, re.lastIndex);
+    const name = allowed.get(id);
+    const words = name ? nameWords(name) : [];
+    const segN = seg.toLowerCase().normalize('NFKD');
+    const ok = name && (!words.length || words.some(w => segN.includes(w)));
+    if (ok) out += seg; else { removed++; console.warn('[lumi] removed unverified event mention', id); }
+    last = re.lastIndex;
+  }
+  out += reply.slice(last);
+  return { text: out.replace(/\n{3,}/g, '\n\n').trim(), removed };
 }
 
 const clip = (s, n) => { s = (s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
@@ -340,7 +388,9 @@ ${text.slice(0, 4000)}`;
       const personLine = firstName ? `\n\nYou're chatting with ${firstName} — use their name now and then, not every message.` : '';
 
       let systemPrompt;
+      const allowedEvents = new Map(); // id -> name of events Lumi may link to
       if (eventId) {
+        allowedEvents.set(event.id, event.name);
         // Event mode — ground Lumi in the event's real data, so it can answer the basics
         // (when/where/how much/who's playing) even if the organiser never pasted a knowledge doc.
         const { data: tiers } = await sb().from('ticket_tiers')
@@ -351,7 +401,7 @@ ${text.slice(0, 4000)}`;
           (e.venue_name || e.venue_city) && `Where: ${[e.venue_name, e.venue_address, e.venue_city].filter(Boolean).join(', ')}`,
           e.genre && `Genre: ${e.genre}`,
           e.organiser_name && `Organiser: ${e.organiser_name}`,
-          e.lineup && `Lineup: ${clip(e.lineup, 300)}`,
+          lineupText(e.lineup) && `Lineup: ${clip(lineupText(e.lineup), 300)}`,
           e.dress_code && `Dress code: ${e.dress_code}`,
           e.age_restriction && `Age restriction: ${e.age_restriction}`,
           tiers?.length ? `Tickets: ${tiers.map(t => `${t.name || 'Ticket'} ${Number(t.price) > 0 ? 'R' + t.price : 'FREE'}${t.sold_out ? ' (SOLD OUT)' : ''}`).join('; ')} — buy at https://pulsefy.co.za/?ev=${e.id}&buy=1`
@@ -397,6 +447,7 @@ ${text.slice(0, 4000)}`;
         }
 
         let eventsContext = '';
+        for (const e of events) allowedEvents.set(e.id, e.name);
         if (events.length) {
           const { data: tiers } = await sb().from('ticket_tiers')
             .select('event_id,price,sold_out').in('event_id', events.map(e => e.id)).order('price', { ascending: true });
@@ -409,7 +460,7 @@ ${text.slice(0, 4000)}`;
             const price = p === 0 || (p == null && e.is_free) ? 'FREE' : p != null ? `from R${p}` : 'price on event page';
             const when = `${fmtDay(e.date_local)}${e.time_local ? ' ' + String(e.time_local).slice(0, 5) : ''}`;
             const going = e.attendance_count > 0 ? ` | ${e.attendance_count} going` : '';
-            const extra = clip(e.lineup ? 'Lineup: ' + e.lineup : e.description, 140);
+            const extra = clip(lineupText(e.lineup) ? 'Lineup: ' + lineupText(e.lineup) : e.description, 140);
             return `- ${e.name} — ${when} @ ${e.venue_name || 'venue TBA'}, ${e.venue_city || 'SA'} | ${e.genre || 'event'} | ${price}${going} → https://pulsefy.co.za/?ev=${e.id}${extra ? `\n  (${extra})` : ''}`;
           }).join('\n');
         }
@@ -459,6 +510,14 @@ ${text.slice(0, 4000)}`;
           + todayLine() + personLine;
       }
 
+      const replyLang = detectLanguage(message);
+      systemPrompt += '\n\nBEFORE YOU ANSWER — CHECK:'
+        + '\n- Only events, dates, weekdays, times, venues, prices, age limits, dress codes and lineups that appear in the data above. If a detail isn\'t there, say you don\'t have it — never guess.'
+        + '\n- Never describe a price as cheap, modest, affordable, early-bird or expensive unless an actual price is listed.'
+        + '\n- You have no live data: no weather, traffic, load-shedding schedules or news. Say you can\'t check that and suggest a weather/traffic app — never make it up.'
+        + '\n- Don\'t re-ask anything already answered in this conversation.'
+        + (replyLang ? `\n- LANGUAGE: they wrote in ${replyLang}. Write your ENTIRE reply in ${replyLang} (keep event names, venues and links exactly as given).` : '\n- Reply in the language of their latest message.');
+
       const chatMessages = recentMsgs.map(m => ({
         role: m.direction === 'in' ? 'user' : 'assistant',
         content: m.body,
@@ -475,6 +534,8 @@ ${text.slice(0, 4000)}`;
       try {
         if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY_MISSING');
         reply = await groqChat(chatMessages, systemPrompt);
+        const g = guardReply(reply, allowedEvents);
+        if (g.removed) reply = g.text || "I couldn't find a matching event on Pulsify right now — browse everything here: https://pulsefy.co.za";
         if (channel === 'whatsapp') reply = reply.replace(/\*\*(.+?)\*\*/g, '*$1*');
         // Buy / contact-organiser buttons only make sense when chatting about one event
         suggestPurchase = !!eventId && (buyIntent || /how much|price|cost|r\d/i.test(message));
