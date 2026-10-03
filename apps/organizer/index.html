@@ -2,17 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="theme-color" content="#160C32"/>
+<meta name="description" content="Pulsefy Organizer Dashboard — create events, sell tickets, scan entries and track your audience."/>
 <meta name="build-version" content="v2.2.0-20260514"/>
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
-<meta http-equiv="Pragma" content="no-cache"/>
-<meta http-equiv="Expires" content="0"/>
 <title>Organizer Dashboard — Pulsefy</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="preconnect" href="https://cjzewfvtdayjgjdpdmln.supabase.co" crossorigin/>
+<link rel="dns-prefetch" href="https://cjzewfvtdayjgjdpdmln.supabase.co"/>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=optional" onload="this.onload=null;this.rel='stylesheet'"/>
+<noscript><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=optional" rel="stylesheet"/></noscript>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-<script src="https://js.paystack.co/v1/inline.js"></script>
+<!-- jsQR + Paystack inline.js are loaded on demand (loadScript) when the scanner / checkout opens -->
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#160C32;--bg2:#1C1140;--surf:#241652;--surf2:#2E1C66;--border:rgba(168,108,255,.16);--border2:rgba(168,108,255,.32);--or:#FF6B00;--li:#6EFF47;--pk:#FF2D88;--cy:#00EEFF;--pu:#CC44FF;--tx:#F4EDFF;--mu:#8575AE;--mu2:#B09CC8;--bh:70px}
@@ -136,6 +138,8 @@ select.inp option{background:#1C1140}
 .ocsnd{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .reply-banner-of{padding:4px 14px 0;font-size:.7rem;color:var(--mu);display:flex;align-items:center;gap:6px}
 .reply-banner-of button{background:none;border:none;color:var(--mu);cursor:pointer;font-size:.8rem}
+/* iOS Safari zooms on focus when an input's font-size < 16px (zoom lock removed from viewport for a11y) */
+@supports (-webkit-touch-callout:none){input,select,textarea{font-size:16px!important}}
 </style>
 </head>
 <body>
@@ -243,7 +247,7 @@ select.inp option{background:#1C1140}
         <textarea class="inp" id="ev-desc" placeholder="Event description (optional)" maxlength="500"></textarea>
         <div style="margin-bottom:8px">
           <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:5px">Banner Image (optional)</div>
-          <div id="ev-img-preview" style="display:none;border-radius:10px;overflow:hidden;height:90px;background:#111;margin-bottom:8px"><img id="ev-img-thumb" style="width:100%;height:100%;object-fit:cover"/></div>
+          <div id="ev-img-preview" style="display:none;border-radius:10px;overflow:hidden;height:90px;background:#111;margin-bottom:8px"><img id="ev-img-thumb" alt="Event image preview" style="width:100%;height:100%;object-fit:cover"/></div>
           <div style="display:flex;gap:8px;align-items:center">
             <button type="button" class="btn-sec" style="padding:8px 14px;font-size:.78rem" onclick="document.getElementById('ev-img-file').click()">📷 Choose Image</button>
             <span id="ev-img-name" style="font-size:.72rem;color:var(--mu2)">No file chosen</span>
@@ -651,7 +655,7 @@ select.inp option{background:#1C1140}
 <div class="sn-overlay" id="org-verify-sheet" onclick="if(event.target===this)closeOrgSheet('org-verify-sheet')">
   <div class="sn-sheet" style="max-height:92vh">
     <div class="sn-handle"></div>
-    <div class="sn-head"><div class="sn-title">Verify Profile</div><button class="sn-close" onclick="closeOrgSheet('org-verify-sheet')">✕</button></div>
+    <div class="sn-head"><div class="sn-title">Verify Profile</div><button class="sn-close" aria-label="Close" onclick="closeOrgSheet('org-verify-sheet')">✕</button></div>
     <div class="sn-body" style="padding-bottom:32px">
       <div style="background:rgba(176,38,255,.08);border:1px solid rgba(176,38,255,.2);border-radius:10px;padding:10px 14px;font-size:.76rem;color:var(--mu);line-height:1.5;margin:14px 0">⏱ Verification takes <strong style="color:var(--tx)">1–3 business days</strong>. You'll be notified once reviewed.</div>
       <div id="org-verif-msg" class="msg"></div>
@@ -695,7 +699,7 @@ select.inp option{background:#1C1140}
         <div id="ovf-cam-area" style="position:relative;border-radius:14px;overflow:hidden;background:#000;margin-bottom:8px;min-height:160px;display:flex;align-items:center;justify-content:center">
           <video id="ovf-video" autoplay playsinline muted style="width:100%;display:block;border-radius:14px;display:none"></video>
           <canvas id="ovf-canvas" style="display:none"></canvas>
-          <img id="ovf-preview" style="width:100%;border-radius:14px;display:none"/>
+          <img id="ovf-preview" alt="Selfie preview" style="width:100%;border-radius:14px;display:none"/>
           <div id="ovf-cam-placeholder" style="color:var(--mu);font-size:.78rem;padding:20px;text-align:center">📸 Take a selfie to confirm your identity</div>
         </div>
         <div style="display:flex;gap:8px">
@@ -711,7 +715,7 @@ select.inp option{background:#1C1140}
           <span id="ovf-id-doc-label">📄 Tap to upload ID document (JPG, PNG or PDF)</span>
         </div>
         <input type="file" id="ovf-id-doc" accept="image/*,application/pdf" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none" onchange="previewOvfIdDoc(event)"/>
-        <img id="ovf-id-doc-preview" style="display:none;width:100%;border-radius:10px;margin-top:8px;max-height:160px;object-fit:contain"/>
+        <img id="ovf-id-doc-preview" alt="ID document preview" style="display:none;width:100%;border-radius:10px;margin-top:8px;max-height:160px;object-fit:contain"/>
       </div>
       <div style="font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">About Your Events *</div>
       <textarea class="inp" id="ovf-desc" style="width:100%;min-height:80px;margin-bottom:14px;resize:vertical" placeholder="What kind of events do you organise?"></textarea>
@@ -724,7 +728,7 @@ select.inp option{background:#1C1140}
 <div class="sn-overlay" id="org-payment-sheet" onclick="if(event.target===this)closeOrgSheet('org-payment-sheet')">
   <div class="sn-sheet">
     <div class="sn-handle"></div>
-    <div class="sn-head"><div class="sn-title">Payment Method</div><button class="sn-close" onclick="closeOrgSheet('org-payment-sheet')">✕</button></div>
+    <div class="sn-head"><div class="sn-title">Payment Method</div><button class="sn-close" aria-label="Close" onclick="closeOrgSheet('org-payment-sheet')">✕</button></div>
     <div class="sn-body" style="padding-bottom:32px">
       <div style="background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:10px 14px;font-size:.76rem;color:var(--mu);margin:14px 0">💳 Banking details stored securely for ticket payout processing. We use them to create your Paystack payout account.</div>
       <div style="background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:10px 14px;font-size:.76rem;color:var(--mu);margin:0 0 14px">⏱ <b>When you get paid:</b> Ticket payments go straight to your Paystack payout account. You receive your share (92% — after Pulsefy's 8% platform fee) and Paystack settles to South African bank accounts on its standard schedule, usually within 1–2 business days of each sale.</div>
@@ -761,7 +765,7 @@ select.inp option{background:#1C1140}
 <div class="sn-overlay" id="org-preview-sheet" onclick="if(event.target===this)closeOrgSheet('org-preview-sheet')">
   <div class="sn-sheet">
     <div class="sn-handle"></div>
-    <div class="sn-head"><div class="sn-title">Preview Post</div><button class="sn-close" onclick="closeOrgSheet('org-preview-sheet')">✕</button></div>
+    <div class="sn-head"><div class="sn-title">Preview Post</div><button class="sn-close" aria-label="Close" onclick="closeOrgSheet('org-preview-sheet')">✕</button></div>
     <div class="sn-body" style="padding-bottom:32px">
       <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">How it'll appear in the feed</div>
       <div style="background:var(--surf2);border:1px solid var(--border);border-radius:16px;overflow:hidden">
@@ -789,11 +793,11 @@ select.inp option{background:#1C1140}
 <div class="sn-overlay" id="org-ev-preview-sheet" onclick="if(event.target===this)closeOrgSheet('org-ev-preview-sheet')">
   <div class="sn-sheet">
     <div class="sn-handle"></div>
-    <div class="sn-head"><div class="sn-title">Preview Event</div><button class="sn-close" onclick="closeOrgSheet('org-ev-preview-sheet')">✕</button></div>
+    <div class="sn-head"><div class="sn-title">Preview Event</div><button class="sn-close" aria-label="Close" onclick="closeOrgSheet('org-ev-preview-sheet')">✕</button></div>
     <div class="sn-body" style="padding-bottom:32px">
       <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:10px">How it'll appear on the platform</div>
       <div style="background:var(--surf2);border:1px solid var(--border);border-radius:16px;overflow:hidden">
-        <div id="ev-preview-banner" style="display:none;height:140px;background:#111"><img id="ev-preview-banner-img" style="width:100%;height:100%;object-fit:cover"/></div>
+        <div id="ev-preview-banner" style="display:none;height:140px;background:#111"><img id="ev-preview-banner-img" alt="Event banner preview" style="width:100%;height:100%;object-fit:cover"/></div>
         <div style="padding:14px">
           <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;line-height:1.1;margin-bottom:4px" id="ev-preview-name"></div>
           <div style="font-size:.72rem;color:var(--mu2);margin-bottom:6px" id="ev-preview-meta"></div>
@@ -817,7 +821,7 @@ select.inp option{background:#1C1140}
 <div class="sn-overlay" id="org-siza-sheet" onclick="if(event.target===this)closeOrgSheet('org-siza-sheet')">
   <div class="sn-sheet" style="max-height:92vh">
     <div class="sn-handle"></div>
-    <div class="sn-head"><div class="sn-title">🤖 Lumi AI Setup</div><button class="sn-close" onclick="closeOrgSheet('org-siza-sheet')">✕</button></div>
+    <div class="sn-head"><div class="sn-title">🤖 Lumi AI Setup</div><button class="sn-close" aria-label="Close" onclick="closeOrgSheet('org-siza-sheet')">✕</button></div>
     <div class="sn-body" style="padding-bottom:40px" id="siza-sheet-body">
       <!-- filled by openSizaStep() -->
     </div>
@@ -828,7 +832,7 @@ select.inp option{background:#1C1140}
 <div class="sn-overlay" id="org-qr-overlay" onclick="if(event.target===this)closeOrgQrScanner()">
   <div class="sn-sheet" style="max-height:92vh">
     <div class="sn-handle"></div>
-    <div class="sn-head"><div class="sn-title">📷 Scan Ticket</div><button class="sn-close" onclick="closeOrgQrScanner()">✕</button></div>
+    <div class="sn-head"><div class="sn-title">📷 Scan Ticket</div><button class="sn-close" aria-label="Close scanner" onclick="closeOrgQrScanner()">✕</button></div>
     <div class="sn-body">
       <p style="font-size:.78rem;color:var(--mu);margin-bottom:14px">Point the camera at the attendee's ticket QR code.</p>
       <div style="position:relative;border-radius:16px;overflow:hidden;background:#000;margin-bottom:14px">
@@ -847,7 +851,7 @@ select.inp option{background:#1C1140}
 <div class="sn-overlay" id="org-upgrade-sheet" onclick="if(event.target===this)closeOrgSheet('org-upgrade-sheet')">
   <div class="sn-sheet">
     <div class="sn-handle"></div>
-    <div class="sn-head"><div class="sn-title">💎 Upgrade to Premium</div><button class="sn-close" onclick="closeOrgSheet('org-upgrade-sheet')">✕</button></div>
+    <div class="sn-head"><div class="sn-title">💎 Upgrade to Premium</div><button class="sn-close" aria-label="Close" onclick="closeOrgSheet('org-upgrade-sheet')">✕</button></div>
     <div class="sn-body" style="padding-bottom:40px">
       <div style="text-align:center;padding:20px 0 16px;background:linear-gradient(135deg,rgba(176,38,255,.15),rgba(255,92,0,.1));border-radius:16px;margin-bottom:18px;border:1px solid rgba(176,38,255,.2)">
         <div style="font-size:2rem;margin-bottom:4px">💎</div>
@@ -872,7 +876,7 @@ select.inp option{background:#1C1140}
 <div class="sn-overlay" id="org-edit-post-sheet" onclick="if(event.target===this)closeOrgSheet('org-edit-post-sheet')">
   <div class="sn-sheet">
     <div class="sn-handle"></div>
-    <div class="sn-head"><div class="sn-title">✏️ Edit Post</div><button class="sn-close" onclick="closeOrgSheet('org-edit-post-sheet')">✕</button></div>
+    <div class="sn-head"><div class="sn-title">✏️ Edit Post</div><button class="sn-close" aria-label="Close" onclick="closeOrgSheet('org-edit-post-sheet')">✕</button></div>
     <div class="sn-body" style="padding-bottom:32px">
       <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Caption</div>
       <textarea class="inp" id="edit-post-caption" placeholder="Write your update…" maxlength="1000" style="min-height:100px;resize:none"></textarea>
@@ -890,7 +894,7 @@ select.inp option{background:#1C1140}
 <div class="sn-overlay" id="org-edit-event-sheet" onclick="if(event.target===this)closeOrgSheet('org-edit-event-sheet')">
   <div class="sn-sheet" style="max-height:92vh">
     <div class="sn-handle"></div>
-    <div class="sn-head"><div class="sn-title">✏️ Edit Event</div><button class="sn-close" onclick="closeOrgSheet('org-edit-event-sheet')">✕</button></div>
+    <div class="sn-head"><div class="sn-title">✏️ Edit Event</div><button class="sn-close" aria-label="Close" onclick="closeOrgSheet('org-edit-event-sheet')">✕</button></div>
     <div class="sn-body" style="padding-bottom:32px;overflow-y:auto">
       <input class="inp" id="edit-ev-name" placeholder="Event name *"/>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0">
@@ -925,7 +929,7 @@ select.inp option{background:#1C1140}
       <!-- Banner image edit -->
       <div style="margin-bottom:10px">
         <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);margin-bottom:5px">Banner Image</div>
-        <div id="edit-ev-img-preview" style="display:none;border-radius:10px;overflow:hidden;height:90px;background:#111;margin-bottom:8px"><img id="edit-ev-img-thumb" style="width:100%;height:100%;object-fit:cover"/></div>
+        <div id="edit-ev-img-preview" style="display:none;border-radius:10px;overflow:hidden;height:90px;background:#111;margin-bottom:8px"><img id="edit-ev-img-thumb" alt="Event image preview" style="width:100%;height:100%;object-fit:cover"/></div>
         <div style="display:flex;gap:8px;align-items:center">
           <button type="button" class="btn-sec" style="padding:8px 14px;font-size:.78rem" onclick="document.getElementById('edit-ev-img-file').click()">📷 Change Image</button>
           <span id="edit-ev-img-name" style="font-size:.72rem;color:var(--mu2)">No new file</span>
@@ -969,6 +973,22 @@ select.inp option{background:#1C1140}
 <div class="toast" id="toast"></div>
 
 <script>
+// On-demand third-party script loader (cached per src) — jsQR / Paystack are only
+// needed when the QR scanner or checkout opens, so they stay off the critical path.
+const _scriptCache = {};
+function loadScript(src) {
+  if (!_scriptCache[src]) _scriptCache[src] = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src; s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => { delete _scriptCache[src]; s.remove(); reject(new Error('Failed to load ' + src)); };
+    document.head.appendChild(s);
+  });
+  return _scriptCache[src];
+}
+const JSQR_SRC = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+const PAYSTACK_SRC = 'https://js.paystack.co/v1/inline.js';
+
 const SUPA_URL = 'https://cjzewfvtdayjgjdpdmln.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
@@ -1065,6 +1085,8 @@ async function startOrgPayment() {
   const msg = document.getElementById('org-pay-msg');
   if (btn) { btn.disabled = true; btn.textContent = 'Preparing checkout…'; }
   if (msg) msg.textContent = '';
+  const paystackReady = loadScript(PAYSTACK_SRC);
+  paystackReady.catch(() => {});
   try {
     const r = await fetch('/api/payments/initiate', {
       method: 'POST',
@@ -1073,6 +1095,7 @@ async function startOrgPayment() {
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Could not start payment');
+    await paystackReady;
     if (btn) { btn.disabled = false; btn.textContent = 'Pay R220/month · Activate Premium 🚀'; }
     PaystackPop.resumeTransaction(d.access_code, {
       onSuccess: async function() {
@@ -1350,6 +1373,7 @@ function previewOrgPost() {
         const div = document.createElement('div');
         div.style.cssText = 'aspect-ratio:1;overflow:hidden;background:#000';
         const img = document.createElement('img');
+        img.alt = '';
         img.style.cssText = 'width:100%;height:100%;object-fit:cover';
         const rd = new FileReader(); rd.onload = e => { img.src = e.target.result; }; rd.readAsDataURL(f);
         div.appendChild(img); imgArea.appendChild(div);
@@ -1605,7 +1629,7 @@ function _ofBuildCmts(comments, postId) {
     const name = p.display_name || p.username || 'Someone';
     const init = (name[0]||'?').toUpperCase();
     const avEl = p.avatar_url
-      ? `<div class="ocmt-av"><img src="${x(p.avatar_url)}" loading="lazy" onerror="this.parentNode.textContent='${x(init)}'"/></div>`
+      ? `<div class="ocmt-av"><img src="${x(p.avatar_url)}" alt="" loading="lazy" decoding="async" onerror="this.parentNode.textContent='${x(init)}'"/></div>`
       : `<div class="ocmt-av">${x(init)}</div>`;
     const replyBtn = !isReply
       ? `<button class="ocmt-reply-btn" onclick="ofStartReply('${x(postId)}','${x(c.id)}','${x(name).replace(/'/g,"&#39;")}')">↩ Reply</button>`
@@ -1655,7 +1679,7 @@ function ofStartReply(postId, parentId, name) {
   if (!wrap) return;
   let bn = wrap.querySelector('.reply-banner-of');
   if (!bn) { bn = document.createElement('div'); bn.className = 'reply-banner-of'; wrap.querySelector('.ocir').before(bn); }
-  bn.innerHTML = `Replying to <strong>${x(name)}</strong> <button onclick="ofCancelReply('${x(postId)}')">✕</button>`;
+  bn.innerHTML = `Replying to <strong>${x(name)}</strong> <button aria-label="Cancel reply" onclick="ofCancelReply('${x(postId)}')">✕</button>`;
   const inp = document.getElementById('ofci-'+postId);
   if (inp) { inp.placeholder = 'Write your reply…'; inp.focus(); }
 }
@@ -1737,7 +1761,7 @@ async function loadOrgFeed() {
       const prof = p.profiles || {};
       const init = (prof.display_name||'U')[0].toUpperCase();
       const avEl = prof.avatar_url
-        ? `<div class="ofa"><img src="${x(prof.avatar_url)}" loading="lazy" onerror="this.style.display='none'"/></div>`
+        ? `<div class="ofa"><img src="${x(prof.avatar_url)}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'"/></div>`
         : `<div class="ofa">${x(init)}</div>`;
       const isOrg = ['organizer','business'].includes(prof.role);
       const imgEl = (() => {
@@ -1748,8 +1772,8 @@ async function loadOrgFeed() {
         } else { urls = [p.image_url]; }
         if (!urls.length) return '';
         return urls.length === 1
-          ? `<img class="ofb" src="${x(urls[0])}" loading="lazy" onerror="this.remove()"/>`
-          : `<div style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none">${urls.map(u=>`<img src="${x(u)}" loading="lazy" onerror="this.remove()" style="width:100%;flex:0 0 100%;max-height:280px;object-fit:cover;scroll-snap-align:start"/>`).join('')}</div>`;
+          ? `<img class="ofb" src="${x(urls[0])}" alt="" loading="lazy" decoding="async" onerror="this.remove()"/>`
+          : `<div style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none">${urls.map(u=>`<img src="${x(u)}" alt="" loading="lazy" decoding="async" onerror="this.remove()" style="width:100%;flex:0 0 100%;max-height:280px;object-fit:cover;scroll-snap-align:start"/>`).join('')}</div>`;
       })();
       const liked = !!_ofLiked[p.id];
       return `<div class="ofc">
@@ -1769,7 +1793,7 @@ async function loadOrgFeed() {
           <div id="ofcmtl-${x(p.id)}"><div style="padding:10px 14px;font-size:.74rem;color:var(--mu)">Tap 💬 to load comments…</div></div>
           <div class="ocir">
             <input class="oci" id="ofci-${x(p.id)}" placeholder="Add a comment…" maxlength="500" onkeydown="if(event.key==='Enter')ofDoComment('${x(p.id)}')"/>
-            <button class="ocsnd" onclick="ofDoComment('${x(p.id)}')">➤</button>
+            <button class="ocsnd" aria-label="Send comment" onclick="ofDoComment('${x(p.id)}')">➤</button>
           </div>
         </div>
       </div>`;
@@ -1903,7 +1927,7 @@ function renderDiscoverCard(ev) {
   const date = d ? d.toLocaleDateString('en-ZA', { day:'numeric', month:'short' }) : '';
   const time = ev.time_local ? ev.time_local.slice(0,5) : '';
   const img = ev.image_url
-    ? `<img src="${xe(ev.image_url)}" loading="lazy" style="width:100%;height:120px;object-fit:cover;border-radius:12px;margin-bottom:8px" onerror="this.style.display='none'"/>`
+    ? `<img src="${xe(ev.image_url)}" alt="" loading="lazy" decoding="async" style="width:100%;height:120px;object-fit:cover;border-radius:12px;margin-bottom:8px" onerror="this.style.display='none'"/>`
     : `<div style="width:100%;height:120px;background:linear-gradient(135deg,rgba(176,38,255,.18),rgba(255,92,0,.14));border-radius:12px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:2.4rem">🎟</div>`;
   // Encode ev data for the inline preview (avoids navigating away)
   const safeId = xe(ev.id);
@@ -1940,10 +1964,10 @@ function openDiscoverPreview(evId) {
       <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem">Event Preview</div>
       <div style="display:flex;gap:8px">
         <a href="/?eid=${encodeURIComponent(ev.id)}" target="_blank" style="background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.3);color:var(--or);padding:5px 12px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;text-decoration:none">Open on site ↗</a>
-        <button onclick="document.getElementById('disc-preview-sheet').remove()" style="background:var(--surf);border:1px solid var(--border);border-radius:50%;width:30px;height:30px;color:var(--mu2);font-size:1rem;cursor:pointer">✕</button>
+        <button aria-label="Close" onclick="document.getElementById('disc-preview-sheet').remove()" style="background:var(--surf);border:1px solid var(--border);border-radius:50%;width:30px;height:30px;color:var(--mu2);font-size:1rem;cursor:pointer">✕</button>
       </div>
     </div>
-    ${ev.image_url ? `<img src="${xe(ev.image_url)}" style="width:100%;height:180px;object-fit:cover;border-radius:14px;margin-bottom:14px">` : ''}
+    ${ev.image_url ? `<img src="${xe(ev.image_url)}" alt="" style="width:100%;height:180px;object-fit:cover;border-radius:14px;margin-bottom:14px">` : ''}
     <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;margin-bottom:8px;color:var(--tx)">${xe(ev.name)}</div>
     ${d ? `<div style="font-size:.8rem;color:var(--mu2);margin-bottom:4px">📅 ${xe(d)}${time?' · '+xe(time):''}</div>` : ''}
     ${ev.venue_name||ev.venue_city ? `<div style="font-size:.8rem;color:var(--mu2);margin-bottom:4px">📍 ${xe([ev.venue_name,ev.venue_city].filter(Boolean).join(', '))}</div>` : ''}
@@ -2014,10 +2038,12 @@ function previewImgs(input) {
     const cell = document.createElement('div');
     cell.style.cssText = 'position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#111';
     const img = document.createElement('img');
+    img.alt = '';
     img.style.cssText = 'width:100%;height:100%;object-fit:cover';
     const rd = new FileReader(); rd.onload = e => { img.src = e.target.result; }; rd.readAsDataURL(f);
     const rm = document.createElement('button');
     rm.textContent = '✕';
+    rm.setAttribute('aria-label', 'Remove image');
     rm.style.cssText = 'position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.6rem;cursor:pointer;padding:0;line-height:1';
     rm.onclick = (ev) => { ev.stopPropagation(); _imgFiles.splice(i, 1); previewImgs({ files: _imgFiles }); };
     cell.appendChild(img); cell.appendChild(rm);
@@ -2138,7 +2164,7 @@ function addEvTierRow(prefillName) {
   row.className = 'ev-tier-row';
   row.style.cssText = 'display:grid;grid-template-columns:1.3fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center';
   const nameVal = prefillName ? ` value="${prefillName.replace(/"/g,'&quot;')}"` : '';
-  row.innerHTML = `<input class="inp" style="margin-bottom:0" placeholder="Tier name"${nameVal}/><input class="inp" style="margin-bottom:0" type="number" placeholder="Price (R)" min="0"/><input class="inp" style="margin-bottom:0" type="number" placeholder="Qty" min="1"/><button type="button" onclick="this.closest('.ev-tier-row').remove()" style="width:28px;height:28px;border-radius:8px;background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.3);color:#FF2D78;cursor:pointer;font-size:.9rem;flex-shrink:0">✕</button>`;
+  row.innerHTML = `<input class="inp" style="margin-bottom:0" placeholder="Tier name"${nameVal}/><input class="inp" style="margin-bottom:0" type="number" placeholder="Price (R)" min="0"/><input class="inp" style="margin-bottom:0" type="number" placeholder="Qty" min="1"/><button type="button" aria-label="Remove ticket tier" onclick="this.closest('.ev-tier-row').remove()" style="width:28px;height:28px;border-radius:8px;background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.3);color:#FF2D78;cursor:pointer;font-size:.9rem;flex-shrink:0">✕</button>`;
   list.appendChild(row);
   return row;
 }
@@ -2369,7 +2395,7 @@ async function loadMyPosts() {
     if (error) throw error;
     if (!posts?.length) { card.innerHTML = '<div class="empty">No posts yet. Share your first update above!</div>'; return; }
     card.innerHTML = posts.map(p => {
-      return `<div class="post-item" id="post-item-${x(p.id)}"><div class="post-row">${p.image_url?`<img class="post-img-thumb" src="${x(p.image_url)}" loading="lazy" onerror="this.style.display='none'"/>`:''}
+      return `<div class="post-item" id="post-item-${x(p.id)}"><div class="post-row">${p.image_url?`<img class="post-img-thumb" src="${x(p.image_url)}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'"/>`:''}
         <div style="flex:1;min-width:0"><div class="post-cap" id="post-cap-${x(p.id)}">${x(p.caption||'(no caption)')}</div>
         <div class="post-meta">${new Date(p.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'})} · ${p.post_type||'post'} · <span style="color:#00e564;font-weight:700">✅ Live</span></div></div>
         <div style="display:flex;gap:6px;flex-shrink:0">
@@ -2758,7 +2784,7 @@ async function openSNPanel() {
       }
 
       const avatarEl = av
-        ? `<img src="${xe(av)}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+        ? `<img src="${xe(av)}" alt="" loading="lazy" decoding="async" width="48" height="48" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0">`
         : `<div style="width:48px;height:48px;border-radius:50%;background:${c}1a;border:1px solid ${c}40;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">${ico}</div>`;
 
       const ts = new Date(n.created_at).toLocaleDateString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
@@ -3014,10 +3040,12 @@ async function openOrgQrScanner() {
   _oqrDone = false;
   document.getElementById('org-qr-result').innerHTML = '';
   openOrgSheet('org-qr-overlay');
+  const jsqrReady = loadScript(JSQR_SRC).catch(() => {});
   try {
     _oqrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
     const vid = document.getElementById('org-qr-video');
     vid.srcObject = _oqrStream;
+    await jsqrReady;
     vid.addEventListener('loadedmetadata', () => { vid.play(); _oqrScanLoop(); }, { once: true });
   } catch(e) {
     const blocked = e.name === 'NotAllowedError' || e.name === 'SecurityError';
@@ -3210,7 +3238,7 @@ function previewOrgPromo() {
     document.body.appendChild(card);
   }
   card.innerHTML = `<div style="width:100%;max-width:440px;background:#0D1424;border:1px solid rgba(255,255,255,.14);border-top-left-radius:20px;border-top-right-radius:20px;padding:18px 18px 24px;max-height:88vh;overflow-y:auto">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-family:'Syne',sans-serif;font-size:.9rem;font-weight:800">👁 Promotion Preview</div><button onclick="document.getElementById('promo-preview-overlay').remove()" style="background:none;border:none;color:#9997B0;font-size:1.2rem;cursor:pointer">✕</button></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-family:'Syne',sans-serif;font-size:.9rem;font-weight:800">👁 Promotion Preview</div><button aria-label="Close" onclick="document.getElementById('promo-preview-overlay').remove()" style="background:none;border:none;color:#9997B0;font-size:1.2rem;cursor:pointer">✕</button></div>
     <div style="font-size:.7rem;color:#9997B0;margin-bottom:12px">This is how your promo will appear in the ${placement === 'feed' ? 'home feed' : placement === 'banner' ? 'banner carousel' : 'feed and banner'} for users in <strong style="color:#FF5C00">${cities}</strong></div>
     <div style="background:linear-gradient(135deg,#1a0d2e,#0f0a1f);border:1px solid rgba(176,38,255,.3);border-radius:14px;padding:14px;position:relative;margin-bottom:14px">
       <div style="position:absolute;top:8px;right:10px;background:#FF5C00;color:#fff;border-radius:50px;padding:2px 8px;font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;letter-spacing:.06em">🚀 BOOSTED</div>
@@ -3624,7 +3652,7 @@ async function loadMyOrgSquadPromos() {
 <div class="sn-overlay" id="sn-overlay" onclick="if(event.target===this)closeSNPanel()">
   <div class="sn-sheet">
     <div class="sn-handle"></div>
-    <div class="sn-head"><div class="sn-title">Notifications</div><button class="sn-close" onclick="closeSNPanel()">✕</button></div>
+    <div class="sn-head"><div class="sn-title">Notifications</div><button class="sn-close" aria-label="Close" onclick="closeSNPanel()">✕</button></div>
     <div class="sn-body" id="sn-list"></div>
   </div>
 </div>
@@ -3687,7 +3715,7 @@ setTimeout(startOnboardingOrg, 1500);
 <div class="sn-overlay" id="followers-sheet" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="sn-sheet">
     <div class="sn-handle"></div>
-    <div class="sn-head"><div class="sn-title">Followers</div><button class="sn-close" onclick="document.getElementById('followers-sheet').classList.remove('open')">✕</button></div>
+    <div class="sn-head"><div class="sn-title">Followers</div><button class="sn-close" aria-label="Close" onclick="document.getElementById('followers-sheet').classList.remove('open')">✕</button></div>
     <div class="sn-body" id="followers-sheet-body" style="padding-bottom:32px"></div>
   </div>
 </div>
@@ -3696,10 +3724,33 @@ setTimeout(startOnboardingOrg, 1500);
 <div class="sn-overlay" id="following-sheet" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="sn-sheet">
     <div class="sn-handle"></div>
-    <div class="sn-head"><div class="sn-title">Following</div><button class="sn-close" onclick="document.getElementById('following-sheet').classList.remove('open')">✕</button></div>
+    <div class="sn-head"><div class="sn-title">Following</div><button class="sn-close" aria-label="Close" onclick="document.getElementById('following-sheet').classList.remove('open')">✕</button></div>
     <div class="sn-body" id="following-sheet-body" style="padding-bottom:32px"></div>
   </div>
 </div>
 
+<script src="/apps/shared/lumi-partner.js" defer></script>
+<script>
+// Lumi for partners — floating assistant (apps/shared/lumi-partner.js)
+window.addEventListener('load', async () => {
+  try {
+    const c = sb;
+    if (!c || !window.LumiPartner) return;
+    const start = async session => {
+      if (!session) return;
+      // Only show Lumi to accounts this dashboard is for (the page shows a gate screen otherwise)
+      const { data: prof } = await c.from('profiles').select('role').eq('id', session.user.id).single();
+      if (!['organizer', 'admin'].includes(prof?.role)) return;
+      LumiPartner.init({
+      role: 'organizer',
+      userId: session.user.id,
+      getToken: async () => (await c.auth.getSession()).data.session?.access_token || null,
+      });
+    };
+    start((await c.auth.getSession()).data.session);
+    c.auth.onAuthStateChange((_e, session) => start(session)); // signed in after load
+  } catch (e) { console.warn('[lumi-partner]', e.message); }
+});
+</script>
 </body>
 </html>
