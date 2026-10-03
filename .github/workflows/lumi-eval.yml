@@ -1,14 +1,18 @@
 name: Lumi eval
 
-# Manual only — every case is a real Groq call, so this never runs on its own.
+# Manual, or by pushing an edit to scripts/lumi-eval.run on a claude/** branch
+# (first line = comma-separated case numbers, blank = all). Every case is a real Groq call.
 on:
+  push:
+    branches: ['claude/**']
+    paths: ['scripts/lumi-eval.run']
   workflow_dispatch:
     inputs:
       base_url:
         description: 'Deployment to test'
         default: 'https://pulsefy.co.za'
       only:
-        description: 'Comma-separated case numbers (blank = all 30)'
+        description: 'Comma-separated case numbers (blank = all)'
         default: ''
       delay_ms:
         description: 'Pause between requests (ms)'
@@ -25,8 +29,10 @@ jobs:
           node-version: '20'
       - name: Run Lumi battery
         run: |
-          ARGS="--base ${{ inputs.base_url }} --delay ${{ inputs.delay_ms }}"
-          if [ -n "${{ inputs.only }}" ]; then ARGS="$ARGS --only ${{ inputs.only }}"; fi
+          ARGS="--base ${{ inputs.base_url || 'https://pulsefy.co.za' }} --delay ${{ inputs.delay_ms || '7000' }}"
+          ONLY="${{ inputs.only }}"
+          if [ -z "$ONLY" ] && [ -f scripts/lumi-eval.run ]; then ONLY="$(head -n1 scripts/lumi-eval.run | tr -d ' \r')"; fi
+          if [ -n "$ONLY" ]; then ARGS="$ARGS --only $ONLY"; fi
           node scripts/lumi-eval.js $ARGS
       - uses: actions/upload-artifact@v4
         if: always()
