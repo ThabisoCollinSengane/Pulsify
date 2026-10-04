@@ -66,6 +66,7 @@ BEGIN
     ('U07 user reads other users'' emails',      'u1','deny',    $q$select count(*) from profiles where id<>'{u1}' and email is not null$q$),
     ('U08 user becomes organizer at signup',     'u1','allow',   $q$with x as (update profiles set role='organizer' where id='{u1}' returning 1) select count(*) from x$q$),
     ('U09 own full profile via my_profile()',    'u1','allow',   $q$select count(*) from my_profile()$q$),
+    ('U10 user saves own phone/dob (settings)',  'u1','allow',   $q$with x as (update profiles set phone='0820000000', dob='2000-01-01' where id='{u1}' returning 1) select count(*) from x$q$),
     -- ── social flows: follow / like / comment / repost / save ────────
     ('F01 follow someone',                       'u1','allow',   $q$with x as (insert into follows(follower_id,following_id) values ('{u1}','{org}') on conflict do nothing returning 1) select count(*)+(select count(*) from follows where follower_id='{u1}' and following_id='{org}') from x$q$),
     ('F02 follow on behalf of someone else',     'u1','deny',    $q$with x as (insert into follows(follower_id,following_id) values ('{u2}','{u1}') returning 1) select count(*) from x$q$),
@@ -85,6 +86,7 @@ BEGIN
     ('F16 read someone else''s saved items',     'u1','deny',    $q$select count(*) from saved_items where user_id<>'{u1}'$q$),
     ('F17 edit someone else''s post',            'u1','deny',    $q$with x as (update posts set caption='hacked' where id='{post2}' returning 1) select count(*) from x$q$),
     ('F18 post as someone else',                 'u1','deny',    $q$with x as (insert into posts(user_id,caption) values ('{u2}','spoof') returning 1) select count(*) from x$q$),
+    ('F19 feed shows posts with author names',   'anon','allow', $q$select count(*) from posts p join profiles pr on pr.id=p.user_id where pr.display_name is not null$q$),
     -- ── notifications ────────────────────────────────────────────────
     ('N01 notify a user (as self)',              'u1','allow',   $q$with x as (insert into notifications(user_id,type,from_user_id,message) values ('{u2}','follow','{u1}','followed you') returning 1) select count(*) from x$q$),
     ('N02 notify a user spoofing the sender',    'u1','deny',    $q$with x as (insert into notifications(user_id,type,from_user_id,message) values ('{u2}','follow','{org}','spoofed') returning 1) select count(*) from x$q$),
