@@ -17,15 +17,8 @@ GRANT EXECUTE ON FUNCTION public.is_admin(), public.is_client_call() TO anon, au
 -- 1. No TRUNCATE / TRIGGER / REFERENCES for browser roles (TRUNCATE ignores RLS) --------
 REVOKE TRUNCATE, TRIGGER, REFERENCES ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
 
--- 2. Profiles: private columns are no longer readable by other people -----------------
-REVOKE SELECT ON public.profiles FROM anon, authenticated;
-GRANT SELECT (id, username, display_name, avatar_url, bio, city, province, is_organiser,
-  is_verified, follower_count, following_count, event_count, created_at, updated_at, role,
-  is_page, genres, verif_status, subscription_type, trial_expires_at, suspended, social_links,
-  instagram, tiktok, whatsapp, facebook, twitter, referral_code, paystack_subaccount_code,
-  cover_url, whatsapp_display_number, whatsapp_verified)
-  ON public.profiles TO anon, authenticated;
-
+-- 2. Profiles: own full row via my_profile() (the column lock itself is in
+--    rls_hardening_round1_lock_profiles.sql — run it only after the app update is live)
 -- The signed-in user's own full row (email, phone, dob, bank details, prefs…)
 CREATE OR REPLACE FUNCTION public.my_profile() RETURNS SETOF public.profiles
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
@@ -88,7 +81,9 @@ CREATE POLICY notifications_own_delete ON public.notifications FOR DELETE
 CREATE OR REPLACE FUNCTION public.fill_notification_sender() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
-  IF is_client_call() AND NEW.from_user_id IS NOT NULL THEN
+  -- The sender's real name; a business may sign as one of its own venues.
+  IF is_client_call() AND NEW.from_user_id IS NOT NULL
+     AND NOT EXISTS (SELECT 1 FROM businesses WHERE owner_id = NEW.from_user_id AND name = NEW.from_display_name) THEN
     SELECT coalesce(display_name, username) INTO NEW.from_display_name FROM profiles WHERE id = NEW.from_user_id;
   END IF;
   RETURN NEW;
