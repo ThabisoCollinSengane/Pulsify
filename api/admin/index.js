@@ -389,7 +389,22 @@ module.exports = async (req, res) => {
         .in('verif_status', ['pending', 'approved', 'rejected'])
         .order('created_at', { ascending: false });
       if (error) return res.status(400).json({ error: error.message });
-      return res.status(200).json({ verifications: data || [] });
+      // verification-docs is a private bucket: the stored public URLs don't open, so hand the
+      // admin short-lived signed URLs instead.
+      const signOne = async (u) => {
+        if (!u || !u.includes('/verification-docs/')) return u;
+        try {
+          const path = u.split('/verification-docs/')[1].split('?')[0];
+          const { data: s } = await sb().storage.from('verification-docs').createSignedUrl(path, 3600);
+          return s?.signedUrl || u;
+        } catch { return u; }
+      };
+      const verifications = await Promise.all((data || []).map(async (row) => ({
+        ...row,
+        face_scan_url: await signOne(row.face_scan_url),
+        id_doc_url:    await signOne(row.id_doc_url),
+      })));
+      return res.status(200).json({ verifications });
     }
 
     /* ─── GET /admin/events ─────────────────────────────────── */
@@ -1152,6 +1167,8 @@ module.exports = async (req, res) => {
 
     /* ─── GET /admin/hubspot-status ── is HubSpot connected? (no secrets returned) ─ */
     if (url === '/admin/hubspot-status' && req.method === 'GET') {
+      const auth = await authUser(req);
+      if (!auth || auth.profile.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
       return res.status(200).json(await hubspotStatus());
     }
 

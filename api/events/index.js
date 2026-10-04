@@ -19,7 +19,7 @@ module.exports = async (req, res) => {
       const city     = q.city     || '';
       const province = q.province || '';
       const genre    = q.genre    || '';
-      const search   = q.search   || '';
+      let   search   = q.search   || '';
       const lat    = parseFloat(q.lat)       || null;
       const lon    = parseFloat(q.lon)       || null;
       const km     = parseFloat(q.radius_km) || 100;
@@ -68,10 +68,12 @@ module.exports = async (req, res) => {
       }
       if (genre === 'free')        query = query.eq('is_free', true);
       else if (genre && genre !== 'all') {
-        const genres = genre.split(',').map(g => g.trim()).filter(Boolean);
+        const genres = genre.split(',').map(g => g.replace(/[^\w\s&-]/g, '').trim()).filter(Boolean);
         if (genres.length > 1) query = query.or(genres.map(g => `genre.ilike.%${g}%`).join(','));
         else if (genres.length === 1) query = query.ilike('genre', `%${genres[0]}%`);
       }
+      // Strip PostgREST filter syntax (, . ( ) etc.) so a search term can't inject extra .or() conditions.
+      if (search) search = search.replace(/[^\w\s&'-]/g, ' ').trim();
       if (search) query = query.or(`name.ilike.%${search}%,venue_name.ilike.%${search}%,venue_city.ilike.%${search}%`);
       if (q.bounds) {
         const [bw, bs, be, bn] = q.bounds.split(',').map(parseFloat);
@@ -102,7 +104,7 @@ module.exports = async (req, res) => {
 
     /* ─── GET /events/search ──────────────────────────────── */
     if (url === '/events/search' && req.method === 'GET') {
-      const term  = q.q || '';
+      const term  = (q.q || '').replace(/[^\w\s&'-]/g, ' ').trim();
       const limit = Math.min(20, parseInt(q.limit || '10'));
       if (!term) return res.status(200).json({ results: [] });
 
@@ -110,6 +112,7 @@ module.exports = async (req, res) => {
         .select('id,name,venue_city,venue_name,date_local,time_local,genre,image_url,is_free,price_min,hype_score,like_count,comment_count,is_frontline,frontline_rank,source,organiser_name')
         .gte('date_local', today)
         .eq('is_active', true)
+        .eq('approved', true)
         .or(`name.ilike.%${term}%,venue_city.ilike.%${term}%,genre.ilike.%${term}%,venue_name.ilike.%${term}%`)
         .order('hype_score', { ascending: false })
         .limit(limit);
@@ -333,6 +336,7 @@ module.exports = async (req, res) => {
       const mv = validate(req, res, { name: { required: true }, price: { required: true, type: 'number', min: 0 } });
       if (!mv) return;
       const { name, price } = mv;
+      const b = req.body || {};
 
       if (auth.profile.subscription_type !== 'premium' && auth.profile.subscription_type !== 'trial') {
         const { count } = await sb().from('menu_items').select('id', { count: 'exact', head: true }).eq('business_id', menuBizId);

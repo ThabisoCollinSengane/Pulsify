@@ -1,15 +1,11 @@
-const { sb, CORS } = require('../../lib/shared');
+const { sb, CORS, cronAuthorized } = require('../../lib/shared');
 const { sendNudgeDay2Email, sendNudgeDay7Email } = require('../../lib/email');
 
 module.exports = async (req, res) => {
   Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const secret = process.env.CRON_SECRET;
-  const auth = req.headers.authorization || '';
-  if (secret && auth !== 'Bearer ' + secret) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  if (!cronAuthorized(req)) return res.status(401).json({ error: 'Unauthorized' });
 
   const now = new Date();
 

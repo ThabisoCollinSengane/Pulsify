@@ -2,7 +2,7 @@
 // Runs daily at 9am via Vercel cron (vercel.json).
 // Uses playwright-core + @sparticuz/chromium (serverless-compatible Chromium).
 // Two lead categories: 'event_organizer' and 'venue' (nightclubs, shisanyamas, restaurants, etc.)
-const { sb: getSB, CORS } = require('../../lib/shared');
+const { sb: getSB, CORS, cronAuthorized } = require('../../lib/shared');
 const { syncBusinessRegistration } = require('../../lib/hubspot');
 
 const MONTH = new Date().toLocaleString('en-US', { month: 'long' }); // e.g. "September"
@@ -251,6 +251,7 @@ module.exports = async (req, res) => {
   Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  if (!cronAuthorized(req)) return res.status(401).json({ error: 'Unauthorized' });
 
   const sb = getSB();
   if (!sb) return res.status(500).json({ error: 'No Supabase client' });

@@ -145,7 +145,12 @@ BEGIN
     ('R04 read admin activity log',              'u1','deny',    $q$select count(*) from admin_activity_log$q$),
     ('R05 read scraped leads',                   'u1','deny',    $q$select count(*) from scraped_leads$q$),
     ('R06 read KYC documents',                   'u1','deny',    $q$select count(*) from kyc_documents where user_id<>'{u1}'$q$),
-    ('R07 anyone deletes files in uploads bucket','anon','deny', $q$select count(*) from pg_policies where schemaname='storage' and cmd='DELETE' and qual not like '%auth.uid()%'$q$)
+    ('R07 anyone deletes files in uploads bucket','anon','deny', $q$select count(*) from pg_policies where schemaname='storage' and cmd='DELETE' and qual not like '%auth.uid()%'$q$),
+    -- ── organiser payouts ────────────────────────────────────────────
+    ('P01 organizer records a payout to self',   'org','deny',   $q$with x as (insert into organiser_payouts(event_id,organiser_id,amount,reference) values ('{ev_org}','{org}',1000,'RLS-P01') returning 1) select count(*) from x$q$),
+    ('P02 user reads others'' payouts',          'u1','deny',    $q$select count(*) from organiser_payouts where organiser_id<>'{u1}'$q$),
+    ('P03 buyer detaches booking from payout',   'u2','deny',    $q$with x as (update bookings set payout_id=null where user_id='{u2}' returning 1) select count(*) from x$q$),
+    ('P04 anon reads payout recipient codes',    'anon','deny',  $q$select count(*) from profiles where paystack_recipient_code is not null$q$)
   ) v(name, who, expect, sql) LOOP
     q := t.sql;
     FOR k IN SELECT jsonb_object_keys(s) LOOP

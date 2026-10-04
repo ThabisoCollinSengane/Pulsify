@@ -29,17 +29,8 @@ const tokenFrom = (req) => (req.headers.authorization || '').replace('Bearer ', 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || '';
 const PAYSTACK_BASE   = 'https://api.paystack.co';
 
-// SA bank name → Paystack clearing code
-const SA_BANK_CODES = {
-  'Absa':          '632005',
-  'Capitec':       '470010',
-  'FNB':           '250655',
-  'Nedbank':       '198765',
-  'Standard Bank': '051001',
-  'Investec':      '580105',
-  'TymeBank':      '678910',
-  'African Bank':  '430000',
-};
+// SA bank name → Paystack clearing code (shared with the payout job)
+const { SA_BANK_CODES } = require('../lib/payouts');
 
 
 async function paystackPost(path, body) {
@@ -138,7 +129,10 @@ async function verifyToken(token) {
     const userSb = createClient(SUPA_URL, SUPA_ANON,
       { auth: { autoRefreshToken: false, persistSession: false } });
     const { data: { user } } = await userSb.auth.getUser(token);
-    return user || null;
+    if (!user) return null;
+    // Suspended accounts lose API access everywhere, same as authUser().
+    const { data: prof } = await sb().from('profiles').select('suspended').eq('id', user.id).maybeSingle();
+    return prof?.suspended ? null : user;
   } catch { return null; }
 }
 
@@ -571,20 +565,32 @@ module.exports = async (req, res) => {
       if (!v) return;
       const { event_id, tier_id, buyer_name, buyer_email, buyer_phone } = v;
 
-      const [{ data: ev }, { data: tier }] = await Promise.all([
-        sb().from('events').select('name,date_local,venue_name,venue_city,commission_rate').eq('id', event_id).single(),
-        tier_id ? sb().from('ticket_tiers').select('*').eq('id', tier_id).single() : { data: null },
+      const [{ data: ev }, { data: tier }, { count: paidTiers }] = await Promise.all([
+        sb().from('events').select('name,date_local,venue_name,venue_city,commission_rate,is_free,price_min').eq('id', event_id).single(),
+        tier_id ? sb().from('ticket_tiers').select('*').eq('id', tier_id).eq('event_id', event_id).single() : { data: null },
+        sb().from('ticket_tiers').select('id', { count: 'exact', head: true }).eq('event_id', event_id).gt('price', 0),
       ]);
 
       if (!ev) return res.status(404).json({ error: 'Event not found' });
+      if (tier_id && !tier) return res.status(400).json({ error: 'Ticket type not found for this event' });
 
       const qty         = v.quantity;
-      const unit_price  = tier?.price || 0;
+      // This endpoint only issues FREE tickets (it confirms without payment). Paid tiers — or a
+      // paid event booked without a tier — must go through /ticket/init → Paystack.
+      if ((tier && Number(tier.price) > 0) || (!tier && (paidTiers > 0 || Number(ev.price_min) > 0)))
+        return res.status(402).json({ error: 'This ticket must be paid for at checkout' });
+      if (tier?.capacity != null && (tier.sold || 0) + qty > tier.capacity)
+        return res.status(409).json({ error: 'Not enough tickets left' });
+      const unit_price  = 0;
       const subtotal    = unit_price * qty;
       const commission  = unit_price > 0 ? +(subtotal * 0.08).toFixed(2) : 0;
       const psf         = unit_price > 0 ? +(subtotal * 0.015 + 1.5).toFixed(2) : 0;
       const total_paid  = +(subtotal + commission + psf).toFixed(2);
-      const booking_ref = `PKF-${Date.now()}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
+      const booking_ref = `PKF-${Date.now()}-${require('crypto').randomBytes(5).toString('hex').toUpperCase()}`;
+
+      // The buyer's account comes from their login token, never from the request body.
+      const purchaseToken = tokenFrom(req);
+      const buyerId = purchaseToken ? (await verifyToken(purchaseToken).catch(() => null))?.id || null : null;
 
       const qr_sig    = signQr(booking_ref, event_id);
       const qr_data   = `PULSIFY:${booking_ref}:${event_id}:${qr_sig}`;
@@ -597,7 +603,7 @@ module.exports = async (req, res) => {
         status:      'confirmed',
         qr_data,
         qr_token:    qr_sig,
-        user_id:     v.user_id || null,
+        user_id:     buyerId,
       }).select().single();
 
       if (bErr) return res.status(400).json({ error: bErr.message });
@@ -609,7 +615,7 @@ module.exports = async (req, res) => {
       await syncTicketPurchase({ buyerName: buyer_name, buyerEmail: buyer_email, buyerPhone: buyer_phone || null, eventName: ev.name, totalPaid: total_paid, bookingRef: booking_ref });
 
       // Notify the buyer if they're a registered user
-      const user_id = v.user_id;
+      const user_id = buyerId;
       if (user_id) {
         await sb().from('notifications').insert({
           user_id, type: 'ticket',
@@ -650,16 +656,23 @@ module.exports = async (req, res) => {
         user_id:     { maxLen: 64 },
       });
       if (!v) return;
-      const { event_id, tier_id, buyer_name, buyer_email, buyer_phone, user_id: uid } = v;
+      const { event_id, tier_id, buyer_name, buyer_email, buyer_phone } = v;
+      // The buyer's account comes from their login token, never from the request body.
+      const initToken = tokenFrom(req);
+      const uid = initToken ? (await verifyToken(initToken).catch(() => null))?.id || null : null;
 
       const [{ data: ev }, { data: tier }] = await Promise.all([
         sb().from('events').select('id,name,date_local,time_local,venue_name,venue_city,organiser_id').eq('id', event_id).single(),
-        tier_id ? sb().from('ticket_tiers').select('*').eq('id', tier_id).single() : { data: null },
+        // Scoped to this event: a cheap tier from another event must not price this one.
+        tier_id ? sb().from('ticket_tiers').select('*').eq('id', tier_id).eq('event_id', event_id).single() : { data: null },
       ]);
 
       if (!ev) return res.status(404).json({ error: 'Event not found' });
+      if (!tier) return res.status(400).json({ error: 'Choose a ticket type' });
 
       const qty        = v.quantity;
+      if (tier.capacity != null && (tier.sold || 0) + qty > tier.capacity)
+        return res.status(409).json({ error: 'Not enough tickets left' });
       const unit_price = tier?.price || 0;
       const subtotal   = unit_price * qty;
       const commission = unit_price > 0 ? +(subtotal * 0.08).toFixed(2) : 0;
@@ -669,7 +682,7 @@ module.exports = async (req, res) => {
       if (unit_price === 0) return res.status(400).json({ error: 'Use /ticket/purchase for free tickets' });
       if (!await flagEnabled('paystack_live')) return res.status(503).json({ error: 'Paid tickets are not yet enabled — check back soon.' });
 
-      const booking_ref = `PKF-${Date.now()}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
+      const booking_ref = `PKF-${Date.now()}-${require('crypto').randomBytes(5).toString('hex').toUpperCase()}`;
       const qr_sig      = signQr(booking_ref, event_id);
       const qr_data     = `PULSIFY:${booking_ref}:${event_id}:${qr_sig}`;
 
@@ -698,17 +711,9 @@ module.exports = async (req, res) => {
         callback_url: `${process.env.APP_URL || 'https://pulsefy.co.za'}/tickets`,
       };
 
-      // Add split if organizer has a subaccount
-      if (ev.organiser_id) {
-        const { data: orgProfile } = await sb().from('profiles').select('paystack_subaccount_code').eq('id', ev.organiser_id).single();
-        if (orgProfile?.paystack_subaccount_code) {
-          txBody.split = {
-            type: 'percentage',
-            bearer_type: 'account',
-            subaccounts: [{ subaccount: orgProfile.paystack_subaccount_code, share: 92 }],
-          };
-        }
-      }
+      // No Paystack split: the whole payment settles to Pulsify's balance and is held until the
+      // event has taken place. The organiser's 92% is paid out 2 business days after the event
+      // by the payouts step of the daily cron (api/cron/event-cleanup.js → lib/payouts.js).
 
       let paystack_ref = booking_ref;
       if (PAYSTACK_SECRET) {
@@ -746,9 +751,16 @@ module.exports = async (req, res) => {
         .eq('booking_ref', ref).single();
       if (bErr || !booking) return res.status(404).json({ error: 'Booking not found' });
 
-      // Idempotent: already confirmed → return it without re-charging logic.
-      if (booking.status === 'confirmed')
-        return res.status(200).json({ success: true, booking_ref: booking.booking_ref, qr_data: booking.qr_data, event_name: booking.events?.name, tier_name: booking.ticket_tiers?.name, quantity: booking.quantity, total_paid: booking.total_paid, buyer_name: booking.buyer_name, buyer_email: booking.buyer_email });
+      // Idempotent: already confirmed → return it without re-charging logic. The ticket QR and
+      // buyer email only go to the buyer's own account, or right after payment (the Paystack
+      // redirect) — a leaked booking ref alone no longer hands out a working ticket.
+      if (booking.status === 'confirmed') {
+        const viewer = await verifyToken(tokenFrom(req)).catch(() => null);
+        const fresh = Date.now() - new Date(booking.updated_at || booking.created_at).getTime() < 30 * 60 * 1000;
+        const mine = (viewer && viewer.id === booking.user_id) || (!booking.user_id && fresh);
+        return res.status(200).json({ success: true, booking_ref: booking.booking_ref, event_name: booking.events?.name, tier_name: booking.ticket_tiers?.name, quantity: booking.quantity, total_paid: booking.total_paid, buyer_name: booking.buyer_name,
+          ...(mine ? { qr_data: booking.qr_data, buyer_email: booking.buyer_email } : {}) });
+      }
       if (booking.status !== 'pending')
         return res.status(400).json({ error: 'Booking is not payable' });
 
@@ -856,7 +868,8 @@ module.exports = async (req, res) => {
       if (!booking)                         return res.status(404).json({ error: 'Ticket not found' });
       if (booking.status !== 'confirmed')   return res.status(400).json({ error: 'Ticket is not confirmed' });
       if (booking.event_id !== event_id)    return res.status(400).json({ error: 'QR data mismatch' });
-      if (profile.role === 'organizer' && booking.events?.organiser_id !== user.id)
+      // Only the event's own organiser/business (or an admin) may check a ticket in.
+      if (profile.role !== 'admin' && booking.events?.organiser_id !== user.id)
         return res.status(403).json({ error: "This ticket is for a different organizer's event" });
 
       if (booking.checked_in)
@@ -961,7 +974,12 @@ module.exports = async (req, res) => {
       if (b.province)        updates.province                = b.province;
       if (b.avatar_url)      updates.avatar_url              = b.avatar_url;
       if (b.genres)          updates.genres                  = b.genres;
-      if (b.role)            updates.role                    = b.role;
+      // Role: only the one-time signup choice user → organizer/business. Never admin — this
+      // update uses the service key, so the DB's own guard trigger doesn't apply here.
+      if (b.role && ['organizer', 'business'].includes(b.role)) {
+        const { data: cur } = await sb().from('profiles').select('role').eq('id', user.id).single();
+        if (!cur?.role || cur.role === 'user') updates.role = b.role;
+      }
       if (b.bank_name)       updates.paystack_bank_name      = b.bank_name;
       if (b.account_number)  updates.paystack_account_number = String(b.account_number);
       if (b.business_name)   updates.paystack_business_name  = b.business_name;
@@ -988,6 +1006,8 @@ module.exports = async (req, res) => {
 
     /* ─── POST /auth/register-business ───────────────────── */
     if (url === '/auth/register-business' && req.method === 'POST') {
+      // Public endpoint that creates auth users — strict per-IP cap.
+      if (rateLimited(req, res, { key: 'reg-biz', limit: 5, windowMs: 3600000 })) return;
       const b = req.body || {};
       // Shared validator rejects malformed emails before we create an auth
       // user (public, unauthenticated endpoint — validate at the door).
@@ -1061,14 +1081,13 @@ module.exports = async (req, res) => {
         if (bizErr) {
           console.error('[register-business] biz insert failed:', bizErr.message);
         } else {
-          // Geocode address → lat/lon (non-blocking, best-effort)
+          // Geocode address → lat/lon (best-effort). Awaited: Vercel freezes the
+          // function once the response is sent, so a fire-and-forget never lands.
           const geoQuery = [b.address, b.suburb, b.city, b.province, 'South Africa'].filter(Boolean).join(', ');
-          geocodeSA(geoQuery).then(coords => {
-            if (coords) {
-              sb().from('businesses').update({ lat: coords.lat, lon: coords.lon })
-                .eq('owner_id', uid).catch(() => {});
-            }
-          }).catch(() => {});
+          try {
+            const coords = await geocodeSA(geoQuery);
+            if (coords) await sb().from('businesses').update({ lat: coords.lat, lon: coords.lon }).eq('owner_id', uid);
+          } catch { /* location can be set later from the dashboard */ }
         }
       }
 
@@ -1543,7 +1562,7 @@ module.exports = async (req, res) => {
 
         // Non-blocking welcome email for new business accounts
         queueEmail('welcome', user.email, { display_name: bizName }).catch(() => {});
-      } else if (!['business', 'admin', 'organizer'].includes(profile.role)) {
+      } else if (!profile.role || profile.role === 'user') {
         const { data: updatedProfile, error: updateError } = await supabase.from('profiles').update({ role: 'business' }).eq('id', user.id).select().single();
         if (updateError) throw updateError;
         profile = updatedProfile;
@@ -1568,6 +1587,7 @@ module.exports = async (req, res) => {
 
     /* ─── GET /quicket-events ─────────────────────────────── */
     if (url === '/quicket-events' && req.method === 'GET') {
+      if (rateLimited(req, res, { key: 'quicket', limit: 20, windowMs: 60000 })) return;
       const QUICKET_KEY = process.env.QUICKET_API_KEY || '7f03069e38b5802980c9ca620dd14dff';
 
       const city  = q.city  || 'all';   // 'all' | 'kzn' | 'jhb' | 'durban' | 'johannesburg' | ...
@@ -2264,6 +2284,13 @@ module.exports = async (req, res) => {
         'price_min','is_free','image_url','genre','external_url','city_targets','genre_targets',
         'placement','is_active','ends_at'];
       const updates = Object.fromEntries(Object.entries(req.body || {}).filter(([k]) => allowed.includes(k)));
+      // Going live / extending is a review decision: owners may pause their own promotion, but
+      // only admins and trusted submitters can (re)activate it or move its end date.
+      const canPublish = auth.profile.role === 'admin' || !!auth.profile.is_trusted_submitter;
+      if (!canPublish) {
+        if (updates.is_active === true) return res.status(403).json({ error: 'Promotions go live after review' });
+        delete updates.ends_at;
+      }
       if (!Object.keys(updates).length) return res.status(400).json({ error: 'No valid fields to update' });
       const { data, error } = await sb().from('promotions').update(updates).eq('id', promoId).select().single();
       if (error) return res.status(400).json({ error: error.message });
@@ -2923,9 +2950,22 @@ module.exports = async (req, res) => {
 
     /* ─── POST /pickup-orders ────────────────────────────── */
     if (url === '/pickup-orders' && req.method === 'POST') {
-      const { business_id, customer_name, customer_phone, customer_email, items, notes, pickup_time, total } = req.body || {};
-      if (!business_id || !customer_name || !customer_phone || !items?.length)
+      // Sends a notification + an email to a caller-supplied address — cap per IP.
+      if (rateLimited(req, res, { key: 'pickup', limit: 10, windowMs: 600000 })) return;
+      const { business_id, customer_name, customer_phone, customer_email, items, notes, pickup_time } = req.body || {};
+      let total = req.body?.total;
+      if (!business_id || !customer_name || !customer_phone || !Array.isArray(items) || !items.length)
         return res.status(400).json({ error: 'business_id, customer_name, customer_phone, items required' });
+      // Re-price from the menu when every cart line matches this business's menu
+      // (same rule as the price_pickup_order DB trigger, which skips service-role inserts).
+      const itemIds = items.map(i => i && i.id).filter(Boolean).map(String);
+      if (itemIds.length === items.length) {
+        const { data: menu } = await sb().from('menu_items').select('id,price')
+          .eq('business_id', business_id).in('id', itemIds);
+        const priceOf = Object.fromEntries((menu || []).map(m => [String(m.id), +m.price || 0]));
+        if (items.every(i => String(i.id) in priceOf))
+          total = items.reduce((sum, i) => sum + priceOf[String(i.id)] * Math.max(parseInt(i.qty, 10) || 1, 1), 0);
+      }
       const order_ref = `ORD-${Date.now()}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
       // capture user_id if the caller is authenticated
       let placing_user_id = null, placing_user_email = null;
@@ -3187,6 +3227,7 @@ module.exports = async (req, res) => {
 
     /* ─── GET /geocode?venue=&city= ─────────────────────────── */
     if (url === '/geocode' && req.method === 'GET') {
+      if (rateLimited(req, res, { key: 'geocode', limit: 30, windowMs: 60000 })) return;
       const venue = (q.venue || '').trim();
       const city  = (q.city  || '').trim();
       if (!venue && !city) return res.status(400).json({ error: 'venue or city required' });
