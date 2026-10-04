@@ -201,6 +201,10 @@ module.exports = async (req, res) => {
 
     /* ─── GET /siza/health ───────────────────────────────────── */
     if (url === '/siza/health' && req.method === 'GET') {
+      // Spends Groq quota on every call — admins only.
+      const hUser = await verifyToken((req.headers.authorization || '').replace('Bearer ', ''));
+      const { data: hProf } = hUser ? await sb().from('profiles').select('role').eq('id', hUser.id).maybeSingle() : { data: null };
+      if (hProf?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
       const groqKey = process.env.GROQ_API_KEY || '';
       const results = {};
 
@@ -239,7 +243,8 @@ module.exports = async (req, res) => {
     /* ─── GET /siza/whatsapp/webhook — Meta verification ─────── */
     if (url === '/siza/whatsapp/webhook' && req.method === 'GET') {
       const q = Object.fromEntries(new URL(req.url, 'http://x').searchParams);
-      if (q['hub.verify_token'] !== (process.env.WHATSAPP_VERIFY_TOKEN || '')) {
+      const verifyTok = process.env.WHATSAPP_VERIFY_TOKEN || '';
+      if (!verifyTok || q['hub.verify_token'] !== verifyTok) {
         return res.status(403).send('Forbidden');
       }
       return res.status(200).send(q['hub.challenge']);
@@ -396,6 +401,7 @@ ${text.slice(0, 4000)}`;
     if (url === '/siza/chat' && req.method === 'POST') {
       const { eventId, conversationId, message, channel = 'web', sessionId } = req.body || {};
       if (!message) return res.status(400).json({ error: 'message required' });
+      if (String(message).length > 1000) return res.status(400).json({ error: 'message too long (max 1000 characters)' });
 
       // Load event (optional — null for discovery mode)
       let event = null;
@@ -409,6 +415,14 @@ ${text.slice(0, 4000)}`;
 
       // Get or create conversation (non-fatal — Lumi responds even without DB tracking)
       let convId = conversationId;
+      if (convId) {
+        // Only continue a conversation that belongs to this browser session and event —
+        // otherwise a guessed/leaked id would pull someone else's history into the prompt.
+        const { data: owned } = await sb().from('siza_conversations')
+          .select('customer_session_id,event_id').eq('id', convId).maybeSingle();
+        if (!owned || !sessionId || owned.customer_session_id !== sessionId
+            || (owned.event_id || null) !== (eventId || null)) convId = null;
+      }
       if (!convId) {
         const { data: conv, error: convErr } = await sb().from('siza_conversations').insert({
           event_id: eventId || null,
@@ -809,11 +823,12 @@ ${text.slice(0, 4000)}`;
       // Verify Meta signature
       const sig = req.headers['x-hub-signature-256'] || '';
       const appSecret = process.env.WHATSAPP_APP_SECRET || '';
-      if (appSecret) {
-        const expected = 'sha256=' + crypto.createHmac('sha256', appSecret)
-          .update(JSON.stringify(req.body)).digest('hex');
-        if (sig !== expected) return res.status(401).json({ error: 'Invalid signature' });
-      }
+      // No secret = no way to tell Meta from a forger, so refuse rather than reply.
+      if (!appSecret) return res.status(503).json({ error: 'WhatsApp webhook not configured' });
+      const expected = 'sha256=' + crypto.createHmac('sha256', appSecret)
+        .update(JSON.stringify(req.body)).digest('hex');
+      if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected)))
+        return res.status(401).json({ error: 'Invalid signature' });
 
       const entry = req.body?.entry?.[0];
       const change = entry?.changes?.[0];
@@ -977,6 +992,10 @@ ${text.slice(0, 4000)}`;
       const authHeader = (req.headers.authorization || '').replace('Bearer ', '');
       const user = await verifyToken(authHeader);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
+      if (rateLimited(req, res, { key: 'wa-reg', limit: 5, windowMs: 3600000 })) return;
+      const { data: waProf } = await sb().from('profiles').select('role').eq('id', user.id).maybeSingle();
+      if (!['organizer', 'business', 'admin'].includes(waProf?.role))
+        return res.status(403).json({ error: 'Only organizer or business accounts can connect WhatsApp' });
       const { phone_number } = req.body || {};
       if (!phone_number) return res.status(400).json({ error: 'phone_number required' });
 

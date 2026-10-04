@@ -1,0 +1,9 @@
+-- APPLIED 2026-10-04. Record of the migrations create_tiktok_leads, harden_rpc_functions and
+-- rls_initplan_and_fk_indexes (see Supabase migration history for the exact SQL).
+-- * tiktok_leads table (admin-only RLS) — the admin TikTok panel wrote to a missing table.
+-- * insert_squad_invite / get_squad_plans / get_friend_suggestions: EXECUTE revoked from
+--   anon/authenticated (they trust a user-id argument; only the API calls them, with the
+--   service key).
+-- * trigger functions not callable as RPCs; increment_poi_votes is one vote per user (poi_votes).
+-- * search_path pinned on linter-flagged functions.
+-- * RLS policies evaluate auth.uid()/auth.role() once per query; every FK has an index.

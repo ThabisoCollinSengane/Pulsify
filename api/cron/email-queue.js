@@ -1,4 +1,4 @@
-const { sbAs, corsHeaders, rateLimited } = require('../../lib/shared');
+const { sbAs, corsHeaders, rateLimited, cronAuthorized } = require('../../lib/shared');
 const {
   sendTicketEmail, sendPaymentConfirmEmail, sendWelcomeEmail,
   sendVerifApprovedEmail, sendVerifRejectedEmail,
@@ -33,11 +33,7 @@ module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // Vercel Cron sends a header; also allow direct call with CRON_SECRET for testing
-  const auth = req.headers.authorization || '';
-  if (auth !== `Bearer ${process.env.CRON_SECRET}` && process.env.CRON_SECRET) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  if (!cronAuthorized(req)) return res.status(401).json({ error: 'Unauthorized' });
 
   const sba = sbAs();
   const { data: rows, error } = await sba

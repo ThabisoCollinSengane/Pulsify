@@ -3535,7 +3535,7 @@ async function initPay(evId) {
     showToast('Preparing checkout…');
     let initData;
     try {
-      initData = await Api.post('/ticket/init', { event_id: evId, tier_id: selTier?.id || null, quantity: selQty, buyer_name: name, buyer_email: email, user_id: currentUser?.id || null });
+      initData = await Api.post('/ticket/init', { event_id: evId, tier_id: selTier?.id || null, quantity: selQty, buyer_name: name, buyer_email: email }, { auth: 'optional' });
     } catch(e) { return showToast(e.message || 'Payment error — try again', 'err'); }
 
     PaystackPop.setup({
@@ -3548,7 +3548,7 @@ async function initPay(evId) {
       callback: async function(psRes) {
         showToast('Confirming your ticket…');
         try {
-          const cd = await Api.get('/ticket/confirm?ref=' + encodeURIComponent(psRes.reference));
+          const cd = await Api.get('/ticket/confirm?ref=' + encodeURIComponent(psRes.reference), { auth: 'optional' });
           showTicketConfirm({ ...cd, quantity: initData.quantity, event_name: initData.event_name, tier_name: initData.tier_name });
           renderBookings();
         } catch(e) { showToast('Check My Tickets tab — your booking may already be confirmed', 'err'); }
@@ -3561,7 +3561,7 @@ async function initPay(evId) {
   // Free ticket — book directly
   showToast('Processing…');
   try {
-    const data = await Api.post('/ticket/purchase', { event_id: evId, tier_id: selTier?.id || null, quantity: selQty, buyer_name: name, buyer_email: email, user_id: currentUser?.id || null });
+    const data = await Api.post('/ticket/purchase', { event_id: evId, tier_id: selTier?.id || null, quantity: selQty, buyer_name: name, buyer_email: email }, { auth: 'optional' });
     showTicketConfirm({ ...data, quantity: selQty });
     if (currentUser) {
       const sb = getSB();
@@ -8990,7 +8990,7 @@ async function startChecklist(role, userId) {
       if (count > 0) done.add('squad');
     }
     if (effectiveRole === 'organizer' && sb) {
-      const { count: evCount } = await sb.from('events').select('id', { count: 'exact', head: true }).eq('organizer_id', userId);
+      const { count: evCount } = await sb.from('events').select('id', { count: 'exact', head: true }).eq('organiser_id', userId);
       if (evCount > 0) done.add('event');
     }
     if (effectiveRole === 'business' && sb) {

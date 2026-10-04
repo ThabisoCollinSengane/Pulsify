@@ -242,6 +242,12 @@ Tracked work from the security, architecture and map briefs. Tackle in order:
       query with no API equivalent.
 - [x] **Infinite scroll (arch §6D)** — keep 10/page, load next page on scroll — PR #22
 - [x] **Consistent request validation (arch §3)** — `validate()` helper in `lib/shared.js` used across api/events, api/index, api/payments, api/siza — PR #135.
+- [x] **Organiser payout hold** — no Paystack split at checkout; all ticket money settles
+      to Pulsify. `lib/payouts.js` (run from the daily `event-cleanup` cron) pays each
+      organiser the ticket subtotal 2 business days after the event via Paystack Transfers,
+      recording `organiser_payouts` + `bookings.payout_id` (claimed before sending — never
+      double-pays). Gated by the `payouts_auto` flag (off = report-only). Needs Paystack
+      Transfers enabled with OTP off. `db/organiser_payouts.sql`.
 - [ ] **Frontend modularization (#14)** — split index.html into modules (big, later).
 - [x] **Queue/background jobs (arch §8)** — async email queue (`pending_emails` table + `lib/email-queue.js` + `api/cron/email-queue.js` 7am cron) — PR #134
 

@@ -1,15 +1,11 @@
-const { sb, CORS } = require('../../lib/shared');
+const { sb, CORS, cronAuthorized } = require('../../lib/shared');
+const { runPayouts } = require('../../lib/payouts');
 
 module.exports = async (req, res) => {
   Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // Verify cron secret so only Vercel scheduler (or authorized callers) can trigger this
-  const secret = process.env.CRON_SECRET;
-  const auth = req.headers.authorization || '';
-  if (secret && auth !== 'Bearer ' + secret) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  if (!cronAuthorized(req)) return res.status(401).json({ error: 'Unauthorized' });
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -31,11 +27,17 @@ module.exports = async (req, res) => {
     const { data: clean, error: cleanErr } = await sb().rpc('cleanup_map_data');
     if (cleanErr) console.error('[event-cleanup] cleanup_map_data failed:', cleanErr.message);
 
+    // Organiser payouts: 2 business days after each event (report-only until `payouts_auto` is on).
+    let payouts = null;
+    try { payouts = await runPayouts(); }
+    catch (e) { console.error('[event-cleanup] payouts failed:', e.message); payouts = { error: e.message }; }
+
     return res.status(200).json({
       ok: true,
       deactivated: data?.length || 0,
       coords_repaired: clean?.coords_repaired ?? null,
       venues_merged:   clean?.venues_merged   ?? null,
+      payouts,
     });
   } catch (e) {
     return res.status(500).json({ error: e.message });

@@ -319,6 +319,15 @@ module.exports = async (req, res) => {
       const squadId = squadDetailMatch[1];
       const { data: squad } = await sb().from('squads').select('id, name, description, avatar_url, is_public, member_count, total_points, template_type, template_config, creator_id, created_at').eq('id', squadId).single();
       if (!squad) return res.status(404).json({ error: 'Squad not found' });
+      // Private squads are visible only to members, the creator, or someone holding an invite.
+      if (!squad.is_public && squad.creator_id !== auth?.user?.id) {
+        if (!auth) return res.status(404).json({ error: 'Squad not found' });
+        const [{ data: mem }, { data: inv }] = await Promise.all([
+          sb().from('squad_members').select('user_id').eq('squad_id', squadId).eq('user_id', auth.user.id).maybeSingle(),
+          sb().from('squad_invites').select('id').eq('squad_id', squadId).eq('invitee_id', auth.user.id).limit(1),
+        ]);
+        if (!mem && !inv?.length) return res.status(404).json({ error: 'Squad not found' });
+      }
       const [{ data: members }, { data: memberCheck }, { data: allPoints }] = await Promise.all([
         sb().from('squad_members').select('user_id, role, joined_at, profiles(id, display_name, username, avatar_url, is_verified)').eq('squad_id', squadId),
         auth ? sb().from('squad_members').select('user_id').eq('squad_id', squadId).eq('user_id', auth.user.id).maybeSingle() : Promise.resolve({ data: null }),

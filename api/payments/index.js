@@ -2,6 +2,19 @@ const crypto = require('crypto');
 const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError, validate } = require('../../lib/shared');
 const { queueEmail } = require('../../lib/email-queue');
 
+// Monthly subscription prices (kobo/cents). Must match the dashboards: organizer R220, business R360.
+const SUBSCRIPTION_PRICES_KOBO = { subscription_organizer: 22000, subscription_business: 36000 };
+
+// Paystack webhook signature. Refuses when the secret is unset (an empty-key HMAC is forgeable)
+// and compares in constant time.
+function paystackSignatureOk(req) {
+  const secret = process.env.PAYSTACK_SECRET_KEY;
+  const sig = String(req.headers['x-paystack-signature'] || '');
+  if (!secret || !sig) return false;
+  const hash = crypto.createHmac('sha512', secret).update(JSON.stringify(req.body)).digest('hex');
+  return sig.length === hash.length && crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(hash));
+}
+
 module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -18,10 +31,15 @@ module.exports = async (req, res) => {
     /* ─── GET /booking/:ref ───────────────────────────────── */
     const bookRef = url.match(/^\/booking\/([^/]+)$/)?.[1];
     if (bookRef && req.method === 'GET') {
+      // Buyer, the event's organiser, or an admin only — it returns contact details and the QR.
+      const auth = await authUser(req);
+      if (!auth) return res.status(401).json({ error: 'Sign in to view this booking' });
       const { data } = await sb().from('bookings')
-        .select('*,events(name,date_local,time_local,venue_name,venue_city)')
+        .select('*,events(name,date_local,time_local,venue_name,venue_city,organiser_id)')
         .eq('booking_ref', bookRef).single();
       if (!data) return res.status(404).json({ error: 'Booking not found' });
+      const allowed = data.user_id === auth.user.id || data.events?.organiser_id === auth.user.id || auth.profile.role === 'admin';
+      if (!allowed) return res.status(404).json({ error: 'Booking not found' });
       return res.status(200).json({ booking: data });
     }
 
@@ -35,10 +53,7 @@ module.exports = async (req, res) => {
        client amount can't confirm a booking. Idempotent on
        status='pending'. */
     if (url === '/paystack/webhook' && req.method === 'POST') {
-      const sig  = req.headers['x-paystack-signature'] || '';
-      const hash = crypto.createHmac('sha512', process.env.PAYSTACK_SECRET_KEY || '')
-        .update(JSON.stringify(req.body)).digest('hex');
-      if (sig !== hash) return res.status(401).json({ error: 'Invalid signature' });
+      if (!paystackSignatureOk(req)) return res.status(401).json({ error: 'Invalid signature' });
 
       if (req.body?.event === 'charge.success') {
         const pdata  = req.body.data || {};
@@ -169,12 +184,13 @@ module.exports = async (req, res) => {
       if (!auth) return res.status(401).json({ error: 'Unauthorized' });
       const { user, profile } = auth;
       const pv = validate(req, res, {
-        type:   { required: true, enum: ['ticket','subscription_organizer','subscription_business','promotion'] },
-        amount: { required: true, type: 'int', min: 1 },
+        type:   { required: true, enum: Object.keys(SUBSCRIPTION_PRICES_KOBO) },
         email:  { required: true, type: 'email' },
       });
       if (!pv) return;
-      const { type, amount, email } = pv;
+      const { type, email } = pv;
+      // The price is set here, never by the browser (a client amount let anyone buy premium for R1).
+      const amount = SUBSCRIPTION_PRICES_KOBO[type];
       const entity_id = req.body?.entity_id || null;
 
       const psRes = await fetch('https://api.paystack.co/transaction/initialize', {
@@ -212,7 +228,8 @@ module.exports = async (req, res) => {
       });
       if (!psRes.ok) { const b = await psRes.json().catch(() => ({})); return res.status(502).json({ error: b.message || 'Paystack verify error' }); }
       const psData = await psRes.json();
-      const newStatus = psData.data?.status === 'success' ? 'success' : 'failed';
+      const paidEnough = psData.data?.currency === 'ZAR' && (psData.data?.amount || 0) >= (SUBSCRIPTION_PRICES_KOBO[payment.type] || payment.amount);
+      const newStatus = psData.data?.status === 'success' && paidEnough ? 'success' : 'failed';
       const now = new Date().toISOString();
 
       const { data: updated } = await sb().from('payments')
@@ -239,10 +256,7 @@ module.exports = async (req, res) => {
 
     /* ─── POST /payments/webhook ──────────────────────────── */
     if (url === '/payments/webhook' && req.method === 'POST') {
-      const sig  = req.headers['x-paystack-signature'] || '';
-      const hash = crypto.createHmac('sha512', process.env.PAYSTACK_SECRET_KEY || '')
-        .update(JSON.stringify(req.body)).digest('hex');
-      if (sig !== hash) return res.status(401).json({ error: 'Invalid signature' });
+      if (!paystackSignatureOk(req)) return res.status(401).json({ error: 'Invalid signature' });
       res.status(200).json({ received: true });
 
       if (req.body?.event === 'charge.success') {
@@ -251,6 +265,11 @@ module.exports = async (req, res) => {
         if (!ref) return;
         const { data: payment } = await sb().from('payments').select('*').eq('reference', ref).maybeSingle();
         if (!payment || payment.status === 'success') return;
+        const wd = req.body.data || {};
+        if (wd.currency !== 'ZAR' || (wd.amount || 0) < (SUBSCRIPTION_PRICES_KOBO[payment.type] || payment.amount)) {
+          console.error('[payments/webhook] amount/currency mismatch for', ref);
+          return;
+        }
         const now = new Date().toISOString();
         await sb().from('payments').update({
           status: 'success', completed_at: now, metadata: { ...payment.metadata, paystack: req.body.data },
