@@ -5,5 +5,11 @@
     "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50",
     "CLAUDE_CODE_SUBAGENT_MODEL": "haiku",
     "ECC_CONTEXT_MONITOR_COST_WARNINGS": "off"
+  },
+  "permissions": {
+    "allow": [
+      "mcp__Supabase__apply_migration",
+      "mcp__Supabase__execute_sql"
+    ]
   }
 }
