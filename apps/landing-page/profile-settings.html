@@ -226,7 +226,7 @@ async function loadData() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { window.location.href = '/signin'; return; }
   currentUser = session.user;
-  const { data: profile } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  const { data: profile } = await sb.rpc('my_profile').single();
   currentProfile = profile || {};
 
   document.getElementById('av-name').textContent = currentProfile.display_name || currentUser.email?.split('@')[0] || 'Your Name';

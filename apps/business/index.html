@@ -1429,7 +1429,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const { data: { session } } = await sb.auth.getSession();
       if (session) {
         _sessionUser = session.user;
-        const { data: profile } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
+        const { data: profile } = await sb.rpc('my_profile').single();
         let role = profile?.role;
         if (!role) {
           // RLS blocked profile read — try localStorage p_user
@@ -2888,6 +2888,7 @@ async function updateOrderStatus(id, status) {
       sb.from('notifications').insert({
         user_id: order.user_id,
         type: 'order_ready',
+        from_user_id: (await sb.auth.getSession()).data.session?.user?.id || null,
         from_display_name: BIZ?.name || 'Venue',
         entity_id: id,
         entity_type: 'pickup_order',
