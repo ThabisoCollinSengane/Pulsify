@@ -2825,6 +2825,7 @@ module.exports = async (req, res) => {
     if (url === '/config' && req.method === 'GET') {
       return res.status(200).json({
         paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY || '',
+        paidTicketsLive: await flagEnabled('paystack_live'),
         appName: 'Pulsefy',
       });
     }

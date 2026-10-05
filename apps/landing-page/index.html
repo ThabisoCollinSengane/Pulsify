@@ -3494,7 +3494,7 @@ function buildOrder() {
   return `<div style="font-size:.79rem">
     <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--mu)">${x(selTier.name)} × ${selQty}</span><span>R${sub.toFixed(2)}</span></div>
     <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--mu)">Pulsefy fee (8%)</span><span style="color:var(--li)">R${comm.toFixed(2)}</span></div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--mu)">Paystack processing</span><span>R${psf.toFixed(2)}</span></div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--mu)">Card processing</span><span>R${psf.toFixed(2)}</span></div>
     <div style="display:flex;justify-content:space-between;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;border-top:1px solid var(--border);padding-top:8px;margin-top:4px"><span style="color:var(--mu)">Total</span><span style="color:var(--or)">R${total.toFixed(2)}</span></div>
   </div>`;
 }
@@ -3516,8 +3516,8 @@ function chgQ(delta) {
   const qe = document.getElementById('qty-disp'); if (qe) qe.textContent = selQty;
   const oe = document.getElementById('order-summary'); if (oe) oe.innerHTML = buildOrder();
 }
-let _paystackPK = '';
-Api.get('/config').then(d => { _paystackPK = d.paystackPublicKey || ''; }).catch(() => {});
+let _paystackPK = '', _paidTicketsLive = false;
+Api.get('/config').then(d => { _paystackPK = d.paystackPublicKey || ''; _paidTicketsLive = !!d.paidTicketsLive; }).catch(() => {});
 
 async function initPay(evId) {
   const name  = document.getElementById('buyer-name')?.value.trim();
@@ -3529,6 +3529,8 @@ async function initPay(evId) {
   const amount = selTier ? selTier.price * selQty * 100 : 0; // cents
 
   if (!isFree && amount > 0) {
+    // No payment partner live yet — say so plainly instead of failing at checkout.
+    if (!_paidTicketsLive) return showToast('Online ticket sales for this event open soon 🎟️ — follow the organiser to hear first', 'err');
     // Paid ticket — use /ticket/init to create pending booking + get split-enabled Paystack reference
     if (!_paystackPK) return showToast('Payment system unavailable — try again shortly', 'err');
 
