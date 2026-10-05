@@ -577,7 +577,7 @@ select.inp option{background:#1C1140}
             </div>
             <button id="org-sub-btn" class="btn-sec" style="padding:6px 12px;font-size:.72rem" onclick="upgradeOrgToPremium()">Upgrade →</button>
           </div>
-          <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">⭐ Auto-approve events · Priority visibility · Support — <strong>R220/month</strong></div>
+          <div style="margin-top:8px;font-size:.71rem;color:var(--mu);line-height:1.5">⭐ Auto-approve events · Priority visibility · Support — <strong>R220/month</strong> · first 3 months free</div>
         </div>
 
         <!-- Payment Method -->
@@ -889,6 +889,7 @@ select.inp option{background:#1C1140}
         <div style="font-size:2rem;margin-bottom:4px">💎</div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.06em">ORGANIZER PREMIUM</div>
         <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--or)">R220<span style="font-size:.8rem;font-weight:400;color:var(--mu)">/month</span></div>
+        <div style="font-size:.74rem;color:#00e564;font-weight:700;margin-top:4px">🎁 First 3 months free on new accounts</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:22px">
         <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Instant event publishing</div><div style="font-size:.71rem;color:var(--mu)">Events go live immediately — no admin approval wait</div></div></div>
@@ -1074,7 +1075,7 @@ const ORG_FAQ = [
   { q: 'How do I update my profile and settings?', a: 'Tap <b>⚙ Settings</b> in the bottom nav. From there you can update your display name, bio, city, genres, profile photo, social links, bank account details for payouts, and submit a verification request (KYC — upload selfie + ID). Verified organizers get a badge and boosted placement. ⚙️' },
   { q: 'How do I set the map location for my event?', a: 'In the event creation form, scroll to <b>Venue Coordinates</b>. Tap <b>📍 Use My Current Location</b> to auto-fill with GPS (stand at or near the venue), or type in the latitude and longitude manually. Once set, your event marker appears on the Pulsefy live map for all users to discover. 🗺️' },
   { q: 'What happens if I hit the post limit?', a: 'Free accounts get 5 posts per calendar month. When you reach the limit you\'ll see a prompt — tap Upgrade to switch to Premium for unlimited posts, events, and instant publishing without admin approval. Your counter resets on the 1st of each month. 💎' },
-  { q: 'How much does an Event Organiser subscription cost?', a: 'The Event Organiser plan is <b>R220/month</b>. It gives you instant event publishing (no admin approval wait), unlimited posts and events, ticket sales with QR scanning at the door, and promotion tools. You can cancel anytime — billing is monthly via Paystack. 💎' },
+  { q: 'How much does an Event Organiser subscription cost?', a: 'The Event Organiser plan is <b>R220/month</b>, and <b>new organiser accounts get it free for the first 3 months</b> — nothing is charged automatically when the free period ends. It gives you instant event publishing (no admin approval wait), unlimited posts and events, ticket sales with QR scanning at the door, and promotion tools. You can cancel anytime — billing is monthly via Paystack. 💎' },
   { q: 'When do I get paid for ticket sales?', a: 'Add your bank account under <b>⚙ Settings → Payment Method</b> to create your Paystack payout account. You receive <b>92%</b> of each sale (Pulsefy keeps an 8% platform fee). Ticket money is held until your event has taken place, then released to your bank account <b>2 business days after the event</b>. 💳' },
 ];
 function renderOrgFAQ() {
@@ -1880,6 +1881,9 @@ function showOrgSubBanner(profile) {
   } else if (subType === 'trial' && daysLeft !== null && daysLeft <= 0) {
     banner.style.cssText = 'display:block;margin:0 0 14px;padding:12px 16px;border-radius:14px;font-size:.78rem;line-height:1.5;background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);color:#FF2D78';
     banner.innerHTML = `🚫 <strong>Your trial has expired.</strong> New events require admin approval. <a href="mailto:hello@pulsefy.co.za" style="color:#FF2D78;font-weight:700">Upgrade to Premium →</a>`;
+  } else if (subType === 'trial' && daysLeft !== null && daysLeft > 7) {
+    banner.style.cssText = 'display:block;margin:0 0 14px;padding:12px 16px;border-radius:14px;font-size:.78rem;line-height:1.5;background:rgba(0,229,100,.08);border:1px solid rgba(0,229,100,.25);color:#00e564';
+    banner.innerHTML = `🎁 <strong>Premium is free for your first 3 months</strong> — ${daysLeft} days left (until ${trialExpires.toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}). After that it's R220/month, only if you choose to subscribe.`;
   } else if (subType === 'premium') {
     banner.style.cssText = 'display:block;margin:0 0 14px;padding:12px 16px;border-radius:14px;font-size:.78rem;line-height:1.5;background:rgba(176,38,255,.08);border:1px solid rgba(176,38,255,.2);color:#B026FF';
     banner.innerHTML = `💎 <strong>Premium organizer.</strong> Your events go live instantly without admin approval.`;
