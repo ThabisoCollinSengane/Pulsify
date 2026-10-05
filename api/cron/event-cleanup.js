@@ -27,6 +27,13 @@ module.exports = async (req, res) => {
     const { data: clean, error: cleanErr } = await sb().rpc('cleanup_map_data');
     if (cleanErr) console.error('[event-cleanup] cleanup_map_data failed:', cleanErr.message);
 
+    // 3-month launch trial (db/free_trial_3_months.sql): drop expired trials back to the free plan.
+    const { data: expired, error: trialErr } = await sb().from('profiles')
+      .update({ subscription_type: 'free' })
+      .eq('subscription_type', 'trial').lt('trial_expires_at', new Date().toISOString())
+      .select('id');
+    if (trialErr) console.error('[event-cleanup] trial expiry failed:', trialErr.message);
+
     // Organiser payouts: 2 business days after each event (report-only until `payouts_auto` is on).
     let payouts = null;
     try { payouts = await runPayouts(); }
@@ -37,6 +44,7 @@ module.exports = async (req, res) => {
       deactivated: data?.length || 0,
       coords_repaired: clean?.coords_repaired ?? null,
       venues_merged:   clean?.venues_merged   ?? null,
+      trials_expired:  expired?.length || 0,
       payouts,
     });
   } catch (e) {
