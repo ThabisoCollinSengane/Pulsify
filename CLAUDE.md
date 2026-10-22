@@ -89,7 +89,7 @@ On 22 Oct 2026 pulsefy.co.za started serving MzansiAcademy. The `pulsify` Vercel
 merge there deployed MzansiAcademy to production here. MzansiAcademy's `vercel.json` now
 has an `ignoreCommand` that skips builds in this project. Production here still comes from
 this repo's GitHub Actions deploy. If it happens again, push to `main` here to redeploy.
-Permanent fix (owner): pulsify → Settings → Git → disconnect the MzansiAcademy repo.
+Fixed 22 Oct 2026: the owner disconnected the MzansiAcademy repo in pulsify → Settings → Git.
 
 ### Deployment gotcha — root index.html shadows the `/` rewrite
 Vercel serves static files with higher priority than `rewrites`. If any `index.html` exists at the repo root, it will be uploaded by the CLI and served for `/`, completely bypassing the `/ → apps/landing-page/index.html` rewrite in `vercel.json`. This is why `.vercelignore` excludes `/index.html`. **Never create or leave an `index.html` at the repo root.**
