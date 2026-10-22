@@ -83,6 +83,14 @@ npx vercel --prod --yes --force --token=<VT>
 
 **CRITICAL — always use `--force`.** Without it, Vercel's edge cache can serve the old CDN response for `/` even after a successful deploy. `--force` bypasses the cache and guarantees the new bundle is served immediately.
 
+### Deployment gotcha — pulsify Vercel project was Git-linked to MzansiAcademy
+On 22 Oct 2026 pulsefy.co.za started serving MzansiAcademy. The `pulsify` Vercel project
+(prj_Mw2nEB…) is Git-connected to the `thabisosengane5-collab/MzansiAcademy-` repo, so a
+merge there deployed MzansiAcademy to production here. MzansiAcademy's `vercel.json` now
+has an `ignoreCommand` that skips builds in this project. Production here still comes from
+this repo's GitHub Actions deploy. If it happens again, push to `main` here to redeploy.
+Permanent fix (owner): pulsify → Settings → Git → disconnect the MzansiAcademy repo.
+
 ### Deployment gotcha — root index.html shadows the `/` rewrite
 Vercel serves static files with higher priority than `rewrites`. If any `index.html` exists at the repo root, it will be uploaded by the CLI and served for `/`, completely bypassing the `/ → apps/landing-page/index.html` rewrite in `vercel.json`. This is why `.vercelignore` excludes `/index.html`. **Never create or leave an `index.html` at the repo root.**
 
