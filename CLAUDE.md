@@ -237,6 +237,12 @@ A static `#vibe-chip-row` (5 pills: Party/Chill/Luxury/Social/Cultural) sits in 
 - **The API runs as service role, so any new route returning posts, comments or attendances must call `hiddenAuthorIds` / `canSeePost` (api/index.js).** Policies can't read profile columns outside the grant directly — use a definer helper.
 - Following is instant (no follow requests yet). "Show email" was removed.
 
+### Notifications come from DB triggers — don't insert them in the API too
+`trg_notif_on_reaction` (likes), `trg_notif_on_follow`, `trg_notif_on_comment` (comments + replies) create these notifications; `_sync_comment_count` / `_sync_like_count` keep the counts. An API-side insert/`+1` on top doubles them (happened 27 Nov 2026). Reposts have no trigger — the API sends that one.
+
+### Pulse mascot (`apps/landing-page/mascot.js`)
+Original SVG+CSS character. `PulseMascot.mount(el,{size,mood,message,side})`, `scan(root)` mounts `[data-pulse]` placeholders, `celebrate(msg)` shows a non-interactive cheer (z-index 4500, auto-removes). Moods: idle / party / sleepy / cheer. Used in feed empty/error states, post celebration, no-events, booking confirmation, home hero greeting, empty profile posts. Respects reduced motion. Never put it on map markers.
+
 ---
 
 ## 8. Roadmap / Deferred Checklist

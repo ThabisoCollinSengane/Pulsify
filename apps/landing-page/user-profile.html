@@ -8,6 +8,7 @@
 <title>User Profile — Pulsefy</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="/mascot.js" defer></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0;--bh:70px}
@@ -80,6 +81,7 @@ body{padding-bottom:32px}
 .ev-badge{display:inline-block;background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.25);color:#00D4AA;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;padding:2px 9px;border-radius:50px}
 .empty{padding:48px 20px;text-align:center}
 .empty-ico{font-size:3rem;margin-bottom:14px}
+.empty-m{display:flex;justify-content:center;margin-bottom:12px;font-size:3rem}
 .empty-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;margin-bottom:8px}
 .empty-sub{font-size:.8rem;color:var(--mu);line-height:1.5;margin-bottom:20px}
 .empty-btn{background:var(--or);color:#fff;border:none;padding:10px 24px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer}
@@ -566,7 +568,9 @@ async function renderPosts(userId) {
     const items = [...ownItems, ...repostItems].sort((a, b) => new Date(b._sortTs) - new Date(a._sortTs));
 
     if (!items.length) {
-      el.innerHTML = '<div class="empty"><div class="empty-ico">📸</div><div class="empty-title">No posts yet</div></div>';
+      el.innerHTML = '<div class="empty"><div class="empty-m" data-pulse-mascot="sleepy">📸</div><div class="empty-title">No posts yet</div>' +
+        (currentUser && currentUser.id === userId ? '<div class="empty-sub">Go make some memories ✨</div>' : '') + '</div>';
+      window.PulseMascot && PulseMascot.scan(el);
       return;
     }
     const _pids = items.map(p => p.id);
