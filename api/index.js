@@ -1561,10 +1561,16 @@ module.exports = async (req, res) => {
       if (!cmt) return res.status(404).json({ error: 'Comment not found' });
       if (cmt.user_id !== user.id) return res.status(403).json({ error: 'Not your comment' });
 
-      const { error: detachErr } = await sb().from('comments').update({ parent_id: null }).eq('parent_id', delCmtId);
-      if (detachErr) return res.status(400).json({ error: detachErr.message });
+      const { data: replies, error: detachErr } = await sb().from('comments')
+        .update({ parent_id: null }).eq('parent_id', delCmtId).select('id');
+      if (detachErr) return res.status(400).json({ error: 'Could not delete comment — try again' });
       const { error } = await sb().from('comments').delete().eq('id', delCmtId).eq('user_id', user.id);
-      if (error) return res.status(400).json({ error: error.message });
+      if (error) {
+        // Put the replies back under the comment so a failed delete changes nothing.
+        const ids = (replies || []).map(r => r.id);
+        if (ids.length) await sb().from('comments').update({ parent_id: delCmtId }).in('id', ids);
+        return res.status(400).json({ error: 'Could not delete comment — try again' });
+      }
       return res.status(200).json({ success: true });
     }
 

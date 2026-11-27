@@ -654,7 +654,7 @@ function buildCard(post) {
       '</div>' +
       '<div style="flex:1;min-width:0;cursor:pointer" onclick="openProfile(\u0027'+x(post.user_id)+'\u0027)">' +
         '<div class="fo"><span class="fo-n">' + x(post.display_name || post.username) + '</span>' + (post.is_verified ? '<span class="verified-pill" title="Verified by Pulsefy"><span class="puls-badge"></span><span class="verified-txt">Verified</span></span>' : '') + (isOrg ? '<span class="org-pill">📢 Page</span>' : '') + (isHot ? '<span class="hot-badge">🔥 HOT</span>' : '') + '</div>' +
-        (post.event_name ? '<div style="font-size:.64rem;color:var(--or);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;letter-spacing:.04em;cursor:pointer" onclick="window.location.href=\u0027/?q=\u0027+encodeURIComponent(post.event_name||\u0027\u0027)" title="Find this event">🎟 '+x(post.event_name)+' ↗</div>' : '') +
+        (post.event_name ? '<div style="font-size:.64rem;color:var(--or);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;letter-spacing:.04em;cursor:pointer" onclick="openPostEvent(\u0027'+x(post.id)+'\u0027)" title="Find this event">🎟 '+x(post.event_name)+' ↗</div>' : '') +
         '<div class="fl">@'+x(post.username)+' · '+timeAgo(post.ts || post.created_at)+'</div>' +
       '</div>' +
       (!isOwn ? '<button class="follow-btn '+(isFollowing?'on':'')+'" id="fbtn-'+x(post.id)+'" onclick="doFollow(\u0027'+x(post.user_id)+'\u0027,\u0027'+x(post.id)+'\u0027)">'+(isFollowing?'✓ Following':'+ Follow')+'</button>' : '') +
@@ -841,11 +841,15 @@ async function doReactComment(cmtId, btn) {
     if (!wasPrev && isNext) { let sp2=b.querySelector('span'); if(!sp2){sp2=document.createElement('span');b.appendChild(sp2);} sp2.textContent=(parseInt(sp2.textContent||'0',10)+1); }
     b.classList.toggle('reacted', bEmoji === next);
   });
-  if (next) fetch('/api/reactions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await freshToken()}` },
-    body: JSON.stringify({ entity_type: 'comment', entity_id: cmtId, type: next }),
-  }).catch(()=>{});
+  const tok = await freshToken();
+  const send = (method, type) => fetch('/api/reactions', {
+    method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tok}` },
+    body: JSON.stringify({ entity_type: 'comment', entity_id: cmtId, type }),
+  });
+  try {
+    if (prev) await send('DELETE', prev);   // POST is insert-only, so remove the old emoji first
+    if (next) { const r = await send('POST', next); if (!r.ok) throw new Error(); }
+  } catch (e) { showToast('Could not save your reaction — try again'); }
 }
 
 // Comment emoji picker — tapping an emoji inserts it into that post's
@@ -1027,6 +1031,11 @@ async function doFollow(targetUserId, postId) {
   let _fw=[]; try{_fw=JSON.parse(localStorage.getItem('p_following')||'[]');}catch(e){} if(fol){if(!_fw.includes(targetUserId))_fw.push(targetUserId);}else{_fw=_fw.filter(i=>i!==targetUserId);} localStorage.setItem('p_following',JSON.stringify(_fw));
   showToast(fol ? '✓ Following' : 'Unfollowed', fol ? 'ok' : '');
   if (_filter === 'following') { _page = 1; render(); }
+}
+
+function openPostEvent(postId) {
+  const p = _posts.find(q => q.id === postId);
+  window.location.href = '/?q=' + encodeURIComponent(p?.event_name || '');
 }
 
 function doShare(postId) {

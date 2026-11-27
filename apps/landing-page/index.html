@@ -7821,7 +7821,7 @@ function renderSquadWorkspace(detail, container) {
            <div style="font-size:.58rem;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:4px">About</div>
            <div id="sq-about-text" style="font-size:.82rem;color:var(--mu2);line-height:1.55">${x(squad.description)}</div>
          </div>
-         ${isAdmin ? `<button onclick="sqEditAbout('${sid}','${x(squad.description).replace(/'/g,'&#39;')}')" style="background:none;border:none;color:var(--mu);font-size:.8rem;cursor:pointer;flex-shrink:0;padding:2px 6px">✏️</button>` : ''}
+         ${isAdmin ? `<button onclick="sqEditAbout('${x(sid)}',${jsStr(squad.description||'')})" style="background:none;border:none;color:var(--mu);font-size:.8rem;cursor:pointer;flex-shrink:0;padding:2px 6px">✏️</button>` : ''}
        </div>`
     : isAdmin
       ? `<button onclick="sqEditAbout('${sid}','')" style="display:block;width:calc(100% - 32px);margin:14px 16px 0;background:rgba(255,255,255,.03);border:1.5px dashed var(--border);border-radius:14px;padding:12px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;cursor:pointer;text-align:center">+ Add a squad description</button>`
