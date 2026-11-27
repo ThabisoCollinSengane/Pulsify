@@ -136,6 +136,48 @@ async function verifyToken(token) {
   } catch { return null; }
 }
 
+// Privacy: ids of followers-only authors whose posts viewerId (null = anon)
+// may NOT see — i.e. not themselves and not someone they follow. These routes
+// use the service role, so this is the only guard (RLS mirrors it for clients).
+async function hiddenAuthorIds(viewerId) {
+  const { data: priv } = await sb().from('profiles').select('id').eq('profile_visibility', 'followers');
+  const ids = (priv || []).map(r => r.id).filter(id => id !== viewerId);
+  if (!ids.length || !viewerId) return ids;
+  const { data: fws } = await sb().from('follows').select('following_id')
+    .eq('follower_id', viewerId).in('following_id', ids);
+  const followed = new Set((fws || []).map(f => f.following_id));
+  return ids.filter(id => !followed.has(id));
+}
+
+async function isFollowing(viewerId, ownerId) {
+  if (!viewerId) return false;
+  const { data: f } = await sb().from('follows').select('follower_id')
+    .eq('follower_id', viewerId).eq('following_id', ownerId).maybeSingle();
+  return !!f;
+}
+
+// Can viewerId see post postId? (false only for a followers-only author's post)
+async function canSeePost(postId, viewerId) {
+  const { data: post } = await sb().from('posts').select('user_id').eq('id', postId).maybeSingle();
+  if (!post?.user_id || post.user_id === viewerId) return true;
+  const { data: owner } = await sb().from('profiles').select('profile_visibility').eq('id', post.user_id).maybeSingle();
+  return owner?.profile_visibility !== 'followers' || await isFollowing(viewerId, post.user_id);
+}
+
+// Privacy: returns the 403 message if viewerId (null = anon) may not comment
+// on post postId under the owner's comment_permission, else null.
+async function postCommentBlock(postId, viewerId) {
+  const { data: post } = await sb().from('posts').select('user_id').eq('id', postId).maybeSingle();
+  if (!post?.user_id || post.user_id === viewerId) return null;
+  const { data: owner } = await sb().from('profiles').select('comment_permission,profile_visibility').eq('id', post.user_id).maybeSingle();
+  const follows = await isFollowing(viewerId, post.user_id);
+  if (owner?.profile_visibility === 'followers' && !follows) return 'Only followers can comment on this post.';
+  const perm = owner?.comment_permission || 'everyone';
+  if (perm === 'nobody') return 'Comments are turned off for this post.';
+  if (perm === 'followers' && !follows) return 'Only followers can comment on this post.';
+  return null;
+}
+
 async function authUser(req) {
   const token = tokenFrom(req);
   if (!token) return null;
@@ -355,9 +397,17 @@ module.exports = async (req, res) => {
       const userId     = q.user_id || null;
       const followerId = q.follower_id || null;
 
+      // Privacy: exclude followers-only authors the viewer can't see, before
+      // paging, so total/has_next stay correct. Null-author posts stay
+      // (SQL NOT IN would drop them), hence the nested or().
+      const viewer = tokenFrom(req) ? await verifyToken(tokenFrom(req)) : null;
+      const hidden = await hiddenAuthorIds(viewer?.id || null);
+      const visFilter = 'or(visibility.eq.public,visibility.is.null)';
       let query = sb().from('posts')
         .select('*', { count: 'exact' })
-        .or('visibility.eq.public,visibility.is.null')
+        .or(hidden.length
+          ? `and(${visFilter},or(user_id.is.null,user_id.not.in.(${hidden.join(',')})))`
+          : visFilter.slice(3, -1))
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
 
@@ -371,8 +421,9 @@ module.exports = async (req, res) => {
         query = query.in('user_id', ids);
       }
 
-      const { data: posts, error, count } = await query;
+      const { data: rawPosts, error, count } = await query;
       if (error) return res.status(400).json({ error: error.message });
+      const posts = rawPosts || [];
 
       const profileIds = [...new Set((posts || []).map(p => p.user_id).filter(Boolean))];
       let profileMap = {};
@@ -392,10 +443,31 @@ module.exports = async (req, res) => {
         (evs || []).forEach(e => { eventImageMap[e.id] = e.image_url || e.banner_url || null; });
       }
 
+      // Like/repost state for the viewer + repost counts — one query each for the page
+      const postIds = posts.map(p => p.id);
+      const rpCount = {}, myReposts = new Set(), myLikes = new Set();
+      if (postIds.length) {
+        const [{ data: rps }, { data: likes }] = await Promise.all([
+          sb().from('reposts').select('post_id,user_id').in('post_id', postIds),
+          viewer
+            ? sb().from('reactions').select('entity_id').eq('user_id', viewer.id)
+                .eq('entity_type', 'post').eq('type', 'like').in('entity_id', postIds)
+            : Promise.resolve({ data: [] }),
+        ]);
+        (rps || []).forEach(r => {
+          rpCount[r.post_id] = (rpCount[r.post_id] || 0) + 1;
+          if (viewer && r.user_id === viewer.id) myReposts.add(r.post_id);
+        });
+        (likes || []).forEach(r => myLikes.add(r.entity_id));
+      }
+
       const result = (posts || []).map(p => ({
         ...p,
         profile: profileMap[p.user_id] || null,
         image_url: p.image_url || (p.event_id ? eventImageMap[p.event_id] : null) || null,
+        liked_by_me: myLikes.has(p.id),
+        reposted_by_me: myReposts.has(p.id),
+        repost_count: rpCount[p.id] || 0,
       }));
       return res.status(200).json({ posts: result, total: count || 0, page, limit, has_next: offset + limit < (count || 0) });
     }
@@ -502,12 +574,21 @@ module.exports = async (req, res) => {
 
       if (!profile) return res.status(404).json({ error: 'Profile not found' });
 
+      // Privacy: followers-only profiles hide recent posts from non-followers.
+      let canView = true;
+      const { data: vis } = await sb().from('profiles').select('profile_visibility').eq('id', profId).maybeSingle();
+      if (vis?.profile_visibility === 'followers') {
+        const viewer = await verifyToken(tokenFrom(req));
+        canView = viewer?.id === profId || await isFollowing(viewer?.id, profId);
+      }
+
       return res.status(200).json({
         profile,
         posts_count:     postsCount    || 0,
         followers_count: followersCount || 0,
         following_count: followingCount || 0,
-        recent_posts:    recentPosts   || [],
+        recent_posts:    canView ? (recentPosts || []) : [],
+        can_view:        canView,
       });
     }
 
@@ -1236,33 +1317,34 @@ module.exports = async (req, res) => {
 
       const { entity_type, entity_id, type = 'like' } = req.body || {};
       if (!entity_type || !entity_id) return res.status(400).json({ error: 'entity_type and entity_id required' });
+      if (entity_type === 'post' && !(await canSeePost(entity_id, user.id))) return res.status(404).json({ error: 'Post not found' });
 
       const userClient = sbAs(token);
 
+      // Insert-only (idempotent): an existing reaction stays. Unlike is DELETE /reactions.
       const { data: existing } = await userClient.from('reactions')
         .select('user_id').eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type).maybeSingle();
-
-      if (existing) {
-        await userClient.from('reactions').delete().eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type);
-        // DB trigger handles count decrement — just notify caller
-        return res.status(200).json({ liked: false });
-      }
+      if (existing) return res.status(200).json({ liked: true });
 
       const { error: insErr } = await userClient.from('reactions').insert({ user_id: user.id, entity_type, entity_id, type });
+      if (insErr?.code === '23505') return res.status(200).json({ liked: true }); // lost a double-tap race
       if (insErr) return res.status(400).json({ error: insErr.message });
 
-      // DB trigger handles count increment; fire notification for posts/events
+      // DB trigger handles count increment; fire notification for posts/events.
+      // Best-effort: the query builder has no .catch(), so use try/await.
       if (entity_type === 'post') {
-        const { data: p } = await sb().from('posts').select('user_id').eq('id', entity_id).single();
-        if (p && p.user_id !== user.id) {
-          const { data: prof } = await sb().from('profiles').select('display_name').eq('id', user.id).single();
-          const name = prof?.display_name || 'Someone';
-          await sb().from('notifications').insert({
-            user_id: p.user_id, type: 'like', from_user_id: user.id,
-            from_display_name: name, entity_id, entity_type: 'post',
-            message: `${name} liked your post`,
-          }).catch(() => {});
-        }
+        try {
+          const { data: p } = await sb().from('posts').select('user_id').eq('id', entity_id).single();
+          if (p && p.user_id !== user.id) {
+            const { data: prof } = await sb().from('profiles').select('display_name').eq('id', user.id).single();
+            const name = prof?.display_name || 'Someone';
+            await sb().from('notifications').insert({
+              user_id: p.user_id, type: 'like', from_user_id: user.id,
+              from_display_name: name, entity_id, entity_type: 'post',
+              message: `${name} liked your post`,
+            });
+          }
+        } catch (e) { /* notification is non-critical */ }
       }
 
       return res.status(200).json({ liked: true });
@@ -1300,6 +1382,7 @@ module.exports = async (req, res) => {
 
       const { post_id } = req.body || {};
       if (!post_id) return res.status(400).json({ error: 'post_id required' });
+      if (!(await canSeePost(post_id, user.id))) return res.status(404).json({ error: 'Post not found' });
 
       // Write with the service-role client. The JWT is already verified above
       // and user.id is authoritative (never client-supplied), so this is safe
@@ -1389,6 +1472,12 @@ module.exports = async (req, res) => {
       const entity_type = q.entity_type || 'post';
       if (!entity_id) return res.status(400).json({ error: 'entity_id required' });
 
+      const viewer = entity_type === 'post' && tokenFrom(req) ? await verifyToken(tokenFrom(req)) : null;
+      if (entity_type === 'post' && !(await canSeePost(entity_id, viewer?.id || null))) {
+        return res.status(200).json({ comments: [], flat: [], can_comment: false,
+          comment_notice: 'Only followers can see and comment on this post.' });
+      }
+
       const { data, error } = await sb().from('comments')
         .select('id,user_id,body,parent_id,like_count,created_at')
         .eq('entity_id', entity_id)
@@ -1415,7 +1504,14 @@ module.exports = async (req, res) => {
         if (c.parent_id && byId[c.parent_id]) byId[c.parent_id].replies.push(c);
         else top.push(c);
       }
-      return res.status(200).json({ comments: top, flat: enriched });
+      // Privacy: tell the viewer whether they may comment (anon → false).
+      // comment_notice is the reason to show in place of the input, or null.
+      let gate = {};
+      if (entity_type === 'post') {
+        const notice = await postCommentBlock(entity_id, viewer?.id || null);
+        gate = { can_comment: !!viewer && !notice, comment_notice: notice };
+      }
+      return res.status(200).json({ comments: top, flat: enriched, ...gate });
     }
 
     /* ─── POST /comments ─────────────────────────────────── */
@@ -1433,20 +1529,49 @@ module.exports = async (req, res) => {
       if (!entity_id || !text) return res.status(400).json({ error: 'entity_id and body/content required' });
       if (text.length > 500) return res.status(400).json({ error: 'comment too long (max 500)' });
 
+      if (entity_type === 'post') {
+        const block = await postCommentBlock(entity_id, user.id);
+        if (block) return res.status(403).json({ error: block });
+      }
+
       const insertRow = { user_id: user.id, entity_id, entity_type, body: text };
       if (parent_id) insertRow.parent_id = parent_id;
 
       const { data: comment, error } = await sbAs(token).from('comments')
         .insert(insertRow).select().single();
 
+      // DB trigger backstop (e.g. permission changed between check and insert).
+      if (error && (/COMMENTS_NOT_ALLOWED/.test(error.message || '') || (error.code === '42501' && entity_type === 'post')))
+        return res.status(403).json({ error: "You can't comment on this post." });
       if (error) return res.status(400).json({ error: error.message });
-
-      if (entity_type === 'post') {
-        const { data: p } = await sb().from('posts').select('comment_count').eq('id', entity_id).single();
-        if (p) await sb().from('posts').update({ comment_count: (p.comment_count || 0) + 1 }).eq('id', entity_id);
-      }
+      // posts.comment_count is kept by trg_sync_comment_count_insert — no manual +1.
 
       return res.status(200).json({ comment: { ...comment, content: comment.body }, success: true });
+    }
+
+    /* ─── DELETE /comments/:id (delete own comment) ───────── */
+    // Replies by others survive: detach them (parent_id FK is ON DELETE CASCADE)
+    // before deleting. trg_sync_comment_count_delete keeps posts.comment_count.
+    const delCmtId = url.match(/^\/comments\/([^/]+)$/)?.[1];
+    if (delCmtId && req.method === 'DELETE') {
+      const user = await verifyToken(tokenFrom(req));
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { data: cmt } = await sb().from('comments').select('user_id').eq('id', delCmtId).maybeSingle();
+      if (!cmt) return res.status(404).json({ error: 'Comment not found' });
+      if (cmt.user_id !== user.id) return res.status(403).json({ error: 'Not your comment' });
+
+      const { data: replies, error: detachErr } = await sb().from('comments')
+        .update({ parent_id: null }).eq('parent_id', delCmtId).select('id');
+      if (detachErr) return res.status(400).json({ error: 'Could not delete comment — try again' });
+      const { error } = await sb().from('comments').delete().eq('id', delCmtId).eq('user_id', user.id);
+      if (error) {
+        // Put the replies back under the comment so a failed delete changes nothing.
+        const ids = (replies || []).map(r => r.id);
+        if (ids.length) await sb().from('comments').update({ parent_id: delCmtId }).in('id', ids);
+        return res.status(400).json({ error: 'Could not delete comment — try again' });
+      }
+      return res.status(200).json({ success: true });
     }
 
     const adminUserMatch = url.match(/^\/admin\/users\/([^/]+)$/);
@@ -2793,10 +2918,93 @@ module.exports = async (req, res) => {
       if (!social_links || typeof social_links !== 'object') return res.status(400).json({ error: 'social_links object required' });
       const allowed = ['whatsapp','instagram','tiktok','facebook','x'];
       const clean = {};
-      for (const k of allowed) clean[k] = (social_links[k] || '').trim().slice(0, 500);
+      // Stored-XSS guard: bare handles, digits for WhatsApp, or a plain https URL only.
+      for (const k of allowed) {
+        const v = String(social_links[k] || '').trim().slice(0, 200);
+        clean[k] = k === 'whatsapp' ? (v.replace(/[^\d+]/g, '') || null)
+          : (/^[A-Za-z0-9._-]{1,50}$/.test(v.replace(/^@+/, '')) ? v.replace(/^@+/, '')
+          : (/^https:\/\/[^\s"'<>`\\]+$/.test(v) ? v : null));
+      }
       const { data, error } = await sb().from('profiles').update({ social_links: clean }).eq('id', auth.user.id).select('social_links').single();
       if (error) return res.status(400).json({ error: error.message });
       return res.status(200).json({ social_links: data.social_links });
+    }
+
+    /* ─── POST /account/delete ── anonymise own account (bookings/payments kept) ── */
+    if (url === '/account/delete' && req.method === 'POST') {
+      const user = await verifyToken(tokenFrom(req));
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+      const id = user.id, db = sb();
+      const [ev, biz] = await Promise.all([
+        db.from('events').select('id', { count: 'exact', head: true }).eq('organiser_id', id),
+        db.from('businesses').select('id', { count: 'exact', head: true }).eq('owner_id', id),
+      ]);
+      if (ev.error || biz.error) return res.status(500).json({ error: (ev.error || biz.error).message });
+      if (ev.count || biz.count) return res.status(409).json({ error: 'You have events or a business on Pulsefy. Email support to close a business account.' });
+
+      const wipe = [
+        ['posts', 'user_id'], ['comments', 'user_id'], ['reactions', 'user_id'], ['reposts', 'user_id'],
+        ['post_reposts', 'user_id'], ['follows', 'follower_id', 'following_id'], ['saved_items', 'user_id'],
+        ['event_attendances', 'user_id'], ['event_likes', 'user_id'], ['push_subscriptions', 'user_id'],
+        ['kyc_documents', 'user_id'], ['location_requests', 'user_id'], ['poi_votes', 'user_id'],
+        ['squad_members', 'user_id'], ['squad_messages', 'user_id'], ['squad_plan_rsvps', 'user_id'],
+        ['squad_invites', 'inviter_id', 'invitee_id'], ['squad_points', 'user_id'],
+        ['notifications', 'user_id', 'from_user_id'],
+      ];
+      // Remove stored files first (ID docs, face scan, avatar, cover) — best effort, logged.
+      const [{ data: prof }, { data: kyc }] = await Promise.all([
+        db.from('profiles').select('avatar_url,cover_url,face_scan_url,id_doc_url').eq('id', id).maybeSingle(),
+        db.from('kyc_documents').select('storage_path').eq('user_id', id),
+      ]);
+      const pathIn = (u, bucket) => (u && u.includes(`/${bucket}/`)) ? u.split(`/${bucket}/`)[1].split('?')[0] : null;
+      const docPaths = [...new Set([...(kyc || []).map(k => k.storage_path),
+        pathIn(prof?.face_scan_url, 'verification-docs'), pathIn(prof?.id_doc_url, 'verification-docs')].filter(Boolean))];
+      // Current avatar/cover plus every older upload named avatar_<id>_* / cover_<id>_*.
+      const { data: older } = await db.storage.from('avatars').list('', { search: id, limit: 100 });
+      const imgPaths = [...new Set([pathIn(prof?.avatar_url, 'avatars'), pathIn(prof?.cover_url, 'avatars'),
+        ...(older || []).map(o => o.name).filter(n => n.includes(`_${id}_`))].filter(Boolean).map(p => decodeURIComponent(p)))];
+      for (const [bucket, paths] of [['verification-docs', docPaths], ['avatars', imgPaths]]) {
+        if (!paths.length) continue;
+        const { error } = await db.storage.from(bucket).remove(paths);
+        if (error) console.error('[account/delete] storage', bucket, error.message);
+      }
+
+      // Other users' rows that point at this user's posts/comments: detach replies
+      // (keep them) and drop reposts of these posts, so FK rules can't block the wipe.
+      const [{ data: myPosts }, { data: myCmts }] = await Promise.all([
+        db.from('posts').select('id').eq('user_id', id),
+        db.from('comments').select('id').eq('user_id', id),
+      ]);
+      const postIds = (myPosts || []).map(p => p.id), cmtIds = (myCmts || []).map(c => c.id);
+      if (cmtIds.length) await db.from('comments').update({ parent_id: null }).in('parent_id', cmtIds);
+      if (postIds.length) await Promise.all([
+        db.from('reposts').delete().in('post_id', postIds),
+        db.from('post_reposts').delete().in('post_id', postIds),
+      ]);
+
+      for (const [table, ...cols] of wipe) {
+        const del = db.from(table).delete();
+        const { error } = await (cols.length > 1 ? del.or(cols.map(c => `${c}.eq.${id}`).join(',')) : del.eq(cols[0], id));
+        if (error && (error.code === '42P01' || error.code === 'PGRST205')) { console.warn('[account/delete] no table', table); continue; }
+        if (error) { console.error('[account/delete]', table, error.message); return res.status(500).json({ error: 'Could not delete your account data — please try again' }); }
+      }
+
+      const email = `deleted+${id}@deleted.pulsefy.invalid`;
+      const { error: pErr } = await db.from('profiles').update({
+        display_name: 'Deleted user', username: `deleted_${id.slice(0, 8)}`,
+        avatar_url: null, cover_url: null, bio: null, city: null, province: null, phone: null, dob: null,
+        face_scan_url: null, id_doc_url: null, instagram: null, tiktok: null, whatsapp: null, facebook: null, twitter: null,
+        genres: [], social_links: {}, notification_prefs: {}, marketing_opt_in: false,
+        profile_visibility: 'followers', comment_permission: 'nobody', show_attended: false, email,
+      }).eq('id', id);
+      if (pErr) { console.error('[account/delete] profile', pErr.message); return res.status(500).json({ error: 'Could not anonymise your profile — try again' }); }
+
+      const { error: aErr } = await db.auth.admin.updateUserById(id, { email, email_confirm: true, ban_duration: '876000h', user_metadata: {} });
+      if (aErr) { console.error('[account/delete] auth', aErr.message); return res.status(500).json({ error: 'Could not close your login — please try again' }); }
+      // Suspend last: verifyToken rejects suspended users, so an earlier failure stays retryable.
+      const { error: sErr } = await db.from('profiles').update({ suspended: true }).eq('id', id);
+      if (sErr) { console.error('[account/delete] suspend', sErr.message); return res.status(500).json({ error: 'Almost done — please try again' }); }
+      return res.status(200).json({ success: true });
     }
 
     /* ─── GET /admin/app-settings ─────────────────────────── */

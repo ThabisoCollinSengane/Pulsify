@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="theme-color" content="#05080F"/>
 <title>Profile Settings — Pulsefy</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
@@ -12,10 +12,10 @@
 :root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0;--bh:70px}
 html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
 body{padding-bottom:40px}
-.tb{position:fixed;top:0;left:0;right:0;height:58px;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:rgba(5,8,15,.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
-.back{display:flex;align-items:center;gap:5px;background:transparent;border:none;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;cursor:pointer;padding:0}
+.tb{position:fixed;top:0;left:0;right:0;height:calc(58px + env(safe-area-inset-top));z-index:100;display:flex;align-items:center;justify-content:space-between;padding:env(safe-area-inset-top) 16px 0;background:rgba(5,8,15,.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
+.back{display:flex;align-items:center;gap:5px;background:transparent;border:none;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;cursor:pointer;padding:0 4px;min-height:44px}
 .tb-title{font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
-.content{padding:70px 16px 24px}
+.content{padding:calc(70px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))}
 .av-wrap{display:flex;flex-direction:column;align-items:center;padding:0 0 22px;border-bottom:1px solid var(--border);margin-bottom:20px}
 .cov{position:relative;width:100%;height:120px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,rgba(176,38,255,.4),rgba(255,92,0,.26));background-size:cover;background-position:center;cursor:pointer;margin-bottom:-40px}
 .cov-ov{position:absolute;right:10px;bottom:10px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.25);border-radius:50px;padding:6px 12px;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:5px}
@@ -25,7 +25,7 @@ body{padding-bottom:40px}
 .av:active .av-ov{opacity:1}
 .av-name{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;margin-top:11px}
 .av-handle{font-size:.76rem;color:var(--mu)}
-.av-btn{margin-top:11px;background:transparent;border:1px solid var(--border2);border-radius:50px;padding:7px 18px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu2);cursor:pointer}
+.av-btn{margin-top:11px;background:transparent;border:1px solid var(--border2);border-radius:50px;padding:7px 18px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu2);cursor:pointer;min-height:44px}
 .av-btn:active{border-color:var(--or);color:var(--or)}
 .sec{background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:14px}
 .sec-head{padding:13px 15px 9px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);border-bottom:1px solid var(--border)}
@@ -34,8 +34,9 @@ body{padding-bottom:40px}
 .lbl{font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu2);margin-bottom:5px;display:flex;align-items:center;gap:6px}
 .ro{font-size:.57rem;background:rgba(255,255,255,.05);padding:2px 7px;border-radius:50px;color:var(--mu);font-weight:400}
 .verified{font-size:.57rem;background:rgba(198,255,74,.1);border:1px solid rgba(198,255,74,.25);color:var(--li);padding:2px 8px;border-radius:50px;font-weight:700}
-.unverified{font-size:.57rem;background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.25);color:var(--or);padding:2px 8px;border-radius:50px;cursor:pointer;font-weight:700}
-.inp{width:100%;background:var(--surf);border:1.5px solid var(--border);border-radius:10px;padding:11px 13px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.87rem;outline:none;transition:border-color .2s}
+.unverified{font-size:.57rem;background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.25);color:var(--or);padding:2px 8px;border-radius:50px;cursor:pointer;font-weight:700;position:relative}
+.unverified::after{content:'';position:absolute;left:0;right:0;top:50%;height:44px;transform:translateY(-50%)}
+.inp{width:100%;min-height:44px;background:var(--surf);border:1.5px solid var(--border);border-radius:10px;padding:11px 13px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:16px;outline:none;transition:border-color .2s}
 .inp:focus{border-color:var(--or)}
 .inp::placeholder{color:var(--mu)}
 .inp:disabled{opacity:.45;cursor:not-allowed}
@@ -50,34 +51,36 @@ textarea.inp{resize:none;height:78px;line-height:1.5}
 .trow-info{}
 .trow-title{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;margin-bottom:2px}
 .trow-sub{font-size:.68rem;color:var(--mu)}
-.tgl{position:relative;display:inline-block;width:42px;height:22px;flex-shrink:0}
+.tgl{position:relative;display:inline-block;width:44px;height:44px;flex-shrink:0;cursor:pointer}
 .tgl input{opacity:0;width:0;height:0}
-.tgl-s{position:absolute;cursor:pointer;inset:0;background:var(--surf2);border-radius:22px;transition:.28s;border:1px solid var(--border2)}
+.tgl-s{position:absolute;cursor:pointer;left:1px;right:1px;top:11px;height:22px;background:var(--surf2);border-radius:22px;transition:.28s;border:1px solid var(--border2)}
 .tgl-s::before{content:'';position:absolute;height:16px;width:16px;left:2px;bottom:2px;background:var(--mu);border-radius:50%;transition:.28s}
 .tgl input:checked + .tgl-s{background:rgba(255,92,0,.2);border-color:var(--or)}
 .tgl input:checked + .tgl-s::before{transform:translateX(20px);background:var(--or)}
 .gg{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:13px 15px}
-.gc{display:flex;align-items:center;gap:7px;background:var(--surf);border:1.5px solid var(--border);border-radius:10px;padding:9px 11px;cursor:pointer;transition:all .18s;-webkit-tap-highlight-color:transparent}
+.gc{display:flex;align-items:center;gap:7px;background:var(--surf);border:1.5px solid var(--border);border-radius:10px;padding:9px 11px;min-height:44px;cursor:pointer;transition:all .18s;-webkit-tap-highlight-color:transparent}
 .gc.on{border-color:var(--or);background:rgba(255,92,0,.07)}
 .gc-ico{font-size:.88rem}
 .gc-lbl{font-family:'Syne',sans-serif;font-size:.69rem;font-weight:700;color:var(--mu);transition:color .18s}
 .gc.on .gc-lbl{color:var(--or)}
 .gc-chk{margin-left:auto;font-size:.72rem;color:var(--or);opacity:0;transition:opacity .18s}
 .gc.on .gc-chk{opacity:1}
-.psel{width:100%;background:var(--surf);border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;outline:none;cursor:pointer;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235A5870' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.psel{width:100%;min-height:44px;background:var(--surf);border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;color:var(--tx);font-family:'Syne',sans-serif;font-size:16px;font-weight:700;outline:none;cursor:pointer;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235A5870' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
 .psel option{background:#0D1424}
 .role-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700}
 .role-user{background:rgba(255,255,255,.05);color:var(--mu)}
 .role-admin{background:rgba(255,92,0,.12);color:var(--or);border:1px solid rgba(255,92,0,.3)}
 .role-mod{background:rgba(176,38,255,.12);color:#B026FF;border:1px solid rgba(176,38,255,.3)}
+.role-biz{background:rgba(0,229,255,.1);color:var(--cy);border:1px solid rgba(0,229,255,.28)}
 .status-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);font-size:.78rem;color:var(--mu2)}
 .status-row:last-child{border-bottom:none}
 .status-lbl{font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;color:var(--mu);min-width:90px}
-.save-btn{width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:15px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;margin-bottom:10px;transition:opacity .2s}
+.save-btn{width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:15px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:opacity .2s}
 .save-btn:active{opacity:.85}
-.out-btn{width:100%;background:rgba(255,45,120,.07);border:1px solid rgba(255,45,120,.22);color:var(--pk);border-radius:13px;padding:13px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;margin-bottom:8px}
-.del-btn{width:100%;background:transparent;border:none;color:var(--mu);font-family:'Syne',sans-serif;font-size:.76rem;cursor:pointer;padding:10px;text-decoration:underline}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 22px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;color:var(--tx);z-index:999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+.save-bar{position:sticky;bottom:0;z-index:50;margin:0 -16px 14px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(5,8,15,.96);backdrop-filter:blur(24px);border-top:1px solid var(--border)}
+.out-btn{width:100%;min-height:44px;background:rgba(255,45,120,.07);border:1px solid rgba(255,45,120,.22);color:var(--pk);border-radius:13px;padding:13px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;margin-bottom:8px}
+.del-btn{width:100%;min-height:44px;background:transparent;border:none;color:var(--mu);font-family:'Syne',sans-serif;font-size:.76rem;cursor:pointer;padding:10px;text-decoration:underline}
+.toast{position:fixed;bottom:calc(88px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(12px);background:var(--surf);border:1px solid var(--border);border-radius:22px;padding:10px 22px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;color:var(--tx);z-index:999;opacity:0;transition:all .3s;pointer-events:none;width:max-content;max-width:calc(100% - 32px);text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.5)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.ok{border-color:rgba(198,255,74,.4);color:var(--li)}
 .toast.err{border-color:rgba(255,45,120,.4);color:var(--pk)}
@@ -112,6 +115,7 @@ textarea.inp{resize:none;height:78px;line-height:1.5}
       <div class="lbl">Account Status &amp; Role</div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <span class="role-badge role-user" id="role-badge">👤 Standard User</span>
+        <span class="verified" id="verified-badge" style="display:none">✓ Verified</span>
         <span id="status-badge" style="font-size:.7rem;color:var(--li)">● Active</span>
       </div>
     </div>
@@ -125,6 +129,10 @@ textarea.inp{resize:none;height:78px;line-height:1.5}
         <span id="email-verif-badge" class="unverified" onclick="resendVerification()">⚠ Unverified — Tap to resend</span>
       </div>
     </div>
+    <div class="field">
+      <div class="lbl">Password</div>
+      <button class="av-btn" style="margin-top:0" onclick="changePassword()">Change password</button>
+    </div>
   </div>
 
   <div class="sec">
@@ -136,6 +144,15 @@ textarea.inp{resize:none;height:78px;line-height:1.5}
     <div class="field"><div class="lbl">Date of Birth</div><input class="inp" id="dob" type="date" style="color-scheme:dark"/></div>
     <div class="field"><div class="lbl">Bio</div><textarea class="inp" id="bio" placeholder="Tell the squad about yourself…"></textarea></div>
     <div class="field"><div class="row2"><div><div class="lbl">Province</div><select class="inp" id="province"><option value="">Select…</option><option value="KZN">KwaZulu-Natal</option><option value="GP">Gauteng</option><option value="WC">Western Cape</option><option value="EC">Eastern Cape</option><option value="MP">Mpumalanga</option><option value="LP">Limpopo</option><option value="NW">North West</option><option value="FS">Free State</option><option value="NC">Northern Cape</option></select></div><div><div class="lbl">City / Suburb</div><input class="inp" id="city" type="text" placeholder="e.g. Soweto"/></div></div></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head">Social Links</div>
+    <div class="field"><div class="lbl">Instagram</div><input class="inp" id="sl-instagram" type="text" placeholder="@handle" autocomplete="off"/></div>
+    <div class="field"><div class="lbl">TikTok</div><input class="inp" id="sl-tiktok" type="text" placeholder="@handle" autocomplete="off"/></div>
+    <div class="field"><div class="lbl">Facebook</div><input class="inp" id="sl-facebook" type="text" placeholder="Page or username" autocomplete="off"/></div>
+    <div class="field"><div class="lbl">X / Twitter</div><input class="inp" id="sl-x" type="text" placeholder="@handle" autocomplete="off"/></div>
+    <div class="field"><div class="lbl">WhatsApp</div><input class="inp" id="sl-whatsapp" type="tel" placeholder="e.g. 072 123 4567"/></div>
   </div>
 
   <div class="sec">
@@ -163,6 +180,7 @@ textarea.inp{resize:none;height:78px;line-height:1.5}
       <div class="trow"><div class="trow-info"><div class="trow-title">Squad invites</div><div class="trow-sub">When a friend invites you to their squad</div></div><label class="tgl"><input type="checkbox" id="n-squad_invite" checked/><span class="tgl-s"></span></label></div>
       <div class="trow"><div class="trow-info"><div class="trow-title">Squad plans</div><div class="trow-sub">New outings planned in your squads</div></div><label class="tgl"><input type="checkbox" id="n-squad_plan" checked/><span class="tgl-s"></span></label></div>
       <div class="trow"><div class="trow-info"><div class="trow-title">Organizer updates</div><div class="trow-sub">Posts from organisers and venues you follow</div></div><label class="tgl"><input type="checkbox" id="n-business_post" checked/><span class="tgl-s"></span></label></div>
+      <div class="trow"><div class="trow-info"><div class="trow-title">Pulsefy news &amp; offers</div><div class="trow-sub">Occasional emails about events and deals</div></div><label class="tgl"><input type="checkbox" id="marketing-opt-in"/><span class="tgl-s"></span></label></div>
     </div>
     <div style="margin:8px 15px 4px;padding:9px 11px;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.18);border-radius:10px;font-size:.72rem;color:var(--mu2);line-height:1.5">
       📬 Email, SMS &amp; push notifications are coming in v2. For now everything appears in your in-app bell 🔔.
@@ -171,14 +189,15 @@ textarea.inp{resize:none;height:78px;line-height:1.5}
 
   <div class="sec">
     <div class="sec-head">Privacy Settings</div>
-    <div class="field"><div class="lbl">Profile Visibility</div><select class="psel" id="priv-profile"><option value="true">🌍 Public — anyone can view</option><option value="false">🔒 Private — only followers</option></select></div>
+    <div class="field"><div class="lbl">Profile Visibility</div><select class="psel" id="priv-profile"><option value="public">🌍 Public — anyone can view</option><option value="followers">🔒 Private — only followers</option></select></div>
     <div class="field"><div class="lbl">Who Can Comment</div><select class="psel" id="priv-comment"><option value="everyone">Everyone</option><option value="followers">Followers only</option><option value="nobody">Nobody</option></select></div>
-    <div class="field"><div style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">Show email on profile</div><div style="font-size:.68rem;color:var(--mu)">Visible to other users</div></div><label class="tgl"><input type="checkbox" id="priv-email"/><span class="tgl-s"></span></label></div></div>
     <div class="field"><div style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">Show events attended</div><div style="font-size:.68rem;color:var(--mu)">Others can see your history</div></div><label class="tgl"><input type="checkbox" id="priv-attended"/><span class="tgl-s"></span></label></div></div>
   </div>
 
-  <div style="margin-top:6px">
+  <div class="save-bar">
     <button class="save-btn" onclick="saveAll()">Save All Changes</button>
+  </div>
+  <div style="margin-top:6px">
     <button class="out-btn" onclick="logout()">Sign Out</button>
     <button class="del-btn" onclick="deleteAccount()">Delete account</button>
   </div>
@@ -249,7 +268,18 @@ async function loadData() {
 
   const rb = document.getElementById('role-badge');
   if (currentProfile.role === 'admin') { rb.className = 'role-badge role-admin'; rb.textContent = '🔑 Admin'; }
-  else if (currentProfile.role === 'organizer') { rb.className = 'role-badge role-mod'; rb.textContent = '🎪 Organizer'; }
+  else if (currentProfile.role === 'organizer') { rb.className = 'role-badge role-mod'; rb.textContent = '🎤 Organiser'; }
+  else if (currentProfile.role === 'business') { rb.className = 'role-badge role-biz'; rb.textContent = '🏪 Business'; }
+  if (currentProfile.is_verified) document.getElementById('verified-badge').style.display = '';
+  const sbd = document.getElementById('status-badge');
+  if (currentProfile.suspended) { sbd.textContent = '● Suspended'; sbd.style.color = 'var(--pk)'; }
+  else if (currentProfile.verif_status === 'pending') { sbd.textContent = '● Pending verification'; sbd.style.color = 'var(--or)'; }
+
+  // user-profile.html renders social_links {instagram,tiktok,facebook,x,whatsapp}; legacy columns are the fallback
+  const sl = currentProfile.social_links || {};
+  [['instagram','instagram'],['tiktok','tiktok'],['facebook','facebook'],['x','twitter'],['whatsapp','whatsapp']].forEach(([k, col]) => {
+    document.getElementById('sl-' + k).value = (sl[k] !== undefined ? sl[k] : currentProfile[col]) || '';
+  });
 
   if (currentProfile.avatar_url) {
     const img = document.createElement('img'); img.src = currentProfile.avatar_url;
@@ -277,12 +307,11 @@ async function loadData() {
     const el = document.getElementById('n-' + k);
     if (el) el.checked = prefs[k] !== false; // default ON
   });
+  document.getElementById('marketing-opt-in').checked = currentProfile.marketing_opt_in === true;
 
-  const priv = JSON.parse(localStorage.getItem('p_privacy') || '{}');
-  document.getElementById('priv-profile').value = priv.profile_public !== false ? 'true' : 'false';
-  document.getElementById('priv-comment').value = priv.who_can_comment || 'everyone';
-  document.getElementById('priv-email').checked = priv.show_email === true;
-  document.getElementById('priv-attended').checked = priv.show_attended !== false;
+  document.getElementById('priv-profile').value = currentProfile.profile_visibility || 'public';
+  document.getElementById('priv-comment').value = currentProfile.comment_permission || 'everyone';
+  document.getElementById('priv-attended').checked = currentProfile.show_attended !== false;
 }
 
 function toggleGenre(el, genre) {
@@ -290,25 +319,23 @@ function toggleGenre(el, genre) {
   else { selectedGenres.add(genre); el.classList.add('on'); }
 }
 
-function handleAvatar(input) {
-  const file = input.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const url = e.target.result;
-    const av = document.getElementById('av-el');
-    let img = av.querySelector('img');
-    if (!img) { img = document.createElement('img'); av.appendChild(img); document.getElementById('av-emoji').style.display = 'none'; }
-    img.src = url;
-    const up = await compressImage(file, 512);
-    const fileName = `avatar_${currentUser.id}_${Date.now()}.${up.name.split('.').pop() || 'jpg'}`;
-    const { error } = await sb.storage.from('avatars').upload(fileName, up, { contentType: up.type });
-    if (!error) {
-      const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(fileName);
-      await sb.from('profiles').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
-    }
-    showToast('Photo updated ✓', 'ok');
-  };
-  reader.readAsDataURL(file);
+async function handleAvatar(input) {
+  const file = input.files[0]; input.value = ''; if (!file) return;
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { showToast('Photo must be a JPG, PNG or WebP', 'err'); return; }
+  const up = await compressImage(file, 512);
+  if (up.size > 5 * 1024 * 1024) { showToast('Photo must be 5MB or smaller', 'err'); return; }
+  showToast('Uploading photo…');
+  const fileName = `avatar_${currentUser.id}_${Date.now()}.${up.name.split('.').pop() || 'jpg'}`;
+  const { error } = await sb.storage.from('avatars').upload(fileName, up, { contentType: up.type });
+  if (error) { showToast('Upload failed: ' + error.message, 'err'); return; }
+  const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(fileName);
+  const { error: dbErr } = await sb.from('profiles').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
+  if (dbErr) { showToast('Could not save photo: ' + dbErr.message, 'err'); return; }
+  const av = document.getElementById('av-el');
+  let img = av.querySelector('img');
+  if (!img) { img = document.createElement('img'); av.appendChild(img); document.getElementById('av-emoji').style.display = 'none'; }
+  img.src = publicUrl;
+  showToast('Photo updated ✓', 'ok');
 }
 
 function handleCover(input) {
@@ -337,7 +364,9 @@ async function resendVerification() {
 
 async function saveAll() {
   const displayName = document.getElementById('display-name').value.trim();
-  const username = document.getElementById('username').value.trim().replace('@', '');
+  const username = document.getElementById('username').value.trim().replace(/^@+/, '').toLowerCase();
+  // Only validate a changed username, so legacy/empty handles don't block saving other settings
+  if (username !== (currentProfile.username || '') && !/^[a-z0-9_.]{3,30}$/.test(username)) { showToast('Username: 3–30 characters, only a–z, 0–9, _ and .', 'err'); return; }
   const bio = document.getElementById('bio').value.trim();
   const province = document.getElementById('province').value;
   const city = document.getElementById('city').value.trim();
@@ -350,28 +379,60 @@ async function saveAll() {
     const el = document.getElementById('n-' + k);
     if (el) notifPrefs[k] = el.checked;
   });
+  notifPrefs.reply = notifPrefs.comment; // replies follow the "Comments on your posts" toggle
   localStorage.setItem('p_notif', JSON.stringify(notifPrefs));
 
-  const updateData = { display_name: displayName, username, bio, province, city, dob, phone, genres: Array.from(selectedGenres), notification_prefs: notifPrefs, updated_at: new Date().toISOString() };
-  const { error } = await sb.from('profiles').update(updateData).eq('id', currentUser.id);
-  if (error) { showToast('Error saving: ' + error.message, 'err'); return; }
-
-  const privacyPrefs = {
-    profile_public: document.getElementById('priv-profile').value === 'true',
-    who_can_comment: document.getElementById('priv-comment').value,
-    show_email: document.getElementById('priv-email').checked,
-    show_attended: document.getElementById('priv-attended').checked
+  // Store bare handles: strip URLs down to the handle and a leading @; empty → null
+  // Only letters, digits, . _ - survive; anything else is dropped (stored-XSS guard).
+  const handle = v => { v = v.trim(); const fbId = v.match(/profile\.php\?id=(\d{1,30})/i); if (fbId) return 'https://facebook.com/profile.php?id=' + fbId[1]; v = v.replace(/^(https?:\/\/)?(www\.|m\.)?[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}\//i, '').split(/[/?#]/)[0].replace(/^@+/, ''); return /^[A-Za-z0-9._-]{1,50}$/.test(v) ? v : null; };
+  const waDigits = document.getElementById('sl-whatsapp').value.replace(/\D/g, '');
+  const socialLinks = {
+    instagram: handle(document.getElementById('sl-instagram').value),
+    tiktok: handle(document.getElementById('sl-tiktok').value),
+    facebook: handle(document.getElementById('sl-facebook').value),
+    x: handle(document.getElementById('sl-x').value),
+    whatsapp: waDigits ? '+' + waDigits.replace(/^0/, '27') : null,
   };
-  localStorage.setItem('p_privacy', JSON.stringify(privacyPrefs));
 
+  const updateData = { display_name: displayName, username, bio, province, city, dob, phone, genres: Array.from(selectedGenres), notification_prefs: notifPrefs,
+    marketing_opt_in: document.getElementById('marketing-opt-in').checked,
+    social_links: socialLinks, instagram: socialLinks.instagram, tiktok: socialLinks.tiktok,
+    facebook: socialLinks.facebook, twitter: socialLinks.x, whatsapp: socialLinks.whatsapp,
+    profile_visibility: document.getElementById('priv-profile').value,
+    comment_permission: document.getElementById('priv-comment').value,
+    show_attended: document.getElementById('priv-attended').checked,
+    updated_at: new Date().toISOString() };
+  const { error } = await sb.from('profiles').update(updateData).eq('id', currentUser.id);
+  if (error) { showToast(error.code === '23505' && /username/i.test(error.message || '') ? 'That username is taken' : 'Error saving: ' + error.message, 'err'); return; }
+
+  document.getElementById('username').value = username;
+  Object.keys(socialLinks).forEach(k => { document.getElementById('sl-' + k).value = socialLinks[k] || ''; });
   document.getElementById('av-name').textContent = displayName || 'Your Name';
   document.getElementById('av-handle').textContent = '@' + (username || currentUser.email?.split('@')[0]);
   showToast('✅ All changes saved!', 'ok');
 }
 
 async function logout() { await sb.auth.signOut(); localStorage.clear(); window.location.href = '/signin'; }
-async function deleteAccount() { if (!confirm('Delete your account? This cannot be undone.')) return; const { error } = await sb.auth.admin.deleteUser(currentUser.id); if (error) showToast(error.message, 'err'); else { localStorage.clear(); window.location.href = '/signin'; } }
-function showToast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast ' + type + ' show'; setTimeout(() => t.classList.remove('show'), 3000); }
+async function changePassword() {
+  const { error } = await sb.auth.resetPasswordForEmail(currentUser.email, { redirectTo: location.origin + '/reset-password' });
+  if (error) showToast(error.message, 'err');
+  else showToast('Check your email for a reset link', 'ok');
+}
+async function deleteAccount() {
+  const typed = prompt('Delete your account?\n\nYour profile, posts, comments and follows are removed. Ticket records are kept for the organiser. This cannot be undone.\n\nType DELETE to confirm.');
+  if (typed === null) return;
+  if (typed.trim() !== 'DELETE') { showToast('Type DELETE to confirm', 'err'); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = '/signin'; return; }
+  try {
+    const r = await fetch('/api/account/delete', { method: 'POST', headers: { Authorization: 'Bearer ' + session.access_token } });
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) { showToast(body.error || 'Could not delete account', 'err'); return; }
+  } catch (e) { showToast('Network error — try again', 'err'); return; }
+  try { await sb.auth.signOut({ scope: 'local' }); } catch (_) {}
+  localStorage.clear(); window.location.href = '/signin';
+}
+function showToast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast ' + type + ' show'; clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 3500); }
 
 loadData();
 </script>

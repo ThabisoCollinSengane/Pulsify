@@ -135,13 +135,38 @@ npx vercel --prod --yes --force --token=<VT>
 
 ---
 
+## 6a. AI team (agents + skills)
+
+Set up from `PULSIFY_MISSION.txt` (27 Nov 2026). Run any bug fix, feature or UI change
+through the **pulse-pipeline** skill.
+
+| Name | Kind | Job | Edits files? |
+| --- | --- | --- | --- |
+| `researcher` | agent (sonnet) | Fires first: root cause with evidence, or cited outside research → BRIEF | No |
+| `builder` | agent | Implements the BRIEF, nothing more | Yes |
+| `designer` | agent | Layout, visuals, animation; phone-first (390px), screenshots its work | Yes |
+| `reviewer` | agent (sonnet) | Reviews the diff: correctness, security/RLS, hard rules, simplicity → PASS or BLOCKER/FIX/NIT | No |
+| `qa-tester` | agent | Playwright at 390px + desktop, signed in/out, reload, second user | No |
+| `pulse-pipeline` | skill | researcher → builder/designer → reviewer (≤3 rounds) → qa-tester → owner approval → draft PR | — |
+| `ship-check` | skill | Release checklist + hard rules as PASS/FAIL/NOT TESTED before a merge | — |
+
+Files: `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`. An agent's `model:` frontmatter
+takes precedence over `CLAUDE_CODE_SUBAGENT_MODEL=haiku` in `.claude/settings.json`; agents
+without one run on haiku.
+
+**For the PULSIFY_MISSION work, section 6's "Claude can merge PRs" is suspended:** no merge
+to `main`, no production deploy, no paid services or sign-ups without the owner's explicit OK.
+Work on `claude/**` branches and open draft PRs (preview URLs only).
+
+---
+
 ## 7. Fixes Log (branch `claude/fix-event-organizer-feeds-ZCzRM`)
 
 Major fixes applied. Read this before touching the related areas — these are non-obvious and easy to regress.
 
 ### Overlay z-index hierarchy + back button
 Overlays must stack and close in descending z-index order.
-- `fl-overlay` (followers/following) **4000** → `prof-overlay` **3500** → `friends-list-overlay` **3000** → `squad-invite-overlay` **2700** → `social-sheet-ov` **2600** → `notif-overlay` **2000** → `#map-panel` **400**.
+- `fl-overlay` (followers/following) **4000** → `comments-overlay` **3600** → `prof-overlay` **3500** → `friends-list-overlay` **3000** → `squad-invite-overlay` **2700** → `social-sheet-ov` **2600** → `notif-overlay` **2000** → `#map-panel` **400**.
 - The `popstate` handler's `styleOverlays` array must list overlays in this same descending order so the back button closes the topmost one first.
 - **PWA exit guard:** `DOMContentLoaded` seeds two history entries (`replaceState` base sentinel + `pushState` current). When `popstate` reaches the sentinel, `showExitConfirm()` shows an "Exit Pulsify?" dialog instead of letting the app close. `_exitConfirmed` flag lets the real exit through on the second back.
 
@@ -205,6 +230,12 @@ A static `#vibe-chip-row` (5 pills: Party/Chill/Luxury/Social/Cultural) sits in 
 - **Auto-jump on feed filter:** `showTab('map')` maps `feedCity`/`feedProvince` via `_cityKeyFromName()` and focuses the map there on open. First-open uses `_pendingCityJump` (applied in the `load` handler since init is async).
 - **Style toggle** (🌗 `toggleMapStyle()`): satellite-streets ⇄ dark-v11. `setStyle()` wipes custom sources/layers/images, so the cluster source + heatmap + animated cluster layers are extracted into `_addMapSourcesAndLayers()` and re-added on `once('style.load')`. Layer/map event handlers (click/hover/zoomend) are attached **once** in the `load` handler — they persist across `setStyle`, so don't re-attach them.
 - **Venue grouping (replaces fan-out):** events are grouped by rounded lat/lon (4 d.p. ≈ 11m). One marker per venue; if multiple events, shows a count badge and tapping opens a venue panel listing all events. `showVenueEventsPanel(events, s)` renders the list.
+
+### Privacy settings (27 Nov 2026 — `db/privacy_settings.sql`)
+- `profiles.profile_visibility` ('public'|'followers'), `comment_permission` ('everyone'|'followers'|'nobody'), `show_attended`. **Not** in the client column grant — owners read via `my_profile()`, others via `get_profile_privacy(p_owner)` → `{can_view, show_attended, can_comment}`.
+- Enforced in RLS (posts `posts_select`, `event_attendances.attendances_select`, comments `cmt_select`) through definer helpers `can_view_private` / `can_view_attended` / `can_comment_on` / `can_view_post`, plus the `trg_enforce_comment_permission` BEFORE INSERT trigger (42501 `COMMENTS_NOT_ALLOWED`).
+- **The API runs as service role, so any new route returning posts, comments or attendances must call `hiddenAuthorIds` / `canSeePost` (api/index.js).** Policies can't read profile columns outside the grant directly — use a definer helper.
+- Following is instant (no follow requests yet). "Show email" was removed.
 
 ---
 

@@ -41,17 +41,20 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .cr::-webkit-scrollbar{display:none}
 .chip{flex-shrink:0;padding:6px 14px;border-radius:50px;border:1px solid var(--border);background:rgba(255,255,255,.02);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu);cursor:pointer;transition:all .2s;white-space:nowrap;-webkit-tap-highlight-color:transparent}
 .chip.active{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.09)}
-.feed{position:fixed;top:calc(var(--th) + 42px);left:0;right:0;bottom:var(--bh);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.feed{position:fixed;top:calc(var(--th) + 42px);left:0;right:0;bottom:var(--bh);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:76px}
 .feed::-webkit-scrollbar{display:none}
 .fc{margin:0 0 2px;border-bottom:1px solid var(--border);background:var(--surf);cursor:default;-webkit-tap-highlight-color:transparent}
 .fh{display:flex;align-items:center;gap:10px;padding:12px 14px 8px}
 .fa{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;border:1.5px solid var(--border);overflow:hidden;background:linear-gradient(135deg,#B026FF,#FF5C00)}
 .fa img{width:100%;height:100%;object-fit:cover}
 .fa.org{border-color:rgba(255,92,0,.6)}
-.fo{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;line-height:1.2;display:flex;align-items:center;gap:6px}
+.fo{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;line-height:1.2;display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap}
+.fo-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fo .verified-pill,.fo .org-pill,.fo .hot-badge{flex-shrink:0}
 .fl{font-size:.66rem;color:var(--mu)}
 .org-pill{font-size:.54rem;background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.28);color:var(--or);padding:2px 7px;border-radius:50px;font-weight:700}
-.follow-btn{margin-left:auto;padding:5px 13px;border-radius:50px;border:1px solid var(--border2);background:transparent;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer;transition:all .2s;flex-shrink:0;-webkit-tap-highlight-color:transparent}
+.follow-btn{margin-left:auto;padding:5px 13px;border-radius:50px;border:1px solid var(--border2);background:transparent;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer;transition:all .2s;flex-shrink:0;-webkit-tap-highlight-color:transparent;position:relative}
+.follow-btn::after{content:'';position:absolute;left:0;right:0;top:50%;height:44px;margin-top:-22px}
 .follow-btn.on{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.08)}
 .fb{width:100%;aspect-ratio:4/5;object-fit:cover;display:block;background:var(--surf2)}
 .fd{padding:10px 14px 4px}
@@ -59,7 +62,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .cap-ev{font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;color:var(--or);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
 .cap-more{color:var(--or);cursor:pointer;font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700}
 .fac{display:flex;align-items:center;gap:8px;padding:6px 14px 12px}
-.ab{display:flex;align-items:center;gap:5px;background:transparent;border:none;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu);cursor:pointer;padding:4px 6px;border-radius:50px;transition:color .18s;-webkit-tap-highlight-color:transparent}
+.ab{display:flex;align-items:center;justify-content:center;gap:5px;background:transparent;border:none;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu);cursor:pointer;padding:4px 6px;min-width:44px;min-height:44px;border-radius:50px;transition:color .18s;-webkit-tap-highlight-color:transparent}
 .ab:active{background:rgba(255,255,255,.04)}
 .ab.lk{color:var(--pk)}
 .ab.rp{color:var(--li)}
@@ -145,9 +148,9 @@ textarea.ff-c{resize:none;height:80px;line-height:1.55}
 .sv-av{width:100%;height:100%;border-radius:50%;background:var(--surf2);border:2px solid var(--surf);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-family:'Syne',sans-serif;font-weight:700;color:#fff}
 .sv-av img{width:100%;height:100%;object-fit:cover}
 .sv-name{font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;color:var(--mu2);max-width:54px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* Card entry animation */
-@keyframes fcIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.fc{animation:fcIn .22s ease both}
+/* Multi-photo gallery + "1/N" counter */
+.gal{position:relative}
+.gal-ct{position:absolute;top:10px;right:10px;z-index:1;background:rgba(0,0,0,.6);color:#fff;font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;padding:3px 8px;border-radius:50px;pointer-events:none}
 /* Image wrap with gradient stats overlay */
 .fb-wrap{position:relative;overflow:hidden;line-height:0}
 .fb-wrap .fb{width:100%;aspect-ratio:1/1;object-fit:cover;display:block}
@@ -376,7 +379,29 @@ async function fetchPosts() {
     (evs || []).forEach(e => { evMap[e.id] = e.image_url || null; });
     rows.forEach(p => { if (p.event_id && !p.image_url) p.image_url = evMap[p.event_id] || null; });
   }
+  await _addLikeRepostState(rows);
   return { posts: rows, total: count || 0 };
+}
+
+// Like/repost state from the DB (same fields GET /api/posts returns):
+// liked_by_me / reposted_by_me for the signed-in viewer + repost_count.
+// RLS: reactions exposes the viewer's own rows, reposts is public-read.
+async function _addLikeRepostState(rows) {
+  const ids = rows.map(p => p.id);
+  if (!ids.length) return;
+  const sb = getSB();
+  const [{ data: rps }, { data: likes }] = await Promise.all([
+    sb.from('reposts').select('post_id,user_id').in('post_id', ids),
+    _uid ? sb.from('reactions').select('entity_id').eq('user_id', _uid).eq('entity_type', 'post').eq('type', 'like').in('entity_id', ids)
+         : Promise.resolve({ data: [] }),
+  ]);
+  const liked = new Set((likes || []).map(r => r.entity_id));
+  rows.forEach(p => {
+    const mine = (rps || []).filter(r => r.post_id === p.id);
+    p.repost_count   = mine.length;
+    p.reposted_by_me = !!_uid && mine.some(r => r.user_id === _uid);
+    p.liked_by_me    = liked.has(p.id);
+  });
 }
 
 function mapPost(p) {
@@ -397,21 +422,28 @@ function mapPost(p) {
     comment_count: p.comments_count || p.comment_count || 0,
     reactions:    p.reactions || {},
     my_reaction:  p.my_reaction || '',
+    liked:        !!p.liked_by_me,
+    reposted:     !!p.reposted_by_me,
+    repost_count: p.repost_count || 0,
     likes: [], reposts: [], comments: [],
     ts: p.created_at,
   };
 }
 
-function _getLikes(postId) { try { return JSON.parse(localStorage.getItem('p_likes_'+postId) || 'null'); } catch { return null; } }
-function _setLikes(postId, arr) { localStorage.setItem('p_likes_'+postId, JSON.stringify(arr)); }
-function _getReposts(postId) { try { return JSON.parse(localStorage.getItem('p_rp_'+postId) || 'null'); } catch { return null; } }
-function _setReposts(postId, arr) { localStorage.setItem('p_rp_'+postId, JSON.stringify(arr)); }
 function _getComments(postId) { try { return JSON.parse(localStorage.getItem('p_cmts_'+postId) || 'null'); } catch { return null; } }
 function _setComments(postId, arr) { localStorage.setItem('p_cmts_'+postId, JSON.stringify(arr)); }
 
-function getLikes(post)    { return _getLikes(post.id)    || []; }
-function getReposts(post)  { return _getReposts(post.id)  || []; }
 function getComments(post) { return _getComments(post.id) || []; }
+
+// Fresh access token from the live session — the cached _token can be
+// expired (Supabase tokens last ~1h), which the API rejects with 401.
+async function freshToken() {
+  try {
+    const { data: { session } } = await getSB().auth.getSession();
+    if (session?.access_token) { _token = session.access_token; try { localStorage.setItem('p_token', _token); } catch(e) {} }
+  } catch(e) {}
+  return _token || '';
+}
 
 function x(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function timeAgo(iso) {
@@ -595,11 +627,9 @@ function _attachSentinel(feedEl) {
 }
 
 function buildCard(post) {
-  const likes    = getLikes(post);
-  const reposts  = getReposts(post);
   const comments = getComments(post);
-  const liked    = _uid && likes.includes(_uid);
-  const reposted = _uid && reposts.includes(_uid);
+  const liked    = _uid && post.liked;
+  const reposted = _uid && post.reposted;
   const isOrg    = post.role === 'organizer';
   let following  = [];
   try { following = JSON.parse(localStorage.getItem('p_following') || '[]'); } catch(e) {}
@@ -610,10 +640,9 @@ function buildCard(post) {
   const cap = post.caption || '';
   const shortCap = cap.length > 220 ? cap.slice(0,220) : cap;
 
-  // Always use server's counts as the source of truth; local cache is only for "did I like this" boolean state
+  // Counts and liked/reposted state all come from the DB
   const likeCount = fn(post.like_count || 0);
   const cmtCount  = fn(post.comment_count || 0);
-  const rpostCount = fn(reposts.length);
 
   const el = document.createElement('div');
   el.className = 'fc';
@@ -624,8 +653,8 @@ function buildCard(post) {
         (post.avatar_url ? '<img src="'+x(post.avatar_url)+'" loading="lazy" onerror="this.style.display=\u0027none\u0027"/>' : (post.display_name?.[0]?.toUpperCase()||'😊')) +
       '</div>' +
       '<div style="flex:1;min-width:0;cursor:pointer" onclick="openProfile(\u0027'+x(post.user_id)+'\u0027)">' +
-        '<div class="fo">' + x(post.display_name || post.username) + (post.is_verified ? '<span class="verified-pill" title="Verified by Pulsefy"><span class="puls-badge"></span><span class="verified-txt">Verified</span></span>' : '') + (isOrg ? '<span class="org-pill">📢 Page</span>' : '') + (isHot ? '<span class="hot-badge">🔥 HOT</span>' : '') + '</div>' +
-        (post.event_name ? '<div style="font-size:.64rem;color:var(--or);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;letter-spacing:.04em;cursor:pointer" onclick="window.location.href=\u0027/?q=\u0027+encodeURIComponent(post.event_name||\u0027\u0027)" title="Find this event">🎟 '+x(post.event_name)+' ↗</div>' : '') +
+        '<div class="fo"><span class="fo-n">' + x(post.display_name || post.username) + '</span>' + (post.is_verified ? '<span class="verified-pill" title="Verified by Pulsefy"><span class="puls-badge"></span><span class="verified-txt">Verified</span></span>' : '') + (isOrg ? '<span class="org-pill">📢 Page</span>' : '') + (isHot ? '<span class="hot-badge">🔥 HOT</span>' : '') + '</div>' +
+        (post.event_name ? '<div style="font-size:.64rem;color:var(--or);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;letter-spacing:.04em;cursor:pointer" onclick="openPostEvent(\u0027'+x(post.id)+'\u0027)" title="Find this event">🎟 '+x(post.event_name)+' ↗</div>' : '') +
         '<div class="fl">@'+x(post.username)+' · '+timeAgo(post.ts || post.created_at)+'</div>' +
       '</div>' +
       (!isOwn ? '<button class="follow-btn '+(isFollowing?'on':'')+'" id="fbtn-'+x(post.id)+'" onclick="doFollow(\u0027'+x(post.user_id)+'\u0027,\u0027'+x(post.id)+'\u0027)">'+(isFollowing?'✓ Following':'+ Follow')+'</button>' : '') +
@@ -644,23 +673,24 @@ function buildCard(post) {
       }
       if (!urls.length) return '';
       if (urls.length === 1) return '<div class="fb-wrap"><img class="fb" src="'+x(urls[0])+'" loading="lazy" onerror="this.parentNode.remove()"/><div class="fb-stats"><span class="fb-stat">❤️ '+fn(post.like_count||0)+'</span><span class="fb-stat">💬 '+fn(post.comment_count||0)+'</span></div></div>';
-      // Multiple photos — horizontal scroll gallery
-      return '<div style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:#000">' + urls.map(u => '<img src="' + x(u) + '" loading="lazy" onerror="this.remove()" style="width:100%;aspect-ratio:4/5;object-fit:cover;flex:0 0 100%;scroll-snap-align:start;display:block"/>').join('') + '</div>';
+      // Multiple photos — horizontal scroll gallery with a "1/N" counter
+      return '<div class="gal"><span class="gal-ct">1/' + urls.length + '</span><div onscroll="_galScroll(this)" style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:#000">' + urls.map(u => '<img src="' + x(u) + '" loading="lazy" onerror="var g=this.parentNode;this.remove();_galScroll(g)" style="width:100%;aspect-ratio:4/5;object-fit:cover;flex:0 0 100%;scroll-snap-align:start;display:block"/>').join('') + '</div></div>';
     })() +
     (cap ? '<div class="fd"><div class="cap" id="cap-'+x(post.id)+'">'+x(shortCap)+(cap.length>220?' <span class="cap-more" onclick="expandCap(\u0027'+x(post.id)+'\u0027)">more</span>':'')+'</div></div>' : '') +
     '<div class="fac">' +
       '<button class="ab '+(liked?'lk':'')+'" id="lb-'+x(post.id)+'" onclick="doLike(\u0027'+x(post.id)+'\u0027)"><span class="ai">'+(liked?'❤️':'🤍')+'</span> <span id="lc-'+x(post.id)+'">'+likeCount+'</span></button>' +
       '<button class="ab" onclick="toggleCmt(\u0027'+x(post.id)+'\u0027)"><span class="ai">💬</span> <span id="cc-'+x(post.id)+'">'+cmtCount+'</span></button>' +
-      '<button class="ab '+(reposted?'rp':'')+'" id="rb-'+x(post.id)+'" onclick="doRepost(\u0027'+x(post.id)+'\u0027)"><span class="ai">🔁</span> <span id="rc-'+x(post.id)+'">'+fn(reposts.length)+'</span></button>' +
-      '<button class="ab" onclick="doShare(\u0027'+x(post.caption||'')+'\u0027)"><span class="ai">🔗</span></button>' +
+      '<button class="ab '+(reposted?'rp':'')+'" id="rb-'+x(post.id)+'" onclick="doRepost(\u0027'+x(post.id)+'\u0027)"><span class="ai">🔁</span> <span id="rc-'+x(post.id)+'">'+fn(post.repost_count)+'</span></button>' +
+      '<button class="ab" onclick="doShare(\u0027'+x(post.id)+'\u0027)"><span class="ai">🔗</span></button>' +
       (isOwn
         ? '<button class="ab" onclick="editPost(\u0027'+x(post.id)+'\u0027)" title="Edit post"><span class="ai">✏️</span></button>'
-        : '<button class="ab" onclick="openReportPost(\u0027'+x(post.id)+'\u0027,\u0027'+x((post.caption||'').slice(0,80).replace(/\u0027/g,''))+'\u0027)" title="Report post"><span class="ai">🚩</span></button>') +
+        : '<button class="ab" onclick="openReportPost(\u0027'+x(post.id)+'\u0027)" title="Report post"><span class="ai">🚩</span></button>') +
     '</div>' +
     '<div class="cmt-wrap" id="cmt-'+x(post.id)+'">' +
       '<div id="cmtl-'+x(post.id)+'">'+(_cmtCache[post.id]?buildCmts(_cmtCache[post.id],post.id):'<div style="padding:10px 14px;font-size:.74rem;color:var(--mu)">Tap to load comments…</div>')+'</div>' +
       '<div class="cmt-emoji-pick" id="cep-'+x(post.id)+'">'+CMT_EMOJIS.map(e => '<span onclick="cmtEmojiPick(\u0027'+x(post.id)+'\u0027,\u0027'+e+'\u0027)">'+e+'</span>').join('')+'</div>' +
-      '<div class="cir"><button class="cmt-emoji-btn" onclick="cmtEmojiToggle(\u0027'+x(post.id)+'\u0027)" title="Emoji">🙂</button><input class="ci" id="cmti-'+x(post.id)+'" placeholder="Add a comment…" maxlength="500" onkeydown="if(event.key===\u0027Enter\u0027)doComment(\u0027'+x(post.id)+'\u0027)"/><button class="csnd" onclick="doComment(\u0027'+x(post.id)+'\u0027)">➤</button></div>' +
+      '<div id="cmtoff-'+x(post.id)+'" style="display:'+(_cmtNotice[post.id]?'block':'none')+';padding:10px 14px;text-align:center;font-size:.72rem;color:var(--mu)">'+x(_cmtNotice[post.id]||'')+'</div>' +
+      '<div class="cir"'+(_cmtNotice[post.id]?' style="display:none"':'')+'><button class="cmt-emoji-btn" onclick="cmtEmojiToggle(\u0027'+x(post.id)+'\u0027)" title="Emoji">🙂</button><input class="ci" id="cmti-'+x(post.id)+'" placeholder="Add a comment…" maxlength="500" onkeydown="if(event.key===\u0027Enter\u0027)doComment(\u0027'+x(post.id)+'\u0027)"/><button class="csnd" onclick="doComment(\u0027'+x(post.id)+'\u0027)">➤</button></div>' +
     '</div>';
   return el;
 }
@@ -676,7 +706,10 @@ function buildCmts(comments, postId) {
       ? '<div class="cmt-av"><img src="'+x(p.avatar_url)+'" loading="lazy" onerror="this.parentNode.textContent=\''+init+'\'"/></div>'
       : '<div class="cmt-av">'+init+'</div>';
     const replyBtn = (!isReply && postId)
-      ? '<button class="cmt-reply-btn" onclick="startReply(\''+x(postId)+'\',\''+x(c.id)+'\',\''+x(name).replace(/\'/g,'&#39;')+'\')">↩ Reply</button>'
+      ? '<button class="cmt-reply-btn" onclick="startReply(\''+x(postId)+'\',\''+x(c.id)+'\')">↩ Reply</button>'
+      : '';
+    const delBtn = (postId && _uid && c.user_id === _uid && !String(c.id).startsWith('tmp_'))
+      ? '<button class="cmt-reply-btn" onclick="deleteComment(\''+x(postId)+'\',\''+x(c.id)+'\')">Delete</button>'
       : '';
     const repliesHtml = (c.replies && c.replies.length)
       ? '<div class="cmt-replies">'+c.replies.map(r => renderOne(r, true)).join('')+'</div>'
@@ -688,11 +721,20 @@ function buildCmts(comments, postId) {
           '<div class="cmt-name" style="cursor:pointer" onclick="openProfile(\''+x(c.user_id||'')+'\')">'+x(name)+'</div>'+
           '<div class="cmt-text">'+x(body)+'</div>'+
           '<div class="cmt-time">'+timeAgo(ts)+'</div>'+
-          '<div style="display:flex;align-items:center;gap:4px;margin-top:3px">'+replyBtn+'</div>'+
+          '<div style="display:flex;align-items:center;gap:10px;margin-top:3px">'+replyBtn+delBtn+'</div>'+
         '</div>'+
       '</div>'+repliesHtml;
   };
   return comments.map(c => renderOne(c, false)).join('');
+}
+
+// Multi-photo gallery: keep the "1/N" counter in step with the swipe position
+function _galScroll(el) {
+  const ct = el && el.parentNode && el.parentNode.querySelector('.gal-ct');
+  if (!ct) return;
+  const n = el.children.length;
+  ct.style.display = n > 1 ? '' : 'none';
+  ct.textContent = Math.min(n, Math.round(el.scrollLeft / (el.clientWidth || 1)) + 1) + '/' + n;
 }
 
 function expandCap(postId) {
@@ -704,64 +746,64 @@ function expandCap(postId) {
 
 async function doLike(postId) {
   if (!_uid) return showToast('Sign in to like posts');
-  // Find the post in our in-memory list so we can update the server count optimistically
   const post = _posts.find(p => p.id === postId);
-  const likes   = _getLikes(postId) || [];
-  const liked   = likes.includes(_uid);
-  const newLikes = liked ? likes.filter(l=>l!==_uid) : [...likes, _uid];
-  _setLikes(postId, newLikes);
-  if (post) post.like_count = Math.max(0, (post.like_count || 0) + (liked ? -1 : 1));
+  if (!post || post._likeBusy) return;
   const btn = document.getElementById('lb-'+postId);
   const cnt = document.getElementById('lc-'+postId);
-  if (btn) { btn.classList.toggle('lk', !liked); btn.querySelector('.ai').textContent = liked?'🤍':'❤️'; }
-  if (cnt && post) cnt.textContent = fn(post.like_count);
-  fetch('/api/reactions', {
-    method: liked ? 'DELETE' : 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
-    body: JSON.stringify({ entity_type: 'post', entity_id: postId, type: 'like' }),
-  }).catch(()=>{});
+  const liked = !!post.liked, before = post.like_count || 0;
+  const setUi = (on, count) => {
+    post.liked = on; post.like_count = count;
+    if (btn) { btn.classList.toggle('lk', on); btn.querySelector('.ai').textContent = on?'❤️':'🤍'; }
+    if (cnt) cnt.textContent = fn(count);
+  };
+  setUi(!liked, Math.max(0, before + (liked ? -1 : 1)));   // optimistic
+  post._likeBusy = true;
+  try {
+    const r = await fetch('/api/reactions', {
+      method: liked ? 'DELETE' : 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await freshToken() },
+      body: JSON.stringify({ entity_type: 'post', entity_id: postId, type: 'like' }),
+    });
+    if (!r.ok) { const j = await safeJson(r); throw new Error(j.error || ('HTTP ' + r.status)); }
+  } catch (e) {
+    setUi(liked, before);   // roll back
+    const msg = (e && e.message) ? String(e.message) : '';
+    showToast(/unauth/i.test(msg) ? 'Please sign in again to like' : ('Could not save like — ' + (msg || 'try again')), 'err');
+  }
+  post._likeBusy = false;
 }
 
 async function doRepost(postId) {
   if (!_uid) return showToast('Sign in to repost');
-  const reposts = _getReposts(postId) || [];
-  const wasRp   = reposts.includes(_uid);
-  // Optimistic UI
-  const optimistic = wasRp ? reposts.filter(r=>r!==_uid) : [...reposts, _uid];
-  _setReposts(postId, optimistic);
+  const post = _posts.find(p => p.id === postId);
+  if (!post || post._rpBusy) return;
   const btn = document.getElementById('rb-'+postId);
   const cnt = document.getElementById('rc-'+postId);
-  if (btn) btn.classList.toggle('rp', !wasRp);
-  if (cnt) cnt.textContent = fn(optimistic.length);
+  const wasRp = !!post.reposted, before = post.repost_count || 0;
+  const setUi = (on, count) => {
+    post.reposted = on; post.repost_count = count;
+    if (btn) btn.classList.toggle('rp', on);
+    if (cnt) cnt.textContent = fn(count);
+  };
+  setUi(!wasRp, Math.max(0, before + (wasRp ? -1 : 1)));   // optimistic
   if (!wasRp) showToast('🔁 Reposted!', 'ok');
-  // Persist via the API. Use a FRESH access token from the live session —
-  // the cached _token in localStorage can be expired (Supabase tokens last
-  // ~1h), which the server rejects with 401.
+  post._rpBusy = true;
   try {
-    let token = _token || '';
-    try {
-      const { data: { session } } = await getSB().auth.getSession();
-      if (session?.access_token) { token = session.access_token; _token = token; try { localStorage.setItem('p_token', token); } catch(e) {} }
-    } catch(e) {}
     const r = await fetch('/api/reposts', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await freshToken() },
       body: JSON.stringify({ post_id: postId }),
     });
     const j = await safeJson(r);
     if (!r.ok) throw new Error(j.detail || j.error || 'repost failed');
-    // Reconcile local state + count with the server truth
-    _setReposts(postId, j.reposted ? [...new Set([...optimistic, _uid])] : optimistic.filter(x=>x!==_uid));
-    if (btn) btn.classList.toggle('rp', !!j.reposted);
-    if (cnt && typeof j.count === 'number') cnt.textContent = fn(j.count);
+    // Reconcile with the server truth
+    setUi(!!j.reposted, typeof j.count === 'number' ? j.count : post.repost_count);
   } catch (e) {
-    // Roll back optimistic UI on failure
-    _setReposts(postId, reposts);
-    if (btn) btn.classList.toggle('rp', wasRp);
-    if (cnt) cnt.textContent = fn(reposts.length);
+    setUi(wasRp, before);   // roll back
     const msg = (e && e.message) ? String(e.message) : '';
     showToast(/unauth/i.test(msg) ? 'Please sign in again to repost' : ('Could not repost — ' + (msg || 'try again')));
   }
+  post._rpBusy = false;
 }
 
 async function doLikeComment(cmtId) {
@@ -776,12 +818,12 @@ async function doLikeComment(cmtId) {
   if (cnt) { const n = parseInt(cnt.textContent||'0',10); cnt.textContent = Math.max(0, n + (newLiked?1:-1)) || ''; }
   fetch('/api/reactions', {
     method: newLiked ? 'POST' : 'DELETE',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await freshToken()}` },
     body: JSON.stringify({ entity_type: 'comment', entity_id: cmtId, type: 'like' }),
   }).catch(()=>{});
 }
 
-function doReactComment(cmtId, btn) {
+async function doReactComment(cmtId, btn) {
   if (!_uid) return showToast('Sign in to react');
   const emoji = btn.textContent.trim().replace(/\s.*/, '');
   const key = 'p_cr_'+cmtId;
@@ -799,11 +841,15 @@ function doReactComment(cmtId, btn) {
     if (!wasPrev && isNext) { let sp2=b.querySelector('span'); if(!sp2){sp2=document.createElement('span');b.appendChild(sp2);} sp2.textContent=(parseInt(sp2.textContent||'0',10)+1); }
     b.classList.toggle('reacted', bEmoji === next);
   });
-  if (next) fetch('/api/reactions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
-    body: JSON.stringify({ entity_type: 'comment', entity_id: cmtId, type: next }),
-  }).catch(()=>{});
+  const tok = await freshToken();
+  const send = (method, type) => fetch('/api/reactions', {
+    method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tok}` },
+    body: JSON.stringify({ entity_type: 'comment', entity_id: cmtId, type }),
+  });
+  try {
+    if (prev) await send('DELETE', prev);   // POST is insert-only, so remove the old emoji first
+    if (next) { const r = await send('POST', next); if (!r.ok) throw new Error(); }
+  } catch (e) { showToast('Could not save your reaction — try again'); }
 }
 
 // Comment emoji picker — tapping an emoji inserts it into that post's
@@ -826,6 +872,7 @@ function cmtEmojiPick(postId, emoji) {
 // Threaded comments — lazy-load from DB on first open
 const _cmtCache = {};        // postId → array of top-level comments (each with .replies[])
 const _replyTo  = {};        // postId → { parent_id, name }  when user is composing a reply
+const _cmtNotice = {};       // postId → reason the viewer can't comment ('' = can comment)
 async function toggleCmt(postId) {
   const el = document.getElementById('cmt-'+postId);
   if (!el) return;
@@ -837,11 +884,21 @@ async function loadComments(postId) {
   const lEl = document.getElementById('cmtl-'+postId);
   if (lEl) lEl.innerHTML = '<div style="padding:10px 14px;font-size:.74rem;color:var(--mu)">Loading comments…</div>';
   try {
-    const res  = await fetch('/api/comments?entity_id=' + encodeURIComponent(postId) + '&entity_type=post');
+    const tok  = _uid ? await freshToken() : '';
+    const res  = await fetch('/api/comments?entity_id=' + encodeURIComponent(postId) + '&entity_type=post',
+      tok ? { headers: { 'Authorization': 'Bearer ' + tok } } : undefined);
     const json = await safeJson(res);
     const top  = (json.comments || []).map(c => ({ ...c, profile: c.profile || {} }));
     _cmtCache[postId] = top;
+    // Owner's comment_permission blocks this viewer → swap the input for a notice
+    _cmtNotice[postId] = (json.can_comment === false && json.comment_notice) || '';
+    const offEl = document.getElementById('cmtoff-'+postId);
+    if (offEl) { offEl.textContent = _cmtNotice[postId]; offEl.style.display = _cmtNotice[postId] ? 'block' : 'none'; }
+    const cirEl = document.getElementById('cmt-'+postId)?.querySelector('.cir');
+    if (cirEl) cirEl.style.display = _cmtNotice[postId] ? 'none' : '';
     const totalCount = (json.flat || []).length;
+    const cPost = _posts.find(p => p.id === postId);
+    if (cPost) cPost.comment_count = totalCount;
     const cEl = document.getElementById('cc-'+postId);
     if (cEl) cEl.textContent = fn(totalCount);
     if (lEl) lEl.innerHTML = top.length ? buildCmts(top, postId) : '<div style="padding:14px;text-align:center;font-size:.74rem;color:var(--mu)">Be the first to comment</div>';
@@ -850,7 +907,9 @@ async function loadComments(postId) {
   }
 }
 
-function startReply(postId, parentId, name) {
+function startReply(postId, parentId) {
+  const pc = (_cmtCache[postId] || []).find(c => c.id === parentId);
+  const name = pc ? (pc.profile?.display_name || pc.profile?.username || 'Someone') : '';
   _replyTo[postId] = { parent_id: parentId, name };
   const wrap = document.getElementById('cmt-'+postId);
   if (!wrap) return;
@@ -905,16 +964,42 @@ async function doComment(postId) {
   try {
     const res = await fetch('/api/comments', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await freshToken()}` },
       body: JSON.stringify({ entity_id: postId, entity_type: 'post', body: txt, parent_id: reply?.parent_id || undefined }),
     });
     const json = await safeJson(res);
+    // Not allowed to comment: show why, drop the optimistic comment, re-gate the input
+    if (res.status === 403) { showToast(json.error || "You can't comment on this post", 'err'); loadComments(postId); return; }
     if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
     // Re-sync from server to pick up real id + DB trigger side-effects
     loadComments(postId);
   } catch(e) {
     showToast('Could not post comment: ' + e.message, 'err');
+    loadComments(postId);   // drop the optimistic comment
+    if (inp && !inp.value) inp.value = txt;
   }
+}
+
+async function deleteComment(postId, cmtId) {
+  if (!confirm('Delete this comment?')) return;
+  try {
+    const r = await fetch('/api/comments/' + encodeURIComponent(cmtId), {
+      method: 'DELETE', headers: { 'Authorization': 'Bearer ' + await freshToken() },
+    });
+    if (!r.ok) { const j = await safeJson(r); throw new Error(j.error || ('HTTP ' + r.status)); }
+  } catch (e) { return showToast('Could not delete comment: ' + e.message, 'err'); }
+  // Mirror the server: the comment goes, its replies become top-level
+  const cache = _cmtCache[postId] || [];
+  const i = cache.findIndex(c => c.id === cmtId);
+  if (i > -1) cache.splice(i, 1, ...(cache[i].replies || []).map(r => ({ ...r, parent_id: null })));
+  else cache.forEach(c => { c.replies = (c.replies || []).filter(r => r.id !== cmtId); });
+  const lEl = document.getElementById('cmtl-'+postId);
+  if (lEl) lEl.innerHTML = cache.length ? buildCmts(cache, postId) : '<div style="padding:14px;text-align:center;font-size:.74rem;color:var(--mu)">Be the first to comment</div>';
+  const post = _posts.find(p => p.id === postId);
+  if (post) post.comment_count = Math.max(0, (post.comment_count || 0) - 1);
+  const cEl = document.getElementById('cc-'+postId);
+  if (cEl) cEl.textContent = fn(post ? post.comment_count : Math.max(0, (parseInt(cEl.textContent, 10) || 0) - 1));
+  showToast('Comment deleted');
 }
 
 async function doFollow(targetUserId, postId) {
@@ -925,7 +1010,7 @@ async function doFollow(targetUserId, postId) {
   if (_uid) {
     const res = await fetch('/api/follows', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await freshToken()}` },
       body: JSON.stringify({ following_id: targetUserId }),
     }).catch(()=>({ok:false,json:()=>({})}) );
     const json = await res.json().catch(()=>({}));
@@ -948,7 +1033,13 @@ async function doFollow(targetUserId, postId) {
   if (_filter === 'following') { _page = 1; render(); }
 }
 
-function doShare(caption) {
+function openPostEvent(postId) {
+  const p = _posts.find(q => q.id === postId);
+  window.location.href = '/?q=' + encodeURIComponent(p?.event_name || '');
+}
+
+function doShare(postId) {
+  const caption = (_posts.find(p => p.id === postId) || {}).caption || '';
   if (navigator.share) navigator.share({title:'Pulsefy Post', text:caption||'Check this out on Pulsefy!', url:location.href});
   else { navigator.clipboard?.writeText(location.href); showToast('🔗 Link copied!'); }
 }
@@ -1047,7 +1138,7 @@ async function doFollowOverlay(targetId) {
   try {
     const res = await fetch('/api/follows', {
       method: isF ? 'DELETE' : 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await freshToken()}` },
       body: JSON.stringify({ following_id: targetId }),
     });
     if (!res.ok) throw new Error((await res.json()).error || 'Failed');
@@ -1124,8 +1215,12 @@ function editPost(id) {
   document.getElementById('post-event-name').value = post.event_name || '';
   const img = firstImg(post.image_url);
   if (img) {
-    _cImg = img; _cImgFile = null; // existing remote image; only re-upload if they pick a new one
-    document.getElementById('img-drop').innerHTML = '<img src="'+x(img)+'" style="width:100%;height:100%;object-fit:cover;border-radius:12px"/>';
+    // Existing photos are kept as-is (image_url is left out of the PATCH) unless they pick a new one
+    _cImg = img; _cImgFile = null;
+    let n = 1;
+    try { const a = JSON.parse(post.image_url); if (Array.isArray(a)) n = a.filter(u => typeof u === 'string' && u.trim()).length || 1; } catch(e) {}
+    document.getElementById('img-drop').innerHTML = '<div style="position:relative;width:100%;height:100%"><img src="'+x(img)+'" style="width:100%;height:100%;object-fit:cover;border-radius:12px"/>' +
+      (n > 1 ? '<span class="gal-ct">'+n+' photos · tap to replace</span>' : '') + '</div>';
   }
   const title = document.querySelector('#compose-modal .ct'); if (title) title.textContent = '✏️ Edit Post';
   const sbtn = document.getElementById('post-submit'); if (sbtn) sbtn.textContent = 'Save changes ✓';
@@ -1178,16 +1273,20 @@ async function submitPost() {
       // ── EDIT existing post ──
       if (sb && _uid) {
         const token = (await sb.auth.getSession())?.data?.session?.access_token;
+        // Only send image_url when a new photo was picked — otherwise a
+        // multi-photo post (JSON array) would be cut down to its first photo
+        const patch = { caption: finalCap, event_name: evName || null };
+        if (_cImgFile) patch.image_url = imageUrl;
         const res = await fetch('/api/posts/' + encodeURIComponent(_editingPostId), {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') },
-          body: JSON.stringify({ caption: finalCap, image_url: imageUrl, event_name: evName || null }),
+          body: JSON.stringify(patch),
         });
-        const data = await res.json();
+        const data = await safeJson(res);
         if (!res.ok) throw new Error(data.error || 'Could not save changes');
       }
       const ep = _posts.find(p => p.id === _editingPostId);
-      if (ep) { ep.caption = finalCap; ep.image_url = imageUrl; ep.event_name = evName || null; }
+      if (ep) { ep.caption = finalCap; if (_cImgFile) ep.image_url = imageUrl; ep.event_name = evName || null; }
       closeCompose();
       _page = 1; render();
       showToast('✓ Post updated', 'ok');
@@ -1198,13 +1297,13 @@ async function submitPost() {
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') },
         body: JSON.stringify({ caption: finalCap, image_url: imageUrl, event_name: evName || null, post_type }),
       });
-      const data = await res.json();
-      if (res.ok && data.post) {
-        _posts.unshift({ id: data.post.id, user_id: _uid, username: uname, display_name: name,
-          role: _session?.role||'user', avatar_url: _profile?.avatar_url||null,
-          event_name: evName||null, image_url: imageUrl, caption: finalCap,
-          likes:[], comments:[], reposts:[], ts: data.post.created_at });
-      }
+      const data = await safeJson(res);
+      // Show the real error and keep the composer open (catch below)
+      if (!res.ok || !data.post) throw new Error(data.message || data.error || ('HTTP ' + res.status));
+      _posts.unshift({ id: data.post.id, user_id: _uid, username: uname, display_name: name,
+        role: _session?.role||'user', avatar_url: _profile?.avatar_url||null,
+        event_name: evName||null, image_url: imageUrl, caption: finalCap,
+        likes:[], comments:[], reposts:[], ts: data.post.created_at });
       closeCompose();
       _page = 1; render();
       showToast('🔥 Post shared!', 'ok');
@@ -1323,7 +1422,9 @@ async function scrollToPostAndComment(postId, commentId) {
         const feedEl = document.getElementById('feed');
         const spotlight = document.createElement('div');
         spotlight.style.cssText = 'border:2px solid var(--pu);border-radius:18px;overflow:hidden;margin-bottom:8px';
+        await _addLikeRepostState([p]);
         const mapped = mapPost({ ...p, profile: prof });
+        _posts.push(mapped);   // like/share/report/edit look the post up by id
         spotlight.appendChild(buildCard(mapped));
         feedEl.insertBefore(spotlight, feedEl.firstChild);
         post = document.getElementById('post-' + postId);
@@ -1506,8 +1607,8 @@ initFeed();
    REPORT POST
 ══════════════════════════════════════════════════ */
 let _rpId = null, _rpCap = null;
-function openReportPost(id, caption) {
-  _rpId = id; _rpCap = caption || '';
+function openReportPost(id) {
+  _rpId = id; _rpCap = ((_posts.find(p => p.id === id) || {}).caption || '').slice(0, 80);
   document.getElementById('rp-reason').value = '';
   document.getElementById('rp-detail').value = '';
   const m = document.getElementById('rp-msg'); m.style.display = 'none';

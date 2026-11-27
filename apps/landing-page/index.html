@@ -1162,14 +1162,15 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 </div>
 
 <!-- COMMENTS OVERLAY -->
-<div id="comments-overlay" onclick="if(event.target===this)closeComments()" style="display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center">
+<div id="comments-overlay" onclick="if(event.target===this)closeComments()" style="display:none;position:fixed;inset:0;z-index:3600;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center">
   <div style="width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;max-height:80vh">
     <div style="padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.08)">
       <span id="comment-title" style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px"></span>
       <button onclick="closeComments()" style="background:none;border:none;color:var(--tx);font-size:18px;cursor:pointer;padding:4px 8px">&#x2715;</button>
     </div>
     <div id="comments-list" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px"></div>
-    <div style="padding:8px 14px 10px;border-top:1px solid rgba(255,255,255,.08)">
+    <div id="cmt-off-note" style="display:none;padding:12px 14px;border-top:1px solid rgba(255,255,255,.08);text-align:center;font-size:.74rem;color:var(--mu)"></div>
+    <div id="cmt-input-bar" style="padding:8px 14px 10px;border-top:1px solid rgba(255,255,255,.08)">
       <div id="cmt-emoji-picker" style="display:none;flex-wrap:wrap;gap:6px;padding:6px 0 8px">
         <span onclick="cmt_insertEmoji('😂')" style="font-size:1.3rem;cursor:pointer">😂</span>
         <span onclick="cmt_insertEmoji('❤️')" style="font-size:1.3rem;cursor:pointer">❤️</span>
@@ -1596,6 +1597,10 @@ const PROV_CITY = {
 
 /* ── UTILS ── */
 function x(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// User text as a JS string argument inside a double-quoted on*="" attribute.
+// x() alone is not enough there: ' is not escaped, and the browser decodes
+// entities before the handler runs. JSON gives a valid JS string literal.
+function jsStr(s) { return x(JSON.stringify(String(s ?? ''))); }
 const escapeHtml = x;
 // Guard for image uploads — allowed types + 5MB cap. Server-side limits are
 // also enforced on the Supabase storage buckets (allowed_mime_types/file_size_limit).
@@ -1977,6 +1982,7 @@ window.addEventListener('popstate', e => {
   // Style-toggled overlays (display:flex or display:block when visible)
   const styleOverlays = [
     ['fl-overlay',           () => { document.getElementById('fl-overlay').style.display = 'none'; }],           // z:4000
+    ['comments-overlay',     closeComments],                                                                       // z:3600
     ['prof-overlay',         closeProfOverlay],                                                                    // z:3500
     ['friends-list-overlay', () => { document.getElementById('friends-list-overlay').style.display = 'none'; }], // z:3000
     ['squad-invite-overlay', closeSquadInvite],                                                                    // z:2700
@@ -2467,8 +2473,8 @@ function buildCard(ev, idx) {
     </div>
     <div class="fac" onclick="event.stopPropagation()">${att >= 2 ? `<div style="display:flex;align-items:center;margin-right:4px">${(ev.recent_attendees||[]).slice(0,3).map((av,i)=>`<div style="width:20px;height:20px;border-radius:50%;border:1.5px solid var(--bg);overflow:hidden;background:var(--surf2);margin-left:${i?'-6px':'0'};z-index:${3-i};flex-shrink:0">${av?`<img src="${x(av)}" style="width:100%;height:100%;object-fit:cover">`:`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:.5rem">👤</div>`}</div>`).join('')}<span style="font-size:.58rem;color:var(--mu2);margin-left:4px;white-space:nowrap">${fn(att)} going</span></div>` : ''}
       <button class="ab" onclick="toggleLike(this, '${x(ev.id)}', 'events')"><span class="ai">🤍</span><span>${fn(ev.like_count)}</span></button>
-      <button class="ab" onclick="openComments('${x(ev.id)}', '${x(ev.name)}', 'events')"><span class="ai">💬</span><span>${fn(ev.comment_count)}</span></button>
-      <button class="ab" onclick="shareIt('${x(ev.name)}')"><span class="ai">🔗</span></button>
+      <button class="ab" onclick="openComments('${x(ev.id)}', ${jsStr(ev.name)}, 'events')"><span class="ai">💬</span><span>${fn(ev.comment_count)}</span></button>
+      <button class="ab" onclick="shareIt(${jsStr(ev.name)})"><span class="ai">🔗</span></button>
       <button class="ab" onclick="toggleSave('ev','${x(ev.id)}',this)"><span class="ai">${savedEv.includes(ev.id) ? '🔖' : '🏷'}</span></button>
       <button class="tb2 ${iF ? 'fr' : ''}" onclick="openEv('${x(ev.id)}');event.stopPropagation()">${btnLbl}</button>
     </div>
@@ -2515,7 +2521,7 @@ function buildPromoCard(promo) {
       <div class="hb"><div class="hf" style="width:${hp}%"></div></div>
     </div>
     <div class="fac" onclick="event.stopPropagation()">
-      <button class="ab" onclick="shareIt('${x(promo.title)}')"><span class="ai">🔗</span></button>
+      <button class="ab" onclick="shareIt(${jsStr(promo.title)})"><span class="ai">🔗</span></button>
       ${promo.external_url ? `<a class="tb2 ${iF ? 'fr' : ''}" href="${x(promo.external_url)}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">${iF ? 'RSVP Free' : 'Book Now'}</a>` : ''}
     </div>
   </div>`;
@@ -3062,13 +3068,13 @@ async function openEv(evId) {
       </div>
       <div class="rx">
         <button class="rb" id="ev-like-btn" onclick="toggleEvLike('${x(ev.id)}',this)"><span class="ri">🤍</span><span class="rl" id="ev-like-count">${fn(lc)}</span></button>
-        <button class="rb" onclick="openComments('${x(ev.id)}','${x(ev.name)}')"><span class="ri">💬</span><span class="rl">${fn(cc)}</span></button>
+        <button class="rb" onclick="openComments('${x(ev.id)}',${jsStr(ev.name)})"><span class="ri">💬</span><span class="rl">${fn(cc)}</span></button>
         <button class="rb" onclick="this.classList.toggle('act')"><span class="ri">🔥</span><span class="rl">${fn(Math.round(lc * .6))}</span></button>
         <button class="rb" id="ev-rsvp-btn" onclick="rsvpEv('${x(ev.id)}',this)"><span class="ri">${iF ? '✅' : '🎟'}</span><span class="rl" id="ev-rsvp-count">${fn(ev.attendance_count || 0)}</span></button>
         <button class="rb" onclick="toggleSave('ev','${x(ev.id)}',this)"><span class="ri">${savedEv.includes(ev.id) ? '🔖' : '🏷'}</span><span class="rl">Save</span></button>
-        <button class="rb" onclick="shareIt('${x(ev.name)}')"><span class="ri">🔗</span><span class="rl">Share</span></button>
-        <button class="rb" onclick="openReportModal('${x(ev.id)}','${x(ev.name).replace(/'/g,'\\\'')}')"><span class="ri">🚩</span><span class="rl">Report</span></button>
-        <button class="rb act" id="lumi-open-btn" onclick="openLumiChat('${x(ev.id)}','${x(ev.name).replace(/'/g,"\\'")}')"><span class="ri" style="line-height:1;display:inline-flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><defs><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FF5C00"/><stop offset="100%" stop-color="#FF2D78"/></linearGradient></defs><path d="M12 2L14.2 9.8L22 12L14.2 14.2L12 22L9.8 14.2L2 12L9.8 9.8Z" fill="url(#lg1)"/></svg></span><span class="rl" style="color:var(--or)">Ask Lumi</span></button>
+        <button class="rb" onclick="shareIt(${jsStr(ev.name)})"><span class="ri">🔗</span><span class="rl">Share</span></button>
+        <button class="rb" onclick="openReportModal('${x(ev.id)}',${jsStr(ev.name)})"><span class="ri">🚩</span><span class="rl">Report</span></button>
+        <button class="rb act" id="lumi-open-btn" onclick="openLumiChat('${x(ev.id)}',${jsStr(ev.name)})"><span class="ri" style="line-height:1;display:inline-flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><defs><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FF5C00"/><stop offset="100%" stop-color="#FF2D78"/></linearGradient></defs><path d="M12 2L14.2 9.8L22 12L14.2 14.2L12 22L9.8 14.2L2 12L9.8 9.8Z" fill="url(#lg1)"/></svg></span><span class="rl" style="color:var(--or)">Ask Lumi</span></button>
       </div>
       <div class="db">
         <div class="ig">
@@ -3619,12 +3625,12 @@ async function openBiz(bizId) {
       </div>
       <div class="rx">
         <button class="rb ${bizLiked?'lk':''}" onclick="toggleLike(this,'${x(b.id)}','businesses')"><span class="ai">${bizLiked?'❤️':'🤍'}</span><span>${fn(bizLikeCount||0)}</span></button>
-        <button class="rb" onclick="openComments('${x(b.id)}','${x(b.name)}')"><span class="ri">💬</span><span class="rl">${fn(Math.round((b.review_count || 0) * .15))}</span></button>
+        <button class="rb" onclick="openComments('${x(b.id)}',${jsStr(b.name)})"><span class="ri">💬</span><span class="rl">${fn(Math.round((b.review_count || 0) * .15))}</span></button>
         <button class="rb" onclick="toggleSave('biz','${x(b.id)}',this)"><span class="ri">${savedBz.includes(b.id) ? '🔖' : '🏷'}</span><span class="rl">Save</span></button>
-        <button class="rb" onclick="shareIt('${x(b.name)}')"><span class="ri">🔗</span><span class="rl">Share</span></button>
-        <button class="rb" onclick="openReportModal('business','${x(b.id)}','${x(b.name).replace(/'/g,'\\\'')}')"><span class="ri">🚩</span><span class="rl">Report</span></button>
+        <button class="rb" onclick="shareIt(${jsStr(b.name)})"><span class="ri">🔗</span><span class="rl">Share</span></button>
+        <button class="rb" onclick="openReportModal('business','${x(b.id)}',${jsStr(b.name)})"><span class="ri">🚩</span><span class="rl">Report</span></button>
       </div>
-      <div class="bztb"><div class="bzt active" onclick="switchBT(this,'bp-info')">ℹ️ Info</div><div class="bzt" onclick="switchBT(this,'bp-menu');loadBizMenu('${x(b.id)}','${x(b.name).replace(/'/g,"\\'")}')">🍽 Menu</div><div class="bzt" onclick="switchBT(this,'bp-gallery')">📸 Gallery</div></div>
+      <div class="bztb"><div class="bzt active" onclick="switchBT(this,'bp-info')">ℹ️ Info</div><div class="bzt" onclick="switchBT(this,'bp-menu');loadBizMenu('${x(b.id)}',${jsStr(b.name)})">🍽 Menu</div><div class="bzt" onclick="switchBT(this,'bp-gallery')">📸 Gallery</div></div>
       <div class="bzp" id="bp-menu"><div id="biz-menu-body" style="padding:4px 0"><div style="padding:20px;text-align:center;color:var(--mu);font-size:.78rem">Tap to load menu</div></div></div>
       <div class="bzp active" id="bp-info">
         <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px">
@@ -5596,7 +5602,7 @@ async function renderBookings() {
               <div style="font-size:.65rem;color:var(--mu);font-family:monospace">Ref: ${esc(b.booking_ref)}</div>
               ${checkedIn}
             </div>
-            ${qrUrl ? `<div style="flex-shrink:0"><img src="${qrUrl}" width="80" height="80" style="border-radius:10px;background:var(--surf);cursor:pointer" loading="lazy" onclick="openBookingQrModal('${esc(b.qr_data||b.booking_ref)}','${esc(ev.name||'')}','${esc(b.booking_ref)}')"/></div>` : ''}
+            ${qrUrl ? `<div style="flex-shrink:0"><img src="${qrUrl}" width="80" height="80" style="border-radius:10px;background:var(--surf);cursor:pointer" loading="lazy" onclick="openBookingQrModal('${esc(b.qr_data||b.booking_ref)}',${jsStr(ev.name)},'${esc(b.booking_ref)}')"/></div>` : ''}
           </div>
         </div>
       </div>`;
@@ -5746,6 +5752,7 @@ function switchST(tab, paneId) { tab.closest('.stbs').querySelectorAll('.stb').f
 ══════════════════════════════════════════════════ */
 let activeEntityId = null;
 let activeEntityType = 'event';
+let _postViewId = null;   // set while the sheet shows openPost()'s post view
 
 async function openComments(entityId, name, type = 'event') {
   const sb = getSB();
@@ -5753,11 +5760,13 @@ async function openComments(entityId, name, type = 'event') {
   
   activeEntityId = entityId;
   activeEntityType = type;
+  _postViewId = null;
   
   const overlay = document.getElementById('comments-overlay');
   const titleEl = document.getElementById('comment-title');
   const listEl = document.getElementById('comments-list');
   
+  _setCmtGate('');
   if (titleEl) titleEl.textContent = 'Comments on ' + name;
   if (listEl) listEl.innerHTML = [1,2,3].map(() => `<div class="cmt-skeleton"><div class="cmt-sk-av"></div><div style="flex:1"><div class="cmt-sk-line" style="width:45%;"></div><div class="cmt-sk-line" style="width:80%;"></div><div class="cmt-sk-line" style="width:35%;"></div></div></div>`).join('');
   
@@ -5778,9 +5787,18 @@ async function openComments(entityId, name, type = 'event') {
   }
 }
 
+// Swap the comment input for a muted notice ('' = show the input again).
+function _setCmtGate(notice) {
+  const bar = document.getElementById('cmt-input-bar');
+  const note = document.getElementById('cmt-off-note');
+  if (bar) bar.style.display = notice ? 'none' : '';
+  if (note) { note.textContent = notice; note.style.display = notice ? 'block' : 'none'; }
+}
+
 function closeComments() {
   document.getElementById('comments-overlay').style.display = 'none';
   activeEntityId = null;
+  _postViewId = null;
 }
 
 const _REACT_EMOJIS = ['❤️','🔥','😂','🙌','👀'];
@@ -5814,6 +5832,7 @@ function renderComments(newId) {
     const replies = (c.replies || []).map(r => renderOne(r, depth + 1)).join('');
     const replyBtn = depth < 2 ? `<button onclick="(function(){var inp=document.getElementById('comment-input');if(inp){window._cmtReplyTo='${x(c.id)}';inp.placeholder='Replying to ${x(name.replace(/'/g,""))}…';inp.focus();}})()" style="background:none;border:none;color:var(--mu);font-size:.62rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;padding:2px 0;margin-top:2px;letter-spacing:.04em">↩ Reply</button>` : '';
     const reactBar = '';
+    const delBtn = (currentUser && uid === currentUser.id) ? `<button onclick="deleteComment('${x(c.id)}')" style="background:none;border:none;color:var(--mu);font-size:.62rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;padding:2px 0;margin-top:2px;letter-spacing:.04em">Delete</button>` : '';
     const isNew = c.id === newId;
     return `<div class="${isOrg && depth===0 ? 'cm-pin' : ''}" style="margin-left:${depth*18}px;${depth>0?'padding-left:8px;border-left:1.5px solid var(--border);':''}">
       <div class="cm${isNew ? ' cm-new' : ''}">
@@ -5821,7 +5840,7 @@ function renderComments(newId) {
         <div style="flex:1">
           <div class="cna" ${clickable}>${pinBadge}${x(name)}</div>
           <div class="ctx">${x(body)}</div>
-          <div style="display:flex;align-items:center;gap:10px"><div class="ctm">${timeAgoShort(c.created_at)}</div>${replyBtn}</div>
+          <div style="display:flex;align-items:center;gap:10px"><div class="ctm">${timeAgoShort(c.created_at)}</div>${replyBtn}${delBtn}</div>
           ${reactBar}
         </div>
       </div>${replies}</div>`;
@@ -5836,7 +5855,8 @@ function cmtReact(commentId, emoji, btn) {
   const countEl = btn.querySelector('span');
   const n = parseInt(countEl.textContent) || 0;
   countEl.textContent = btn.classList.contains('rx-on') ? n + 1 : Math.max(0, n - 1);
-  Api.post('/reactions', { entity_type: 'comment', entity_id: commentId, type: emoji }, { auth: true }).catch(() => {});
+  const rx = { entity_type: 'comment', entity_id: commentId, type: emoji };
+  (btn.classList.contains('rx-on') ? Api.post('/reactions', rx, { auth: true }) : Api.del('/reactions', rx, { auth: true })).catch(() => {});
 }
 
 function cmt_toggleEmoji() {
@@ -5882,7 +5902,8 @@ async function postComment() {
     });
     window._cmtReplyTo = null;
     inp.placeholder = 'Add a comment…';
-    renderComments(json.comment.id);
+    if (_postViewId && _postViewId === activeEntityId) openPost(_postViewId);
+    else renderComments(json.comment.id);
     inp.value = '';
   } catch(e) {
     showToast('Failed to post comment: ' + e.message, 'err');
@@ -5891,6 +5912,18 @@ async function postComment() {
     inp.disabled = false;
     inp.focus();
   }
+}
+
+async function deleteComment(cmtId) {
+  if (!confirm('Delete this comment?')) return;
+  try {
+    await Api.del('/comments/' + encodeURIComponent(cmtId), undefined, { auth: true });
+  } catch (e) { return showToast('Could not delete comment: ' + e.message, 'err'); }
+  // Replies survive server-side as top-level comments
+  activeComments = activeComments.filter(c => c.id !== cmtId).map(c => c.parent_id === cmtId ? { ...c, parent_id: null } : c);
+  if (_postViewId) openPost(_postViewId);   // re-fetches the post + its comment_count
+  else renderComments();
+  showToast('Comment deleted');
 }
 
 /* ══════════════════════════════════════════════════
@@ -6350,6 +6383,8 @@ async function openFollowList(userId, type) {
   }
 }
 
+let _profLocked = null; // userId of the followers-only profile open in the overlay, else null
+const _PROF_LOCKED_HTML = '<div style="padding:28px;text-align:center;font-size:.8rem;color:var(--mu);border:1px dashed var(--border);border-radius:12px">🔒 This account is private — follow to see their posts</div>';
 async function openProfile(userId) {
   const ov = document.getElementById('prof-overlay');
   const body = document.getElementById('prof-overlay-body');
@@ -6366,6 +6401,16 @@ async function openProfile(userId) {
       const { data: fw } = await sb.from('follows').select('follower_id').eq('follower_id', currentUser.id).eq('following_id', userId).maybeSingle();
       isFollowing = !!fw;
     }
+    // Privacy: followers-only accounts keep the header but hide posts.
+    // RPC error (e.g. not deployed yet) → treat as viewable; RLS still guards rows.
+    _profLocked = null;
+    if (currentUser?.id !== userId) {
+      try {
+        const { data: pv, error: pvErr } = await sb.rpc('get_profile_privacy', { p_owner: userId });
+        const pvRow = Array.isArray(pv) ? pv[0] : pv;
+        if (!pvErr && pvRow && pvRow.can_view === false) _profLocked = userId;
+      } catch (_) {}
+    }
     const init = (profile.display_name || profile.username || '?')[0].toUpperCase();
     const isOrg = ['organizer','business','admin'].includes(profile.role);
     const heroGrad = isOrg
@@ -6375,8 +6420,8 @@ async function openProfile(userId) {
       ? 'linear-gradient(135deg,#FF5C00,#FF2D78)'
       : 'linear-gradient(135deg,#B026FF,#FF5C00)';
 
-    const photoPosts = recent_posts.filter(p => firstImg(p.image_url)).slice(0, 9);
-    const postsHtml = photoPosts.length
+    const photoPosts = _profLocked ? [] : recent_posts.filter(p => firstImg(p.image_url)).slice(0, 9);
+    const postsHtml = _profLocked ? _PROF_LOCKED_HTML : photoPosts.length
       ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px;border-radius:10px;overflow:hidden">
           ${photoPosts.map(p => `
             <div onclick="openPost('${x(p.id)}')" style="aspect-ratio:1;background:var(--surf2);overflow:hidden;cursor:pointer;position:relative">
@@ -6396,7 +6441,7 @@ async function openProfile(userId) {
     const heroCss = profile.cover_url
       ? `background:url("${x(profile.cover_url)}") center/cover no-repeat`
       : `background:${heroGrad}`;
-    const seeAllBtn = posts_count > 6 ? `<button onclick="openAllPhotos('${x(userId)}')" style="background:none;border:none;color:var(--or);font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;cursor:pointer">See all ${posts_count} →</button>` : '';
+    const seeAllBtn = (posts_count > 6 && !_profLocked) ? `<button onclick="openAllPhotos('${x(userId)}')" style="background:none;border:none;color:var(--or);font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;cursor:pointer">See all ${posts_count} →</button>` : '';
     const bottomHtml = isOrg
       ? ['<div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:0" id="prof-tabs">',
           `<button id="ptab-posts" onclick="switchProfTab('posts','${x(userId)}')" style="flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid var(--or);color:var(--tx);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer;transition:color .15s">📝 Posts</button>`,
@@ -6444,7 +6489,12 @@ async function openPost(postId) {
   if (!ov || !listEl) return;
 
   ov.style.display = 'flex';
+  _setCmtGate('');
   titleEl.textContent = 'Post';
+  // postComment() needs these, or it returns early
+  activeEntityId = postId;
+  activeEntityType = 'post';
+  _postViewId = postId;
   listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu)">Loading…</div>';
 
   const [{ data: post }, { data: cmts }] = await Promise.all([
@@ -6452,6 +6502,16 @@ async function openPost(postId) {
     sb.from('comments').select('id,body,created_at,user_id').eq('entity_id', postId).eq('entity_type','post').order('created_at',{ascending:true}).limit(50),
   ]);
   if (!post) { listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu)">Post not found</div>'; return; }
+
+  // Owner's comment_permission: hide the input if this viewer can't comment.
+  // RPC error (e.g. not deployed yet) → leave the input; the API/DB still enforce it.
+  if (currentUser && post.user_id && post.user_id !== currentUser.id) {
+    try {
+      const { data: pv, error: pvErr } = await sb.rpc('get_profile_privacy', { p_owner: post.user_id });
+      const pvRow = Array.isArray(pv) ? pv[0] : pv;
+      if (!pvErr && pvRow && pvRow.can_comment === false) _setCmtGate("You can't comment on this post");
+    } catch (_) {}
+  }
 
   // Batch-fetch profiles for author + commenters in one query
   const allUids = [...new Set([post.user_id, ...(cmts||[]).map(c => c.user_id).filter(Boolean)])];
@@ -6482,7 +6542,7 @@ async function openPost(postId) {
         <div style="flex:1;min-width:0;background:var(--surf);border-radius:12px;padding:8px 10px">
           <div style="font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;color:var(--tx);margin-bottom:2px">${x(cp.display_name||'User')}</div>
           <div style="font-size:.8rem;color:var(--mu2);line-height:1.4;white-space:pre-wrap;word-break:break-word">${x(c.body||'')}</div>
-          <div style="font-size:.6rem;color:var(--mu);margin-top:3px">${timeAgoShort(c.created_at)}</div>
+          <div style="font-size:.6rem;color:var(--mu);margin-top:3px">${timeAgoShort(c.created_at)}${currentUser && c.user_id === currentUser.id ? ` · <button onclick="deleteComment('${x(c.id)}')" style="background:none;border:none;color:var(--mu);font-size:.6rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;padding:0">Delete</button>` : ''}</div>
         </div>
       </div>`;
     }).join('')
@@ -6638,8 +6698,9 @@ async function switchProfTab(tab, userId) {
 }
 
 async function _renderProfPosts(userId, el) {
+  if (_profLocked === userId) { el.innerHTML = _PROF_LOCKED_HTML; return; }
   try {
-    const { posts } = await Api.get('/posts?user_id=' + encodeURIComponent(userId) + '&limit=18');
+    const { posts } = await Api.get('/posts?user_id=' + encodeURIComponent(userId) + '&limit=18', { auth: 'optional' });
     if (!posts || !posts.length) {
       el.innerHTML = '<div style="padding:28px;text-align:center;font-size:.78rem;color:var(--mu);border:1px dashed var(--border);border-radius:12px">No posts yet</div>';
       return;
@@ -6754,6 +6815,7 @@ async function toggleFollowOverlay(targetId) {
       await sb.from('follows').insert({ follower_id: currentUser.id, following_id: targetId });
       if (btn) { btn.textContent = '✓ Following'; btn.style.background = 'transparent'; btn.style.border = '1px solid var(--border2)'; btn.style.color = 'var(--mu2)'; }
       showToast('🔥 Following!');
+      if (_profLocked === targetId) openProfile(targetId); // now a follower — reload to show posts
     }
   } catch(e) { showToast('Error: ' + e.message); }
   if (btn) btn.disabled = false;
@@ -7759,7 +7821,7 @@ function renderSquadWorkspace(detail, container) {
            <div style="font-size:.58rem;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:4px">About</div>
            <div id="sq-about-text" style="font-size:.82rem;color:var(--mu2);line-height:1.55">${x(squad.description)}</div>
          </div>
-         ${isAdmin ? `<button onclick="sqEditAbout('${sid}','${x(squad.description).replace(/'/g,'&#39;')}')" style="background:none;border:none;color:var(--mu);font-size:.8rem;cursor:pointer;flex-shrink:0;padding:2px 6px">✏️</button>` : ''}
+         ${isAdmin ? `<button onclick="sqEditAbout('${x(sid)}',${jsStr(squad.description||'')})" style="background:none;border:none;color:var(--mu);font-size:.8rem;cursor:pointer;flex-shrink:0;padding:2px 6px">✏️</button>` : ''}
        </div>`
     : isAdmin
       ? `<button onclick="sqEditAbout('${sid}','')" style="display:block;width:calc(100% - 32px);margin:14px 16px 0;background:rgba(255,255,255,.03);border:1.5px dashed var(--border);border-radius:14px;padding:12px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;cursor:pointer;text-align:center">+ Add a squad description</button>`
@@ -8236,7 +8298,7 @@ async function openDealDetail(promoId) {
         </div>
       </div>` : ''}
       <div style="position:sticky;bottom:0;background:linear-gradient(to top,var(--bg2) 75%,transparent);padding:16px 0 4px">
-        <button onclick="_sqJoinFromDetail('${x(p.id)}','${x(p.title).replace(/'/g,"\\'")}','${x(p.venue_name).replace(/'/g,"\\'")}','${x(p.deal_type||'')}','${x(p.business_id||'')}','${x(p.event_id||'')}')" style="width:100%;padding:14px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer">${p.event_id ? '🎟 Buy Tickets with Squad' : p.business_id ? '🍽 Order with Squad' : '👥 Join Squad to Claim'}</button>
+        <button onclick="_sqJoinFromDetail('${x(p.id)}',${jsStr(p.title)},${jsStr(p.venue_name)},'${x(p.deal_type||'')}','${x(p.business_id||'')}','${x(p.event_id||'')}')" style="width:100%;padding:14px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer">${p.event_id ? '🎟 Buy Tickets with Squad' : p.business_id ? '🍽 Order with Squad' : '👥 Join Squad to Claim'}</button>
       </div>`;
   } catch(e) {
     ws.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Could not load deal</div>';
