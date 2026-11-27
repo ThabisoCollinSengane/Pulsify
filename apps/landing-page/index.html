@@ -107,6 +107,7 @@ function openAvatarLightbox() {
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
 <script src="https://js.paystack.co/v1/inline.js" defer></script>
+<script src="/mascot.js" defer></script>
 <!-- Error monitoring (Sentry) — inert until a DSN is set.
      To enable: paste your Sentry project DSN into PULSIFY_SENTRY_DSN below. -->
 <script>window.PULSIFY_SENTRY_DSN = window.PULSIFY_SENTRY_DSN || '';</script>
@@ -662,6 +663,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     <div class="rd-hero">
       <div class="rd-hero-ov"></div>
       <div class="rd-hero-inner">
+        <div id="hero-mascot" style="position:absolute;right:12px;bottom:100%"></div>
         <h1 class="rd-hero-h">WHAT ARE YOU DOING THIS WEEKEND?</h1>
         <p class="rd-hero-sub">Find events near you.</p>
         <div class="rd-hero-btns">
@@ -1432,7 +1434,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 <div id="ticket-confirm-modal" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.85);backdrop-filter:blur(14px);align-items:center;justify-content:center;padding:20px">
   <div style="width:100%;max-width:360px;background:var(--bg2);border-radius:22px;border:1px solid rgba(255,255,255,.12);overflow:hidden;animation:su .3s ease">
     <div style="background:linear-gradient(135deg,#B026FF,#FF5C00);padding:20px;text-align:center">
-      <div style="font-size:2.5rem;margin-bottom:8px">🎟</div>
+      <div id="tc-mascot" style="display:flex;justify-content:center;font-size:2.5rem;margin-bottom:8px">🎟</div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.04em;color:#fff">Booking Confirmed!</div>
       <div id="tc-event" style="font-size:.8rem;color:rgba(255,255,255,.85);margin-top:4px"></div>
     </div>
@@ -2270,11 +2272,12 @@ async function loadFeed(resetPage = false, append = false) {
     if (events.length === 0) {
       feedEl.innerHTML = `
         <div class="no-results">
-          <div class="no-results-ico">🎟</div>
+          <div class="no-results-ico" data-pulse-mascot="sleepy" style="display:flex;justify-content:center">🎟</div>
           <div class="no-results-title">No events found</div>
           <div class="no-results-sub">Try a different city or genre</div>
           <button class="no-results-btn" onclick="feedCity='all';feedGenre='all';feedFrom='';feedTo='';_homeQuickActive=null;feedPage=1;document.querySelectorAll('.rd-qbtn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('#city-chip-row .chip,#genre-chip-row .chip-mini,#vibe-chip-row .vibe-chip').forEach(b=>b.classList.remove('active'));document.querySelector('#city-chip-row .chip')?.classList.add('active');document.querySelector('#genre-chip-row .chip-mini')?.classList.add('active');loadFeed(true)">Show All Events</button>
         </div>`;
+      window.PulseMascot && PulseMascot.scan(feedEl);
       return;
     }
 
@@ -6862,6 +6865,7 @@ async function showTicketConfirm(booking) {
   const qrData = encodeURIComponent(booking.qr_data || booking.booking_ref || 'PULSEFY');
   document.getElementById('tc-qr').src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${qrData}&bgcolor=090D1A&color=FF5C00&margin=2`;
   document.getElementById('ticket-confirm-modal').style.display = 'flex';
+  if (window.PulseMascot) PulseMascot.mount(document.getElementById('tc-mascot'), { mood: 'cheer', size: 76 }).react('burst');
   const evId = booking.event_id || '';
   if (_mySquads.length) {
     showSquadCheckinBar(evId);
@@ -7436,6 +7440,22 @@ async function initSupabaseSession() {
   });
 }
 document.addEventListener('DOMContentLoaded', initSupabaseSession);
+
+/* ── Pulse mascot in the hero: a time-aware hello that fades after a few seconds ── */
+document.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('hero-mascot');
+  if (!el || !window.PulseMascot) return;
+  const now = new Date(), h = now.getHours(), d = now.getDay();
+  const late = h < 5;
+  const line = late ? 'Still out? Get home safe 🌙'
+    : h < 12 ? 'Morning! Plan tonight early ☀️'
+    : h >= 17 && d === 5 ? 'Friday night plans? 🎶'
+    : h >= 17 && d === 6 ? 'Saturday vibes loading… 🔥'
+    : d === 0 ? 'Sunday chill? 🌿'
+    : h >= 17 ? 'Midweek link-up? 🥂'
+    : 'What’s the plan later? 🎶';
+  PulseMascot.mount(el, { size: 58, mood: late ? 'sleepy' : 'idle', side: 'left' }).say(line, 7000);
+});
 
 /* ══════════════════════════════════════════════════
    BOOT
