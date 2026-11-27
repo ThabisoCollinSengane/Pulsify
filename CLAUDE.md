@@ -243,6 +243,13 @@ A static `#vibe-chip-row` (5 pills: Party/Chill/Luxury/Social/Cultural) sits in 
 ### Pulse mascot (`apps/landing-page/mascot.js`)
 Original SVG+CSS character. `PulseMascot.mount(el,{size,mood,message,side})`, `scan(root)` mounts `[data-pulse]` placeholders, `celebrate(msg)` shows a non-interactive cheer (z-index 4500, auto-removes). Moods: idle / party / sleepy / cheer. Used in feed empty/error states, post celebration, no-events, booking confirmation, home hero greeting, empty profile posts. Respects reduced motion. Never put it on map markers.
 
+### SEO pages (`lib/seo-pages.js`, served from `api/index.js`)
+The app is a client-rendered SPA, so Google only saw one page. Crawlable, server-rendered HTML now lives at `/durban`, `/durban/{events,nightlife,gqom,amapiano,shisanyama,this-weekend}`, `/e/:id` (event page, schema.org `Event`) and `/sitemap.xml`. `vercel.json` rewrites these to `/api` **before** the `/(.+)` catch-all, and `api/index.js` calls `seoPages()` for GET/HEAD. No new `api/*` file was added (12-function limit).
+- Data = DB events (Durban areas, KZN) + live Quicket KZN (`fetchQuicketEvents`, cached 10 min, empty results only 30 s). `isDurbanArea` matches whole words and rejects non-KZN provinces (so "Durbanville" is out).
+- `/e/:id` returns inactive events only if they ended within 3 days; otherwise 404. Non-200 responses are `no-store`; DB errors give 500, not 404.
+- Every interpolated value goes through `esc()`; JSON-LD through `ld()` (escapes `< > &`); URLs through `safeUrl()`. Keep it that way.
+- Page links into the app use `/?bid=<id>` (business) and `/e/:id`.
+
 ---
 
 ## 8. Roadmap / Deferred Checklist
