@@ -9,7 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0;--bh:70px}
+:root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--tx:#F0EEF8;--mu:#8A88A4;--mu2:#9997B0;--bh:70px}
 html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
 body{padding-bottom:40px}
 .tb{position:fixed;top:0;left:0;right:0;height:calc(58px + env(safe-area-inset-top));z-index:100;display:flex;align-items:center;justify-content:space-between;padding:env(safe-area-inset-top) 16px 0;background:rgba(5,8,15,.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
@@ -75,7 +75,7 @@ textarea.inp{resize:none;height:78px;line-height:1.5}
 .status-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);font-size:.78rem;color:var(--mu2)}
 .status-row:last-child{border-bottom:none}
 .status-lbl{font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;color:var(--mu);min-width:90px}
-.save-btn{width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:15px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:opacity .2s}
+.save-btn{width:100%;background:linear-gradient(135deg,#B026FF,#CC4400);color:#fff;border:none;padding:15px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:opacity .2s}
 .save-btn:active{opacity:.85}
 .save-bar{position:sticky;bottom:0;z-index:50;margin:0 -16px 14px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(5,8,15,.96);backdrop-filter:blur(24px);border-top:1px solid var(--border)}
 .out-btn{width:100%;min-height:44px;background:rgba(255,45,120,.07);border:1px solid rgba(255,45,120,.22);color:var(--pk);border-radius:13px;padding:13px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;margin-bottom:8px}
@@ -84,6 +84,14 @@ textarea.inp{resize:none;height:78px;line-height:1.5}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.ok{border-color:rgba(198,255,74,.4);color:var(--li)}
 .toast.err{border-color:rgba(255,45,120,.4);color:var(--pk)}
+/* Reduced motion: honour the phone's setting for every animation and transition */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+/* Desktop: settings in a ~600px centre column; top bar stays full width */
+@media (min-width:900px){
+  .content{max-width:632px;margin:0 auto}
+}
 </style>
 </head>
 <body>

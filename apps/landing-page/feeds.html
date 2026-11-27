@@ -42,6 +42,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .tb2-btn::after{content:'';position:absolute;left:0;right:0;top:50%;height:44px;margin-top:-22px}
 #notif-btn::after,.cc::after,.csnd::after{content:'';position:absolute;top:50%;left:50%;width:44px;height:44px;margin:-22px 0 0 -22px}
 .cc,.csnd{position:relative}
+.fh>div[onclick]{min-height:44px;display:flex;flex-direction:column;justify-content:center}
+.fh [onclick^="openPostEvent"]{display:inline-block;align-self:flex-start;padding:6px 0;margin:-6px 0}
 .cr{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:4px 14px;position:fixed;top:var(--th);left:0;right:0;z-index:100;background:rgba(5,8,15,.95);backdrop-filter:blur(18px);border-bottom:1px solid var(--border)}
 .cr::-webkit-scrollbar{display:none}
 .chip{flex-shrink:0;min-height:44px;display:inline-flex;align-items:center;padding:6px 14px;border-radius:50px;border:1px solid var(--border);background:rgba(255,255,255,.02);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu);cursor:pointer;transition:all .2s;white-space:nowrap;-webkit-tap-highlight-color:transparent}
@@ -1128,7 +1130,7 @@ async function openProfile(userId) {
       '<a href="/user-profile?id='+x(userId)+'" style="display:block;text-align:center;padding:10px 14px;margin-top:14px;background:rgba(176,38,255,.12);border:1px solid rgba(176,38,255,.3);border-radius:50px;color:var(--pu);font-family:\u0027Syne\u0027,sans-serif;font-size:.78rem;font-weight:700;text-decoration:none">View Full Profile →</a>' +
       (postsHtml ? '<div style="font-family:\u0027Syne\u0027,sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin:14px 0 8px">Places Attended</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">'+postsHtml+'</div>' : '');
   } catch(e) {
-    body.innerHTML = '<div class="es"><div class="es-m">📡</div><div class="em">We couldn't open this profile. Check your connection.</div><button class="es-btn" onclick="openProfile(''+x(userId)+'')">Try again</button></div>';
+    body.innerHTML = '<div class="es"><div class="es-m">📡</div><div class="em">We couldn&#39;t open this profile. Check your connection.</div><button class="es-btn" onclick="openProfile(&quot;'+x(userId)+'&quot;)">Try again</button></div>';
   }
 }
 
