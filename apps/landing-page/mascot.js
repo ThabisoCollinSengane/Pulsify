@@ -127,6 +127,7 @@ K + 'Say{from{opacity:0;transform:scale(.7)}}' +
   function mount(el, o) {
     if (!el) return null;
     if (el._pm) return el._pm;
+    live = live.filter(function (i) { return i.el.isConnected; }); // drop detached instances (blink prune is off under reduced motion)
     css();
     o = o || {};
     var ds = el.dataset || {}, P = 'pm' + (++uid), n = 0, tOn, tSay, tSg;
