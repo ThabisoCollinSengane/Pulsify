@@ -1330,23 +1330,8 @@ module.exports = async (req, res) => {
       if (insErr?.code === '23505') return res.status(200).json({ liked: true }); // lost a double-tap race
       if (insErr) return res.status(400).json({ error: insErr.message });
 
-      // DB trigger handles count increment; fire notification for posts/events.
-      // Best-effort: the query builder has no .catch(), so use try/await.
-      if (entity_type === 'post') {
-        try {
-          const { data: p } = await sb().from('posts').select('user_id').eq('id', entity_id).single();
-          if (p && p.user_id !== user.id) {
-            const { data: prof } = await sb().from('profiles').select('display_name').eq('id', user.id).single();
-            const name = prof?.display_name || 'Someone';
-            await sb().from('notifications').insert({
-              user_id: p.user_id, type: 'like', from_user_id: user.id,
-              from_display_name: name, entity_id, entity_type: 'post',
-              message: `${name} liked your post`,
-            });
-          }
-        } catch (e) { /* notification is non-critical */ }
-      }
-
+      // DB triggers handle the count (trg_sync_like_count_insert) and the
+      // notification (trg_notif_on_reaction) — don't insert one here too.
       return res.status(200).json({ liked: true });
     }
 
@@ -1433,17 +1418,7 @@ module.exports = async (req, res) => {
 
       const { error } = await sbAs(token).from('follows').insert({ follower_id: user.id, following_id });
       if (error && error.code !== '23505') return res.status(400).json({ error: error.message });
-
-      if (!error) {
-        const { data: prof } = await sb().from('profiles').select('display_name').eq('id', user.id).single();
-        const name = prof?.display_name || 'Someone';
-        await sb().from('notifications').insert({
-          user_id: following_id, type: 'follow', from_user_id: user.id,
-          from_display_name: name, entity_id: user.id, entity_type: 'profile',
-          message: `${name} started following you`,
-        });
-      }
-
+      // trg_notif_on_follow sends the "started following you" notification.
       return res.status(200).json({ following: true });
     }
 
