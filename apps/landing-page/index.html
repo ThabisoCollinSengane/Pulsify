@@ -235,7 +235,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .fsoc{font-size:.66rem;font-family:'Syne',sans-serif;font-weight:700;color:var(--pk);background:rgba(255,45,136,.1);border:1px solid rgba(255,45,136,.25);padding:1px 8px;border-radius:50px;margin-left:auto}
 .fv{font-size:.73rem;color:var(--mu);margin-bottom:4px}
 /* Event card hierarchy: when (bold) → where → going/organiser → actions */
-.fb .fbg{position:absolute;top:8px;left:8px;z-index:3;background:rgba(8,4,20,.82);backdrop-filter:blur(6px)}
+.fc .fb .fbg{position:absolute;top:8px;left:8px;z-index:3;background:rgba(8,4,20,.82);backdrop-filter:blur(6px)}
 .fwhen{font-family:'Syne',sans-serif;font-size:.86rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--tx);margin-bottom:3px}
 .fwhen.tn{color:var(--or)}
 .fwhere{font-size:.78rem;color:var(--mu2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px}
@@ -586,8 +586,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .mcb{flex-shrink:0;min-height:44px;background:rgba(10,14,26,.82);backdrop-filter:blur(20px);border:1.5px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);padding:6px 14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s;-webkit-tap-highlight-color:transparent}
 /* Map header icon buttons: 36px visual, hit area fills the 44px bar */
 .map-hdr button{width:36px!important;height:36px!important;position:relative}
-.map-hdr button::after{content:'';position:absolute;left:-2px;right:-2px;top:-4px;bottom:-4px}
+.map-hdr button::after{content:'';position:absolute;left:-4px;right:-4px;top:-4px;bottom:-4px}
 #map-city-jump{height:44px!important}
+/* Narrow phones: the "PULSEFY MAP" title would truncate to "P…" next to 44px buttons — the
+   active MAP tab already names the screen, so drop it and spread the controls instead */
+@media (max-width:479px){.map-hdr>div:first-child{display:none}.map-hdr{justify-content:space-between}}
 .mcb.active{background:linear-gradient(135deg,var(--pu),var(--or));color:#fff;border-color:transparent;box-shadow:0 4px 18px rgba(176,38,255,.45)}
 
 /* ── MAP SPLASH (logo wordmark over hero) ── */
