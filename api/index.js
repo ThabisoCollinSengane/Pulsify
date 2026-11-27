@@ -345,8 +345,14 @@ module.exports = async (req, res) => {
   try {
 
     /* ─── SEO pages (public HTML/XML): /durban, /durban/:slug, /e/:id, /sitemap.xml ─── */
-    if (req.method === 'GET' && (url === '/sitemap.xml' || /^\/(durban|e)(\/|$)/.test(url))) {
-      return await seoPages(url, res, { sb, fetchQuicketEvents });
+    if ((req.method === 'GET' || req.method === 'HEAD') && (url === '/sitemap.xml' || /^\/(durban|e)(\/|$)/.test(url))) {
+      try { return await seoPages(url, res, { sb, fetchQuicketEvents }); }
+      catch (e) {
+        console.error('[seo]', e.message);
+        res.setHeader('Cache-Control', 'no-store');
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        return res.status(500).send('Something went wrong — please try again.');
+      }
     }
 
     /* ─── GET /unsubscribe ── one-click email opt-out (public) ─────── */
