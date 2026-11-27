@@ -365,7 +365,8 @@ async function resendVerification() {
 async function saveAll() {
   const displayName = document.getElementById('display-name').value.trim();
   const username = document.getElementById('username').value.trim().replace(/^@+/, '').toLowerCase();
-  if (!/^[a-z0-9_.]{3,30}$/.test(username)) { showToast('Username: 3–30 characters, only a–z, 0–9, _ and .', 'err'); return; }
+  // Only validate a changed username, so legacy/empty handles don't block saving other settings
+  if (username !== (currentProfile.username || '') && !/^[a-z0-9_.]{3,30}$/.test(username)) { showToast('Username: 3–30 characters, only a–z, 0–9, _ and .', 'err'); return; }
   const bio = document.getElementById('bio').value.trim();
   const province = document.getElementById('province').value;
   const city = document.getElementById('city').value.trim();
@@ -382,7 +383,8 @@ async function saveAll() {
   localStorage.setItem('p_notif', JSON.stringify(notifPrefs));
 
   // Store bare handles: strip URLs down to the handle and a leading @; empty → null
-  const handle = v => { v = v.trim(); if (/profile\.php/i.test(v)) return v; v = v.replace(/^(https?:\/\/)?(www\.|m\.)?[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}\//i, '').split(/[/?#]/)[0].replace(/^@+/, ''); return v || null; };
+  // Only letters, digits, . _ - survive; anything else is dropped (stored-XSS guard).
+  const handle = v => { v = v.trim(); const fbId = v.match(/profile\.php\?id=(\d{1,30})/i); if (fbId) return 'https://facebook.com/profile.php?id=' + fbId[1]; v = v.replace(/^(https?:\/\/)?(www\.|m\.)?[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}\//i, '').split(/[/?#]/)[0].replace(/^@+/, ''); return /^[A-Za-z0-9._-]{1,50}$/.test(v) ? v : null; };
   const waDigits = document.getElementById('sl-whatsapp').value.replace(/\D/g, '');
   const socialLinks = {
     instagram: handle(document.getElementById('sl-instagram').value),
@@ -401,7 +403,7 @@ async function saveAll() {
     show_attended: document.getElementById('priv-attended').checked,
     updated_at: new Date().toISOString() };
   const { error } = await sb.from('profiles').update(updateData).eq('id', currentUser.id);
-  if (error) { showToast(error.code === '23505' ? 'That username is taken' : 'Error saving: ' + error.message, 'err'); return; }
+  if (error) { showToast(error.code === '23505' && /username/i.test(error.message || '') ? 'That username is taken' : 'Error saving: ' + error.message, 'err'); return; }
 
   document.getElementById('username').value = username;
   Object.keys(socialLinks).forEach(k => { document.getElementById('sl-' + k).value = socialLinks[k] || ''; });

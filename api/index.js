@@ -2876,7 +2876,13 @@ module.exports = async (req, res) => {
       if (!social_links || typeof social_links !== 'object') return res.status(400).json({ error: 'social_links object required' });
       const allowed = ['whatsapp','instagram','tiktok','facebook','x'];
       const clean = {};
-      for (const k of allowed) clean[k] = (social_links[k] || '').trim().slice(0, 500);
+      // Stored-XSS guard: bare handles, digits for WhatsApp, or a plain https URL only.
+      for (const k of allowed) {
+        const v = String(social_links[k] || '').trim().slice(0, 200);
+        clean[k] = k === 'whatsapp' ? (v.replace(/[^\d+]/g, '') || null)
+          : (/^[A-Za-z0-9._-]{1,50}$/.test(v.replace(/^@+/, '')) ? v.replace(/^@+/, '')
+          : (/^https:\/\/[^\s"'<>`\\]+$/.test(v) ? v : null));
+      }
       const { data, error } = await sb().from('profiles').update({ social_links: clean }).eq('id', auth.user.id).select('social_links').single();
       if (error) return res.status(400).json({ error: error.message });
       return res.status(200).json({ social_links: data.social_links });
@@ -2903,6 +2909,21 @@ module.exports = async (req, res) => {
         ['squad_invites', 'inviter_id', 'invitee_id'], ['squad_points', 'user_id'],
         ['notifications', 'user_id', 'from_user_id'],
       ];
+      // Remove stored files first (ID docs, face scan, avatar, cover) — best effort, logged.
+      const [{ data: prof }, { data: kyc }] = await Promise.all([
+        db.from('profiles').select('avatar_url,cover_url,face_scan_url,id_doc_url').eq('id', id).maybeSingle(),
+        db.from('kyc_documents').select('storage_path').eq('user_id', id),
+      ]);
+      const pathIn = (u, bucket) => (u && u.includes(`/${bucket}/`)) ? u.split(`/${bucket}/`)[1].split('?')[0] : null;
+      const docPaths = [...new Set([...(kyc || []).map(k => k.storage_path),
+        pathIn(prof?.face_scan_url, 'verification-docs'), pathIn(prof?.id_doc_url, 'verification-docs')].filter(Boolean))];
+      const imgPaths = [pathIn(prof?.avatar_url, 'avatars'), pathIn(prof?.cover_url, 'avatars')].filter(Boolean);
+      for (const [bucket, paths] of [['verification-docs', docPaths], ['avatars', imgPaths]]) {
+        if (!paths.length) continue;
+        const { error } = await db.storage.from(bucket).remove(paths);
+        if (error) console.error('[account/delete] storage', bucket, error.message);
+      }
+
       // Other users' rows that point at this user's posts/comments: detach replies
       // (keep them) and drop reposts of these posts, so FK rules can't block the wipe.
       const [{ data: myPosts }, { data: myCmts }] = await Promise.all([
@@ -2920,7 +2941,7 @@ module.exports = async (req, res) => {
         const del = db.from(table).delete();
         const { error } = await (cols.length > 1 ? del.or(cols.map(c => `${c}.eq.${id}`).join(',')) : del.eq(cols[0], id));
         if (error && (error.code === '42P01' || error.code === 'PGRST205')) { console.warn('[account/delete] no table', table); continue; }
-        if (error) { console.error('[account/delete]', table, error.message); return res.status(500).json({ error: `Could not delete your ${table.replace(/_/g, ' ')} — try again` }); }
+        if (error) { console.error('[account/delete]', table, error.message); return res.status(500).json({ error: 'Could not delete your account data — please try again' }); }
       }
 
       const email = `deleted+${id}@deleted.pulsefy.invalid`;
@@ -2928,13 +2949,15 @@ module.exports = async (req, res) => {
         display_name: 'Deleted user', username: `deleted_${id.slice(0, 8)}`,
         avatar_url: null, cover_url: null, bio: null, city: null, province: null, phone: null, dob: null,
         face_scan_url: null, id_doc_url: null, instagram: null, tiktok: null, whatsapp: null, facebook: null, twitter: null,
-        genres: [], social_links: {}, notification_prefs: {}, marketing_opt_in: false, suspended: true,
+        genres: [], social_links: {}, notification_prefs: {}, marketing_opt_in: false,
         profile_visibility: 'followers', comment_permission: 'nobody', show_attended: false, email,
       }).eq('id', id);
       if (pErr) { console.error('[account/delete] profile', pErr.message); return res.status(500).json({ error: 'Could not anonymise your profile — try again' }); }
 
       const { error: aErr } = await db.auth.admin.updateUserById(id, { email, email_confirm: true, ban_duration: '876000h', user_metadata: {} });
-      if (aErr) { console.error('[account/delete] auth', aErr.message); return res.status(500).json({ error: 'Could not close your login — email support' }); }
+      if (aErr) { console.error('[account/delete] auth', aErr.message); return res.status(500).json({ error: 'Could not close your login — please try again' }); }
+      // Suspend last: verifyToken rejects suspended users, so an earlier failure stays retryable.
+      await db.from('profiles').update({ suspended: true }).eq('id', id);
       return res.status(200).json({ success: true });
     }
 
