@@ -1169,7 +1169,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
       <button onclick="closeComments()" style="background:none;border:none;color:var(--tx);font-size:18px;cursor:pointer;padding:4px 8px">&#x2715;</button>
     </div>
     <div id="comments-list" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px"></div>
-    <div style="padding:8px 14px 10px;border-top:1px solid rgba(255,255,255,.08)">
+    <div id="cmt-off-note" style="display:none;padding:12px 14px;border-top:1px solid rgba(255,255,255,.08);text-align:center;font-size:.74rem;color:var(--mu)"></div>
+    <div id="cmt-input-bar" style="padding:8px 14px 10px;border-top:1px solid rgba(255,255,255,.08)">
       <div id="cmt-emoji-picker" style="display:none;flex-wrap:wrap;gap:6px;padding:6px 0 8px">
         <span onclick="cmt_insertEmoji('😂')" style="font-size:1.3rem;cursor:pointer">😂</span>
         <span onclick="cmt_insertEmoji('❤️')" style="font-size:1.3rem;cursor:pointer">❤️</span>
@@ -5758,6 +5759,7 @@ async function openComments(entityId, name, type = 'event') {
   const titleEl = document.getElementById('comment-title');
   const listEl = document.getElementById('comments-list');
   
+  _setCmtGate('');
   if (titleEl) titleEl.textContent = 'Comments on ' + name;
   if (listEl) listEl.innerHTML = [1,2,3].map(() => `<div class="cmt-skeleton"><div class="cmt-sk-av"></div><div style="flex:1"><div class="cmt-sk-line" style="width:45%;"></div><div class="cmt-sk-line" style="width:80%;"></div><div class="cmt-sk-line" style="width:35%;"></div></div></div>`).join('');
   
@@ -5776,6 +5778,14 @@ async function openComments(entityId, name, type = 'event') {
     if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--pk)">Error loading comments.</div>';
     console.error('Comment load error:', e);
   }
+}
+
+// Swap the comment input for a muted notice ('' = show the input again).
+function _setCmtGate(notice) {
+  const bar = document.getElementById('cmt-input-bar');
+  const note = document.getElementById('cmt-off-note');
+  if (bar) bar.style.display = notice ? 'none' : '';
+  if (note) { note.textContent = notice; note.style.display = notice ? 'block' : 'none'; }
 }
 
 function closeComments() {
@@ -6350,6 +6360,8 @@ async function openFollowList(userId, type) {
   }
 }
 
+let _profLocked = null; // userId of the followers-only profile open in the overlay, else null
+const _PROF_LOCKED_HTML = '<div style="padding:28px;text-align:center;font-size:.8rem;color:var(--mu);border:1px dashed var(--border);border-radius:12px">🔒 This account is private — follow to see their posts</div>';
 async function openProfile(userId) {
   const ov = document.getElementById('prof-overlay');
   const body = document.getElementById('prof-overlay-body');
@@ -6366,6 +6378,16 @@ async function openProfile(userId) {
       const { data: fw } = await sb.from('follows').select('follower_id').eq('follower_id', currentUser.id).eq('following_id', userId).maybeSingle();
       isFollowing = !!fw;
     }
+    // Privacy: followers-only accounts keep the header but hide posts.
+    // RPC error (e.g. not deployed yet) → treat as viewable; RLS still guards rows.
+    _profLocked = null;
+    if (currentUser?.id !== userId) {
+      try {
+        const { data: pv, error: pvErr } = await sb.rpc('get_profile_privacy', { p_owner: userId });
+        const pvRow = Array.isArray(pv) ? pv[0] : pv;
+        if (!pvErr && pvRow && pvRow.can_view === false) _profLocked = userId;
+      } catch (_) {}
+    }
     const init = (profile.display_name || profile.username || '?')[0].toUpperCase();
     const isOrg = ['organizer','business','admin'].includes(profile.role);
     const heroGrad = isOrg
@@ -6375,8 +6397,8 @@ async function openProfile(userId) {
       ? 'linear-gradient(135deg,#FF5C00,#FF2D78)'
       : 'linear-gradient(135deg,#B026FF,#FF5C00)';
 
-    const photoPosts = recent_posts.filter(p => firstImg(p.image_url)).slice(0, 9);
-    const postsHtml = photoPosts.length
+    const photoPosts = _profLocked ? [] : recent_posts.filter(p => firstImg(p.image_url)).slice(0, 9);
+    const postsHtml = _profLocked ? _PROF_LOCKED_HTML : photoPosts.length
       ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px;border-radius:10px;overflow:hidden">
           ${photoPosts.map(p => `
             <div onclick="openPost('${x(p.id)}')" style="aspect-ratio:1;background:var(--surf2);overflow:hidden;cursor:pointer;position:relative">
@@ -6396,7 +6418,7 @@ async function openProfile(userId) {
     const heroCss = profile.cover_url
       ? `background:url("${x(profile.cover_url)}") center/cover no-repeat`
       : `background:${heroGrad}`;
-    const seeAllBtn = posts_count > 6 ? `<button onclick="openAllPhotos('${x(userId)}')" style="background:none;border:none;color:var(--or);font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;cursor:pointer">See all ${posts_count} →</button>` : '';
+    const seeAllBtn = (posts_count > 6 && !_profLocked) ? `<button onclick="openAllPhotos('${x(userId)}')" style="background:none;border:none;color:var(--or);font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;cursor:pointer">See all ${posts_count} →</button>` : '';
     const bottomHtml = isOrg
       ? ['<div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:0" id="prof-tabs">',
           `<button id="ptab-posts" onclick="switchProfTab('posts','${x(userId)}')" style="flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid var(--or);color:var(--tx);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer;transition:color .15s">📝 Posts</button>`,
@@ -6444,6 +6466,7 @@ async function openPost(postId) {
   if (!ov || !listEl) return;
 
   ov.style.display = 'flex';
+  _setCmtGate('');
   titleEl.textContent = 'Post';
   listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu)">Loading…</div>';
 
@@ -6452,6 +6475,16 @@ async function openPost(postId) {
     sb.from('comments').select('id,body,created_at,user_id').eq('entity_id', postId).eq('entity_type','post').order('created_at',{ascending:true}).limit(50),
   ]);
   if (!post) { listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu)">Post not found</div>'; return; }
+
+  // Owner's comment_permission: hide the input if this viewer can't comment.
+  // RPC error (e.g. not deployed yet) → leave the input; the API/DB still enforce it.
+  if (currentUser && post.user_id && post.user_id !== currentUser.id) {
+    try {
+      const { data: pv, error: pvErr } = await sb.rpc('get_profile_privacy', { p_owner: post.user_id });
+      const pvRow = Array.isArray(pv) ? pv[0] : pv;
+      if (!pvErr && pvRow && pvRow.can_comment === false) _setCmtGate("You can't comment on this post");
+    } catch (_) {}
+  }
 
   // Batch-fetch profiles for author + commenters in one query
   const allUids = [...new Set([post.user_id, ...(cmts||[]).map(c => c.user_id).filter(Boolean)])];
@@ -6638,8 +6671,9 @@ async function switchProfTab(tab, userId) {
 }
 
 async function _renderProfPosts(userId, el) {
+  if (_profLocked === userId) { el.innerHTML = _PROF_LOCKED_HTML; return; }
   try {
-    const { posts } = await Api.get('/posts?user_id=' + encodeURIComponent(userId) + '&limit=18');
+    const { posts } = await Api.get('/posts?user_id=' + encodeURIComponent(userId) + '&limit=18', { auth: 'optional' });
     if (!posts || !posts.length) {
       el.innerHTML = '<div style="padding:28px;text-align:center;font-size:.78rem;color:var(--mu);border:1px dashed var(--border);border-radius:12px">No posts yet</div>';
       return;
@@ -6754,6 +6788,7 @@ async function toggleFollowOverlay(targetId) {
       await sb.from('follows').insert({ follower_id: currentUser.id, following_id: targetId });
       if (btn) { btn.textContent = '✓ Following'; btn.style.background = 'transparent'; btn.style.border = '1px solid var(--border2)'; btn.style.color = 'var(--mu2)'; }
       showToast('🔥 Following!');
+      if (_profLocked === targetId) openProfile(targetId); // now a follower — reload to show posts
     }
   } catch(e) { showToast('Error: ' + e.message); }
   if (btn) btn.disabled = false;

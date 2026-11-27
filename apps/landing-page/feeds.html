@@ -660,7 +660,8 @@ function buildCard(post) {
     '<div class="cmt-wrap" id="cmt-'+x(post.id)+'">' +
       '<div id="cmtl-'+x(post.id)+'">'+(_cmtCache[post.id]?buildCmts(_cmtCache[post.id],post.id):'<div style="padding:10px 14px;font-size:.74rem;color:var(--mu)">Tap to load comments…</div>')+'</div>' +
       '<div class="cmt-emoji-pick" id="cep-'+x(post.id)+'">'+CMT_EMOJIS.map(e => '<span onclick="cmtEmojiPick(\u0027'+x(post.id)+'\u0027,\u0027'+e+'\u0027)">'+e+'</span>').join('')+'</div>' +
-      '<div class="cir"><button class="cmt-emoji-btn" onclick="cmtEmojiToggle(\u0027'+x(post.id)+'\u0027)" title="Emoji">🙂</button><input class="ci" id="cmti-'+x(post.id)+'" placeholder="Add a comment…" maxlength="500" onkeydown="if(event.key===\u0027Enter\u0027)doComment(\u0027'+x(post.id)+'\u0027)"/><button class="csnd" onclick="doComment(\u0027'+x(post.id)+'\u0027)">➤</button></div>' +
+      '<div id="cmtoff-'+x(post.id)+'" style="display:'+(_cmtNotice[post.id]?'block':'none')+';padding:10px 14px;text-align:center;font-size:.72rem;color:var(--mu)">'+x(_cmtNotice[post.id]||'')+'</div>' +
+      '<div class="cir"'+(_cmtNotice[post.id]?' style="display:none"':'')+'><button class="cmt-emoji-btn" onclick="cmtEmojiToggle(\u0027'+x(post.id)+'\u0027)" title="Emoji">🙂</button><input class="ci" id="cmti-'+x(post.id)+'" placeholder="Add a comment…" maxlength="500" onkeydown="if(event.key===\u0027Enter\u0027)doComment(\u0027'+x(post.id)+'\u0027)"/><button class="csnd" onclick="doComment(\u0027'+x(post.id)+'\u0027)">➤</button></div>' +
     '</div>';
   return el;
 }
@@ -826,6 +827,7 @@ function cmtEmojiPick(postId, emoji) {
 // Threaded comments — lazy-load from DB on first open
 const _cmtCache = {};        // postId → array of top-level comments (each with .replies[])
 const _replyTo  = {};        // postId → { parent_id, name }  when user is composing a reply
+const _cmtNotice = {};       // postId → reason the viewer can't comment ('' = can comment)
 async function toggleCmt(postId) {
   const el = document.getElementById('cmt-'+postId);
   if (!el) return;
@@ -837,10 +839,17 @@ async function loadComments(postId) {
   const lEl = document.getElementById('cmtl-'+postId);
   if (lEl) lEl.innerHTML = '<div style="padding:10px 14px;font-size:.74rem;color:var(--mu)">Loading comments…</div>';
   try {
-    const res  = await fetch('/api/comments?entity_id=' + encodeURIComponent(postId) + '&entity_type=post');
+    const res  = await fetch('/api/comments?entity_id=' + encodeURIComponent(postId) + '&entity_type=post',
+      _token ? { headers: { 'Authorization': 'Bearer ' + _token } } : undefined);
     const json = await safeJson(res);
     const top  = (json.comments || []).map(c => ({ ...c, profile: c.profile || {} }));
     _cmtCache[postId] = top;
+    // Owner's comment_permission blocks this viewer → swap the input for a notice
+    _cmtNotice[postId] = (json.can_comment === false && json.comment_notice) || '';
+    const offEl = document.getElementById('cmtoff-'+postId);
+    if (offEl) { offEl.textContent = _cmtNotice[postId]; offEl.style.display = _cmtNotice[postId] ? 'block' : 'none'; }
+    const cirEl = document.getElementById('cmt-'+postId)?.querySelector('.cir');
+    if (cirEl) cirEl.style.display = _cmtNotice[postId] ? 'none' : '';
     const totalCount = (json.flat || []).length;
     const cEl = document.getElementById('cc-'+postId);
     if (cEl) cEl.textContent = fn(totalCount);
@@ -909,6 +918,8 @@ async function doComment(postId) {
       body: JSON.stringify({ entity_id: postId, entity_type: 'post', body: txt, parent_id: reply?.parent_id || undefined }),
     });
     const json = await safeJson(res);
+    // Not allowed to comment: show why, drop the optimistic comment, re-gate the input
+    if (res.status === 403) { showToast(json.error || "You can't comment on this post", 'err'); loadComments(postId); return; }
     if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
     // Re-sync from server to pick up real id + DB trigger side-effects
     loadComments(postId);

@@ -171,9 +171,8 @@ textarea.inp{resize:none;height:78px;line-height:1.5}
 
   <div class="sec">
     <div class="sec-head">Privacy Settings</div>
-    <div class="field"><div class="lbl">Profile Visibility</div><select class="psel" id="priv-profile"><option value="true">🌍 Public — anyone can view</option><option value="false">🔒 Private — only followers</option></select></div>
+    <div class="field"><div class="lbl">Profile Visibility</div><select class="psel" id="priv-profile"><option value="public">🌍 Public — anyone can view</option><option value="followers">🔒 Private — only followers</option></select></div>
     <div class="field"><div class="lbl">Who Can Comment</div><select class="psel" id="priv-comment"><option value="everyone">Everyone</option><option value="followers">Followers only</option><option value="nobody">Nobody</option></select></div>
-    <div class="field"><div style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">Show email on profile</div><div style="font-size:.68rem;color:var(--mu)">Visible to other users</div></div><label class="tgl"><input type="checkbox" id="priv-email"/><span class="tgl-s"></span></label></div></div>
     <div class="field"><div style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">Show events attended</div><div style="font-size:.68rem;color:var(--mu)">Others can see your history</div></div><label class="tgl"><input type="checkbox" id="priv-attended"/><span class="tgl-s"></span></label></div></div>
   </div>
 
@@ -278,11 +277,9 @@ async function loadData() {
     if (el) el.checked = prefs[k] !== false; // default ON
   });
 
-  const priv = JSON.parse(localStorage.getItem('p_privacy') || '{}');
-  document.getElementById('priv-profile').value = priv.profile_public !== false ? 'true' : 'false';
-  document.getElementById('priv-comment').value = priv.who_can_comment || 'everyone';
-  document.getElementById('priv-email').checked = priv.show_email === true;
-  document.getElementById('priv-attended').checked = priv.show_attended !== false;
+  document.getElementById('priv-profile').value = currentProfile.profile_visibility || 'public';
+  document.getElementById('priv-comment').value = currentProfile.comment_permission || 'everyone';
+  document.getElementById('priv-attended').checked = currentProfile.show_attended !== false;
 }
 
 function toggleGenre(el, genre) {
@@ -352,17 +349,13 @@ async function saveAll() {
   });
   localStorage.setItem('p_notif', JSON.stringify(notifPrefs));
 
-  const updateData = { display_name: displayName, username, bio, province, city, dob, phone, genres: Array.from(selectedGenres), notification_prefs: notifPrefs, updated_at: new Date().toISOString() };
+  const updateData = { display_name: displayName, username, bio, province, city, dob, phone, genres: Array.from(selectedGenres), notification_prefs: notifPrefs,
+    profile_visibility: document.getElementById('priv-profile').value,
+    comment_permission: document.getElementById('priv-comment').value,
+    show_attended: document.getElementById('priv-attended').checked,
+    updated_at: new Date().toISOString() };
   const { error } = await sb.from('profiles').update(updateData).eq('id', currentUser.id);
   if (error) { showToast('Error saving: ' + error.message, 'err'); return; }
-
-  const privacyPrefs = {
-    profile_public: document.getElementById('priv-profile').value === 'true',
-    who_can_comment: document.getElementById('priv-comment').value,
-    show_email: document.getElementById('priv-email').checked,
-    show_attended: document.getElementById('priv-attended').checked
-  };
-  localStorage.setItem('p_privacy', JSON.stringify(privacyPrefs));
 
   document.getElementById('av-name').textContent = displayName || 'Your Name';
   document.getElementById('av-handle').textContent = '@' + (username || currentUser.email?.split('@')[0]);

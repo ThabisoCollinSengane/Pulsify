@@ -136,6 +136,48 @@ async function verifyToken(token) {
   } catch { return null; }
 }
 
+// Privacy: ids of followers-only authors whose posts viewerId (null = anon)
+// may NOT see — i.e. not themselves and not someone they follow. These routes
+// use the service role, so this is the only guard (RLS mirrors it for clients).
+async function hiddenAuthorIds(viewerId) {
+  const { data: priv } = await sb().from('profiles').select('id').eq('profile_visibility', 'followers');
+  const ids = (priv || []).map(r => r.id).filter(id => id !== viewerId);
+  if (!ids.length || !viewerId) return ids;
+  const { data: fws } = await sb().from('follows').select('following_id')
+    .eq('follower_id', viewerId).in('following_id', ids);
+  const followed = new Set((fws || []).map(f => f.following_id));
+  return ids.filter(id => !followed.has(id));
+}
+
+async function isFollowing(viewerId, ownerId) {
+  if (!viewerId) return false;
+  const { data: f } = await sb().from('follows').select('follower_id')
+    .eq('follower_id', viewerId).eq('following_id', ownerId).maybeSingle();
+  return !!f;
+}
+
+// Can viewerId see post postId? (false only for a followers-only author's post)
+async function canSeePost(postId, viewerId) {
+  const { data: post } = await sb().from('posts').select('user_id').eq('id', postId).maybeSingle();
+  if (!post?.user_id || post.user_id === viewerId) return true;
+  const { data: owner } = await sb().from('profiles').select('profile_visibility').eq('id', post.user_id).maybeSingle();
+  return owner?.profile_visibility !== 'followers' || await isFollowing(viewerId, post.user_id);
+}
+
+// Privacy: returns the 403 message if viewerId (null = anon) may not comment
+// on post postId under the owner's comment_permission, else null.
+async function postCommentBlock(postId, viewerId) {
+  const { data: post } = await sb().from('posts').select('user_id').eq('id', postId).maybeSingle();
+  if (!post?.user_id || post.user_id === viewerId) return null;
+  const { data: owner } = await sb().from('profiles').select('comment_permission,profile_visibility').eq('id', post.user_id).maybeSingle();
+  const follows = await isFollowing(viewerId, post.user_id);
+  if (owner?.profile_visibility === 'followers' && !follows) return 'Only followers can comment on this post.';
+  const perm = owner?.comment_permission || 'everyone';
+  if (perm === 'nobody') return 'Comments are turned off for this post.';
+  if (perm === 'followers' && !follows) return 'Only followers can comment on this post.';
+  return null;
+}
+
 async function authUser(req) {
   const token = tokenFrom(req);
   if (!token) return null;
@@ -355,9 +397,17 @@ module.exports = async (req, res) => {
       const userId     = q.user_id || null;
       const followerId = q.follower_id || null;
 
+      // Privacy: exclude followers-only authors the viewer can't see, before
+      // paging, so total/has_next stay correct. Null-author posts stay
+      // (SQL NOT IN would drop them), hence the nested or().
+      const viewer = tokenFrom(req) ? await verifyToken(tokenFrom(req)) : null;
+      const hidden = await hiddenAuthorIds(viewer?.id || null);
+      const visFilter = 'or(visibility.eq.public,visibility.is.null)';
       let query = sb().from('posts')
         .select('*', { count: 'exact' })
-        .or('visibility.eq.public,visibility.is.null')
+        .or(hidden.length
+          ? `and(${visFilter},or(user_id.is.null,user_id.not.in.(${hidden.join(',')})))`
+          : visFilter.slice(3, -1))
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
 
@@ -371,8 +421,9 @@ module.exports = async (req, res) => {
         query = query.in('user_id', ids);
       }
 
-      const { data: posts, error, count } = await query;
+      const { data: rawPosts, error, count } = await query;
       if (error) return res.status(400).json({ error: error.message });
+      const posts = rawPosts || [];
 
       const profileIds = [...new Set((posts || []).map(p => p.user_id).filter(Boolean))];
       let profileMap = {};
@@ -502,12 +553,21 @@ module.exports = async (req, res) => {
 
       if (!profile) return res.status(404).json({ error: 'Profile not found' });
 
+      // Privacy: followers-only profiles hide recent posts from non-followers.
+      let canView = true;
+      const { data: vis } = await sb().from('profiles').select('profile_visibility').eq('id', profId).maybeSingle();
+      if (vis?.profile_visibility === 'followers') {
+        const viewer = await verifyToken(tokenFrom(req));
+        canView = viewer?.id === profId || await isFollowing(viewer?.id, profId);
+      }
+
       return res.status(200).json({
         profile,
         posts_count:     postsCount    || 0,
         followers_count: followersCount || 0,
         following_count: followingCount || 0,
-        recent_posts:    recentPosts   || [],
+        recent_posts:    canView ? (recentPosts || []) : [],
+        can_view:        canView,
       });
     }
 
@@ -1236,6 +1296,7 @@ module.exports = async (req, res) => {
 
       const { entity_type, entity_id, type = 'like' } = req.body || {};
       if (!entity_type || !entity_id) return res.status(400).json({ error: 'entity_type and entity_id required' });
+      if (entity_type === 'post' && !(await canSeePost(entity_id, user.id))) return res.status(404).json({ error: 'Post not found' });
 
       const userClient = sbAs(token);
 
@@ -1300,6 +1361,7 @@ module.exports = async (req, res) => {
 
       const { post_id } = req.body || {};
       if (!post_id) return res.status(400).json({ error: 'post_id required' });
+      if (!(await canSeePost(post_id, user.id))) return res.status(404).json({ error: 'Post not found' });
 
       // Write with the service-role client. The JWT is already verified above
       // and user.id is authoritative (never client-supplied), so this is safe
@@ -1389,6 +1451,12 @@ module.exports = async (req, res) => {
       const entity_type = q.entity_type || 'post';
       if (!entity_id) return res.status(400).json({ error: 'entity_id required' });
 
+      const viewer = entity_type === 'post' && tokenFrom(req) ? await verifyToken(tokenFrom(req)) : null;
+      if (entity_type === 'post' && !(await canSeePost(entity_id, viewer?.id || null))) {
+        return res.status(200).json({ comments: [], flat: [], can_comment: false,
+          comment_notice: 'Only followers can see and comment on this post.' });
+      }
+
       const { data, error } = await sb().from('comments')
         .select('id,user_id,body,parent_id,like_count,created_at')
         .eq('entity_id', entity_id)
@@ -1415,7 +1483,14 @@ module.exports = async (req, res) => {
         if (c.parent_id && byId[c.parent_id]) byId[c.parent_id].replies.push(c);
         else top.push(c);
       }
-      return res.status(200).json({ comments: top, flat: enriched });
+      // Privacy: tell the viewer whether they may comment (anon → false).
+      // comment_notice is the reason to show in place of the input, or null.
+      let gate = {};
+      if (entity_type === 'post') {
+        const notice = await postCommentBlock(entity_id, viewer?.id || null);
+        gate = { can_comment: !!viewer && !notice, comment_notice: notice };
+      }
+      return res.status(200).json({ comments: top, flat: enriched, ...gate });
     }
 
     /* ─── POST /comments ─────────────────────────────────── */
@@ -1433,12 +1508,20 @@ module.exports = async (req, res) => {
       if (!entity_id || !text) return res.status(400).json({ error: 'entity_id and body/content required' });
       if (text.length > 500) return res.status(400).json({ error: 'comment too long (max 500)' });
 
+      if (entity_type === 'post') {
+        const block = await postCommentBlock(entity_id, user.id);
+        if (block) return res.status(403).json({ error: block });
+      }
+
       const insertRow = { user_id: user.id, entity_id, entity_type, body: text };
       if (parent_id) insertRow.parent_id = parent_id;
 
       const { data: comment, error } = await sbAs(token).from('comments')
         .insert(insertRow).select().single();
 
+      // DB trigger backstop (e.g. permission changed between check and insert).
+      if (error && (/COMMENTS_NOT_ALLOWED/.test(error.message || '') || (error.code === '42501' && entity_type === 'post')))
+        return res.status(403).json({ error: "You can't comment on this post." });
       if (error) return res.status(400).json({ error: error.message });
 
       if (entity_type === 'post') {

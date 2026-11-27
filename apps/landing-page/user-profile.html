@@ -195,6 +195,7 @@ const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 let currentUser = null;
 let profileId = null;
 let isFollowing = false;
+let _upProfile = null;   // viewed profile — renderProfileContent re-runs on follow change
 let _upToken = '';
 const _upCmtCache = {};
 const _upLiked = {};
@@ -346,14 +347,41 @@ async function loadUserData() {
   document.getElementById('following-count').textContent = followingCount || 0;
 
   const isOrg = ['organizer','business','admin'].includes(profile.role);
-  renderPosts(profile.id);
   if (isOrg) {
     document.getElementById('events-tab').textContent = isOwnProfile ? '🎟 My Events' : '🎟 Events';
     document.getElementById('activity-tab').textContent = '🍽 Menu';
+  }
+  _upProfile = profile;
+  renderProfileContent(profile, isOwnProfile);
+}
+
+// Privacy gate for the tab content. Header (avatar, name, follow, counts) always shows.
+// Re-run after follow/unfollow. RPC error (e.g. not deployed) → show everything; RLS still guards rows.
+async function renderProfileContent(profile, isOwnProfile) {
+  let priv = { can_view: true, show_attended: true };
+  if (!isOwnProfile) {
+    try {
+      const { data, error } = await sb.rpc('get_profile_privacy', { p_owner: profile.id });
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!error && row) priv = row;
+    } catch (e) {}
+  }
+  const isOrg = ['organizer','business','admin'].includes(profile.role);
+  const msg = (t) => `<div class="empty"><div class="empty-ico">🔒</div><div class="empty-title">${t}</div></div>`;
+  if (priv.can_view === false) {
+    const lock = msg('This account is private — follow to see their posts');
+    document.getElementById('posts-list').innerHTML = lock;
+    if (isOrg) { renderPostedEvents(profile.id); renderMenu(profile.id); }
+    else { document.getElementById('events-list').innerHTML = lock; document.getElementById('activity-list').innerHTML = lock; }
+    return;
+  }
+  renderPosts(profile.id);
+  if (isOrg) {
     renderPostedEvents(profile.id);
     renderMenu(profile.id);
   } else {
-    renderAttended(profile.id, isOwnProfile);
+    if (priv.show_attended === false) document.getElementById('events-list').innerHTML = msg('Attended events are hidden');
+    else renderAttended(profile.id, isOwnProfile);
     renderActivity(profile.id);
   }
 }
@@ -489,6 +517,8 @@ async function toggleFollow(userId) {
     }
   }
   followBtn.disabled = false;
+  // Follow state changes what this viewer may see / comment on — re-check and reload.
+  if (_upProfile) { Object.keys(_upCmtCache).forEach(k => delete _upCmtCache[k]); renderProfileContent(_upProfile, false); }
 }
 
 function updateFollowerCount(change) {
@@ -690,10 +720,25 @@ async function upLoadComments(postId) {
   if (!listEl) return;
   listEl.innerHTML = '<div style="padding:10px 14px;font-size:.75rem;color:var(--mu)">Loading…</div>';
   try {
-    const r = await fetch('/api/comments?entity_id=' + encodeURIComponent(postId) + '&entity_type=post');
+    const r = await fetch('/api/comments?entity_id=' + encodeURIComponent(postId) + '&entity_type=post',
+      _upToken ? { headers: { 'Authorization': 'Bearer ' + _upToken } } : undefined);
     const j = await r.json();
     _upCmtCache[postId] = j.comments || [];
     listEl.innerHTML = upBuildCmts(postId);
+    // Owner's comment_permission blocks this viewer → swap the input for a notice
+    const notice = (j.can_comment === false && j.comment_notice) || '';
+    const row = document.getElementById('up-cmt-' + postId)?.querySelector('.up-cmt-input-row');
+    if (row) {
+      row.style.display = notice ? 'none' : '';
+      let n = row.previousElementSibling;
+      if (!n || !n.classList.contains('up-cmt-off')) {
+        n = document.createElement('div'); n.className = 'up-cmt-off';
+        n.style.cssText = 'padding:10px 14px;text-align:center;font-size:.72rem;color:var(--mu)';
+        row.before(n);
+      }
+      n.textContent = notice;
+      n.style.display = notice ? '' : 'none';
+    }
   } catch(e) {
     listEl.innerHTML = '<div style="padding:10px 14px;font-size:.74rem;color:var(--mu)">Could not load comments</div>';
   }
@@ -761,14 +806,14 @@ async function upDoComment(postId) {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _upToken },
       body: JSON.stringify(payload)
     });
-    if (!r.ok) throw new Error('fail');
+    if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(r.status === 403 && j.error ? j.error : 'Could not post comment'); }
     upCancelReply(postId);
     delete _upCmtCache[postId];
     await upLoadComments(postId);
     const cnt = document.getElementById('up-cmc-' + postId);
     if (cnt) cnt.textContent = parseInt(cnt.textContent || '0', 10) + 1;
   } catch(e) {
-    showToast('Could not post comment', '');
+    showToast(e.message || 'Could not post comment', '');
   }
 }
 
