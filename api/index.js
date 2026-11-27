@@ -2917,7 +2917,10 @@ module.exports = async (req, res) => {
       const pathIn = (u, bucket) => (u && u.includes(`/${bucket}/`)) ? u.split(`/${bucket}/`)[1].split('?')[0] : null;
       const docPaths = [...new Set([...(kyc || []).map(k => k.storage_path),
         pathIn(prof?.face_scan_url, 'verification-docs'), pathIn(prof?.id_doc_url, 'verification-docs')].filter(Boolean))];
-      const imgPaths = [pathIn(prof?.avatar_url, 'avatars'), pathIn(prof?.cover_url, 'avatars')].filter(Boolean);
+      // Current avatar/cover plus every older upload named avatar_<id>_* / cover_<id>_*.
+      const { data: older } = await db.storage.from('avatars').list('', { search: id, limit: 100 });
+      const imgPaths = [...new Set([pathIn(prof?.avatar_url, 'avatars'), pathIn(prof?.cover_url, 'avatars'),
+        ...(older || []).map(o => o.name).filter(n => n.includes(`_${id}_`))].filter(Boolean).map(p => decodeURIComponent(p)))];
       for (const [bucket, paths] of [['verification-docs', docPaths], ['avatars', imgPaths]]) {
         if (!paths.length) continue;
         const { error } = await db.storage.from(bucket).remove(paths);
@@ -2957,7 +2960,8 @@ module.exports = async (req, res) => {
       const { error: aErr } = await db.auth.admin.updateUserById(id, { email, email_confirm: true, ban_duration: '876000h', user_metadata: {} });
       if (aErr) { console.error('[account/delete] auth', aErr.message); return res.status(500).json({ error: 'Could not close your login — please try again' }); }
       // Suspend last: verifyToken rejects suspended users, so an earlier failure stays retryable.
-      await db.from('profiles').update({ suspended: true }).eq('id', id);
+      const { error: sErr } = await db.from('profiles').update({ suspended: true }).eq('id', id);
+      if (sErr) { console.error('[account/delete] suspend', sErr.message); return res.status(500).json({ error: 'Almost done — please try again' }); }
       return res.status(200).json({ success: true });
     }
 
