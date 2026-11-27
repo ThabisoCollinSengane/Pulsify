@@ -268,7 +268,18 @@ async function loadData() {
 
   const rb = document.getElementById('role-badge');
   if (currentProfile.role === 'admin') { rb.className = 'role-badge role-admin'; rb.textContent = '🔑 Admin'; }
-  else if (currentProfile.role === 'organizer') { rb.className = 'role-badge role-mod'; rb.textContent = '🎪 Organizer'; }
+  else if (currentProfile.role === 'organizer') { rb.className = 'role-badge role-mod'; rb.textContent = '🎤 Organiser'; }
+  else if (currentProfile.role === 'business') { rb.className = 'role-badge role-biz'; rb.textContent = '🏪 Business'; }
+  if (currentProfile.is_verified) document.getElementById('verified-badge').style.display = '';
+  const sbd = document.getElementById('status-badge');
+  if (currentProfile.suspended) { sbd.textContent = '● Suspended'; sbd.style.color = 'var(--pk)'; }
+  else if (currentProfile.verif_status === 'pending') { sbd.textContent = '● Pending verification'; sbd.style.color = 'var(--or)'; }
+
+  // user-profile.html renders social_links {instagram,tiktok,facebook,x,whatsapp}; legacy columns are the fallback
+  const sl = currentProfile.social_links || {};
+  [['instagram','instagram'],['tiktok','tiktok'],['facebook','facebook'],['x','twitter'],['whatsapp','whatsapp']].forEach(([k, col]) => {
+    document.getElementById('sl-' + k).value = (sl[k] !== undefined ? sl[k] : currentProfile[col]) || '';
+  });
 
   if (currentProfile.avatar_url) {
     const img = document.createElement('img'); img.src = currentProfile.avatar_url;
@@ -296,6 +307,7 @@ async function loadData() {
     const el = document.getElementById('n-' + k);
     if (el) el.checked = prefs[k] !== false; // default ON
   });
+  document.getElementById('marketing-opt-in').checked = currentProfile.marketing_opt_in === true;
 
   document.getElementById('priv-profile').value = currentProfile.profile_visibility || 'public';
   document.getElementById('priv-comment').value = currentProfile.comment_permission || 'everyone';
@@ -307,25 +319,23 @@ function toggleGenre(el, genre) {
   else { selectedGenres.add(genre); el.classList.add('on'); }
 }
 
-function handleAvatar(input) {
-  const file = input.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const url = e.target.result;
-    const av = document.getElementById('av-el');
-    let img = av.querySelector('img');
-    if (!img) { img = document.createElement('img'); av.appendChild(img); document.getElementById('av-emoji').style.display = 'none'; }
-    img.src = url;
-    const up = await compressImage(file, 512);
-    const fileName = `avatar_${currentUser.id}_${Date.now()}.${up.name.split('.').pop() || 'jpg'}`;
-    const { error } = await sb.storage.from('avatars').upload(fileName, up, { contentType: up.type });
-    if (!error) {
-      const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(fileName);
-      await sb.from('profiles').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
-    }
-    showToast('Photo updated ✓', 'ok');
-  };
-  reader.readAsDataURL(file);
+async function handleAvatar(input) {
+  const file = input.files[0]; input.value = ''; if (!file) return;
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { showToast('Photo must be a JPG, PNG or WebP', 'err'); return; }
+  const up = await compressImage(file, 512);
+  if (up.size > 5 * 1024 * 1024) { showToast('Photo must be 5MB or smaller', 'err'); return; }
+  showToast('Uploading photo…');
+  const fileName = `avatar_${currentUser.id}_${Date.now()}.${up.name.split('.').pop() || 'jpg'}`;
+  const { error } = await sb.storage.from('avatars').upload(fileName, up, { contentType: up.type });
+  if (error) { showToast('Upload failed: ' + error.message, 'err'); return; }
+  const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(fileName);
+  const { error: dbErr } = await sb.from('profiles').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
+  if (dbErr) { showToast('Could not save photo: ' + dbErr.message, 'err'); return; }
+  const av = document.getElementById('av-el');
+  let img = av.querySelector('img');
+  if (!img) { img = document.createElement('img'); av.appendChild(img); document.getElementById('av-emoji').style.display = 'none'; }
+  img.src = publicUrl;
+  showToast('Photo updated ✓', 'ok');
 }
 
 function handleCover(input) {
@@ -354,7 +364,8 @@ async function resendVerification() {
 
 async function saveAll() {
   const displayName = document.getElementById('display-name').value.trim();
-  const username = document.getElementById('username').value.trim().replace('@', '');
+  const username = document.getElementById('username').value.trim().replace(/^@+/, '').toLowerCase();
+  if (!/^[a-z0-9_.]{3,30}$/.test(username)) { showToast('Username: 3–30 characters, only a–z, 0–9, _ and .', 'err'); return; }
   const bio = document.getElementById('bio').value.trim();
   const province = document.getElementById('province').value;
   const city = document.getElementById('city').value.trim();
@@ -367,24 +378,59 @@ async function saveAll() {
     const el = document.getElementById('n-' + k);
     if (el) notifPrefs[k] = el.checked;
   });
+  notifPrefs.reply = notifPrefs.comment; // replies follow the "Comments on your posts" toggle
   localStorage.setItem('p_notif', JSON.stringify(notifPrefs));
 
+  // Store bare handles: strip URLs down to the handle and a leading @; empty → null
+  const handle = v => { v = v.trim(); if (/profile\.php/i.test(v)) return v; v = v.replace(/^(https?:\/\/)?(www\.|m\.)?[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}\//i, '').split(/[/?#]/)[0].replace(/^@+/, ''); return v || null; };
+  const waDigits = document.getElementById('sl-whatsapp').value.replace(/\D/g, '');
+  const socialLinks = {
+    instagram: handle(document.getElementById('sl-instagram').value),
+    tiktok: handle(document.getElementById('sl-tiktok').value),
+    facebook: handle(document.getElementById('sl-facebook').value),
+    x: handle(document.getElementById('sl-x').value),
+    whatsapp: waDigits ? '+' + waDigits.replace(/^0/, '27') : null,
+  };
+
   const updateData = { display_name: displayName, username, bio, province, city, dob, phone, genres: Array.from(selectedGenres), notification_prefs: notifPrefs,
+    marketing_opt_in: document.getElementById('marketing-opt-in').checked,
+    social_links: socialLinks, instagram: socialLinks.instagram, tiktok: socialLinks.tiktok,
+    facebook: socialLinks.facebook, twitter: socialLinks.x, whatsapp: socialLinks.whatsapp,
     profile_visibility: document.getElementById('priv-profile').value,
     comment_permission: document.getElementById('priv-comment').value,
     show_attended: document.getElementById('priv-attended').checked,
     updated_at: new Date().toISOString() };
   const { error } = await sb.from('profiles').update(updateData).eq('id', currentUser.id);
-  if (error) { showToast('Error saving: ' + error.message, 'err'); return; }
+  if (error) { showToast(error.code === '23505' ? 'That username is taken' : 'Error saving: ' + error.message, 'err'); return; }
 
+  document.getElementById('username').value = username;
+  Object.keys(socialLinks).forEach(k => { document.getElementById('sl-' + k).value = socialLinks[k] || ''; });
   document.getElementById('av-name').textContent = displayName || 'Your Name';
   document.getElementById('av-handle').textContent = '@' + (username || currentUser.email?.split('@')[0]);
   showToast('✅ All changes saved!', 'ok');
 }
 
 async function logout() { await sb.auth.signOut(); localStorage.clear(); window.location.href = '/signin'; }
-async function deleteAccount() { if (!confirm('Delete your account? This cannot be undone.')) return; const { error } = await sb.auth.admin.deleteUser(currentUser.id); if (error) showToast(error.message, 'err'); else { localStorage.clear(); window.location.href = '/signin'; } }
-function showToast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast ' + type + ' show'; setTimeout(() => t.classList.remove('show'), 3000); }
+async function changePassword() {
+  const { error } = await sb.auth.resetPasswordForEmail(currentUser.email, { redirectTo: location.origin + '/reset-password' });
+  if (error) showToast(error.message, 'err');
+  else showToast('Check your email for a reset link', 'ok');
+}
+async function deleteAccount() {
+  const typed = prompt('Delete your account?\n\nYour profile, posts, comments and follows are removed. Ticket records are kept for the organiser. This cannot be undone.\n\nType DELETE to confirm.');
+  if (typed === null) return;
+  if (typed.trim() !== 'DELETE') { showToast('Type DELETE to confirm', 'err'); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = '/signin'; return; }
+  try {
+    const r = await fetch('/api/account/delete', { method: 'POST', headers: { Authorization: 'Bearer ' + session.access_token } });
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) { showToast(body.error || 'Could not delete account', 'err'); return; }
+  } catch (e) { showToast('Network error — try again', 'err'); return; }
+  try { await sb.auth.signOut({ scope: 'local' }); } catch (_) {}
+  localStorage.clear(); window.location.href = '/signin';
+}
+function showToast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast ' + type + ' show'; clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 3500); }
 
 loadData();
 </script>
