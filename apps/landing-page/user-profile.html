@@ -727,7 +727,7 @@ async function upLoadComments(postId) {
     const r = await fetch('/api/comments?entity_id=' + encodeURIComponent(postId) + '&entity_type=post',
       _upToken ? { headers: { 'Authorization': 'Bearer ' + _upToken } } : undefined);
     const j = await r.json();
-    _upCmtCache[postId] = j.comments || [];
+    _upCmtCache[postId] = j.flat || j.comments || [];   // flat: upBuildCmts threads by parent_id
     listEl.innerHTML = upBuildCmts(postId);
     // Owner's comment_permission blocks this viewer → swap the input for a notice
     const notice = (j.can_comment === false && j.comment_notice) || '';
@@ -769,7 +769,8 @@ function upBuildCmts(postId) {
         <div class="up-cmt-text">${escHtml(c.content || c.body || '')}</div>
         <div style="display:flex;align-items:center;gap:8px">
           <div class="up-cmt-time">${timeStr}</div>
-          ${depth < 2 ? `<button class="up-cmt-reply-btn" onclick="upStartReply('${pid}','${cid}','${name}')">↩ Reply</button>` : ''}
+          ${depth < 2 ? `<button class="up-cmt-reply-btn" onclick="upStartReply('${pid}','${cid}')">↩ Reply</button>` : ''}
+          ${currentUser && c.user_id === currentUser.id ? `<button class="up-cmt-reply-btn" onclick="upDeleteComment('${pid}','${cid}')">Delete</button>` : ''}
         </div>
         ${replies.length ? `<div class="up-cmt-replies">${replies.map(r => renderOne(r, depth + 1)).join('')}</div>` : ''}
       </div>
@@ -778,7 +779,9 @@ function upBuildCmts(postId) {
   return top.map(c => renderOne(c, 0)).join('');
 }
 
-function upStartReply(postId, cmtId, name) {
+function upStartReply(postId, cmtId) {
+  const c = (_upCmtCache[postId] || []).find(x => x.id === cmtId);
+  const name = c?.profile?.display_name || c?.profile?.username || 'User';
   _upReplyTo[postId] = cmtId;
   const rb = document.getElementById('up-rb-' + postId);
   const rbt = document.getElementById('up-rb-txt-' + postId);
@@ -819,6 +822,25 @@ async function upDoComment(postId) {
   } catch(e) {
     showToast(e.message || 'Could not post comment', '');
   }
+}
+
+async function upDeleteComment(postId, cmtId) {
+  if (!confirm('Delete this comment?')) return;
+  try {
+    const token = (await sb.auth.getSession())?.data?.session?.access_token || _upToken;
+    const r = await fetch('/api/comments/' + encodeURIComponent(cmtId), {
+      method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token },
+    });
+    if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || 'Could not delete comment'); }
+  } catch (e) { showToast(e.message || 'Could not delete comment', ''); return; }
+  // Replies survive server-side as top-level comments
+  _upCmtCache[postId] = (_upCmtCache[postId] || []).filter(c => c.id !== cmtId)
+    .map(c => c.parent_id === cmtId ? { ...c, parent_id: null } : c);
+  const listEl = document.getElementById('up-cmt-list-' + postId);
+  if (listEl) listEl.innerHTML = upBuildCmts(postId);
+  const cnt = document.getElementById('up-cmc-' + postId);
+  if (cnt) cnt.textContent = Math.max(0, parseInt(cnt.textContent || '0', 10) - 1);
+  showToast('Comment deleted', 'ok');
 }
 
 async function renderAttended(userId, isOwnProfile) {

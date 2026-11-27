@@ -1162,7 +1162,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 </div>
 
 <!-- COMMENTS OVERLAY -->
-<div id="comments-overlay" onclick="if(event.target===this)closeComments()" style="display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center">
+<div id="comments-overlay" onclick="if(event.target===this)closeComments()" style="display:none;position:fixed;inset:0;z-index:3600;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center">
   <div style="width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;max-height:80vh">
     <div style="padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.08)">
       <span id="comment-title" style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px"></span>
@@ -1982,6 +1982,7 @@ window.addEventListener('popstate', e => {
   // Style-toggled overlays (display:flex or display:block when visible)
   const styleOverlays = [
     ['fl-overlay',           () => { document.getElementById('fl-overlay').style.display = 'none'; }],           // z:4000
+    ['comments-overlay',     closeComments],                                                                       // z:3600
     ['prof-overlay',         closeProfOverlay],                                                                    // z:3500
     ['friends-list-overlay', () => { document.getElementById('friends-list-overlay').style.display = 'none'; }], // z:3000
     ['squad-invite-overlay', closeSquadInvite],                                                                    // z:2700
@@ -5751,6 +5752,7 @@ function switchST(tab, paneId) { tab.closest('.stbs').querySelectorAll('.stb').f
 ══════════════════════════════════════════════════ */
 let activeEntityId = null;
 let activeEntityType = 'event';
+let _postViewId = null;   // set while the sheet shows openPost()'s post view
 
 async function openComments(entityId, name, type = 'event') {
   const sb = getSB();
@@ -5758,6 +5760,7 @@ async function openComments(entityId, name, type = 'event') {
   
   activeEntityId = entityId;
   activeEntityType = type;
+  _postViewId = null;
   
   const overlay = document.getElementById('comments-overlay');
   const titleEl = document.getElementById('comment-title');
@@ -5795,6 +5798,7 @@ function _setCmtGate(notice) {
 function closeComments() {
   document.getElementById('comments-overlay').style.display = 'none';
   activeEntityId = null;
+  _postViewId = null;
 }
 
 const _REACT_EMOJIS = ['❤️','🔥','😂','🙌','👀'];
@@ -5828,6 +5832,7 @@ function renderComments(newId) {
     const replies = (c.replies || []).map(r => renderOne(r, depth + 1)).join('');
     const replyBtn = depth < 2 ? `<button onclick="(function(){var inp=document.getElementById('comment-input');if(inp){window._cmtReplyTo='${x(c.id)}';inp.placeholder='Replying to ${x(name.replace(/'/g,""))}…';inp.focus();}})()" style="background:none;border:none;color:var(--mu);font-size:.62rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;padding:2px 0;margin-top:2px;letter-spacing:.04em">↩ Reply</button>` : '';
     const reactBar = '';
+    const delBtn = (currentUser && uid === currentUser.id) ? `<button onclick="deleteComment('${x(c.id)}')" style="background:none;border:none;color:var(--mu);font-size:.62rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;padding:2px 0;margin-top:2px;letter-spacing:.04em">Delete</button>` : '';
     const isNew = c.id === newId;
     return `<div class="${isOrg && depth===0 ? 'cm-pin' : ''}" style="margin-left:${depth*18}px;${depth>0?'padding-left:8px;border-left:1.5px solid var(--border);':''}">
       <div class="cm${isNew ? ' cm-new' : ''}">
@@ -5835,7 +5840,7 @@ function renderComments(newId) {
         <div style="flex:1">
           <div class="cna" ${clickable}>${pinBadge}${x(name)}</div>
           <div class="ctx">${x(body)}</div>
-          <div style="display:flex;align-items:center;gap:10px"><div class="ctm">${timeAgoShort(c.created_at)}</div>${replyBtn}</div>
+          <div style="display:flex;align-items:center;gap:10px"><div class="ctm">${timeAgoShort(c.created_at)}</div>${replyBtn}${delBtn}</div>
           ${reactBar}
         </div>
       </div>${replies}</div>`;
@@ -5850,7 +5855,8 @@ function cmtReact(commentId, emoji, btn) {
   const countEl = btn.querySelector('span');
   const n = parseInt(countEl.textContent) || 0;
   countEl.textContent = btn.classList.contains('rx-on') ? n + 1 : Math.max(0, n - 1);
-  Api.post('/reactions', { entity_type: 'comment', entity_id: commentId, type: emoji }, { auth: true }).catch(() => {});
+  const rx = { entity_type: 'comment', entity_id: commentId, type: emoji };
+  (btn.classList.contains('rx-on') ? Api.post('/reactions', rx, { auth: true }) : Api.del('/reactions', rx, { auth: true })).catch(() => {});
 }
 
 function cmt_toggleEmoji() {
@@ -5896,7 +5902,8 @@ async function postComment() {
     });
     window._cmtReplyTo = null;
     inp.placeholder = 'Add a comment…';
-    renderComments(json.comment.id);
+    if (_postViewId && _postViewId === activeEntityId) openPost(_postViewId);
+    else renderComments(json.comment.id);
     inp.value = '';
   } catch(e) {
     showToast('Failed to post comment: ' + e.message, 'err');
@@ -5905,6 +5912,18 @@ async function postComment() {
     inp.disabled = false;
     inp.focus();
   }
+}
+
+async function deleteComment(cmtId) {
+  if (!confirm('Delete this comment?')) return;
+  try {
+    await Api.del('/comments/' + encodeURIComponent(cmtId), undefined, { auth: true });
+  } catch (e) { return showToast('Could not delete comment: ' + e.message, 'err'); }
+  // Replies survive server-side as top-level comments
+  activeComments = activeComments.filter(c => c.id !== cmtId).map(c => c.parent_id === cmtId ? { ...c, parent_id: null } : c);
+  if (_postViewId) openPost(_postViewId);   // re-fetches the post + its comment_count
+  else renderComments();
+  showToast('Comment deleted');
 }
 
 /* ══════════════════════════════════════════════════
@@ -6472,6 +6491,10 @@ async function openPost(postId) {
   ov.style.display = 'flex';
   _setCmtGate('');
   titleEl.textContent = 'Post';
+  // postComment() needs these, or it returns early
+  activeEntityId = postId;
+  activeEntityType = 'post';
+  _postViewId = postId;
   listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu)">Loading…</div>';
 
   const [{ data: post }, { data: cmts }] = await Promise.all([
@@ -6519,7 +6542,7 @@ async function openPost(postId) {
         <div style="flex:1;min-width:0;background:var(--surf);border-radius:12px;padding:8px 10px">
           <div style="font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;color:var(--tx);margin-bottom:2px">${x(cp.display_name||'User')}</div>
           <div style="font-size:.8rem;color:var(--mu2);line-height:1.4;white-space:pre-wrap;word-break:break-word">${x(c.body||'')}</div>
-          <div style="font-size:.6rem;color:var(--mu);margin-top:3px">${timeAgoShort(c.created_at)}</div>
+          <div style="font-size:.6rem;color:var(--mu);margin-top:3px">${timeAgoShort(c.created_at)}${currentUser && c.user_id === currentUser.id ? ` · <button onclick="deleteComment('${x(c.id)}')" style="background:none;border:none;color:var(--mu);font-size:.6rem;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;padding:0">Delete</button>` : ''}</div>
         </div>
       </div>`;
     }).join('')
