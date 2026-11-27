@@ -1,0 +1,313 @@
+PULSIFY MISSION BRIEF FOR CLAUDE CODE
+From: Tubs (owner)
+Repo: ThabisoCollinSengane/Pulsify
+Date: 27 Nov 2026
+
+Read this whole file before doing anything. Then read CLAUDE.md and .claude/*.md
+(backend.md, frontend.md, debugging.md, RELEASE_CHECKLIST.md). The CLAUDE.md hard rules
+still apply to everything below.
+
+======================================================================
+THE MISSION IN ONE PARAGRAPH
+======================================================================
+Pulsify is built and live (pulsefy.co.za). Set up a 5-agent AI team plus 2 skills
+(copied from the setup in my MzansiAcademy repo, explained below). Then use the team for
+these jobs, in this order:
+  1. Fix the post system (reposts, comments, post layout) and the settings page.
+  2. Research and recommend a payment provider that will actually take Pulsify on.
+  3. Review the whole website and give me a prioritised list of problems.
+  4. Only after 1-3: prototype a 2D-looking 3D (toon/anime-style) character on the site.
+
+IMPORTANT CHANGE TO THE NORMAL WORKFLOW FOR THIS MISSION:
+CLAUDE.md section 6 says Claude can merge PRs to main. For this mission, do NOT merge
+to main, deploy to production, run paid services or sign up for anything without my
+explicit OK in the conversation. Work on claude/** branches, which only go to preview URLs.
+Open draft PRs and send me the preview link.
+
+======================================================================
+PHASE 0 - SET UP THE TEAM
+======================================================================
+Reference: my MzansiAcademy repo (thabisosengane5-collab/MzansiAcademy-) has this
+working in .claude/agents/*.md and .claude/skills/*/SKILL.md. Read those files if you can
+reach that repo and copy their structure and tone. If you can't reach it, use the
+specs below.
+
+What each one is (so you build them correctly):
+- AGENT (.claude/agents/<name>.md) = a separate worker with its own context, role and
+  limited tools. It does one job and reports back. Read-only agents CANNOT edit files.
+- SKILL (.claude/skills/<name>/SKILL.md) = a playbook the main Claude follows. The
+  pipeline skill tells the main Claude which agent to call, in what order.
+
+Agent file format (YAML frontmatter, then the instructions):
+  ---
+  name: researcher
+  description: <when to use it - one or two lines>
+  tools: Read, Grep, Glob, Bash, WebSearch, WebFetch
+  model: sonnet
+  ---
+  <role, how to work step by step, rules, what the output looks like>
+
+Model note: .claude/settings.json sets CLAUDE_CODE_SUBAGENT_MODEL=haiku. That's fine
+for the builder, but the researcher and reviewer need stronger judgement. Set
+`model: sonnet` on those two and check whether the env var overrides it. If it does,
+tell me and suggest the change to settings.json. Don't change it yourself.
+
+---------------------------------------------
+AGENT 1: researcher   (always fires first)
+---------------------------------------------
+Tools: Read, Grep, Glob, Bash, WebSearch, WebFetch. Read-only: no Edit/Write.
+Job: before any build work, find out the facts and write a BRIEF.
+- For bugs: reproduce the problem, find the exact files, lines, tables and RLS policies
+  involved, and state the root cause with evidence (not a guess).
+- For outside questions (payments, animation libraries): search the web for CURRENT
+  info. Prices, fees and requirements change, so cite a source URL and date for every
+  claim. Prefer official docs over blogs.
+- Output: a brief with the problem, evidence, root cause, recommended fix, files to
+  touch, risks, and "what I could not confirm".
+- Rule: if you're unsure, say so. Never invent fees, requirements or API behaviour.
+
+---------------------------------------------
+AGENT 2: builder
+---------------------------------------------
+Tools: Read, Grep, Glob, Bash, Edit, Write.
+Job: implement exactly what the researcher's brief says, nothing more (CLAUDE.md
+sections 2-3: simplicity, surgical changes).
+Rules:
+- Back up any big HTML file before editing it (cp file file.bak) and delete the
+  backup before committing.
+- Follow every hard rule in CLAUDE.md section 5 (getSB(), even backtick count, no broad
+  regex edits, service key server-only, SA map bounds, mock data only as fallback).
+- Supabase schema changes go in a new .sql file in db/ AND get applied through the
+  migration tool. Never edit data in production without my OK.
+- Hand off to the reviewer. Never merge or deploy.
+
+---------------------------------------------
+AGENT 3: reviewer
+---------------------------------------------
+Tools: Read, Grep, Glob, Bash. Read-only.
+Job: review only what changed (git diff) against the brief.
+Check, in this order:
+  1. Correctness: does it actually fix the root cause? Are edge cases handled
+     (signed out, no posts, deleted post, slow network)?
+  2. Security: RLS policies on any table touched, user content escaped before
+     innerHTML, no secrets in the diff
+     (git diff | grep -iE "key|secret|token|password" and read the hits).
+  3. CLAUDE.md hard rules.
+  4. Simplicity: is there unneeded code?
+Output: findings with file, line, problem, fix and severity
+(BLOCKER / FIX / NIT). Say "PASS" only if there are no BLOCKER or FIX items.
+
+---------------------------------------------
+AGENT 4: designer   (UI, layout and animation)
+---------------------------------------------
+Tools: Read, Grep, Glob, Bash, Edit, Write.
+Job: layout and visual work: the post card layout, settings page layout, and later the
+character animation (Phase 4).
+Rules:
+- Phone-first. Most users are on cheap Android phones on mobile data. Design at 390px
+  wide first, then check desktop.
+- Match the existing Pulsify look (colours, fonts, spacing). Don't redesign what isn't broken.
+- Take screenshots with Playwright at 390px and desktop and LOOK at them before
+  handing off.
+- Hand off to the reviewer. Never merge or deploy.
+
+---------------------------------------------
+AGENT 5: qa-tester
+---------------------------------------------
+Tools: Read, Grep, Glob, Bash. Read-only.
+Job: test in a real browser (Playwright/Chromium) before anything is shown to me.
+- Click through the changed flows at 390px and desktop, signed in AND signed out.
+- Check: no console errors, no sideways scrolling, tap targets big enough, nothing
+  hidden behind fixed bars, and data survives a page reload AND shows up for a second
+  test user (this matters for posts and comments).
+- Use .claude/RELEASE_CHECKLIST.md items where they apply.
+- Output: PASS/FAIL per check, with details and screenshot paths. Say plainly what you
+  could NOT test (Google sign-in, real payments, push notifications).
+
+---------------------------------------------
+SKILL 1: pulse-pipeline   (.claude/skills/pulse-pipeline/SKILL.md)
+---------------------------------------------
+Description: use for ANY bug fix, feature or UI change on Pulsify. Runs the team in
+order and stops for the owner's approval.
+Steps:
+  1. researcher -> brief. If the job touches more than one area, show me the plan first.
+  2. builder (code) and/or designer (layout/visual) -> implement from the brief.
+  3. reviewer -> send every BLOCKER/FIX back to the builder or designer. Repeat until
+     PASS, max 3 rounds, then ask me.
+  4. qa-tester -> any FAIL goes back to whoever owns it.
+  5. Approval -> show me: what changed in plain words, reviewer PASS, QA results,
+     1-2 screenshots, the preview URL, and what wasn't tested.
+  6. Ship -> claude/** branch, commit, push, draft PR. Merging to main = going live;
+     only I say when (run ship-check first).
+Ask me first, and don't decide alone, when: money is involved, user data could be
+deleted, a third-party sign-up is needed, or the fix changes how the product works.
+
+---------------------------------------------
+SKILL 2: ship-check   (.claude/skills/ship-check/SKILL.md)
+---------------------------------------------
+Build this from .claude/RELEASE_CHECKLIST.md plus the CLAUDE.md hard rules. It's the
+quality gate before I approve a merge. Report every item as PASS / FAIL / NOT TESTED,
+then summarise in plain words: what users will see differently, what was checked, what
+wasn't, and any risk. Never merge, deploy or delete data without my explicit OK.
+
+After creating the 5 agents and 2 skills: add a short "AI team" section to CLAUDE.md
+listing them, commit to a claude/** branch, and show me the file list before Phase 1.
+
+======================================================================
+PHASE 1 - FIX POSTS AND SETTINGS   (TOP PRIORITY)
+======================================================================
+My problem: the post features don't work properly. Reposting, comments and the
+layout of the post system all have issues. The settings page needs work too.
+
+Lead found during a quick read of the code (researcher: CONFIRM this, don't assume it):
+- apps/landing-page/feeds.html around lines 407-414: reposts and comments are read
+  from and written to localStorage (keys 'p_rp_<postId>' and 'p_cmts_<postId>'), not
+  the database. If that's how it works, a repost or comment only exists in one browser:
+  other users never see it and it disappears when the cache is cleared. Counts would
+  also disagree with the database (comment_count comes from the DB, the list comes
+  from localStorage).
+- db/reposts_rls_policies.sql exists, so a reposts table probably already exists in
+  Supabase. Check its columns and RLS, and check the comments table, its RLS and the
+  notification triggers (_pulsify_notify_post_comment).
+- .claude/debugging.md lists "User photo posts require event selection + 100m radius
+  check" as open. Check whether it's related.
+
+What "done" looks like:
+- Repost: saved in the database, can be undone, count correct, shows for other users,
+  one repost per user per post, can't be faked through the API (RLS).
+- Comments: saved in the database, visible to everyone who can see the post, counts
+  correct, the author can delete their own, text escaped (no HTML injection), the post
+  owner gets a notification.
+- Like, repost and comment counts all agree with the database after a reload.
+- Post card layout: clean at 390px. Images, captions, buttons and counts don't
+  overlap, and long captions and multi-image posts are handled.
+- Settings (apps/landing-page/profile-settings.html): researcher lists what's broken or
+  missing first. At minimum every setting must save, survive a reload and match the
+  profiles table. Show me that list before building, because I may want to add things.
+- Any old localStorage data: don't migrate it silently. Tell me what's there and ask.
+
+Run it through pulse-pipeline. Show me the preview before Phase 2 build work.
+
+======================================================================
+PHASE 2 - PAYMENT PROVIDER   (RESEARCH + RECOMMENDATION FIRST)
+======================================================================
+Situation: payment code is already written for Paystack (api/payments/index.js
+webhook, lib/payouts.js transfers to organisers, subscriptions R220 organiser / R360
+business). My problem is that I can't get a payment provider to handle the payments.
+
+WHAT ACTUALLY HAPPENED (owner's account, 27 Nov 2026):
+- Paystack DECLINED the activation request for Pulsify (ref 1799393, email dated
+  24 Jun 2026). Their reason: the business falls outside their Acceptable Use Policy
+  because it "results in or creates a significant risk of chargebacks, penalties,
+  damages or other harm or liability". They said they have no flexibility.
+- A second provider declined for the same reason. I referred to it as "PayShap", but
+  PayShap is a bank payment rail, not a merchant gateway, so ask me to confirm which
+  provider it was.
+- How it was pitched (from memory, VERIFY in the repo/docs and lib/payouts.js): ticket
+  money is collected into MY Paystack balance and held, then paid out to the event
+  organiser or business AFTER the event. lib/payouts.js matches this: "paid tickets
+  settle in full to Pulsify's Paystack balance (no split ...)" and payouts go out with
+  Paystack Transfers.
+
+Why this probably got rejected (researcher: confirm or reject each point with sources):
+- Holding other people's money and paying it out later makes Pulsify a
+  "payment facilitator / aggregator". If an event is cancelled or flops, every buyer
+  charges back against MY merchant account, and providers see a new solo business
+  as unable to cover that.
+- Event ticketing is a "future delivery" business (paid now, delivered weeks later).
+  Card schemes and gateways rate that as high risk on its own.
+So simply switching providers with the same pitch will probably get the same answer.
+
+Researcher: find a model that providers WILL approve. Options to investigate (not
+decisions):
+  A. Split the business in two. Apply first ONLY for the low-risk part: the R220/R360
+     monthly SaaS subscriptions for organisers and businesses. Software subscriptions
+     are a normal, low-chargeback category. That gets revenue flowing now.
+  B. Tickets where the ORGANISER is the merchant of record. Money goes straight to the
+     organiser's own account and Pulsify only takes a fee, so Pulsify never holds the
+     funds. Which SA providers support split payments / sub-accounts / connected
+     merchants for this (e.g. Peach Payments, Yoco, PayFast, Ozow, Stitch, iKhokha)?
+     What does each organiser need in order to onboard?
+  C. Tickets with reduced risk on Pulsify's side: rolling reserve, delayed payouts,
+     refund guarantee, payouts only to verified organisers, a clear refund policy.
+     Which providers accept this, and what do they need (CIPC registration, trading
+     history, etc.)?
+  D. Partner with an established SA ticketing provider that already has gateway
+     approval (Pulsify does discovery, they process tickets) as a stop-gap.
+For each option: which providers, requirements, fees, how much of the existing Paystack
+code can be reused, and the realistic approval odds for a new solo business.
+Also check whether Paystack will reconsider an application that covers ONLY option A.
+
+The researcher can start Phase 2 research while Phase 1 is being built, because it
+doesn't touch code.
+
+Researcher: compare the realistic South African options. At least: Paystack (current),
+Yoco, PayFast (Network International), Ozow, Peach Payments, iKhokha, Stitch, and
+any other that fits. For each one, with source links and dates:
+- Will it onboard a small/new business or sole proprietor? Exact documents required
+  (CIPC registration, bank account, ID, proof of address, website requirements such as
+  terms, refund policy and contact details).
+- Does it allow a MARKETPLACE / ticketing model (taking money for events run by other
+  organisers and paying them out)? This is often the real reason providers say no. Check
+  for split payments, sub-accounts, or rules against collecting on behalf of third parties.
+- Fees per transaction, payout timing, monthly costs.
+- Recurring subscriptions supported?
+- Developer API quality, webhooks, sandbox, and how much of the existing Paystack code
+  could be reused.
+- Approval time.
+Also check what Pulsify itself needs to pass onboarding: are terms.html, a refund
+policy, contact details and pricing visible on the site? List anything missing.
+
+Output: a comparison table, a top recommendation with a runner-up, and a step-by-step
+"what Tubs must do to get approved" list. Do NOT sign up, create accounts, or change the
+payment code until I choose. After I choose, the builder adapts the code through
+pulse-pipeline, testing in the provider's sandbox only.
+
+======================================================================
+PHASE 3 - FULL WEBSITE REVIEW   (REPORT ONLY)
+======================================================================
+qa-tester + reviewer walk every app (landing-page, organizer, business, admin, map,
+leads) at 390px and desktop. Also go through the open items in .claude/debugging.md.
+Output: one prioritised list. Critical (broken, security, money), then High
+(hurts users), then Nice-to-have. Each item gets a one-line fix estimate.
+Don't fix anything in this phase. I'll pick what goes next.
+
+======================================================================
+PHASE 4 - ANIME-STYLE CHARACTER   (ONLY AFTER PHASES 1-3)
+======================================================================
+What I want: I've seen websites with characters that look 2D (anime/cartoon style)
+but are actually 3D, and it looks cool. I'm open to something like that on Pulsify
+if there's a good place for it. Use NEW, original characters. Don't reuse anything
+from my other repos (the ANDILE anime project) unless I say so.
+
+Researcher first:
+- Name the technique properly. This is usually "toon / cel shading" on a 3D model
+  (for example three.js with a toon material and outlines, VRM anime models via
+  @pixiv/three-vrm, or Spline scenes). Live2D is a different option: 2D art rigged to
+  move as if it's 3D. Compare them on look, file size, mobile performance, licence
+  and cost, and how I'd get an original character made.
+- Find 3-5 live example sites so I can see the style.
+- Suggest WHERE it fits on Pulsify (e.g. a landing-page hero mascot, an empty-state
+  character on the feed, a loading animation) and where it would just get in the way.
+
+Hard limits for whatever we build:
+- Must not slow the site down on a cheap Android phone on mobile data. Load it lazily,
+  after the page is usable, with a small file size budget (propose a number). Show a
+  static image fallback for slow or low-power devices and when the user prefers
+  reduced motion.
+- No paid assets or tools without my OK. Check the licence of any model or library.
+Then designer builds ONE prototype on a preview branch through pulse-pipeline, and I
+decide whether it goes live.
+
+======================================================================
+HOW TO REPORT TO ME
+======================================================================
+- I'm a solo, self-taught founder. Talk to me in plain language, short and direct.
+- At the end of each phase: what was done, what's left, what you need from me,
+  the preview link.
+- When you're stuck, give me 2-3 options to choose from, not an open question.
+- If one of my ideas is weak, say so directly.
+- Keep .claude/debugging.md and CLAUDE.md up to date as you fix things (RELEASE_CHECKLIST
+  "Documentation Updates" rule).
+
+START: Phase 0 now. Show me the agent and skill files, then go to Phase 1.
