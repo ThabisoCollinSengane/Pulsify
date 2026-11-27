@@ -443,10 +443,31 @@ module.exports = async (req, res) => {
         (evs || []).forEach(e => { eventImageMap[e.id] = e.image_url || e.banner_url || null; });
       }
 
+      // Like/repost state for the viewer + repost counts — one query each for the page
+      const postIds = posts.map(p => p.id);
+      const rpCount = {}, myReposts = new Set(), myLikes = new Set();
+      if (postIds.length) {
+        const [{ data: rps }, { data: likes }] = await Promise.all([
+          sb().from('reposts').select('post_id,user_id').in('post_id', postIds),
+          viewer
+            ? sb().from('reactions').select('entity_id').eq('user_id', viewer.id)
+                .eq('entity_type', 'post').eq('type', 'like').in('entity_id', postIds)
+            : Promise.resolve({ data: [] }),
+        ]);
+        (rps || []).forEach(r => {
+          rpCount[r.post_id] = (rpCount[r.post_id] || 0) + 1;
+          if (viewer && r.user_id === viewer.id) myReposts.add(r.post_id);
+        });
+        (likes || []).forEach(r => myLikes.add(r.entity_id));
+      }
+
       const result = (posts || []).map(p => ({
         ...p,
         profile: profileMap[p.user_id] || null,
         image_url: p.image_url || (p.event_id ? eventImageMap[p.event_id] : null) || null,
+        liked_by_me: myLikes.has(p.id),
+        reposted_by_me: myReposts.has(p.id),
+        repost_count: rpCount[p.id] || 0,
       }));
       return res.status(200).json({ posts: result, total: count || 0, page, limit, has_next: offset + limit < (count || 0) });
     }
@@ -1300,30 +1321,30 @@ module.exports = async (req, res) => {
 
       const userClient = sbAs(token);
 
+      // Insert-only (idempotent): an existing reaction stays. Unlike is DELETE /reactions.
       const { data: existing } = await userClient.from('reactions')
         .select('user_id').eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type).maybeSingle();
-
-      if (existing) {
-        await userClient.from('reactions').delete().eq('user_id', user.id).eq('entity_id', entity_id).eq('type', type);
-        // DB trigger handles count decrement — just notify caller
-        return res.status(200).json({ liked: false });
-      }
+      if (existing) return res.status(200).json({ liked: true });
 
       const { error: insErr } = await userClient.from('reactions').insert({ user_id: user.id, entity_type, entity_id, type });
+      if (insErr?.code === '23505') return res.status(200).json({ liked: true }); // lost a double-tap race
       if (insErr) return res.status(400).json({ error: insErr.message });
 
-      // DB trigger handles count increment; fire notification for posts/events
+      // DB trigger handles count increment; fire notification for posts/events.
+      // Best-effort: the query builder has no .catch(), so use try/await.
       if (entity_type === 'post') {
-        const { data: p } = await sb().from('posts').select('user_id').eq('id', entity_id).single();
-        if (p && p.user_id !== user.id) {
-          const { data: prof } = await sb().from('profiles').select('display_name').eq('id', user.id).single();
-          const name = prof?.display_name || 'Someone';
-          await sb().from('notifications').insert({
-            user_id: p.user_id, type: 'like', from_user_id: user.id,
-            from_display_name: name, entity_id, entity_type: 'post',
-            message: `${name} liked your post`,
-          }).catch(() => {});
-        }
+        try {
+          const { data: p } = await sb().from('posts').select('user_id').eq('id', entity_id).single();
+          if (p && p.user_id !== user.id) {
+            const { data: prof } = await sb().from('profiles').select('display_name').eq('id', user.id).single();
+            const name = prof?.display_name || 'Someone';
+            await sb().from('notifications').insert({
+              user_id: p.user_id, type: 'like', from_user_id: user.id,
+              from_display_name: name, entity_id, entity_type: 'post',
+              message: `${name} liked your post`,
+            });
+          }
+        } catch (e) { /* notification is non-critical */ }
       }
 
       return res.status(200).json({ liked: true });
