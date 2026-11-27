@@ -7556,6 +7556,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const _qTab = new URLSearchParams(location.search).get('tab');
   const _restoredTab = (['home','discover','map','tickets','me'].includes(_qTab) && _qTab) || sessionStorage.getItem('p_last_tab') || 'home';
   sessionStorage.setItem('p_last_tab', _restoredTab);
+  if (_qTab !== null) { const _u = new URL(location.href); _u.searchParams.delete('tab'); history.replaceState(history.state, '', _u.pathname + _u.search + _u.hash); }
   // Push a base sentinel so the back button is always interceptable (PWA exit prevention)
   history.replaceState({ tab: '__base__', isBase: true }, '');
   history.pushState({ tab: _restoredTab, detail: false }, '');
