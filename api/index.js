@@ -2903,6 +2903,19 @@ module.exports = async (req, res) => {
         ['squad_invites', 'inviter_id', 'invitee_id'], ['squad_points', 'user_id'],
         ['notifications', 'user_id', 'from_user_id'],
       ];
+      // Other users' rows that point at this user's posts/comments: detach replies
+      // (keep them) and drop reposts of these posts, so FK rules can't block the wipe.
+      const [{ data: myPosts }, { data: myCmts }] = await Promise.all([
+        db.from('posts').select('id').eq('user_id', id),
+        db.from('comments').select('id').eq('user_id', id),
+      ]);
+      const postIds = (myPosts || []).map(p => p.id), cmtIds = (myCmts || []).map(c => c.id);
+      if (cmtIds.length) await db.from('comments').update({ parent_id: null }).in('parent_id', cmtIds);
+      if (postIds.length) await Promise.all([
+        db.from('reposts').delete().in('post_id', postIds),
+        db.from('post_reposts').delete().in('post_id', postIds),
+      ]);
+
       for (const [table, ...cols] of wipe) {
         const del = db.from(table).delete();
         const { error } = await (cols.length > 1 ? del.or(cols.map(c => `${c}.eq.${id}`).join(',')) : del.eq(cols[0], id));
