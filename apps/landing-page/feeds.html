@@ -893,6 +893,8 @@ async function loadComments(postId) {
     const cirEl = document.getElementById('cmt-'+postId)?.querySelector('.cir');
     if (cirEl) cirEl.style.display = _cmtNotice[postId] ? 'none' : '';
     const totalCount = (json.flat || []).length;
+    const cPost = _posts.find(p => p.id === postId);
+    if (cPost) cPost.comment_count = totalCount;
     const cEl = document.getElementById('cc-'+postId);
     if (cEl) cEl.textContent = fn(totalCount);
     if (lEl) lEl.innerHTML = top.length ? buildCmts(top, postId) : '<div style="padding:14px;text-align:center;font-size:.74rem;color:var(--mu)">Be the first to comment</div>';

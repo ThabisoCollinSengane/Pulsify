@@ -166,7 +166,7 @@ Major fixes applied. Read this before touching the related areas — these are n
 
 ### Overlay z-index hierarchy + back button
 Overlays must stack and close in descending z-index order.
-- `fl-overlay` (followers/following) **4000** → `prof-overlay` **3500** → `friends-list-overlay` **3000** → `squad-invite-overlay` **2700** → `social-sheet-ov` **2600** → `notif-overlay` **2000** → `#map-panel` **400**.
+- `fl-overlay` (followers/following) **4000** → `comments-overlay` **3600** → `prof-overlay` **3500** → `friends-list-overlay` **3000** → `squad-invite-overlay` **2700** → `social-sheet-ov` **2600** → `notif-overlay` **2000** → `#map-panel` **400**.
 - The `popstate` handler's `styleOverlays` array must list overlays in this same descending order so the back button closes the topmost one first.
 - **PWA exit guard:** `DOMContentLoaded` seeds two history entries (`replaceState` base sentinel + `pushState` current). When `popstate` reaches the sentinel, `showExitConfirm()` shows an "Exit Pulsify?" dialog instead of letting the app close. `_exitConfirmed` flag lets the real exit through on the second back.
 
