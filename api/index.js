@@ -2882,6 +2882,49 @@ module.exports = async (req, res) => {
       return res.status(200).json({ social_links: data.social_links });
     }
 
+    /* ─── POST /account/delete ── anonymise own account (bookings/payments kept) ── */
+    if (url === '/account/delete' && req.method === 'POST') {
+      const user = await verifyToken(tokenFrom(req));
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+      const id = user.id, db = sb();
+      const [ev, biz] = await Promise.all([
+        db.from('events').select('id', { count: 'exact', head: true }).eq('organiser_id', id),
+        db.from('businesses').select('id', { count: 'exact', head: true }).eq('owner_id', id),
+      ]);
+      if (ev.error || biz.error) return res.status(500).json({ error: (ev.error || biz.error).message });
+      if (ev.count || biz.count) return res.status(409).json({ error: 'You have events or a business on Pulsefy. Email support to close a business account.' });
+
+      const wipe = [
+        ['posts', 'user_id'], ['comments', 'user_id'], ['reactions', 'user_id'], ['reposts', 'user_id'],
+        ['post_reposts', 'user_id'], ['follows', 'follower_id', 'following_id'], ['saved_items', 'user_id'],
+        ['event_attendances', 'user_id'], ['event_likes', 'user_id'], ['push_subscriptions', 'user_id'],
+        ['kyc_documents', 'user_id'], ['location_requests', 'user_id'], ['poi_votes', 'user_id'],
+        ['squad_members', 'user_id'], ['squad_messages', 'user_id'], ['squad_plan_rsvps', 'user_id'],
+        ['squad_invites', 'inviter_id', 'invitee_id'], ['squad_points', 'user_id'],
+        ['notifications', 'user_id', 'from_user_id'],
+      ];
+      for (const [table, ...cols] of wipe) {
+        const del = db.from(table).delete();
+        const { error } = await (cols.length > 1 ? del.or(cols.map(c => `${c}.eq.${id}`).join(',')) : del.eq(cols[0], id));
+        if (error && (error.code === '42P01' || error.code === 'PGRST205')) { console.warn('[account/delete] no table', table); continue; }
+        if (error) { console.error('[account/delete]', table, error.message); return res.status(500).json({ error: `Could not delete your ${table.replace(/_/g, ' ')} — try again` }); }
+      }
+
+      const email = `deleted+${id}@deleted.pulsefy.invalid`;
+      const { error: pErr } = await db.from('profiles').update({
+        display_name: 'Deleted user', username: `deleted_${id.slice(0, 8)}`,
+        avatar_url: null, cover_url: null, bio: null, city: null, province: null, phone: null, dob: null,
+        face_scan_url: null, id_doc_url: null, instagram: null, tiktok: null, whatsapp: null, facebook: null, twitter: null,
+        genres: [], social_links: {}, notification_prefs: {}, marketing_opt_in: false, suspended: true,
+        profile_visibility: 'followers', comment_permission: 'nobody', show_attended: false, email,
+      }).eq('id', id);
+      if (pErr) { console.error('[account/delete] profile', pErr.message); return res.status(500).json({ error: 'Could not anonymise your profile — try again' }); }
+
+      const { error: aErr } = await db.auth.admin.updateUserById(id, { email, email_confirm: true, ban_duration: '876000h', user_metadata: {} });
+      if (aErr) { console.error('[account/delete] auth', aErr.message); return res.status(500).json({ error: 'Could not close your login — email support' }); }
+      return res.status(200).json({ success: true });
+    }
+
     /* ─── GET /admin/app-settings ─────────────────────────── */
     if (url === '/admin/app-settings' && req.method === 'GET') {
       const auth = await authUser(req);
