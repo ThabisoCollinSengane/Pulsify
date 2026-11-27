@@ -1544,13 +1544,28 @@ module.exports = async (req, res) => {
       if (error && (/COMMENTS_NOT_ALLOWED/.test(error.message || '') || (error.code === '42501' && entity_type === 'post')))
         return res.status(403).json({ error: "You can't comment on this post." });
       if (error) return res.status(400).json({ error: error.message });
-
-      if (entity_type === 'post') {
-        const { data: p } = await sb().from('posts').select('comment_count').eq('id', entity_id).single();
-        if (p) await sb().from('posts').update({ comment_count: (p.comment_count || 0) + 1 }).eq('id', entity_id);
-      }
+      // posts.comment_count is kept by trg_sync_comment_count_insert — no manual +1.
 
       return res.status(200).json({ comment: { ...comment, content: comment.body }, success: true });
+    }
+
+    /* ─── DELETE /comments/:id (delete own comment) ───────── */
+    // Replies by others survive: detach them (parent_id FK is ON DELETE CASCADE)
+    // before deleting. trg_sync_comment_count_delete keeps posts.comment_count.
+    const delCmtId = url.match(/^\/comments\/([^/]+)$/)?.[1];
+    if (delCmtId && req.method === 'DELETE') {
+      const user = await verifyToken(tokenFrom(req));
+      if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+      const { data: cmt } = await sb().from('comments').select('user_id').eq('id', delCmtId).maybeSingle();
+      if (!cmt) return res.status(404).json({ error: 'Comment not found' });
+      if (cmt.user_id !== user.id) return res.status(403).json({ error: 'Not your comment' });
+
+      const { error: detachErr } = await sb().from('comments').update({ parent_id: null }).eq('parent_id', delCmtId);
+      if (detachErr) return res.status(400).json({ error: detachErr.message });
+      const { error } = await sb().from('comments').delete().eq('id', delCmtId).eq('user_id', user.id);
+      if (error) return res.status(400).json({ error: error.message });
+      return res.status(200).json({ success: true });
     }
 
     const adminUserMatch = url.match(/^\/admin\/users\/([^/]+)$/);

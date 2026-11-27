@@ -41,17 +41,20 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .cr::-webkit-scrollbar{display:none}
 .chip{flex-shrink:0;padding:6px 14px;border-radius:50px;border:1px solid var(--border);background:rgba(255,255,255,.02);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu);cursor:pointer;transition:all .2s;white-space:nowrap;-webkit-tap-highlight-color:transparent}
 .chip.active{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.09)}
-.feed{position:fixed;top:calc(var(--th) + 42px);left:0;right:0;bottom:var(--bh);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.feed{position:fixed;top:calc(var(--th) + 42px);left:0;right:0;bottom:var(--bh);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:76px}
 .feed::-webkit-scrollbar{display:none}
 .fc{margin:0 0 2px;border-bottom:1px solid var(--border);background:var(--surf);cursor:default;-webkit-tap-highlight-color:transparent}
 .fh{display:flex;align-items:center;gap:10px;padding:12px 14px 8px}
 .fa{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;border:1.5px solid var(--border);overflow:hidden;background:linear-gradient(135deg,#B026FF,#FF5C00)}
 .fa img{width:100%;height:100%;object-fit:cover}
 .fa.org{border-color:rgba(255,92,0,.6)}
-.fo{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;line-height:1.2;display:flex;align-items:center;gap:6px}
+.fo{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;line-height:1.2;display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap}
+.fo-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fo .verified-pill,.fo .org-pill,.fo .hot-badge{flex-shrink:0}
 .fl{font-size:.66rem;color:var(--mu)}
 .org-pill{font-size:.54rem;background:rgba(255,92,0,.12);border:1px solid rgba(255,92,0,.28);color:var(--or);padding:2px 7px;border-radius:50px;font-weight:700}
-.follow-btn{margin-left:auto;padding:5px 13px;border-radius:50px;border:1px solid var(--border2);background:transparent;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer;transition:all .2s;flex-shrink:0;-webkit-tap-highlight-color:transparent}
+.follow-btn{margin-left:auto;padding:5px 13px;border-radius:50px;border:1px solid var(--border2);background:transparent;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;cursor:pointer;transition:all .2s;flex-shrink:0;-webkit-tap-highlight-color:transparent;position:relative}
+.follow-btn::after{content:'';position:absolute;left:0;right:0;top:50%;height:44px;margin-top:-22px}
 .follow-btn.on{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.08)}
 .fb{width:100%;aspect-ratio:4/5;object-fit:cover;display:block;background:var(--surf2)}
 .fd{padding:10px 14px 4px}
@@ -59,7 +62,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .cap-ev{font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;color:var(--or);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
 .cap-more{color:var(--or);cursor:pointer;font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700}
 .fac{display:flex;align-items:center;gap:8px;padding:6px 14px 12px}
-.ab{display:flex;align-items:center;gap:5px;background:transparent;border:none;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu);cursor:pointer;padding:4px 6px;border-radius:50px;transition:color .18s;-webkit-tap-highlight-color:transparent}
+.ab{display:flex;align-items:center;justify-content:center;gap:5px;background:transparent;border:none;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu);cursor:pointer;padding:4px 6px;min-width:44px;min-height:44px;border-radius:50px;transition:color .18s;-webkit-tap-highlight-color:transparent}
 .ab:active{background:rgba(255,255,255,.04)}
 .ab.lk{color:var(--pk)}
 .ab.rp{color:var(--li)}
@@ -145,9 +148,9 @@ textarea.ff-c{resize:none;height:80px;line-height:1.55}
 .sv-av{width:100%;height:100%;border-radius:50%;background:var(--surf2);border:2px solid var(--surf);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-family:'Syne',sans-serif;font-weight:700;color:#fff}
 .sv-av img{width:100%;height:100%;object-fit:cover}
 .sv-name{font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;color:var(--mu2);max-width:54px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* Card entry animation */
-@keyframes fcIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.fc{animation:fcIn .22s ease both}
+/* Multi-photo gallery + "1/N" counter */
+.gal{position:relative}
+.gal-ct{position:absolute;top:10px;right:10px;z-index:1;background:rgba(0,0,0,.6);color:#fff;font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;padding:3px 8px;border-radius:50px;pointer-events:none}
 /* Image wrap with gradient stats overlay */
 .fb-wrap{position:relative;overflow:hidden;line-height:0}
 .fb-wrap .fb{width:100%;aspect-ratio:1/1;object-fit:cover;display:block}
@@ -376,7 +379,29 @@ async function fetchPosts() {
     (evs || []).forEach(e => { evMap[e.id] = e.image_url || null; });
     rows.forEach(p => { if (p.event_id && !p.image_url) p.image_url = evMap[p.event_id] || null; });
   }
+  await _addLikeRepostState(rows);
   return { posts: rows, total: count || 0 };
+}
+
+// Like/repost state from the DB (same fields GET /api/posts returns):
+// liked_by_me / reposted_by_me for the signed-in viewer + repost_count.
+// RLS: reactions exposes the viewer's own rows, reposts is public-read.
+async function _addLikeRepostState(rows) {
+  const ids = rows.map(p => p.id);
+  if (!ids.length) return;
+  const sb = getSB();
+  const [{ data: rps }, { data: likes }] = await Promise.all([
+    sb.from('reposts').select('post_id,user_id').in('post_id', ids),
+    _uid ? sb.from('reactions').select('entity_id').eq('user_id', _uid).eq('entity_type', 'post').eq('type', 'like').in('entity_id', ids)
+         : Promise.resolve({ data: [] }),
+  ]);
+  const liked = new Set((likes || []).map(r => r.entity_id));
+  rows.forEach(p => {
+    const mine = (rps || []).filter(r => r.post_id === p.id);
+    p.repost_count   = mine.length;
+    p.reposted_by_me = !!_uid && mine.some(r => r.user_id === _uid);
+    p.liked_by_me    = liked.has(p.id);
+  });
 }
 
 function mapPost(p) {
@@ -397,21 +422,28 @@ function mapPost(p) {
     comment_count: p.comments_count || p.comment_count || 0,
     reactions:    p.reactions || {},
     my_reaction:  p.my_reaction || '',
+    liked:        !!p.liked_by_me,
+    reposted:     !!p.reposted_by_me,
+    repost_count: p.repost_count || 0,
     likes: [], reposts: [], comments: [],
     ts: p.created_at,
   };
 }
 
-function _getLikes(postId) { try { return JSON.parse(localStorage.getItem('p_likes_'+postId) || 'null'); } catch { return null; } }
-function _setLikes(postId, arr) { localStorage.setItem('p_likes_'+postId, JSON.stringify(arr)); }
-function _getReposts(postId) { try { return JSON.parse(localStorage.getItem('p_rp_'+postId) || 'null'); } catch { return null; } }
-function _setReposts(postId, arr) { localStorage.setItem('p_rp_'+postId, JSON.stringify(arr)); }
 function _getComments(postId) { try { return JSON.parse(localStorage.getItem('p_cmts_'+postId) || 'null'); } catch { return null; } }
 function _setComments(postId, arr) { localStorage.setItem('p_cmts_'+postId, JSON.stringify(arr)); }
 
-function getLikes(post)    { return _getLikes(post.id)    || []; }
-function getReposts(post)  { return _getReposts(post.id)  || []; }
 function getComments(post) { return _getComments(post.id) || []; }
+
+// Fresh access token from the live session — the cached _token can be
+// expired (Supabase tokens last ~1h), which the API rejects with 401.
+async function freshToken() {
+  try {
+    const { data: { session } } = await getSB().auth.getSession();
+    if (session?.access_token) { _token = session.access_token; try { localStorage.setItem('p_token', _token); } catch(e) {} }
+  } catch(e) {}
+  return _token || '';
+}
 
 function x(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function timeAgo(iso) {
@@ -595,11 +627,9 @@ function _attachSentinel(feedEl) {
 }
 
 function buildCard(post) {
-  const likes    = getLikes(post);
-  const reposts  = getReposts(post);
   const comments = getComments(post);
-  const liked    = _uid && likes.includes(_uid);
-  const reposted = _uid && reposts.includes(_uid);
+  const liked    = _uid && post.liked;
+  const reposted = _uid && post.reposted;
   const isOrg    = post.role === 'organizer';
   let following  = [];
   try { following = JSON.parse(localStorage.getItem('p_following') || '[]'); } catch(e) {}
@@ -610,10 +640,9 @@ function buildCard(post) {
   const cap = post.caption || '';
   const shortCap = cap.length > 220 ? cap.slice(0,220) : cap;
 
-  // Always use server's counts as the source of truth; local cache is only for "did I like this" boolean state
+  // Counts and liked/reposted state all come from the DB
   const likeCount = fn(post.like_count || 0);
   const cmtCount  = fn(post.comment_count || 0);
-  const rpostCount = fn(reposts.length);
 
   const el = document.createElement('div');
   el.className = 'fc';
@@ -624,7 +653,7 @@ function buildCard(post) {
         (post.avatar_url ? '<img src="'+x(post.avatar_url)+'" loading="lazy" onerror="this.style.display=\u0027none\u0027"/>' : (post.display_name?.[0]?.toUpperCase()||'😊')) +
       '</div>' +
       '<div style="flex:1;min-width:0;cursor:pointer" onclick="openProfile(\u0027'+x(post.user_id)+'\u0027)">' +
-        '<div class="fo">' + x(post.display_name || post.username) + (post.is_verified ? '<span class="verified-pill" title="Verified by Pulsefy"><span class="puls-badge"></span><span class="verified-txt">Verified</span></span>' : '') + (isOrg ? '<span class="org-pill">📢 Page</span>' : '') + (isHot ? '<span class="hot-badge">🔥 HOT</span>' : '') + '</div>' +
+        '<div class="fo"><span class="fo-n">' + x(post.display_name || post.username) + '</span>' + (post.is_verified ? '<span class="verified-pill" title="Verified by Pulsefy"><span class="puls-badge"></span><span class="verified-txt">Verified</span></span>' : '') + (isOrg ? '<span class="org-pill">📢 Page</span>' : '') + (isHot ? '<span class="hot-badge">🔥 HOT</span>' : '') + '</div>' +
         (post.event_name ? '<div style="font-size:.64rem;color:var(--or);font-family:\u0027Syne\u0027,sans-serif;font-weight:700;letter-spacing:.04em;cursor:pointer" onclick="window.location.href=\u0027/?q=\u0027+encodeURIComponent(post.event_name||\u0027\u0027)" title="Find this event">🎟 '+x(post.event_name)+' ↗</div>' : '') +
         '<div class="fl">@'+x(post.username)+' · '+timeAgo(post.ts || post.created_at)+'</div>' +
       '</div>' +
@@ -644,8 +673,8 @@ function buildCard(post) {
       }
       if (!urls.length) return '';
       if (urls.length === 1) return '<div class="fb-wrap"><img class="fb" src="'+x(urls[0])+'" loading="lazy" onerror="this.parentNode.remove()"/><div class="fb-stats"><span class="fb-stat">❤️ '+fn(post.like_count||0)+'</span><span class="fb-stat">💬 '+fn(post.comment_count||0)+'</span></div></div>';
-      // Multiple photos — horizontal scroll gallery
-      return '<div style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:#000">' + urls.map(u => '<img src="' + x(u) + '" loading="lazy" onerror="this.remove()" style="width:100%;aspect-ratio:4/5;object-fit:cover;flex:0 0 100%;scroll-snap-align:start;display:block"/>').join('') + '</div>';
+      // Multiple photos — horizontal scroll gallery with a "1/N" counter
+      return '<div class="gal"><span class="gal-ct">1/' + urls.length + '</span><div onscroll="_galScroll(this)" style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:#000">' + urls.map(u => '<img src="' + x(u) + '" loading="lazy" onerror="var g=this.parentNode;this.remove();_galScroll(g)" style="width:100%;aspect-ratio:4/5;object-fit:cover;flex:0 0 100%;scroll-snap-align:start;display:block"/>').join('') + '</div></div>';
     })() +
     (cap ? '<div class="fd"><div class="cap" id="cap-'+x(post.id)+'">'+x(shortCap)+(cap.length>220?' <span class="cap-more" onclick="expandCap(\u0027'+x(post.id)+'\u0027)">more</span>':'')+'</div></div>' : '') +
     '<div class="fac">' +
