@@ -11,12 +11,15 @@
 <script src="/mascot.js" defer></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--tx:#F0EEF8;--mu:#5A5870;--mu2:#9997B0;--bh:70px}
+:root{--bg:#05080F;--bg2:#090D1A;--surf:#0D1424;--surf2:#121B30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.14);--or:#FF5C00;--li:#C6FF4A;--pk:#FF2D78;--cy:#00E5FF;--tx:#F0EEF8;--mu:#8A88A4;--mu2:#9997B0;--bh:70px}
 html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
-body{padding-bottom:32px}
+body{padding-bottom:calc(var(--bh) + 24px)}
 .tb{position:fixed;top:0;left:0;right:0;height:58px;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:rgba(5,8,15,.95);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
-.back{display:flex;align-items:center;gap:6px;background:transparent;border:none;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;padding:0}
-.settings-btn{width:34px;height:34px;border-radius:50%;background:var(--surf);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem}
+.back{display:flex;align-items:center;gap:6px;background:transparent;border:none;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;padding:0 4px;min-height:44px}
+.settings-btn{width:34px;height:34px;border-radius:50%;background:var(--surf);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;position:relative}
+/* 44px hit areas for compact controls — visuals unchanged */
+.settings-btn::after,.up-cmt-snd::after{content:'';position:absolute;top:50%;left:50%;width:44px;height:44px;margin:-22px 0 0 -22px}
+.edit-btn::after,.follow-btn::after{content:'';position:absolute;left:0;right:0;top:50%;height:44px;margin-top:-22px}
 .hero{margin-top:58px;padding:0 0 0;background:linear-gradient(180deg,rgba(176,38,255,.12) 0%,transparent 100%);border-bottom:1px solid var(--border)}
 .hero-bg{height:120px;background:linear-gradient(135deg,#1a0533,#0a001a,#1a0015);position:relative;overflow:hidden}
 .hero-bg-blur{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:6rem;opacity:.08;filter:blur(8px)}
@@ -24,7 +27,7 @@ body{padding-bottom:32px}
 .avatar{width:78px;height:78px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:1.9rem;border:3px solid var(--bg);margin-top:-39px;overflow:hidden;cursor:pointer;position:relative}
 .avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
 .hero-row{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:12px}
-.edit-btn{background:var(--surf);border:1px solid var(--border2);border-radius:50px;padding:7px 16px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--tx);cursor:pointer}
+.edit-btn{background:var(--surf);border:1px solid var(--border2);border-radius:50px;padding:7px 16px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--tx);cursor:pointer;position:relative}
 .edit-btn:active{border-color:var(--or);color:var(--or)}
 .pname{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:.03em;line-height:1}
 .phandle{font-size:.78rem;color:var(--mu);margin-bottom:6px}
@@ -36,11 +39,11 @@ body{padding-bottom:32px}
 .genres-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
 .genre-tag{background:rgba(255,92,0,.08);border:1px solid rgba(255,92,0,.2);color:var(--or);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;padding:4px 11px;border-radius:50px}
 .follow-row{display:flex;gap:16px;margin-bottom:10px}
-.follow-stat{text-align:center;cursor:pointer}
+.follow-stat{text-align:center;cursor:pointer;min-width:44px;min-height:44px;display:flex;flex-direction:column;justify-content:center}
 .follow-num{font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--tx)}
 .follow-label{font-size:.6rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.05em}
 .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:58px;z-index:10}
-.tab{flex:1;padding:13px;text-align:center;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.tab{flex:1;min-height:44px;padding:13px;text-align:center;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
 .tab.active{color:var(--or);border-bottom-color:var(--or)}
 .pane{display:none;padding:14px 16px}
 .pane.active{display:block}
@@ -66,7 +69,8 @@ body{padding-bottom:32px}
 .post-foot{display:flex;align-items:center;justify-content:space-between}
 .post-date{font-size:.68rem;color:var(--mu)}
 .post-actions{display:flex;gap:12px}
-.pa{background:none;border:none;font-size:.78rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px}
+.pa{background:none;border:none;font-size:.78rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;min-width:44px;min-height:44px;padding:0 6px;border-radius:50px}
+.post-actions{gap:2px!important}
 .pa.rp{color:var(--li)}
 .up-cmt-emoji-btn{background:none;border:none;font-size:1.15rem;cursor:pointer;padding:0 2px;opacity:.75;flex-shrink:0}
 .up-cmt-emoji-pick{display:none;flex-wrap:wrap;gap:8px;padding:8px 14px 2px}
@@ -84,7 +88,7 @@ body{padding-bottom:32px}
 .empty-m{display:flex;justify-content:center;margin-bottom:12px;font-size:3rem}
 .empty-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;margin-bottom:8px}
 .empty-sub{font-size:.8rem;color:var(--mu);line-height:1.5;margin-bottom:20px}
-.empty-btn{background:var(--or);color:#fff;border:none;padding:10px 24px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer}
+.empty-btn{background:#CC4400;color:#fff;border:none;min-height:44px;padding:10px 24px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer}
 .fab{position:fixed;bottom:calc(var(--bh) + 16px);right:16px;z-index:50;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:1.4rem;cursor:pointer;box-shadow:0 4px 20px rgba(176,38,255,.4);display:flex;align-items:center;justify-content:center}
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 22px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--tx);z-index:999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -96,9 +100,9 @@ body{padding-bottom:32px}
 .modal-title{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:16px}
 .modal-inp{width:100%;background:var(--surf);border:1.5px solid var(--border);border-radius:12px;padding:11px 14px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;margin-bottom:12px}
 .modal-inp:focus{border-color:var(--or)}
-.modal-btn{width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:14px;border-radius:12px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;margin-bottom:10px}
+.modal-btn{width:100%;background:linear-gradient(135deg,#B026FF,#CC4400);color:#fff;border:none;padding:14px;border-radius:12px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;margin-bottom:10px}
 .modal-cancel{width:100%;background:transparent;border:1px solid var(--border);border-radius:12px;padding:13px;font-family:'Syne',sans-serif;font-size:.86rem;font-weight:700;color:var(--mu);cursor:pointer}
-.follow-btn{margin-left:auto;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:7px 16px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer}
+.follow-btn{margin-left:auto;background:linear-gradient(135deg,#B026FF,#CC4400);color:#fff;border:none;padding:7px 16px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer;position:relative}
 .follow-btn.following{background:transparent;border:1px solid var(--border2);color:var(--mu2)}
 .pa.lk{color:#FF2D78}
 .up-cmt-wrap{background:rgba(0,0,0,.2);border-top:1px solid var(--border);display:none}
@@ -115,9 +119,25 @@ body{padding-bottom:32px}
 .up-cmt-inp{flex:1;background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:8px 14px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none}
 .up-cmt-inp:focus{border-color:var(--or)}
 .up-cmt-inp::placeholder{color:var(--mu)}
-.up-cmt-snd{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.up-cmt-snd{position:relative;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .up-reply-banner{padding:4px 14px 0;font-size:.7rem;color:var(--mu);display:flex;align-items:center;gap:6px}
 .up-reply-banner button{background:none;border:none;color:var(--mu);cursor:pointer;font-size:.8rem}
+/* Bottom nav — same 5 tabs as the home app (index.html) */
+.bn{position:fixed;bottom:0;left:0;right:0;height:var(--bh);z-index:100;background:rgba(5,8,15,.97);backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;align-items:stretch}
+.bb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px 2px 10px;position:relative;text-decoration:none;-webkit-tap-highlight-color:transparent}
+.bb svg{width:22px;height:22px;stroke:var(--mu);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.bb.active svg{stroke:var(--or);transform:scale(1.12)}
+.bl{font-family:'Syne',sans-serif;font-size:.6875rem;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--mu);white-space:nowrap}
+.bb.active .bl{color:var(--or)}
+.bb.active::after{content:'';position:absolute;top:0;left:24%;right:24%;height:3px;border-radius:0 0 3px 3px;background:var(--or)}
+/* Reduced motion: honour the phone's setting for every animation and transition */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+/* Desktop: profile in a ~600px centre column; top bar and bottom nav stay full width */
+@media (min-width:900px){
+  .hero,.tabs,.pane{max-width:600px;margin-left:auto;margin-right:auto}
+}
 </style>
 </head>
 <body>
@@ -187,6 +207,14 @@ body{padding-bottom:32px}
     <button class="modal-cancel" onclick="closePostModal()">Cancel</button>
   </div>
 </div>
+<!-- Same 5 tabs as the home app (index.html); ?tab= opens that tab there. "Me" lights up on your own profile. -->
+<nav class="bn">
+  <a class="bb" href="/?tab=home"><svg viewBox="0 0 24 24"><path d="M12 3C12 3 4 9.5 4 15a8 8 0 0016 0C20 9.5 12 3 12 3Z"/><path d="M12 10v5M9.5 13h5"/></svg><span class="bl">Home</span></a>
+  <a class="bb" href="/?tab=discover"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"/></svg><span class="bl">Discover</span></a>
+  <a class="bb" href="/?tab=map"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3M9 20V7m6 13l5.447-2.724A1 1 0 0021 16.382V5.618a1 1 0 00-1.447-.894L15 7m0 13V7M9 7l6-3"/></svg><span class="bl">Map</span></a>
+  <a class="bb" href="/?tab=tickets"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M16 7v-.5a3.5 3.5 0 00-7 0V7M16 17v.5a3.5 3.5 0 01-7 0V17"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span class="bl">Bookings</span></a>
+  <a class="bb" id="bn-me" href="/?tab=me"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 19c0-3 2.7-5.5 6-5.5s6 2.5 6 5.5"/><circle cx="18" cy="8" r="2.2"/><path d="M15.5 18.5c0-1.8 1.1-3.3 2.5-4"/></svg><span class="bl">Me</span></a>
+</nav>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -277,6 +305,7 @@ async function loadUserData() {
   document.getElementById('nav-title').textContent = isOwnProfile ? 'My Profile' : profile.display_name;
   
   if (isOwnProfile) {
+    const _bnMe = document.getElementById('bn-me'); _bnMe.classList.add('active'); _bnMe.setAttribute('aria-current', 'page');
     document.getElementById('settings-btn-wrapper').innerHTML = `<div class="settings-btn" onclick="window.location.href='/profile-settings'">⚙️</div>`;
     document.getElementById('profile-action-btn').innerHTML = `<button class="edit-btn" onclick="window.location.href='/profile-settings'">Edit Profile</button>`;
     document.getElementById('avatar-el').style.cursor = 'pointer';

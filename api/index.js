@@ -4,6 +4,7 @@ const { sendOrderEmail, unsubToken } = require('../lib/email');
 const { queueEmail } = require('../lib/email-queue');
 const { rateLimited, captureError, corsHeaders, signQr, verifyQr, validate, flagEnabled, geocodeSA } = require('../lib/shared');
 const { syncTicketPurchase, syncBusinessRegistration } = require('../lib/hubspot');
+const { seoPages } = require('../lib/seo-pages');
 
 const SUPA_URL  = process.env.SUPABASE_URL  || 'https://cjzewfvtdayjgjdpdmln.supabase.co';
 const SUPA_ANON = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqemV3ZnZ0ZGF5amdqZHBkbWxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NTg0MjYsImV4cCI6MjA5MTQzNDQyNn0.KQ80RmaB6cfA0dkcT-pdTe53fwyUrrIBeVJtToWF_Mk';
@@ -204,6 +205,134 @@ async function logAdminAction(adminId, adminName, actionType, targetId, targetNa
   } catch(e) { /* non-fatal */ }
 }
 
+/* ─── Quicket — shared by GET /quicket-events and the SEO pages (lib/seo-pages.js) ─── */
+const QUICKET_KEY = process.env.QUICKET_API_KEY || '7f03069e38b5802980c9ca620dd14dff';
+
+// Quicket category/keyword → Pulsefy genre
+const QUICKET_GENRE_MAP = {
+  music:'house', concert:'house', live:'live',
+  amapiano:'amapiano', gqom:'gqom',
+  'hip-hop':'hiphop', hiphop:'hiphop', hip_hop:'hiphop', rap:'hiphop',
+  house:'house', afrobeats:'afrobeats', afrohouse:'afrohouse',
+  rock:'rock', gospel:'gospel', jazz:'jazz',
+  maskandi:'maskandi', kwaito:'kwaito',
+  reggae:'reggae', soul:'soul', rnb:'rnb',
+  comedy:'comedy', sport:'sport', sports:'sport',
+  festival:'festival', nightlife:'nightlife',
+  theatre:'theatre', theater:'theatre',
+  outdoor:'outdoor', adventure:'outdoor', hiking:'outdoor', camping:'outdoor',
+  ceremonies:'ceremonies', ceremony:'ceremonies', wedding:'ceremonies',
+  workshop:'workshop', course:'workshop', training:'workshop', class:'workshop', seminar:'workshop',
+  food:'food', cuisine:'food', dining:'food', tasting:'food', shisanyama:'shisanyama',
+  cultural:'cultural', heritage:'cultural', traditional:'cultural',
+  business:'business', conference:'business', networking:'business', expo:'business',
+  fashion:'fashion', style:'fashion',
+  wellness:'wellness', yoga:'wellness', fitness:'wellness', meditation:'wellness', health:'wellness',
+  art:'art', exhibition:'art', gallery:'art',
+  market:'market', flea:'market', craft:'market',
+  kids:'kids', family:'kids', children:'kids',
+  charity:'charity', fundraiser:'charity', cause:'charity',
+  technology:'tech', tech:'tech',
+  film:'film', movie:'film', cinema:'film',
+  dance:'dance', ballet:'dance',
+};
+
+const QUICKET_PAGES_PER_CITY = 2;
+const QUICKET_PAGE_SIZE      = 50;
+
+async function quicketFetch(fetchCity, page, genre) {
+  // usertoken must be a query param, not a header
+  const params = new URLSearchParams({
+    usertoken: QUICKET_KEY,
+    pagesize:  String(QUICKET_PAGE_SIZE),
+    page:      String(page),
+    location:  fetchCity,
+    country:   'ZA',
+    startDate: new Date().toISOString().split('T')[0],
+  });
+  if (genre !== 'all') params.append('search', genre);
+
+  try {
+    const resp = await fetch(`https://api.quicket.co.za/api/events?${params}`, {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!resp.ok) {
+      const body = await resp.text().catch(() => '');
+      console.warn(`[Quicket] ${fetchCity} p${page} → HTTP ${resp.status}`, body.slice(0, 200));
+      return [];
+    }
+    const json = await resp.json();
+    const rows = json?.data || json?.events || json?.results || (Array.isArray(json) ? json : []);
+    console.log(`[Quicket] ${fetchCity} p${page} → ${rows.length} events`);
+    return rows;
+  } catch(e) {
+    console.warn(`[Quicket] ${fetchCity} p${page} fetch error: ${e.message}`);
+    return [];
+  }
+}
+
+function normalizeQuicket(item, fetchCity) {
+  const id         = item.id || item.event_id || item.EventId;
+  const title      = item.title || item.name || item.EventName;
+  const venue      = item.venue?.name || item.venueName || item.venue_name || item.Venue || '';
+  const cityVal    = item.venue?.city || item.city || item.venueCity || fetchCity;
+  const start      = item.startDate || item.start_date || item.StartDate || item.date_local;
+  const image      = item.imageUrl || item.image_url || item.bannerUrl || item.banner_url || null;
+  const desc       = item.description || item.shortDescription || item.short_description || null;
+  const url_       = item.url || item.eventUrl || item.event_url || `https://www.quicket.co.za/events/${id}`;
+  const priceRaw   = item.minPrice ?? item.min_price ?? item.ticketMinPrice ?? item.price_min ?? 0;
+  const catRaw     = (item.category || item.categories?.[0]?.name || item.genre || '').toLowerCase().replace(/\s+/g, '');
+  const mappedGenre = QUICKET_GENRE_MAP[catRaw] || (catRaw || 'other');
+  const lat        = parseFloat(item.venue?.latitude  || item.latitude  || item.lat  || 0) || null;
+  const lon        = parseFloat(item.venue?.longitude || item.longitude || item.lon || 0) || null;
+  const priceNum   = typeof priceRaw === 'number' ? priceRaw : parseFloat(priceRaw) || 0;
+
+  if (!id || !title || !start) return null;
+
+  return {
+    id:            `qkt_${id}`,
+    name:          title,
+    date_local:    start,
+    venue_name:    venue,
+    venue_city:    cityVal,
+    venue_lat:     lat,
+    venue_lon:     lon,
+    price_min:     priceNum,
+    is_free:       priceNum === 0 || priceRaw === 'Free' || priceRaw === 'free',
+    // SEO pages: only claim 'Free' when Quicket actually said so (missing price defaults to 0)
+    price_known:   (item.minPrice ?? item.min_price ?? item.ticketMinPrice ?? item.price_min) != null,
+    image_url:     image,
+    genre:         mappedGenre,
+    description:   desc,
+    external_url:  url_,
+    source:        'quicket',
+    is_active:     true,
+    organiser_name: item.organiser?.name || item.organiserName || item.organizer || null,
+  };
+}
+
+// QUICKET_PAGES_PER_CITY pages per city, normalized, deduped by id (first wins).
+async function fetchQuicketEvents(citiesToFetch, genre = 'all') {
+  const tasks = [];
+  for (const c of citiesToFetch) {
+    for (let p = 1; p <= QUICKET_PAGES_PER_CITY; p++) {
+      tasks.push(quicketFetch(c, p, genre).then(items => items.map(i => normalizeQuicket(i, c)).filter(Boolean)));
+    }
+  }
+  const batches = await Promise.all(tasks);
+  const seen = new Set();
+  const events = [];
+  for (const batch of batches) {
+    for (const ev of batch) {
+      if (seen.has(ev.id)) continue;
+      seen.add(ev.id);
+      events.push(ev);
+    }
+  }
+  return events;
+}
+
 module.exports = async (req, res) => {
   Object.entries(corsHeaders(req)).forEach(([k, v]) => res.setHeader(k, v));
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -214,6 +343,17 @@ module.exports = async (req, res) => {
   const today  = new Date().toISOString().split('T')[0];
 
   try {
+
+    /* ─── SEO pages (public HTML/XML): /durban, /durban/:slug, /e/:id, /sitemap.xml ─── */
+    if ((req.method === 'GET' || req.method === 'HEAD') && (url === '/sitemap.xml' || /^\/(durban|e)(\/|$)/.test(url))) {
+      try { return await seoPages(url, res, { sb, fetchQuicketEvents }); }
+      catch (e) {
+        console.error('[seo]', e.message);
+        res.setHeader('Cache-Control', 'no-store');
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        return res.status(500).send('Something went wrong — please try again.');
+      }
+    }
 
     /* ─── GET /unsubscribe ── one-click email opt-out (public) ─────── */
     if (url === '/unsubscribe' && req.method === 'GET') {
@@ -1688,41 +1828,11 @@ module.exports = async (req, res) => {
     /* ─── GET /quicket-events ─────────────────────────────── */
     if (url === '/quicket-events' && req.method === 'GET') {
       if (rateLimited(req, res, { key: 'quicket', limit: 20, windowMs: 60000 })) return;
-      const QUICKET_KEY = process.env.QUICKET_API_KEY || '7f03069e38b5802980c9ca620dd14dff';
 
       const city  = q.city  || 'all';   // 'all' | 'kzn' | 'jhb' | 'durban' | 'johannesburg' | ...
       const genre = q.genre || 'all';
       const free  = q.free === '1' || q.free === 'true';
       const limit = Math.min(parseInt(q.limit || '200'), 500);
-
-      // Quicket category/keyword → Pulsefy genre
-      const GENRE_MAP = {
-        music:'house', concert:'house', live:'live',
-        amapiano:'amapiano', gqom:'gqom',
-        'hip-hop':'hiphop', hiphop:'hiphop', hip_hop:'hiphop', rap:'hiphop',
-        house:'house', afrobeats:'afrobeats', afrohouse:'afrohouse',
-        rock:'rock', gospel:'gospel', jazz:'jazz',
-        maskandi:'maskandi', kwaito:'kwaito',
-        reggae:'reggae', soul:'soul', rnb:'rnb',
-        comedy:'comedy', sport:'sport', sports:'sport',
-        festival:'festival', nightlife:'nightlife',
-        theatre:'theatre', theater:'theatre',
-        outdoor:'outdoor', adventure:'outdoor', hiking:'outdoor', camping:'outdoor',
-        ceremonies:'ceremonies', ceremony:'ceremonies', wedding:'ceremonies',
-        workshop:'workshop', course:'workshop', training:'workshop', class:'workshop', seminar:'workshop',
-        food:'food', cuisine:'food', dining:'food', tasting:'food', shisanyama:'shisanyama',
-        cultural:'cultural', heritage:'cultural', traditional:'cultural',
-        business:'business', conference:'business', networking:'business', expo:'business',
-        fashion:'fashion', style:'fashion',
-        wellness:'wellness', yoga:'wellness', fitness:'wellness', meditation:'wellness', health:'wellness',
-        art:'art', exhibition:'art', gallery:'art',
-        market:'market', flea:'market', craft:'market',
-        kids:'kids', family:'kids', children:'kids',
-        charity:'charity', fundraiser:'charity', cause:'charity',
-        technology:'tech', tech:'tech',
-        film:'film', movie:'film', cinema:'film',
-        dance:'dance', ballet:'dance',
-      };
 
       // Cities to fetch — biased toward KZN + JHB metros
       const KZN = ['Durban', 'Pietermaritzburg', 'Umhlanga'];
@@ -1734,96 +1844,8 @@ module.exports = async (req, res) => {
       else if (city === 'durban')      citiesToFetch = ['Durban'];
       else                              citiesToFetch = [city];
 
-      const PAGES_PER_CITY = 2;
-      const PAGE_SIZE      = 50;
-
-      const quicketFetch = async (fetchCity, page) => {
-        // usertoken must be a query param, not a header
-        const params = new URLSearchParams({
-          usertoken: QUICKET_KEY,
-          pagesize:  String(PAGE_SIZE),
-          page:      String(page),
-          location:  fetchCity,
-          country:   'ZA',
-          startDate: new Date().toISOString().split('T')[0],
-        });
-        if (genre !== 'all') params.append('search', genre);
-
-        try {
-          const resp = await fetch(`https://api.quicket.co.za/api/events?${params}`, {
-            headers: { 'Accept': 'application/json' },
-            signal: AbortSignal.timeout(10000),
-          });
-          if (!resp.ok) {
-            const body = await resp.text().catch(() => '');
-            console.warn(`[Quicket] ${fetchCity} p${page} → HTTP ${resp.status}`, body.slice(0, 200));
-            return [];
-          }
-          const json = await resp.json();
-          const rows = json?.data || json?.events || json?.results || (Array.isArray(json) ? json : []);
-          console.log(`[Quicket] ${fetchCity} p${page} → ${rows.length} events`);
-          return rows;
-        } catch(e) {
-          console.warn(`[Quicket] ${fetchCity} p${page} fetch error: ${e.message}`);
-          return [];
-        }
-      };
-
-      const normalize = (item, fetchCity) => {
-        const id         = item.id || item.event_id || item.EventId;
-        const title      = item.title || item.name || item.EventName;
-        const venue      = item.venue?.name || item.venueName || item.venue_name || item.Venue || '';
-        const cityVal    = item.venue?.city || item.city || item.venueCity || fetchCity;
-        const start      = item.startDate || item.start_date || item.StartDate || item.date_local;
-        const image      = item.imageUrl || item.image_url || item.bannerUrl || item.banner_url || null;
-        const desc       = item.description || item.shortDescription || item.short_description || null;
-        const url_       = item.url || item.eventUrl || item.event_url || `https://www.quicket.co.za/events/${id}`;
-        const priceRaw   = item.minPrice ?? item.min_price ?? item.ticketMinPrice ?? item.price_min ?? 0;
-        const catRaw     = (item.category || item.categories?.[0]?.name || item.genre || '').toLowerCase().replace(/\s+/g, '');
-        const mappedGenre = GENRE_MAP[catRaw] || (catRaw || 'other');
-        const lat        = parseFloat(item.venue?.latitude  || item.latitude  || item.lat  || 0) || null;
-        const lon        = parseFloat(item.venue?.longitude || item.longitude || item.lon || 0) || null;
-        const priceNum   = typeof priceRaw === 'number' ? priceRaw : parseFloat(priceRaw) || 0;
-
-        if (!id || !title || !start) return null;
-
-        return {
-          id:            `qkt_${id}`,
-          name:          title,
-          date_local:    start,
-          venue_name:    venue,
-          venue_city:    cityVal,
-          venue_lat:     lat,
-          venue_lon:     lon,
-          price_min:     priceNum,
-          is_free:       priceNum === 0 || priceRaw === 'Free' || priceRaw === 'free',
-          image_url:     image,
-          genre:         mappedGenre,
-          description:   desc,
-          external_url:  url_,
-          source:        'quicket',
-          is_active:     true,
-          organiser_name: item.organiser?.name || item.organiserName || item.organizer || null,
-        };
-      };
-
       try {
-        const tasks = [];
-        for (const c of citiesToFetch) {
-          for (let p = 1; p <= PAGES_PER_CITY; p++) {
-            tasks.push(quicketFetch(c, p).then(items => items.map(i => normalize(i, c)).filter(Boolean)));
-          }
-        }
-        const batches = await Promise.all(tasks);
-        const seen = new Set();
-        let events = [];
-        for (const batch of batches) {
-          for (const ev of batch) {
-            if (seen.has(ev.id)) continue;
-            seen.add(ev.id);
-            events.push(ev);
-          }
-        }
+        let events = await fetchQuicketEvents(citiesToFetch, genre);
         if (free) events = events.filter(e => e.is_free);
         // Free events first, then by date ascending
         events.sort((a, b) => {

@@ -67,6 +67,10 @@
     { "source": "/partners",             "destination": "/apps/landing-page/partners.html" },
     { "source": "/business-menu",        "destination": "/apps/landing-page/business-menu.html" },
     { "source": "/diagnose",             "destination": "/apps/landing-page/diagnose.html" },
+    { "source": "/durban",               "destination": "/api" },
+    { "source": "/durban/(.*)",          "destination": "/api" },
+    { "source": "/e/(.*)",               "destination": "/api" },
+    { "source": "/sitemap.xml",          "destination": "/api" },
     { "source": "/",                     "destination": "/apps/landing-page/index.html" },
     { "source": "/(.+)",                 "destination": "/apps/landing-page/$1" }
   ],
