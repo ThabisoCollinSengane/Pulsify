@@ -728,6 +728,15 @@ function buildCmts(comments, postId) {
   return comments.map(c => renderOne(c, false)).join('');
 }
 
+// Multi-photo gallery: keep the "1/N" counter in step with the swipe position
+function _galScroll(el) {
+  const ct = el && el.parentNode && el.parentNode.querySelector('.gal-ct');
+  if (!ct) return;
+  const n = el.children.length;
+  ct.style.display = n > 1 ? '' : 'none';
+  ct.textContent = Math.min(n, Math.round(el.scrollLeft / (el.clientWidth || 1)) + 1) + '/' + n;
+}
+
 function expandCap(postId) {
   const post = _posts.find(p => p.id === postId);
   if (!post) return;
@@ -871,8 +880,9 @@ async function loadComments(postId) {
   const lEl = document.getElementById('cmtl-'+postId);
   if (lEl) lEl.innerHTML = '<div style="padding:10px 14px;font-size:.74rem;color:var(--mu)">Loading comments…</div>';
   try {
+    const tok  = _uid ? await freshToken() : '';
     const res  = await fetch('/api/comments?entity_id=' + encodeURIComponent(postId) + '&entity_type=post',
-      _token ? { headers: { 'Authorization': 'Bearer ' + _token } } : undefined);
+      tok ? { headers: { 'Authorization': 'Bearer ' + tok } } : undefined);
     const json = await safeJson(res);
     const top  = (json.comments || []).map(c => ({ ...c, profile: c.profile || {} }));
     _cmtCache[postId] = top;
@@ -891,7 +901,9 @@ async function loadComments(postId) {
   }
 }
 
-function startReply(postId, parentId, name) {
+function startReply(postId, parentId) {
+  const pc = (_cmtCache[postId] || []).find(c => c.id === parentId);
+  const name = pc ? (pc.profile?.display_name || pc.profile?.username || 'Someone') : '';
   _replyTo[postId] = { parent_id: parentId, name };
   const wrap = document.getElementById('cmt-'+postId);
   if (!wrap) return;
@@ -946,7 +958,7 @@ async function doComment(postId) {
   try {
     const res = await fetch('/api/comments', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await freshToken()}` },
       body: JSON.stringify({ entity_id: postId, entity_type: 'post', body: txt, parent_id: reply?.parent_id || undefined }),
     });
     const json = await safeJson(res);
@@ -957,7 +969,31 @@ async function doComment(postId) {
     loadComments(postId);
   } catch(e) {
     showToast('Could not post comment: ' + e.message, 'err');
+    loadComments(postId);   // drop the optimistic comment
+    if (inp && !inp.value) inp.value = txt;
   }
+}
+
+async function deleteComment(postId, cmtId) {
+  if (!confirm('Delete this comment?')) return;
+  try {
+    const r = await fetch('/api/comments/' + encodeURIComponent(cmtId), {
+      method: 'DELETE', headers: { 'Authorization': 'Bearer ' + await freshToken() },
+    });
+    if (!r.ok) { const j = await safeJson(r); throw new Error(j.error || ('HTTP ' + r.status)); }
+  } catch (e) { return showToast('Could not delete comment: ' + e.message, 'err'); }
+  // Mirror the server: the comment goes, its replies become top-level
+  const cache = _cmtCache[postId] || [];
+  const i = cache.findIndex(c => c.id === cmtId);
+  if (i > -1) cache.splice(i, 1, ...(cache[i].replies || []).map(r => ({ ...r, parent_id: null })));
+  else cache.forEach(c => { c.replies = (c.replies || []).filter(r => r.id !== cmtId); });
+  const lEl = document.getElementById('cmtl-'+postId);
+  if (lEl) lEl.innerHTML = cache.length ? buildCmts(cache, postId) : '<div style="padding:14px;text-align:center;font-size:.74rem;color:var(--mu)">Be the first to comment</div>';
+  const post = _posts.find(p => p.id === postId);
+  if (post) post.comment_count = Math.max(0, (post.comment_count || 0) - 1);
+  const cEl = document.getElementById('cc-'+postId);
+  if (cEl) cEl.textContent = fn(post ? post.comment_count : Math.max(0, (parseInt(cEl.textContent, 10) || 0) - 1));
+  showToast('Comment deleted');
 }
 
 async function doFollow(targetUserId, postId) {
@@ -968,7 +1004,7 @@ async function doFollow(targetUserId, postId) {
   if (_uid) {
     const res = await fetch('/api/follows', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await freshToken()}` },
       body: JSON.stringify({ following_id: targetUserId }),
     }).catch(()=>({ok:false,json:()=>({})}) );
     const json = await res.json().catch(()=>({}));
@@ -991,7 +1027,8 @@ async function doFollow(targetUserId, postId) {
   if (_filter === 'following') { _page = 1; render(); }
 }
 
-function doShare(caption) {
+function doShare(postId) {
+  const caption = (_posts.find(p => p.id === postId) || {}).caption || '';
   if (navigator.share) navigator.share({title:'Pulsefy Post', text:caption||'Check this out on Pulsefy!', url:location.href});
   else { navigator.clipboard?.writeText(location.href); showToast('🔗 Link copied!'); }
 }
@@ -1090,7 +1127,7 @@ async function doFollowOverlay(targetId) {
   try {
     const res = await fetch('/api/follows', {
       method: isF ? 'DELETE' : 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token||''}` },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await freshToken()}` },
       body: JSON.stringify({ following_id: targetId }),
     });
     if (!res.ok) throw new Error((await res.json()).error || 'Failed');
@@ -1167,8 +1204,12 @@ function editPost(id) {
   document.getElementById('post-event-name').value = post.event_name || '';
   const img = firstImg(post.image_url);
   if (img) {
-    _cImg = img; _cImgFile = null; // existing remote image; only re-upload if they pick a new one
-    document.getElementById('img-drop').innerHTML = '<img src="'+x(img)+'" style="width:100%;height:100%;object-fit:cover;border-radius:12px"/>';
+    // Existing photos are kept as-is (image_url is left out of the PATCH) unless they pick a new one
+    _cImg = img; _cImgFile = null;
+    let n = 1;
+    try { const a = JSON.parse(post.image_url); if (Array.isArray(a)) n = a.filter(u => typeof u === 'string' && u.trim()).length || 1; } catch(e) {}
+    document.getElementById('img-drop').innerHTML = '<div style="position:relative;width:100%;height:100%"><img src="'+x(img)+'" style="width:100%;height:100%;object-fit:cover;border-radius:12px"/>' +
+      (n > 1 ? '<span class="gal-ct">'+n+' photos · tap to replace</span>' : '') + '</div>';
   }
   const title = document.querySelector('#compose-modal .ct'); if (title) title.textContent = '✏️ Edit Post';
   const sbtn = document.getElementById('post-submit'); if (sbtn) sbtn.textContent = 'Save changes ✓';
@@ -1221,16 +1262,20 @@ async function submitPost() {
       // ── EDIT existing post ──
       if (sb && _uid) {
         const token = (await sb.auth.getSession())?.data?.session?.access_token;
+        // Only send image_url when a new photo was picked — otherwise a
+        // multi-photo post (JSON array) would be cut down to its first photo
+        const patch = { caption: finalCap, event_name: evName || null };
+        if (_cImgFile) patch.image_url = imageUrl;
         const res = await fetch('/api/posts/' + encodeURIComponent(_editingPostId), {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') },
-          body: JSON.stringify({ caption: finalCap, image_url: imageUrl, event_name: evName || null }),
+          body: JSON.stringify(patch),
         });
-        const data = await res.json();
+        const data = await safeJson(res);
         if (!res.ok) throw new Error(data.error || 'Could not save changes');
       }
       const ep = _posts.find(p => p.id === _editingPostId);
-      if (ep) { ep.caption = finalCap; ep.image_url = imageUrl; ep.event_name = evName || null; }
+      if (ep) { ep.caption = finalCap; if (_cImgFile) ep.image_url = imageUrl; ep.event_name = evName || null; }
       closeCompose();
       _page = 1; render();
       showToast('✓ Post updated', 'ok');
@@ -1241,13 +1286,13 @@ async function submitPost() {
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') },
         body: JSON.stringify({ caption: finalCap, image_url: imageUrl, event_name: evName || null, post_type }),
       });
-      const data = await res.json();
-      if (res.ok && data.post) {
-        _posts.unshift({ id: data.post.id, user_id: _uid, username: uname, display_name: name,
-          role: _session?.role||'user', avatar_url: _profile?.avatar_url||null,
-          event_name: evName||null, image_url: imageUrl, caption: finalCap,
-          likes:[], comments:[], reposts:[], ts: data.post.created_at });
-      }
+      const data = await safeJson(res);
+      // Show the real error and keep the composer open (catch below)
+      if (!res.ok || !data.post) throw new Error(data.message || data.error || ('HTTP ' + res.status));
+      _posts.unshift({ id: data.post.id, user_id: _uid, username: uname, display_name: name,
+        role: _session?.role||'user', avatar_url: _profile?.avatar_url||null,
+        event_name: evName||null, image_url: imageUrl, caption: finalCap,
+        likes:[], comments:[], reposts:[], ts: data.post.created_at });
       closeCompose();
       _page = 1; render();
       showToast('🔥 Post shared!', 'ok');
@@ -1366,7 +1411,9 @@ async function scrollToPostAndComment(postId, commentId) {
         const feedEl = document.getElementById('feed');
         const spotlight = document.createElement('div');
         spotlight.style.cssText = 'border:2px solid var(--pu);border-radius:18px;overflow:hidden;margin-bottom:8px';
+        await _addLikeRepostState([p]);
         const mapped = mapPost({ ...p, profile: prof });
+        _posts.push(mapped);   // like/share/report/edit look the post up by id
         spotlight.appendChild(buildCard(mapped));
         feedEl.insertBefore(spotlight, feedEl.firstChild);
         post = document.getElementById('post-' + postId);
@@ -1549,8 +1596,8 @@ initFeed();
    REPORT POST
 ══════════════════════════════════════════════════ */
 let _rpId = null, _rpCap = null;
-function openReportPost(id, caption) {
-  _rpId = id; _rpCap = caption || '';
+function openReportPost(id) {
+  _rpId = id; _rpCap = ((_posts.find(p => p.id === id) || {}).caption || '').slice(0, 80);
   document.getElementById('rp-reason').value = '';
   document.getElementById('rp-detail').value = '';
   const m = document.getElementById('rp-msg'); m.style.display = 'none';

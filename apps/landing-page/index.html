@@ -1597,6 +1597,10 @@ const PROV_CITY = {
 
 /* ── UTILS ── */
 function x(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// User text as a JS string argument inside a double-quoted on*="" attribute.
+// x() alone is not enough there: ' is not escaped, and the browser decodes
+// entities before the handler runs. JSON gives a valid JS string literal.
+function jsStr(s) { return x(JSON.stringify(String(s ?? ''))); }
 const escapeHtml = x;
 // Guard for image uploads — allowed types + 5MB cap. Server-side limits are
 // also enforced on the Supabase storage buckets (allowed_mime_types/file_size_limit).
@@ -2468,8 +2472,8 @@ function buildCard(ev, idx) {
     </div>
     <div class="fac" onclick="event.stopPropagation()">${att >= 2 ? `<div style="display:flex;align-items:center;margin-right:4px">${(ev.recent_attendees||[]).slice(0,3).map((av,i)=>`<div style="width:20px;height:20px;border-radius:50%;border:1.5px solid var(--bg);overflow:hidden;background:var(--surf2);margin-left:${i?'-6px':'0'};z-index:${3-i};flex-shrink:0">${av?`<img src="${x(av)}" style="width:100%;height:100%;object-fit:cover">`:`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:.5rem">👤</div>`}</div>`).join('')}<span style="font-size:.58rem;color:var(--mu2);margin-left:4px;white-space:nowrap">${fn(att)} going</span></div>` : ''}
       <button class="ab" onclick="toggleLike(this, '${x(ev.id)}', 'events')"><span class="ai">🤍</span><span>${fn(ev.like_count)}</span></button>
-      <button class="ab" onclick="openComments('${x(ev.id)}', '${x(ev.name)}', 'events')"><span class="ai">💬</span><span>${fn(ev.comment_count)}</span></button>
-      <button class="ab" onclick="shareIt('${x(ev.name)}')"><span class="ai">🔗</span></button>
+      <button class="ab" onclick="openComments('${x(ev.id)}', ${jsStr(ev.name)}, 'events')"><span class="ai">💬</span><span>${fn(ev.comment_count)}</span></button>
+      <button class="ab" onclick="shareIt(${jsStr(ev.name)})"><span class="ai">🔗</span></button>
       <button class="ab" onclick="toggleSave('ev','${x(ev.id)}',this)"><span class="ai">${savedEv.includes(ev.id) ? '🔖' : '🏷'}</span></button>
       <button class="tb2 ${iF ? 'fr' : ''}" onclick="openEv('${x(ev.id)}');event.stopPropagation()">${btnLbl}</button>
     </div>
@@ -2516,7 +2520,7 @@ function buildPromoCard(promo) {
       <div class="hb"><div class="hf" style="width:${hp}%"></div></div>
     </div>
     <div class="fac" onclick="event.stopPropagation()">
-      <button class="ab" onclick="shareIt('${x(promo.title)}')"><span class="ai">🔗</span></button>
+      <button class="ab" onclick="shareIt(${jsStr(promo.title)})"><span class="ai">🔗</span></button>
       ${promo.external_url ? `<a class="tb2 ${iF ? 'fr' : ''}" href="${x(promo.external_url)}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">${iF ? 'RSVP Free' : 'Book Now'}</a>` : ''}
     </div>
   </div>`;
@@ -3063,13 +3067,13 @@ async function openEv(evId) {
       </div>
       <div class="rx">
         <button class="rb" id="ev-like-btn" onclick="toggleEvLike('${x(ev.id)}',this)"><span class="ri">🤍</span><span class="rl" id="ev-like-count">${fn(lc)}</span></button>
-        <button class="rb" onclick="openComments('${x(ev.id)}','${x(ev.name)}')"><span class="ri">💬</span><span class="rl">${fn(cc)}</span></button>
+        <button class="rb" onclick="openComments('${x(ev.id)}',${jsStr(ev.name)})"><span class="ri">💬</span><span class="rl">${fn(cc)}</span></button>
         <button class="rb" onclick="this.classList.toggle('act')"><span class="ri">🔥</span><span class="rl">${fn(Math.round(lc * .6))}</span></button>
         <button class="rb" id="ev-rsvp-btn" onclick="rsvpEv('${x(ev.id)}',this)"><span class="ri">${iF ? '✅' : '🎟'}</span><span class="rl" id="ev-rsvp-count">${fn(ev.attendance_count || 0)}</span></button>
         <button class="rb" onclick="toggleSave('ev','${x(ev.id)}',this)"><span class="ri">${savedEv.includes(ev.id) ? '🔖' : '🏷'}</span><span class="rl">Save</span></button>
-        <button class="rb" onclick="shareIt('${x(ev.name)}')"><span class="ri">🔗</span><span class="rl">Share</span></button>
-        <button class="rb" onclick="openReportModal('${x(ev.id)}','${x(ev.name).replace(/'/g,'\\\'')}')"><span class="ri">🚩</span><span class="rl">Report</span></button>
-        <button class="rb act" id="lumi-open-btn" onclick="openLumiChat('${x(ev.id)}','${x(ev.name).replace(/'/g,"\\'")}')"><span class="ri" style="line-height:1;display:inline-flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><defs><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FF5C00"/><stop offset="100%" stop-color="#FF2D78"/></linearGradient></defs><path d="M12 2L14.2 9.8L22 12L14.2 14.2L12 22L9.8 14.2L2 12L9.8 9.8Z" fill="url(#lg1)"/></svg></span><span class="rl" style="color:var(--or)">Ask Lumi</span></button>
+        <button class="rb" onclick="shareIt(${jsStr(ev.name)})"><span class="ri">🔗</span><span class="rl">Share</span></button>
+        <button class="rb" onclick="openReportModal('${x(ev.id)}',${jsStr(ev.name)})"><span class="ri">🚩</span><span class="rl">Report</span></button>
+        <button class="rb act" id="lumi-open-btn" onclick="openLumiChat('${x(ev.id)}',${jsStr(ev.name)})"><span class="ri" style="line-height:1;display:inline-flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><defs><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FF5C00"/><stop offset="100%" stop-color="#FF2D78"/></linearGradient></defs><path d="M12 2L14.2 9.8L22 12L14.2 14.2L12 22L9.8 14.2L2 12L9.8 9.8Z" fill="url(#lg1)"/></svg></span><span class="rl" style="color:var(--or)">Ask Lumi</span></button>
       </div>
       <div class="db">
         <div class="ig">
@@ -3620,12 +3624,12 @@ async function openBiz(bizId) {
       </div>
       <div class="rx">
         <button class="rb ${bizLiked?'lk':''}" onclick="toggleLike(this,'${x(b.id)}','businesses')"><span class="ai">${bizLiked?'❤️':'🤍'}</span><span>${fn(bizLikeCount||0)}</span></button>
-        <button class="rb" onclick="openComments('${x(b.id)}','${x(b.name)}')"><span class="ri">💬</span><span class="rl">${fn(Math.round((b.review_count || 0) * .15))}</span></button>
+        <button class="rb" onclick="openComments('${x(b.id)}',${jsStr(b.name)})"><span class="ri">💬</span><span class="rl">${fn(Math.round((b.review_count || 0) * .15))}</span></button>
         <button class="rb" onclick="toggleSave('biz','${x(b.id)}',this)"><span class="ri">${savedBz.includes(b.id) ? '🔖' : '🏷'}</span><span class="rl">Save</span></button>
-        <button class="rb" onclick="shareIt('${x(b.name)}')"><span class="ri">🔗</span><span class="rl">Share</span></button>
-        <button class="rb" onclick="openReportModal('business','${x(b.id)}','${x(b.name).replace(/'/g,'\\\'')}')"><span class="ri">🚩</span><span class="rl">Report</span></button>
+        <button class="rb" onclick="shareIt(${jsStr(b.name)})"><span class="ri">🔗</span><span class="rl">Share</span></button>
+        <button class="rb" onclick="openReportModal('business','${x(b.id)}',${jsStr(b.name)})"><span class="ri">🚩</span><span class="rl">Report</span></button>
       </div>
-      <div class="bztb"><div class="bzt active" onclick="switchBT(this,'bp-info')">ℹ️ Info</div><div class="bzt" onclick="switchBT(this,'bp-menu');loadBizMenu('${x(b.id)}','${x(b.name).replace(/'/g,"\\'")}')">🍽 Menu</div><div class="bzt" onclick="switchBT(this,'bp-gallery')">📸 Gallery</div></div>
+      <div class="bztb"><div class="bzt active" onclick="switchBT(this,'bp-info')">ℹ️ Info</div><div class="bzt" onclick="switchBT(this,'bp-menu');loadBizMenu('${x(b.id)}',${jsStr(b.name)})">🍽 Menu</div><div class="bzt" onclick="switchBT(this,'bp-gallery')">📸 Gallery</div></div>
       <div class="bzp" id="bp-menu"><div id="biz-menu-body" style="padding:4px 0"><div style="padding:20px;text-align:center;color:var(--mu);font-size:.78rem">Tap to load menu</div></div></div>
       <div class="bzp active" id="bp-info">
         <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px">
@@ -5597,7 +5601,7 @@ async function renderBookings() {
               <div style="font-size:.65rem;color:var(--mu);font-family:monospace">Ref: ${esc(b.booking_ref)}</div>
               ${checkedIn}
             </div>
-            ${qrUrl ? `<div style="flex-shrink:0"><img src="${qrUrl}" width="80" height="80" style="border-radius:10px;background:var(--surf);cursor:pointer" loading="lazy" onclick="openBookingQrModal('${esc(b.qr_data||b.booking_ref)}','${esc(ev.name||'')}','${esc(b.booking_ref)}')"/></div>` : ''}
+            ${qrUrl ? `<div style="flex-shrink:0"><img src="${qrUrl}" width="80" height="80" style="border-radius:10px;background:var(--surf);cursor:pointer" loading="lazy" onclick="openBookingQrModal('${esc(b.qr_data||b.booking_ref)}',${jsStr(ev.name)},'${esc(b.booking_ref)}')"/></div>` : ''}
           </div>
         </div>
       </div>`;
@@ -8271,7 +8275,7 @@ async function openDealDetail(promoId) {
         </div>
       </div>` : ''}
       <div style="position:sticky;bottom:0;background:linear-gradient(to top,var(--bg2) 75%,transparent);padding:16px 0 4px">
-        <button onclick="_sqJoinFromDetail('${x(p.id)}','${x(p.title).replace(/'/g,"\\'")}','${x(p.venue_name).replace(/'/g,"\\'")}','${x(p.deal_type||'')}','${x(p.business_id||'')}','${x(p.event_id||'')}')" style="width:100%;padding:14px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer">${p.event_id ? '🎟 Buy Tickets with Squad' : p.business_id ? '🍽 Order with Squad' : '👥 Join Squad to Claim'}</button>
+        <button onclick="_sqJoinFromDetail('${x(p.id)}',${jsStr(p.title)},${jsStr(p.venue_name)},'${x(p.deal_type||'')}','${x(p.business_id||'')}','${x(p.event_id||'')}')" style="width:100%;padding:14px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer">${p.event_id ? '🎟 Buy Tickets with Squad' : p.business_id ? '🍽 Order with Squad' : '👥 Join Squad to Claim'}</button>
       </div>`;
   } catch(e) {
     ws.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Could not load deal</div>';
