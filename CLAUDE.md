@@ -135,6 +135,31 @@ npx vercel --prod --yes --force --token=<VT>
 
 ---
 
+## 6a. AI team (agents + skills)
+
+Set up from `PULSIFY_MISSION.txt` (27 Nov 2026). Run any bug fix, feature or UI change
+through the **pulse-pipeline** skill.
+
+| Name | Kind | Job | Edits files? |
+| --- | --- | --- | --- |
+| `researcher` | agent (sonnet) | Fires first: root cause with evidence, or cited outside research → BRIEF | No |
+| `builder` | agent | Implements the BRIEF, nothing more | Yes |
+| `designer` | agent | Layout, visuals, animation; phone-first (390px), screenshots its work | Yes |
+| `reviewer` | agent (sonnet) | Reviews the diff: correctness, security/RLS, hard rules, simplicity → PASS or BLOCKER/FIX/NIT | No |
+| `qa-tester` | agent | Playwright at 390px + desktop, signed in/out, reload, second user | No |
+| `pulse-pipeline` | skill | researcher → builder/designer → reviewer (≤3 rounds) → qa-tester → owner approval → draft PR | — |
+| `ship-check` | skill | Release checklist + hard rules as PASS/FAIL/NOT TESTED before a merge | — |
+
+Files: `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`. An agent's `model:` frontmatter
+takes precedence over `CLAUDE_CODE_SUBAGENT_MODEL=haiku` in `.claude/settings.json`; agents
+without one run on haiku.
+
+**For the PULSIFY_MISSION work, section 6's "Claude can merge PRs" is suspended:** no merge
+to `main`, no production deploy, no paid services or sign-ups without the owner's explicit OK.
+Work on `claude/**` branches and open draft PRs (preview URLs only).
+
+---
+
 ## 7. Fixes Log (branch `claude/fix-event-organizer-feeds-ZCzRM`)
 
 Major fixes applied. Read this before touching the related areas — these are non-obvious and easy to regress.
