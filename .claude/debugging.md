@@ -62,6 +62,15 @@ Updated after every resolved issue.
 
 ## Resolved Issues
 
+### [2026-11-27] Privacy settings did nothing
+- **Symptoms:** Settings → Privacy (profile visibility, who can comment, show attended, show email) saved and reloaded fine, but nothing was hidden.
+- **Root cause:** Values lived only in localStorage (`p_privacy`). Also, the posts RLS policy `"public read posts"` was `USING (true)`, so even non-public posts were readable.
+- **Fix:** Added `profiles.profile_visibility` / `comment_permission` / `show_attended` (db/privacy_settings.sql). The checks run in definer helpers `can_view_private`, `can_view_attended`, `can_comment_on` and `can_view_post`, which apply them through RLS. RLS covers posts, event_attendances and post comments. A BEFORE INSERT trigger on comments raises 42501 `COMMENTS_NOT_ALLOWED`. The API uses the service role, so it re-checks in `hiddenAuthorIds` / `canSeePost` / `postCommentBlock` (api/index.js). "Show email" was removed (emails are never public).
+- **Lessons:**
+  - RLS policies run as the caller. A policy can't read a profiles column that isn't in the client column grant (it fails with "permission denied for table profiles"), so wrap the read in a SECURITY DEFINER function.
+  - PostgREST `not.in` drops NULLs, so keep null-author rows with `or(user_id.is.null,user_id.not.in.(...))`.
+- **Test:** I ran the policies in a rolled-back transaction as anon, a stranger, a follower and the owner. Anon and the stranger saw 0 of 16 posts; the follower and the owner saw 16.
+
 ### [2026-06-11] Map clustering broken — individual markers showing at country zoom
 - **Symptoms:** At country/province zoom, individual DOM pins rendered everywhere instead of collapsing into cluster bubbles. Cluster bubbles never appeared.
 - **Root cause (the big one):** Mapbox GL uses a custom marker element **AS the marker directly — there is NO wrapper element**. The hide logic set `opacity:0` on `m.getElement().parentElement`, which is the shared canvas container, not the marker. So nothing hid; every individual marker stayed fully visible and painted on top of the cluster bubbles underneath.

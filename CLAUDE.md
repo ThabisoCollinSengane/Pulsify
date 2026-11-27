@@ -231,6 +231,12 @@ A static `#vibe-chip-row` (5 pills: Party/Chill/Luxury/Social/Cultural) sits in 
 - **Style toggle** (🌗 `toggleMapStyle()`): satellite-streets ⇄ dark-v11. `setStyle()` wipes custom sources/layers/images, so the cluster source + heatmap + animated cluster layers are extracted into `_addMapSourcesAndLayers()` and re-added on `once('style.load')`. Layer/map event handlers (click/hover/zoomend) are attached **once** in the `load` handler — they persist across `setStyle`, so don't re-attach them.
 - **Venue grouping (replaces fan-out):** events are grouped by rounded lat/lon (4 d.p. ≈ 11m). One marker per venue; if multiple events, shows a count badge and tapping opens a venue panel listing all events. `showVenueEventsPanel(events, s)` renders the list.
 
+### Privacy settings (27 Nov 2026 — `db/privacy_settings.sql`)
+- `profiles.profile_visibility` ('public'|'followers'), `comment_permission` ('everyone'|'followers'|'nobody'), `show_attended`. **Not** in the client column grant — owners read via `my_profile()`, others via `get_profile_privacy(p_owner)` → `{can_view, show_attended, can_comment}`.
+- Enforced in RLS (posts `posts_select`, `event_attendances.attendances_select`, comments `cmt_select`) through definer helpers `can_view_private` / `can_view_attended` / `can_comment_on` / `can_view_post`, plus the `trg_enforce_comment_permission` BEFORE INSERT trigger (42501 `COMMENTS_NOT_ALLOWED`).
+- **The API runs as service role, so any new route returning posts, comments or attendances must call `hiddenAuthorIds` / `canSeePost` (api/index.js).** Policies can't read profile columns outside the grant directly — use a definer helper.
+- Following is instant (no follow requests yet). "Show email" was removed.
+
 ---
 
 ## 8. Roadmap / Deferred Checklist
