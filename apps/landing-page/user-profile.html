@@ -40,8 +40,8 @@ body{padding-bottom:calc(var(--bh) + 24px)}
 .stat[hidden]{display:none}
 button.stat{background:none;border-top:0;border-right:0;border-bottom:0;color:inherit;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
 button.stat:active .stat-n{color:var(--or)}
-.stat-n{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--tx);line-height:1}
-.stat-l{font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);white-space:nowrap}
+.stat-n{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--tx);line-height:1;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stat-l{font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;color:var(--mu);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .genres-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
 .genre-tag{background:rgba(255,92,0,.08);border:1px solid rgba(255,92,0,.2);color:var(--or);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;padding:4px 11px;border-radius:50px}
 /* "Going to" strip: upcoming events this person attends (privacy enforced by event_attendances RLS) */
