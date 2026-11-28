@@ -2928,7 +2928,8 @@ function onProvChange(v) {
 }
 function onCityChange(v) {
   feedCity = v || 'all';
-  feedProvince = v ? feedProvince : 'all';
+  // "All cities" falls back to the chosen province (was: reset to all SA while the select still showed it)
+  feedProvince = v ? feedProvince : (document.getElementById('sel-province')?.value || 'all');
   loadFeed(true);
 }
 // Location pill (search row) ⇄ bottom sheet holding #sel-province / #sel-city
@@ -4386,7 +4387,7 @@ function showOrderConfirmation(orderRef, bizName, total, items) {
       <div style="font-family:monospace;font-size:.72rem;color:var(--mu);margin-bottom:6px">Ref: ${x(orderRef)}</div>
       <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;color:var(--or);margin-bottom:18px">R${(+total || 0).toFixed(2)}</div>
       <button onclick="goToMyOrders()" style="width:100%;background:var(--surf);border:1px solid var(--border2);color:var(--tx);padding:12px;border-radius:12px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;margin-bottom:8px">View in My Orders →</button>
-      <button onclick="this.closest('#order-confirm-overlay').remove()" style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:13px;border-radius:12px;font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer">Done</button>
+      <button onclick="this.closest('#order-confirm-overlay').remove()" style="width:100%;background:linear-gradient(135deg,#B026FF,#CC4400);color:#fff;border:none;padding:13px;border-radius:12px;font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer">Done</button>
     </div>`;
   document.body.appendChild(ov);
 }
@@ -4644,7 +4645,7 @@ async function loadDiscoverSquadDeals() {
           <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;line-height:1;color:${dealColor};margin-bottom:3px;letter-spacing:.02em">${dealVal}</div>
           <div style="font-size:.62rem;color:var(--mu);margin-bottom:7px">${x(benefit)}</div>
           <div style="font-size:.62rem;color:var(--mu2);margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📍 ${x(p.venue_name)}${p.location_city ? ' · ' + x(p.location_city) : ''}</div>
-          <div style="text-align:center;padding:7px;background:linear-gradient(135deg,#B026FF,#FF5C00);border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700">View Deal →</div>
+          <div style="text-align:center;padding:7px;background:linear-gradient(135deg,#B026FF,#CC4400);border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700">View Deal →</div>
         </div>
       </div>`;
     }).join('');
@@ -5609,7 +5610,7 @@ function showExitConfirm() {
     <div style="font-size:.8rem;color:var(--mu,#9ca3af);margin-bottom:28px">Are you sure you want to close the app?</div>
     <div style="display:flex;gap:12px">
       <button onclick="document.getElementById('exit-confirm-ov').remove()" style="flex:1;padding:13px;border-radius:50px;border:1px solid var(--border2,rgba(255,255,255,.12));background:var(--surf,#1e2535);color:var(--tx,#fff);font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer">Stay</button>
-      <button onclick="document.getElementById('exit-confirm-ov').remove();_exitConfirmed=true;history.back()" style="flex:1;padding:13px;border-radius:50px;border:none;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer">Exit</button>
+      <button onclick="document.getElementById('exit-confirm-ov').remove();_exitConfirmed=true;history.back()" style="flex:1;padding:13px;border-radius:50px;border:none;background:linear-gradient(135deg,#B026FF,#CC4400);color:#fff;font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer">Exit</button>
     </div>
   </div>`;
   document.body.appendChild(ov);
@@ -5637,7 +5638,7 @@ function showLocationHelp(retryFn) {
       </div>
       <div style="display:flex;gap:10px">
         <button onclick="document.getElementById('loc-help-overlay').remove()" style="flex:1;padding:12px;background:var(--surf);border:1px solid var(--border2);border-radius:50px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--mu2);cursor:pointer">Dismiss</button>
-        <button onclick="document.getElementById('loc-help-overlay').remove();window._locRetry&&window._locRetry()" style="flex:2;padding:12px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:#fff;cursor:pointer">Try Again</button>
+        <button onclick="document.getElementById('loc-help-overlay').remove();window._locRetry&&window._locRetry()" style="flex:2;padding:12px;background:linear-gradient(135deg,#B026FF,#CC4400);border:none;border-radius:50px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:#fff;cursor:pointer">Try Again</button>
       </div>
     </div>`;
   ov.onclick = e => { if (e.target === ov) ov.remove(); };
@@ -6505,7 +6506,7 @@ async function renderSquad() {
     el.innerHTML = _whatsappInviteCard() + list.map(p => {
       const isOrg = ['organizer','business'].includes(p.role);
       const init  = (p.display_name||p.username||'?')[0].toUpperCase();
-      const grad  = isOrg ? 'linear-gradient(135deg,#FF5C00,#FF2D78)' : 'linear-gradient(135deg,#B026FF,#FF5C00)';
+      const grad  = isOrg ? 'linear-gradient(135deg,#FF5C00,#FF2D78)' : 'linear-gradient(135deg,#B026FF,#CC4400)';
       const vbadge = p.is_verified ? '<span class="puls-badge" title="Verified by Pulsefy" style="width:12px;height:12px;margin-left:4px"></span>' : '';
       const av   = p.avatar_url ? '<img src="'+x(p.avatar_url)+'" style="width:100%;height:100%;object-fit:cover">' : init;
       // Reason chip — show what matched
@@ -6802,7 +6803,7 @@ async function openFollowList(userId, type) {
     body.innerHTML = list.map(p => {
       const init  = (p.display_name||p.username||'?')[0].toUpperCase();
       const isOrg = ['organizer','business'].includes(p.role);
-      const grad  = isOrg ? 'linear-gradient(135deg,#FF5C00,#FF2D78)' : 'linear-gradient(135deg,#B026FF,#FF5C00)';
+      const grad  = isOrg ? 'linear-gradient(135deg,#FF5C00,#FF2D78)' : 'linear-gradient(135deg,#B026FF,#CC4400)';
       const vbadge = p.is_verified ? '<span class="puls-badge" title="Verified by Pulsefy" style="width:12px;height:12px;margin-left:4px"></span>' : '';
       const av   = p.avatar_url ? `<img src="${x(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover">` : init;
       return `<div onclick="document.getElementById('fl-overlay').style.display='none';openProfile('${x(p.id)}')" style="display:flex;align-items:center;gap:10px;padding:10px 6px;cursor:pointer;border-bottom:1px solid var(--border)"><div style="width:40px;height:40px;border-radius:50%;background:${grad};display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:.9rem;flex-shrink:0;overflow:hidden">${av}</div><div style="flex:1;min-width:0"><div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(p.display_name||p.username||'User')}${vbadge}</div><div style="font-size:.7rem;color:var(--mu)">@${x(p.username||'user')}${p.city?' · '+x(p.city):''}</div></div></div>`;
@@ -6847,7 +6848,7 @@ async function openProfile(userId) {
       : 'linear-gradient(135deg,rgba(176,38,255,.5),rgba(255,92,0,.3))';
     const avGrad = isOrg
       ? 'linear-gradient(135deg,#FF5C00,#FF2D78)'
-      : 'linear-gradient(135deg,#B026FF,#FF5C00)';
+      : 'linear-gradient(135deg,#B026FF,#CC4400)';
 
     const photoPosts = _profLocked ? [] : recent_posts.filter(p => firstImg(p.image_url)).slice(0, 9);
     const postsHtml = _profLocked ? _PROF_LOCKED_HTML : photoPosts.length
@@ -6886,7 +6887,7 @@ async function openProfile(userId) {
           ${profile.avatar_url ? `<img src="${x(profile.avatar_url)}" style="width:100%;height:100%;object-fit:cover"/>` : init}
         </div>
         <div style="display:flex;gap:8px;padding-bottom:6px">
-          ${currentUser && currentUser.id !== userId ? `<button id="po-follow-btn" onclick="toggleFollowOverlay('${x(userId)}')" style="background:${isFollowing?'transparent':'linear-gradient(135deg,#B026FF,#FF5C00)'};border:${isFollowing?'1px solid var(--border2)':'none'};color:${isFollowing?'var(--mu2)':'#fff'};padding:9px 20px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;cursor:pointer">${isFollowing?'✓ Following':'+ Follow'}</button>` : ''}
+          ${currentUser && currentUser.id !== userId ? `<button id="po-follow-btn" onclick="toggleFollowOverlay('${x(userId)}')" style="background:${isFollowing?'transparent':'linear-gradient(135deg,#B026FF,#CC4400)'};border:${isFollowing?'1px solid var(--border2)':'none'};color:${isFollowing?'var(--mu2)':'#fff'};padding:9px 20px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;cursor:pointer">${isFollowing?'✓ Following':'+ Follow'}</button>` : ''}
           <button onclick="closeProfOverlay();window.location.href='/user-profile?id=${x(userId)}'" style="background:var(--surf);border:1px solid var(--border2);color:var(--mu2);padding:9px 14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer">Full Profile →</button>
         </div>
       </div>
@@ -7246,7 +7247,7 @@ async function toggleFollowOverlay(targetId) {
   try {
     if (isF) {
       await sb.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', targetId);
-      if (btn) { btn.textContent = '+ Follow'; btn.style.background = 'linear-gradient(135deg,#B026FF,#FF5C00)'; btn.style.border = 'none'; btn.style.color = '#fff'; }
+      if (btn) { btn.textContent = '+ Follow'; btn.style.background = 'linear-gradient(135deg,#B026FF,#CC4400)'; btn.style.border = 'none'; btn.style.color = '#fff'; }
       showToast('Unfollowed');
     } else {
       await sb.from('follows').insert({ follower_id: currentUser.id, following_id: targetId });
@@ -7506,7 +7507,7 @@ function openPromoForm(templateId) {
     <div style="background:rgba(176,38,255,.06);border:1px solid rgba(176,38,255,.2);border-radius:10px;padding:10px 12px;margin:6px 0 14px;font-size:.72rem;color:var(--mu2);line-height:1.45">
       ⏳ Promos go through admin review before going live. You'll see status in the list above.
     </div>
-    <button onclick="submitPromo()" style="width:100%;padding:13px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Submit for Review</button>`;
+    <button onclick="submitPromo()" style="width:100%;padding:13px;background:linear-gradient(135deg,#B026FF,#CC4400);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Submit for Review</button>`;
 }
 
 async function submitPromo() {
@@ -8232,7 +8233,7 @@ async function loadSquads() {
     _squadsLoaded = false;
     if (workspace) workspace.innerHTML = `<div style="padding:24px;text-align:center">
       <div style="font-size:.8rem;color:var(--mu);margin-bottom:14px">Could not connect. Check your connection.</div>
-      <button onclick="_squadsLoaded=false;showSquadSubTab('squads')" style="background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;padding:10px 24px;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem;cursor:pointer">Retry</button>
+      <button onclick="_squadsLoaded=false;showSquadSubTab('squads')" style="background:linear-gradient(135deg,#B026FF,#CC4400);border:none;padding:10px 24px;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem;cursor:pointer">Retry</button>
     </div>`;
   }
 }
@@ -8312,7 +8313,7 @@ function renderSquadWorkspace(detail, container) {
             <span style="font-size:.74rem;color:var(--mu)">${squad.is_public?'🌍 Public':'🔒 Private'}</span>
           </div>
         </div>
-        ${isMember ? `<button onclick="openSquadInvite('${sid}')" style="flex-shrink:0;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;padding:9px 14px;color:#fff;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap">+ Invite</button>` : ''}
+        ${isMember ? `<button onclick="openSquadInvite('${sid}')" style="flex-shrink:0;background:linear-gradient(135deg,#B026FF,#CC4400);border:none;border-radius:50px;padding:9px 14px;color:#fff;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap">+ Invite</button>` : ''}
       </div>
     </div>
     ${aboutSection}
@@ -8393,7 +8394,7 @@ function renderPlansList(pane, plans, squadId) {
   const today = new Date(); today.setHours(0,0,0,0);
   const upcoming = plans.filter(p => new Date(p.plan_date + 'T00:00:00') >= today);
   const past = plans.filter(p => new Date(p.plan_date + 'T00:00:00') < today);
-  const createBtn = `<button onclick="showCreatePlanForm('${x(squadId)}')" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;cursor:pointer;margin-bottom:14px">+ Plan an Outing</button>`;
+  const createBtn = `<button onclick="showCreatePlanForm('${x(squadId)}')" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#CC4400);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;cursor:pointer;margin-bottom:14px">+ Plan an Outing</button>`;
   if (!plans.length) {
     pane.innerHTML = createBtn + `<div style="text-align:center;padding:24px 0"><div style="font-size:2.4rem;margin-bottom:8px">📅</div><div style="font-size:.82rem;color:var(--mu)">No outings planned yet.<br>Be the first to plan one!</div></div>`;
     return;
@@ -8483,7 +8484,7 @@ function showCreatePlanForm(squadId, prefill) {
       <span>🎟</span><span style="flex:1">${x(pf.name||'Linked event')}</span>
       <button onclick="document.getElementById('plan-event-id').remove();this.closest('div').remove()" style="background:transparent;border:none;color:var(--mu);cursor:pointer;font-size:.8rem">✕</button>
     </div>` : ''}
-    <button onclick="submitPlan('${x(squadId)}')" style="width:100%;padding:12px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer;margin-top:12px">Save Plan</button>`;
+    <button onclick="submitPlan('${x(squadId)}')" style="width:100%;padding:12px;background:linear-gradient(135deg,#B026FF,#CC4400);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer;margin-top:12px">Save Plan</button>`;
   // auto-select General pill
   setTimeout(() => sqSelectOutingType('general', document.querySelector('[data-otype="general"]')), 0);
 }
@@ -8535,7 +8536,7 @@ async function loadSqChat(squadId) {
     <div id="sq-reply-bar" style="display:none;align-items:center;background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:6px 4px 6px 0;margin-top:6px"></div>
     <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
       <input id="sq-chat-input" class="sq-input" placeholder="Message…" style="flex:1;margin-bottom:0" onkeydown="if(event.key==='Enter')sendSqMsg('${x(squadId)}')"/>
-      <button onclick="sendSqMsg('${x(squadId)}')" style="padding:10px 16px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.78rem;cursor:pointer;flex-shrink:0">Send</button>
+      <button onclick="sendSqMsg('${x(squadId)}')" style="padding:10px 16px;background:linear-gradient(135deg,#B026FF,#CC4400);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.78rem;cursor:pointer;flex-shrink:0">Send</button>
     </div>`;
   _sqReplyTo = null;
   fetchSqMessages(squadId, session);
@@ -8626,7 +8627,7 @@ function loadSqMembers(squadId) {
     </div>` : '';
   const actionBtn = isMember
     ? `<button onclick="leaveSquad('${x(squadId)}')" style="width:100%;padding:11px;background:rgba(255,45,120,.1);border:1.5px solid rgba(255,45,120,.3);border-radius:50px;color:var(--pk);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;margin-top:8px">Leave Squad</button>`
-    : `<button onclick="joinSquad('${x(squadId)}')" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;margin-top:14px">Join Squad</button>`;
+    : `<button onclick="joinSquad('${x(squadId)}')" style="width:100%;padding:11px;background:linear-gradient(135deg,#B026FF,#CC4400);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;margin-top:14px">Join Squad</button>`;
   pane.innerHTML = `<div style="font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Members (${members.length})</div>${membersHtml}${shareSection}${actionBtn}`;
 }
 
@@ -8681,7 +8682,7 @@ async function loadSquadDeals(squadId) {
             <div style="font-family:'Bebas Neue',sans-serif;font-size:2rem;line-height:1;color:${dealColor};margin-bottom:4px;letter-spacing:.02em">${dealVal}</div>
             <div style="font-size:.72rem;color:var(--mu);margin-bottom:10px">${dealSub}</div>
             <div style="font-size:.72rem;color:var(--mu2);margin-bottom:14px">📍 ${x(loc)}</div>
-            <div style="text-align:center;padding:10px;background:linear-gradient(135deg,#B026FF,#FF5C00);border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">View Deal →</div>
+            <div style="text-align:center;padding:10px;background:linear-gradient(135deg,#B026FF,#CC4400);border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">View Deal →</div>
           </div>
         </div>`;
       }).join('');
@@ -8771,7 +8772,7 @@ async function openDealDetail(promoId) {
         </div>
       </div>` : ''}
       <div style="position:sticky;bottom:0;background:linear-gradient(to top,var(--bg2) 75%,transparent);padding:16px 0 4px">
-        <button onclick="_sqJoinFromDetail('${x(p.id)}',${jsStr(p.title)},${jsStr(p.venue_name)},'${x(p.deal_type||'')}','${x(p.business_id||'')}','${x(p.event_id||'')}')" style="width:100%;padding:14px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer">${p.event_id ? '🎟 Buy Tickets with Squad' : p.business_id ? '🍽 Order with Squad' : '👥 Join Squad to Claim'}</button>
+        <button onclick="_sqJoinFromDetail('${x(p.id)}',${jsStr(p.title)},${jsStr(p.venue_name)},'${x(p.deal_type||'')}','${x(p.business_id||'')}','${x(p.event_id||'')}')" style="width:100%;padding:14px;background:linear-gradient(135deg,#B026FF,#CC4400);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer">${p.event_id ? '🎟 Buy Tickets with Squad' : p.business_id ? '🍽 Order with Squad' : '👥 Join Squad to Claim'}</button>
       </div>`;
   } catch(e) {
     ws.innerHTML = '<div style="padding:40px;text-align:center;color:var(--mu)">Could not load deal</div>';
@@ -8962,7 +8963,7 @@ function renderInvitesBanner(invites) {
         </div>
         ${declined
           ? `<button onclick="deleteInvite('${x(inv.id)}')" style="padding:5px 10px;background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.25);border-radius:50px;color:var(--pk);font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;cursor:pointer">Remove</button>`
-          : `<button onclick="acceptInvite('${x(inv.id)}')" style="padding:5px 10px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;cursor:pointer">Accept</button>
+          : `<button onclick="acceptInvite('${x(inv.id)}')" style="padding:5px 10px;background:linear-gradient(135deg,#B026FF,#CC4400);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;cursor:pointer">Accept</button>
              <button onclick="rejectInvite('${x(inv.id)}')" style="padding:5px 8px;background:transparent;border:1px solid var(--border2);border-radius:50px;color:var(--mu);font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;cursor:pointer">✕</button>`}
       </div>`;
     }).join('')}
@@ -9035,7 +9036,7 @@ async function handleSquadInviteLink(squadId) {
     if (!banner) {
       banner = document.createElement('div');
       banner.id = 'sq-invite-link-banner';
-      banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#B026FF,#FF5C00);padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.6)';
+      banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#B026FF,#CC4400);padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.6)';
       document.body.prepend(banner);
     }
     banner.innerHTML = `
@@ -9073,7 +9074,7 @@ function showSquadEmptyState(container) {
         </div>
       </div>
 
-      <button onclick="showCreateForm()" style="background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;padding:13px 30px;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">+ Create a Squad</button>
+      <button onclick="showCreateForm()" style="background:linear-gradient(135deg,#B026FF,#CC4400);border:none;padding:13px 30px;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">+ Create a Squad</button>
       <div style="font-size:.7rem;color:var(--mu);margin-top:12px">Then tap a squad to invite friends and plan your first outing.</div>
     </div>`;
 }
@@ -9112,7 +9113,7 @@ function showCreateForm() {
       <input type="checkbox" id="sq-new-public" checked style="width:14px;height:14px"/> Public squad
     </label>
     <input type="hidden" id="sq-new-template" value="${defType}"/>
-    <button onclick="createSquad()" style="width:100%;padding:13px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Create Squad</button>`;
+    <button onclick="createSquad()" style="width:100%;padding:13px;background:linear-gradient(135deg,#B026FF,#CC4400);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Create Squad</button>`;
 }
 
 function selectTemplate(type) {
@@ -9189,7 +9190,7 @@ function showBusinessTeamForm(squadId) {
     <input id="bt-dept" class="sq-input" placeholder="Department (e.g. Sales, Ops)" maxlength="40"/>
     <textarea id="bt-objs" class="sq-input" placeholder="Objectives — one per line" maxlength="600" style="min-height:120px;resize:vertical;font-family:inherit"></textarea>
     <div style="font-size:.7rem;color:var(--mu);margin-bottom:14px">Each line becomes a bullet point.</div>
-    <button onclick="saveBusinessTeam('${x(squadId)}')" style="width:100%;padding:13px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Save Objectives</button>`;
+    <button onclick="saveBusinessTeam('${x(squadId)}')" style="width:100%;padding:13px;background:linear-gradient(135deg,#B026FF,#CC4400);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Save Objectives</button>`;
 }
 async function saveBusinessTeam(squadId) {
   const dept = (document.getElementById('bt-dept')?.value || '').trim();
@@ -9254,7 +9255,7 @@ async function loadSquadInviteList() {
           <div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(p.display_name || p.username || 'User')}${p.is_verified?'<span class="puls-badge" title="Verified by Pulsefy" style="width:13px;height:13px"></span>':''}</div>
           ${p.username ? `<div style="font-size:.7rem;color:var(--mu)">@${x(p.username)}</div>` : ''}
         </div>
-        <button onclick="inviteToSquad('${x(p.id)}', this)" style="background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;padding:7px 16px;cursor:pointer">＋ Invite</button>
+        <button onclick="inviteToSquad('${x(p.id)}', this)" style="background:linear-gradient(135deg,#B026FF,#CC4400);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;padding:7px 16px;cursor:pointer">＋ Invite</button>
       </div>`;
     }).join('');
   } catch(e) {
