@@ -727,10 +727,12 @@ function openPostView(postId) {
   ov.classList.add('open');
   document.body.style.overflow = 'hidden';
   // Android back button closes the post instead of leaving the profile
-  if (!(history.state && history.state.upPost)) history.pushState({ upPost: 1 }, '');
+  if (!_pvPushed) { history.pushState({ upPost: 1 }, ''); _pvPushed = true; }
   ov.querySelector('.pv-x').focus({ preventScroll: true });
 }
+let _pvPushed = false;   // true only while the open post view owns a history entry
 function _hidePostView() {
+  _pvPushed = false;
   const ov = document.getElementById('post-view');
   if (!ov.classList.contains('open')) return false;
   ov.classList.remove('open');
@@ -738,7 +740,7 @@ function _hidePostView() {
   return true;
 }
 function closePostView() {
-  if (history.state && history.state.upPost) history.back();   // popstate hides it
+  if (_pvPushed) history.back();   // popstate hides it
   else _hidePostView();
 }
 window.addEventListener('popstate', () => { _hidePostView(); });
@@ -1047,9 +1049,9 @@ async function renderAttended(userId, isOwnProfile) {
 // others only if show_attended and the profile is visible to them). bookings SELECT = own rows only.
 async function renderGoingTo(userId, isOwnProfile) {
   const strip = document.getElementById('going-strip');
-  const today = new Date().toLocaleDateString('en-CA');   // local YYYY-MM-DD
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Johannesburg' });   // SA YYYY-MM-DD
   const cols = 'id,name,date_local,time_local,image_url,venue_name,venue_city,is_active';
-  const upcoming = (q) => q.eq('user_id', userId).gte('events.date_local', today).eq('events.is_active', true).limit(30);
+  const upcoming = (q) => q.eq('user_id', userId).gte('events.date_local', today).eq('events.is_active', true).limit(200);   // sorted client-side, so fetch them all
   try {
     const reqs = [upcoming(sb.from('event_attendances').select(`event_id, events!inner(${cols})`).eq('status', 'going'))];
     if (isOwnProfile) reqs.push(upcoming(sb.from('bookings').select(`event_id, events!inner(${cols})`).eq('status', 'confirmed')));
@@ -1058,8 +1060,8 @@ async function renderGoingTo(userId, isOwnProfile) {
     res.forEach(r => (r && !r.error && r.data || []).forEach(row => { const ev = row.events; if (ev && ev.id && ev.date_local >= today) byId[ev.id] = ev; }));
     const evs = Object.values(byId).sort((a, b) => (a.date_local + (a.time_local || '')).localeCompare(b.date_local + (b.time_local || ''))).slice(0, 10);
     if (!evs.length) { strip.hidden = true; return; }
-    const tmr = new Date(); tmr.setDate(tmr.getDate() + 1);
-    const tomorrow = tmr.toLocaleDateString('en-CA');
+    const tmr = new Date(today + 'T12:00:00Z'); tmr.setUTCDate(tmr.getUTCDate() + 1);
+    const tomorrow = tmr.toISOString().slice(0, 10);
     document.getElementById('going-row').innerHTML = evs.map(ev => {
       const img = _firstImageUrl(ev.image_url);
       const dt = ev.date_local === today ? 'Today' : ev.date_local === tomorrow ? 'Tomorrow'
@@ -1193,7 +1195,6 @@ document.addEventListener('keydown', e => {
   else if (document.getElementById('post-view').classList.contains('open')) closePostView();
 });
 
-let _postImageFile = null;
 
 
 async function openFlList(type) {
