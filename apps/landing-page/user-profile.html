@@ -21,7 +21,8 @@ body{padding-bottom:calc(var(--bh) + 24px)}
 .settings-btn::after,.up-cmt-snd::after{content:'';position:absolute;top:50%;left:50%;width:44px;height:44px;margin:-22px 0 0 -22px}
 .edit-btn::after,.follow-btn::after{content:'';position:absolute;left:0;right:0;top:50%;height:44px;margin-top:-22px}
 .hero{margin-top:58px;padding:0 0 0;background:linear-gradient(180deg,rgba(176,38,255,.12) 0%,transparent 100%);border-bottom:1px solid var(--border)}
-.hero-bg{height:120px;background:linear-gradient(135deg,#1a0533,#0a001a,#1a0015);position:relative;overflow:hidden}
+/* Cover: profiles.cover_url when set (inline background-image), else a genre-tinted gradient with a dot pattern */
+.hero-bg{--c1:#B026FF;--c2:#CC4400;height:120px;background:linear-gradient(180deg,transparent 55%,rgba(5,8,15,.55)),radial-gradient(rgba(255,255,255,.14) 1px,transparent 1.6px) 0 0/14px 14px,radial-gradient(circle at 85% 20%,rgba(255,255,255,.22),transparent 45%),linear-gradient(135deg,var(--c1),var(--c2));position:relative;overflow:hidden}
 .hero-bg-blur{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:6rem;opacity:.08;filter:blur(8px)}
 .hero-body{padding:0 16px 20px;position:relative}
 .avatar{width:78px;height:78px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:1.9rem;border:3px solid var(--bg);margin-top:-39px;overflow:hidden;cursor:pointer;position:relative}
@@ -32,16 +33,35 @@ body{padding-bottom:calc(var(--bh) + 24px)}
 .pname{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:.03em;line-height:1}
 .phandle{font-size:.78rem;color:var(--mu);margin-bottom:6px}
 .pbio{font-size:.82rem;color:var(--mu2);line-height:1.5;margin-bottom:14px}
-.stats{display:flex;gap:20px;margin-bottom:14px}
-.stat{text-align:center}
+/* One stats row: Posts · Followers · Following · Events (+ Saved on your own profile) */
+.stats{display:flex;margin-bottom:14px;background:var(--surf);border:1px solid var(--border);border-radius:14px}
+.stat{flex:1;min-width:0;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 2px;text-align:center}
+.stat+.stat{border-left:1px solid var(--border)}
+.stat[hidden]{display:none}
+button.stat{background:none;border-top:0;border-right:0;border-bottom:0;color:inherit;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button.stat:active .stat-n{color:var(--or)}
 .stat-n{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--tx);line-height:1}
-.stat-l{font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu)}
+.stat-l{font-family:'Syne',sans-serif;font-size:.56rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);white-space:nowrap}
 .genres-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
 .genre-tag{background:rgba(255,92,0,.08);border:1px solid rgba(255,92,0,.2);color:var(--or);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;padding:4px 11px;border-radius:50px}
-.follow-row{display:flex;gap:16px;margin-bottom:10px}
-.follow-stat{text-align:center;cursor:pointer;min-width:44px;min-height:44px;display:flex;flex-direction:column;justify-content:center}
-.follow-num{font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--tx)}
-.follow-label{font-size:.6rem;color:var(--mu);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.05em}
+/* "Going to" strip: upcoming events this person attends (privacy enforced by event_attendances RLS) */
+.going{margin-top:16px}
+.going[hidden]{display:none}
+.going-hd{font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:8px}
+.going-row{display:flex;gap:10px;overflow-x:auto;margin:0 -16px;padding:0 16px 4px;scroll-snap-type:x proximity;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.going-row::-webkit-scrollbar{display:none}
+@media (hover:hover) and (pointer:fine){.going-row{scrollbar-width:thin;scrollbar-color:var(--border2) transparent}.going-row::-webkit-scrollbar{display:block;height:6px}.going-row::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}}
+.go-card{flex:0 0 132px;scroll-snap-align:start;background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;text-decoration:none;color:var(--tx);display:flex;flex-direction:column}
+.go-card:active{border-color:rgba(255,92,0,.4)}
+.go-img{height:80px;background:linear-gradient(135deg,#2a0a4a,#4a1a10);display:flex;align-items:center;justify-content:center;font-size:1.6rem;overflow:hidden}
+.go-img img{width:100%;height:100%;object-fit:cover;display:block}
+.go-body{padding:7px 9px 9px}
+.go-date{font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--or);margin-bottom:3px}
+.go-name{font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.hero-acts{display:flex;align-items:center;gap:8px}
+.share-btn{background:var(--surf);border:1px solid var(--border2);border-radius:50px;padding:7px 14px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--tx);cursor:pointer;position:relative;display:inline-flex;align-items:center;gap:5px}
+.share-btn::after{content:'';position:absolute;left:0;right:0;top:50%;height:44px;margin-top:-22px}
+.share-btn:active{border-color:var(--or);color:var(--or)}
 .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:58px;z-index:10}
 .tab{flex:1;min-height:44px;padding:13px;text-align:center;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--mu);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
 .tab.active{color:var(--or);border-bottom-color:var(--or)}
@@ -54,7 +74,7 @@ body{padding-bottom:calc(var(--bh) + 24px)}
 .post.is-repost{border:1px solid rgba(255,92,0,.18)}
 .up-repost-eyebrow{font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);padding:10px 14px 0;display:flex;align-items:center;gap:5px}
 .up-post-head{display:flex;align-items:center;gap:10px;padding:8px 14px 10px}
-.up-ph-av{width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,var(--or),#ff2d78);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:1rem;border:1.5px solid rgba(255,92,0,.35)}
+.up-ph-av{width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,#CC4400,#ff2d78);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:1rem;border:1.5px solid rgba(255,92,0,.35)}
 .up-ph-av img{width:100%;height:100%;object-fit:cover}
 .up-ph-meta{min-width:0}
 .up-ph-name{font-weight:800;font-size:.95rem;color:var(--tx);display:flex;align-items:center;gap:6px;line-height:1.2}
@@ -89,7 +109,40 @@ body{padding-bottom:calc(var(--bh) + 24px)}
 .empty-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;margin-bottom:8px}
 .empty-sub{font-size:.8rem;color:var(--mu);line-height:1.5;margin-bottom:20px}
 .empty-btn{background:#CC4400;color:#fff;border:none;min-height:44px;padding:10px 24px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer}
-.fab{position:fixed;bottom:calc(var(--bh) + 16px);right:16px;z-index:50;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:1.4rem;cursor:pointer;box-shadow:0 4px 20px rgba(176,38,255,.4);display:flex;align-items:center;justify-content:center}
+/* Posts grid (3-across squares). Tap a tile → full post in #post-view (same card + like/comment/reply). */
+.up-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin:-12px -16px 0}
+.up-tile{position:relative;aspect-ratio:1/1;overflow:hidden;border:0;padding:0;margin:0;cursor:pointer;background:linear-gradient(135deg,var(--t1,#5B21B6),var(--t2,#CC4400));color:#fff;-webkit-tap-highlight-color:transparent;display:block;width:100%}
+.up-tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;background:var(--surf2)}
+.up-tile:active{filter:brightness(.8)}
+.up-tile:focus-visible{outline:2px solid var(--cy);outline-offset:-2px}
+.up-tile-txt{position:absolute;inset:0;padding:10px 9px;display:flex;align-items:center;justify-content:center;text-align:center;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;line-height:1.35;text-shadow:0 1px 3px rgba(0,0,0,.45);word-break:break-word}
+.up-tile-txt span{display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+.up-tile-b{position:absolute;top:5px;padding:2px 6px;border-radius:50px;background:rgba(0,0,0,.6);font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;color:#fff;line-height:1.4;pointer-events:none}
+.up-tile-b.r{right:5px}.up-tile-b.l{left:5px}
+.pv-ov{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.82);backdrop-filter:blur(10px);display:none;flex-direction:column;align-items:center}
+.pv-ov.open{display:flex}
+.pv-bar{width:100%;max-width:600px;height:56px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 16px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700}
+.pv-x,.sh-x{width:44px;height:44px;border-radius:50%;background:transparent;border:0;color:var(--mu2);font-size:1.05rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.pv-body{width:100%;max-width:600px;flex:1;overflow-y:auto;padding:0 12px 24px;-webkit-overflow-scrolling:touch}
+/* Share-profile sheet */
+.sh-head{display:flex;align-items:center;justify-content:space-between;margin:-8px -6px 10px 0}
+.sh-head .modal-title{margin:0}
+.sh-qr{width:208px;height:208px;margin:0 auto 14px;background:#fff;border-radius:16px;padding:10px;display:flex;align-items:center;justify-content:center}
+.sh-qr img{width:188px;height:188px;display:block}
+.sh-link{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--mu2);font-family:'DM Sans',sans-serif;font-size:.8rem;margin-bottom:12px;outline:none;text-overflow:ellipsis}
+.sh-acts{display:flex;gap:10px}
+.sh-acts .modal-btn,.sh-acts .modal-cancel{flex:1;margin:0;min-height:48px}
+.sh-acts .modal-cancel{color:var(--tx)}
+/* Pulse helper (replaces the old 📷 button; same pattern as /feeds) */
+#pulse-fab{position:fixed;bottom:calc(var(--bh) + 6px);right:10px;z-index:150}
+#pulse-fab .pm-say{display:none!important}
+.pf-menu{position:fixed;right:12px;bottom:calc(var(--bh) + 84px);z-index:151;width:min(280px,calc(100vw - 24px));background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:12px;box-shadow:0 14px 40px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:6px;transform-origin:bottom right;animation:pfIn .22s cubic-bezier(.3,1.4,.5,1)}
+.pf-menu[hidden]{display:none}
+.pf-hd{font-family:'Syne',sans-serif;font-weight:800;font-size:.9rem;line-height:1.3;padding:2px 4px 6px}
+.pf-sub{font-family:'DM Sans',sans-serif;font-size:.74rem;font-weight:500;color:var(--mu);margin-top:2px}
+.pf-menu a,.pf-menu button{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border-radius:12px;background:var(--surf);border:1px solid var(--border);color:var(--tx);font:600 .86rem 'DM Sans',sans-serif;text-decoration:none;text-align:left;cursor:pointer}
+.pf-menu a:active,.pf-menu button:active{border-color:var(--or)}
+@keyframes pfIn{from{opacity:0;transform:scale(.85) translateY(8px)}}
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 22px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--tx);z-index:999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.ok{border-color:rgba(198,255,74,.4);color:var(--li)}
@@ -108,7 +161,7 @@ body{padding-bottom:calc(var(--bh) + 24px)}
 .up-cmt-wrap{background:rgba(0,0,0,.2);border-top:1px solid var(--border);display:none}
 .up-cmt-item{display:flex;gap:9px;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.03)}
 .up-cmt-item:last-of-type{border-bottom:none}
-.up-cmt-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.78rem;overflow:hidden;font-family:'Syne',sans-serif;font-weight:700;color:#fff;background:linear-gradient(135deg,#B026FF,#FF5C00)}
+.up-cmt-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.78rem;overflow:hidden;font-family:'Syne',sans-serif;font-weight:700;color:#fff;background:linear-gradient(135deg,#B026FF,#CC4400)}
 .up-cmt-av img{width:100%;height:100%;object-fit:cover}
 .up-cmt-name{font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;margin-bottom:2px}
 .up-cmt-text{font-size:.78rem;color:var(--mu2);line-height:1.45}
@@ -119,7 +172,7 @@ body{padding-bottom:calc(var(--bh) + 24px)}
 .up-cmt-inp{flex:1;background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:8px 14px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none}
 .up-cmt-inp:focus{border-color:var(--or)}
 .up-cmt-inp::placeholder{color:var(--mu)}
-.up-cmt-snd{position:relative;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.up-cmt-snd{position:relative;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#CC4400);border:none;color:#fff;font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .up-reply-banner{padding:4px 14px 0;font-size:.7rem;color:var(--mu);display:flex;align-items:center;gap:6px}
 .up-reply-banner button{background:none;border:none;color:var(--mu);cursor:pointer;font-size:.8rem}
 /* Bottom nav — same 5 tabs as the home app (index.html) */
@@ -153,28 +206,24 @@ body{padding-bottom:calc(var(--bh) + 24px)}
       <div class="avatar" id="avatar-el">
         <span id="avatar-emoji">😊</span>
       </div>
-      <div id="profile-action-btn"></div>
+      <div class="hero-acts"><div id="profile-action-btn"></div><button type="button" class="share-btn" id="share-btn" onclick="openShareSheet()" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13"/></svg>Share</button></div>
     </div>
     <div class="pname" id="pname">User</div>
     <div class="phandle" id="phandle">@user</div>
     <div class="pbio" id="pbio"></div>
     <div id="social-links-row" style="display:none;gap:8px;margin:8px 0 4px"></div>
-    <div class="follow-row">
-      <div class="follow-stat" id="followers-stat" style="cursor:pointer" onclick="openFlList('followers')">
-        <div class="follow-num" id="followers-count">0</div>
-        <div class="follow-label">Followers</div>
-      </div>
-      <div class="follow-stat" id="following-stat" style="cursor:pointer" onclick="openFlList('following')">
-        <div class="follow-num" id="following-count">0</div>
-        <div class="follow-label">Following</div>
-      </div>
-    </div>
     <div class="stats">
       <div class="stat"><div class="stat-n" id="stat-posts">0</div><div class="stat-l">Posts</div></div>
+      <button type="button" class="stat" id="followers-stat" onclick="openFlList('followers')"><span class="stat-n" id="followers-count">0</span><span class="stat-l">Followers</span></button>
+      <button type="button" class="stat" id="following-stat" onclick="openFlList('following')"><span class="stat-n" id="following-count">0</span><span class="stat-l">Following</span></button>
       <div class="stat"><div class="stat-n" id="stat-events">0</div><div class="stat-l">Events</div></div>
-      <div class="stat"><div class="stat-n" id="stat-saved">0</div><div class="stat-l">Saved</div></div>
+      <div class="stat" id="saved-stat" hidden><div class="stat-n" id="stat-saved">0</div><div class="stat-l">Saved</div></div>
     </div>
     <div class="genres-row" id="genres-row"></div>
+    <div class="going" id="going-strip" hidden>
+      <div class="going-hd">🎟 Going to</div>
+      <div class="going-row" id="going-row"></div>
+    </div>
     <div id="social-links-row" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px"></div>
   </div>
 </div>
@@ -207,6 +256,21 @@ body{padding-bottom:calc(var(--bh) + 24px)}
     <button class="modal-cancel" onclick="closePostModal()">Cancel</button>
   </div>
 </div>
+<div class="modal-ov" id="share-sheet" onclick="if(event.target===this)closeShareSheet()">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="sh-title">
+    <div class="sh-head"><div class="modal-title" id="sh-title">Share profile</div><button type="button" class="sh-x" onclick="closeShareSheet()" aria-label="Close">✕</button></div>
+    <div class="sh-qr"><img id="sh-qr-img" alt="QR code for this profile" width="188" height="188"/></div>
+    <input class="sh-link" id="sh-link" readonly aria-label="Profile link" onfocus="this.select()"/>
+    <div class="sh-acts">
+      <button type="button" class="modal-cancel" id="sh-copy" onclick="copyProfileLink()">Copy link</button>
+      <button type="button" class="modal-btn" id="sh-native" onclick="nativeShareProfile()" hidden>Share…</button>
+    </div>
+  </div>
+</div>
+<div class="pv-ov" id="post-view" onclick="if(event.target===this)closePostView()" role="dialog" aria-modal="true" aria-label="Post">
+  <div class="pv-bar"><span>Post</span><button type="button" class="pv-x" onclick="closePostView()" aria-label="Close">✕</button></div>
+  <div class="pv-body" id="post-view-body" onclick="if(event.target===this)closePostView()"></div>
+</div>
 <!-- Same 5 tabs as the home app (index.html); ?tab= opens that tab there. "Me" lights up on your own profile. -->
 <nav class="bn">
   <a class="bb" href="/?tab=home"><svg viewBox="0 0 24 24"><path d="M12 3C12 3 4 9.5 4 15a8 8 0 0016 0C20 9.5 12 3 12 3Z"/><path d="M12 10v5M9.5 13h5"/></svg><span class="bl">Home</span></a>
@@ -231,6 +295,8 @@ const _upCmtCache = {};
 const _upLiked = {};
 const _upReplyTo = {};
 const _upReposted = {};  // postId → viewer reposted?
+const _upPosts = {};     // postId → post row shown in the grid
+const _upCardEls = {};   // postId → rendered full-post card (reused by the post view)
 const _UP_CMT_EMOJIS = ['😂','❤️','🔥','🙌','👀','💯','🎉','👏','😍','💪'];
 
 const GENRE_LABELS = {
@@ -238,6 +304,13 @@ const GENRE_LABELS = {
   house: '🎧 House', afrobeats: '🥁 Afrobeats', rock: '🎸 Rock',
   gospel: '🙏 Gospel', jazz: '🎷 Jazz', sport: '⚽ Sport',
   maskandi: '🪗 Maskandi'
+};
+// Default cover gradient per top genre [from, to]; '_' = brand fallback
+const _GENRE_COVER = {
+  amapiano: ['#FF7A1A', '#E0216B'], gqom: ['#7B2BFF', '#00B8D9'], jazz: ['#D9A21B', '#3A2A8C'],
+  house: ['#2563EB', '#8B2BFF'], hiphop: ['#C81E3A', '#E08A1B'], afrobeats: ['#16A34A', '#D9A21B'],
+  gospel: ['#38BDF8', '#8B5CF6'], maskandi: ['#B45309', '#7C2D12'], rock: ['#B91C1C', '#27272A'],
+  sport: ['#059669', '#0E7490'], _: ['#B026FF', '#CC4400']
 };
 
 const _SL_META = [
@@ -312,7 +385,8 @@ async function loadUserData() {
     document.getElementById('avatar-el').onclick = () => window.location.href='/profile-settings';
     document.getElementById('posts-tab').textContent = '📸 My Posts';
     document.getElementById('events-tab').textContent = '🎟 My Events';
-    document.getElementById('fab-wrapper').innerHTML = `<button class="fab" onclick="openPostModal()" title="Add memory">📷</button>`;
+    document.getElementById('saved-stat').hidden = false;   // Saved is private — own profile only
+    _mountPulseFab();
   } else {
     // Follow button logic
     const followBtn = document.createElement('button');
@@ -325,7 +399,7 @@ async function loadUserData() {
   }
 
   document.getElementById('pname').innerHTML = escHtml(profile.display_name || 'User') +
-    (profile.is_verified ? ' <span title="Verified by Pulsefy" style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);box-shadow:0 0 8px rgba(255,92,0,.6);vertical-align:middle;margin-left:4px;font-size:.7rem">✓</span>' : '');
+    (profile.is_verified ? ' <span title="Verified by Pulsefy" style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#CC4400,#FF2D78);box-shadow:0 0 8px rgba(255,92,0,.6);vertical-align:middle;margin-left:4px;font-size:.7rem;color:#fff">✓</span>' : '');
   document.getElementById('phandle').textContent = '@' + (profile.username || 'user');
   document.getElementById('pbio').textContent = profile.bio || '';
 
@@ -339,10 +413,16 @@ async function loadUserData() {
   ].filter(Boolean);
   if (socialLinks.length) { socialRow.innerHTML = socialLinks.join(''); socialRow.style.display = 'flex'; }
 
-  if (profile.cover_url) {
-    const heroBg = document.getElementById('hero-bg-el');
-    if (heroBg) {
-      heroBg.style.backgroundImage = `url("${profile.cover_url}")`;
+  const heroBg = document.getElementById('hero-bg-el');
+  if (heroBg) {
+    // Default cover: gradient tinted by the user's top genre (also sits under a cover photo that fails to load)
+    const g = String((profile.genres || [])[0] || '').toLowerCase().replace(/[^a-z]/g, '');
+    const c = _GENRE_COVER[g] || _GENRE_COVER._;
+    heroBg.style.setProperty('--c1', c[0]);
+    heroBg.style.setProperty('--c2', c[1]);
+    const coverUrl = _safeHref(profile.cover_url) ? String(profile.cover_url) : '';
+    if (coverUrl) {
+      heroBg.style.backgroundImage = `url("${coverUrl}"),linear-gradient(135deg,var(--c1),var(--c2))`;
       heroBg.style.backgroundSize = 'cover';
       heroBg.style.backgroundPosition = 'center';
       const blur = heroBg.querySelector('.hero-bg-blur');
@@ -352,7 +432,7 @@ async function loadUserData() {
 
   if (profile.avatar_url) {
     const avatarEl = document.getElementById('avatar-el');
-    avatarEl.innerHTML = `<img src="${profile.avatar_url}" alt="avatar">`;
+    avatarEl.innerHTML = `<img src="${escHtml(profile.avatar_url)}" alt="avatar">`;
   } else {
     document.getElementById('avatar-emoji').style.display = 'block';
   }
@@ -403,6 +483,9 @@ async function renderProfileContent(profile, isOwnProfile) {
   }
   const isOrg = ['organizer','business','admin'].includes(profile.role);
   const msg = (t) => `<div class="empty"><div class="empty-ico">🔒</div><div class="empty-title">${t}</div></div>`;
+  // "Going to" strip — skip when the owner hides attendance; RLS (can_view_attended) enforces it anyway
+  document.getElementById('going-strip').hidden = true;
+  if (isOwnProfile || (priv.can_view !== false && priv.show_attended !== false)) renderGoingTo(profile.id, isOwnProfile);
   if (priv.can_view === false) {
     const lock = msg('This account is private — follow to see their posts');
     document.getElementById('posts-list').innerHTML = lock;
@@ -457,7 +540,7 @@ async function renderPostedEvents(userId) {
   } catch(e) {
     el.innerHTML = '<div class="empty"><div class="empty-ico">🎟</div><div class="empty-title">Could not load events</div></div>';
   }
-  try {
+  if (currentUser && currentUser.id === userId) try {   // Saved is private: owner only
     const { count: savedCount } = await sb.from('saved_items').select('*', { count: 'exact', head: true }).eq('user_id', userId);
     document.getElementById('stat-saved').textContent = savedCount || 0;
   } catch(e) {}
@@ -609,7 +692,72 @@ async function renderPosts(userId) {
       const { data: myRp } = await sb.from('reposts').select('post_id').eq('user_id', currentUser.id).in('post_id', _pids);
       (myRp || []).forEach(r => { _upReposted[r.post_id] = true; });
     }
-    el.innerHTML = items.map(p => {
+    Object.keys(_upPosts).forEach(k => delete _upPosts[k]);
+    Object.keys(_upCardEls).forEach(k => delete _upCardEls[k]);
+    items.forEach(p => { _upPosts[p.id] = p; });
+    el.innerHTML = `<div class="up-grid">${items.map(_upTile).join('')}</div>`;
+  } catch(e) {
+    el.innerHTML = '<div class="empty"><div class="empty-ico">📸</div><div class="empty-title">Could not load posts</div></div>';
+  }
+}
+
+// Grid tile: first photo (+ "📷 N" on multi-photo posts) or the caption on a gradient.
+const _UP_TILE_GRADS = [['#5B21B6','#CC4400'], ['#0E7490','#5B21B6'], ['#9D174D','#7C2D12'], ['#1E40AF','#7E22CE'], ['#7C2D12','#9D174D']];
+function _upTile(p) {
+  const img = _firstImageUrl(p.image_url);
+  const n = _imageCount(p.image_url);
+  const h = [...String(p.id)].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 0);
+  const gr = _UP_TILE_GRADS[h % _UP_TILE_GRADS.length];
+  const cap = p.caption || p.event_name || '';
+  const label = (p._repost ? 'Repost: ' : '') + (cap || (img ? 'Photo post' : 'Post'));
+  return `<button type="button" class="up-tile" style="--t1:${gr[0]};--t2:${gr[1]}" data-pid="${escHtml(p.id)}" onclick="openPostView(this.dataset.pid)" aria-label="${escHtml(label.slice(0, 80))}">` +
+    (img ? `<img src="${escHtml(img)}" alt="" loading="lazy" decoding="async" onerror="this.remove()"/>` : '') +
+    (img ? '' : `<span class="up-tile-txt"><span>${escHtml(cap || '📸')}</span></span>`) +
+    (n > 1 ? `<span class="up-tile-b r">📷 ${n}</span>` : '') +
+    (p._repost ? '<span class="up-tile-b l">🔁</span>' : '') +
+    '</button>';
+}
+function _imageCount(raw) {
+  if (Array.isArray(raw)) return raw.filter(Boolean).length;
+  if (typeof raw === 'string' && raw.trim().startsWith('[')) {
+    try { const a = JSON.parse(raw); return Array.isArray(a) ? a.filter(Boolean).length : 1; } catch(e) { return 1; }
+  }
+  return raw ? 1 : 0;
+}
+
+// Full post view: the same card (like / comment / reply / delete-own-comment / repost / share) in an overlay.
+// One card node per post is kept, so likes and open comments survive closing and reopening.
+function openPostView(postId) {
+  const p = _upPosts[postId];
+  if (!p) return;
+  let card = _upCardEls[postId];
+  if (!card) {
+    const t = document.createElement('template');
+    t.innerHTML = _upPostCard(p).trim();
+    card = _upCardEls[postId] = t.content.firstElementChild;
+  }
+  document.getElementById('post-view-body').replaceChildren(card);
+  const ov = document.getElementById('post-view');
+  ov.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  // Android back button closes the post instead of leaving the profile
+  if (!(history.state && history.state.upPost)) history.pushState({ upPost: 1 }, '');
+  ov.querySelector('.pv-x').focus({ preventScroll: true });
+}
+function _hidePostView() {
+  const ov = document.getElementById('post-view');
+  if (!ov.classList.contains('open')) return false;
+  ov.classList.remove('open');
+  document.body.style.overflow = '';
+  return true;
+}
+function closePostView() {
+  if (history.state && history.state.upPost) history.back();   // popstate hides it
+  else _hidePostView();
+}
+window.addEventListener('popstate', () => { _hidePostView(); });
+
+function _upPostCard(p) {
       const img = _firstImageUrl(p.image_url);
       const likes = p.like_count || 0;
       const cmts  = p.comment_count || 0;
@@ -669,10 +817,6 @@ async function renderPosts(userId) {
           </div>
         </div>
       </div>`;
-    }).join('');
-  } catch(e) {
-    el.innerHTML = '<div class="empty"><div class="empty-ico">📸</div><div class="empty-title">Could not load posts</div></div>';
-  }
 }
 
 async function upLike(postId, btn) {
@@ -906,10 +1050,41 @@ async function renderAttended(userId, isOwnProfile) {
     el.innerHTML = '<div class="empty"><div class="empty-ico">🎟</div><div class="empty-title">Could not load events</div></div>';
   }
 
-  try {
+  if (currentUser && currentUser.id === userId) try {   // Saved is private: owner only
     const { count: savedCount } = await sb.from('saved_items').select('*', { count: 'exact', head: true }).eq('user_id', userId);
     document.getElementById('stat-saved').textContent = savedCount || 0;
   } catch(e) {}
+}
+
+// "Going to": upcoming events this person RSVP'd to (+ your own confirmed tickets).
+// Privacy lives in RLS: event_attendances SELECT = can_view_attended(user_id) (owner always;
+// others only if show_attended and the profile is visible to them). bookings SELECT = own rows only.
+async function renderGoingTo(userId, isOwnProfile) {
+  const strip = document.getElementById('going-strip');
+  const today = new Date().toLocaleDateString('en-CA');   // local YYYY-MM-DD
+  const cols = 'id,name,date_local,time_local,image_url,venue_name,venue_city,is_active';
+  const upcoming = (q) => q.eq('user_id', userId).gte('events.date_local', today).eq('events.is_active', true).limit(30);
+  try {
+    const reqs = [upcoming(sb.from('event_attendances').select(`event_id, events!inner(${cols})`).eq('status', 'going'))];
+    if (isOwnProfile) reqs.push(upcoming(sb.from('bookings').select(`event_id, events!inner(${cols})`).eq('status', 'confirmed')));
+    const res = await Promise.all(reqs.map(r => r.then(x => x, () => ({}))));
+    const byId = {};
+    res.forEach(r => (r && !r.error && r.data || []).forEach(row => { const ev = row.events; if (ev && ev.id && ev.date_local >= today) byId[ev.id] = ev; }));
+    const evs = Object.values(byId).sort((a, b) => (a.date_local + (a.time_local || '')).localeCompare(b.date_local + (b.time_local || ''))).slice(0, 10);
+    if (!evs.length) { strip.hidden = true; return; }
+    const tmr = new Date(); tmr.setDate(tmr.getDate() + 1);
+    const tomorrow = tmr.toLocaleDateString('en-CA');
+    document.getElementById('going-row').innerHTML = evs.map(ev => {
+      const img = _firstImageUrl(ev.image_url);
+      const dt = ev.date_local === today ? 'Today' : ev.date_local === tomorrow ? 'Tomorrow'
+        : new Date(ev.date_local + 'T00:00:00').toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' });
+      return `<a class="go-card" href="/?eid=${escHtml(encodeURIComponent(ev.id))}">
+        <div class="go-img">${img ? `<img src="${escHtml(img)}" alt="" loading="lazy" decoding="async" onerror="this.remove()"/>` : '🎶'}</div>
+        <div class="go-body"><div class="go-date">${escHtml(dt)}</div><div class="go-name">${escHtml(ev.name || 'Event')}</div></div>
+      </a>`;
+    }).join('');
+    strip.hidden = false;
+  } catch (e) { strip.hidden = true; }
 }
 
 async function renderActivity(userId) {
@@ -975,6 +1150,64 @@ function showToast(msg, type = '') {
 function openPostModal() { if(profileId === currentUser?.id) document.getElementById('post-modal').classList.add('open'); }
 function closePostModal() { document.getElementById('post-modal').classList.remove('open'); /* reset form */ }
 
+// Share profile: link + copy + native share + QR (QR image is only fetched when the sheet opens)
+function _profileLink() { return 'https://pulsefy.co.za/user-profile?id=' + encodeURIComponent(profileId || ''); }
+function openShareSheet() {
+  if (!profileId) return;
+  const url = _profileLink();
+  document.getElementById('sh-link').value = url;
+  document.getElementById('sh-qr-img').src = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(url);
+  document.getElementById('sh-native').hidden = !navigator.share;
+  document.getElementById('sh-copy').textContent = 'Copy link';
+  document.getElementById('share-sheet').classList.add('open');
+  document.querySelector('#share-sheet .sh-x').focus({ preventScroll: true });
+}
+function closeShareSheet() { document.getElementById('share-sheet').classList.remove('open'); }
+async function copyProfileLink() {
+  const url = _profileLink(), btn = document.getElementById('sh-copy');
+  try { await navigator.clipboard.writeText(url); }
+  catch (e) { const inp = document.getElementById('sh-link'); inp.focus(); inp.select(); try { document.execCommand('copy'); } catch (_) {} }
+  btn.textContent = 'Copied ✓';
+  showToast('🔗 Profile link copied', 'ok');
+  setTimeout(() => { btn.textContent = 'Copy link'; }, 2000);
+}
+async function nativeShareProfile() {
+  const name = (_upProfile && (_upProfile.display_name || _upProfile.username)) || 'this profile';
+  try { await navigator.share({ title: name + ' on Pulsefy', text: 'Check out ' + name + ' on Pulsefy', url: _profileLink() }); }
+  catch (e) { /* user cancelled */ }
+}
+
+// Pulse helper (own profile only) — replaces the old 📷 button; same pattern as /feeds
+function _mountPulseFab() {
+  const w = document.getElementById('fab-wrapper');
+  w.innerHTML = `<div id="pulse-fab" data-pulse-mascot="idle" data-size="60"></div>
+<div class="pf-menu" id="pf-menu" hidden>
+  <div class="pf-hd">Hey, I'm Pulse 👋 What's the plan?<div class="pf-sub">Lumi, our AI guide, will sort you out</div></div>
+  <button type="button" onclick="_pfToggle(false);openPostModal()">📸 Add a memory</button>
+  <a href="/?lumi=1&amp;q=tonight&amp;from=profile">🔥 What's on tonight?</a>
+  <a href="/?lumi=1&amp;q=weekend&amp;from=profile">🎉 Plans for this weekend</a>
+  <a href="/?lumi=1&amp;q=shisanyama&amp;from=profile">🍖 Find a shisanyama</a>
+  <a href="/?lumi=1&amp;q=free&amp;from=profile">🎟 Free events</a>
+  <a href="/?lumi=1&amp;from=profile">✨ Ask my own question</a>
+</div>`;
+  window.PulseMascot && PulseMascot.scan(w);
+  document.getElementById('pulse-fab').addEventListener('click', () => _pfToggle());
+}
+function _pfToggle(open) {
+  const m = document.getElementById('pf-menu'); if (!m) return;
+  m.hidden = !(open ?? m.hidden);
+  const b = document.querySelector('#pulse-fab .pm'); if (b) b.setAttribute('aria-expanded', String(!m.hidden));
+}
+document.addEventListener('click', e => { if (!e.target.closest('#pulse-fab,#pf-menu')) _pfToggle(false); });
+// Esc closes the topmost layer: Pulse menu → share sheet → post view
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const m = document.getElementById('pf-menu');
+  if (m && !m.hidden) _pfToggle(false);
+  else if (document.getElementById('share-sheet').classList.contains('open')) closeShareSheet();
+  else if (document.getElementById('post-view').classList.contains('open')) closePostView();
+});
+
 let _postImageFile = null;
 function previewPost(input) { /* ... implementation unchanged ... */ }
 async function submitPost() { /* ... implementation largely unchanged, but ensure it uses currentUser.id ... */ }
@@ -1007,7 +1240,7 @@ async function openFlList(type) {
     body.innerHTML = list.map(p => {
       const init = (p.display_name || p.username || '?')[0].toUpperCase();
       const isOrg = ['organizer','business'].includes(p.role);
-      const grad = isOrg ? 'linear-gradient(135deg,#FF5C00,#FF2D78)' : 'linear-gradient(135deg,#B026FF,#FF5C00)';
+      const grad = isOrg ? 'linear-gradient(135deg,#CC4400,#FF2D78)' : 'linear-gradient(135deg,#B026FF,#CC4400)';
       const av = p.avatar_url ? '<img src="' + esc(p.avatar_url) + '" style="width:100%;height:100%;object-fit:cover">' : init;
       return `<a href="/user-profile?id=${esc(p.id)}" style="display:flex;align-items:center;gap:10px;padding:10px 6px;cursor:pointer;border-bottom:1px solid var(--border);text-decoration:none;color:var(--tx)"><div style="width:40px;height:40px;border-radius:50%;background:${grad};display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:.9rem;flex-shrink:0;overflow:hidden">${av}</div><div style="flex:1;min-width:0"><div style="font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700">${esc(p.display_name || p.username || "User")}</div><div style="font-size:.7rem;color:var(--mu)">@${esc(p.username || "user")}${p.city ? " · " + esc(p.city) : ""}</div></div></a>`;
     }).join('');
