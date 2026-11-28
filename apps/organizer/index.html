@@ -1302,7 +1302,7 @@ function previewOvfIdDoc(e) {
 async function uploadVerifDoc(file, folder, uid) {
   const ext  = file.name.split('.').pop() || 'jpg';
   const path = `${uid}/${folder}_${Date.now()}.${ext}`;
-  const { data, error } = await sb.storage.from('verification-docs').upload(path, file, { upsert: true });
+  const { data, error } = await sb.storage.from('verification-docs').upload(path, file, { upsert: false });
   if (error) throw error;
   const { data: { publicUrl } } = sb.storage.from('verification-docs').getPublicUrl(path);
   return publicUrl;
@@ -1330,12 +1330,14 @@ async function submitOrgVerification() {
     const uid = session.user.id;
     // Upload face scan
     const facePath = `${uid}/face_${Date.now()}.jpg`;
-    await sb.storage.from('verification-docs').upload(facePath, _ovfFaceScanBlob, { contentType: 'image/jpeg', upsert: true });
+    const { error: faceErr } = await sb.storage.from('verification-docs').upload(facePath, _ovfFaceScanBlob, { contentType: 'image/jpeg', upsert: false });
+    if (faceErr) throw new Error('Face scan upload failed: ' + faceErr.message);
     const { data: { publicUrl: faceScanUrl } } = sb.storage.from('verification-docs').getPublicUrl(facePath);
     // Upload ID doc
     const ext = (_ovfIdDocFile.name.split('.').pop() || 'jpg').toLowerCase();
     const idPath = `${uid}/id_doc_${Date.now()}.${ext}`;
-    await sb.storage.from('verification-docs').upload(idPath, _ovfIdDocFile, { upsert: true });
+    const { error: idErr } = await sb.storage.from('verification-docs').upload(idPath, _ovfIdDocFile, { upsert: false });
+    if (idErr) throw new Error('ID document upload failed: ' + idErr.message);
     const { data: { publicUrl: idDocUrl } } = sb.storage.from('verification-docs').getPublicUrl(idPath);
 
     const payload = {

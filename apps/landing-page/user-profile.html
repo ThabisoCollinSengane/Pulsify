@@ -366,9 +366,9 @@ async function loadUserData() {
   if (isOwnProfile) {
     const _bnMe = document.getElementById('bn-me'); _bnMe.classList.add('active'); _bnMe.setAttribute('aria-current', 'page');
     document.getElementById('settings-btn-wrapper').innerHTML = `<div class="settings-btn" onclick="window.location.href='/profile-settings'">⚙️</div>`;
-    document.getElementById('profile-action-btn').innerHTML = `<button class="edit-btn" onclick="window.location.href='/profile-settings'">Edit Profile</button>`;
+    document.getElementById('profile-action-btn').innerHTML = `<button class="edit-btn" onclick="window.location.href='/profile-settings#edit'">Edit Profile</button>`;
     document.getElementById('avatar-el').style.cursor = 'pointer';
-    document.getElementById('avatar-el').onclick = () => window.location.href='/profile-settings';
+    document.getElementById('avatar-el').onclick = () => window.location.href='/profile-settings#edit';
     document.getElementById('posts-tab').textContent = '📸 My Posts';
     document.getElementById('events-tab').textContent = '🎟 My Events';
     document.getElementById('saved-stat').hidden = false;   // Saved is private — own profile only
@@ -817,13 +817,12 @@ async function upLike(postId, btn) {
     btn.classList.remove('lk');
     if (cnt) cnt.textContent = Math.max(0, cur - 1);
     await sb.from('reactions').delete().eq('user_id', currentUser.id).eq('entity_id', postId).eq('entity_type', 'post').eq('type', 'like');
-    await sb.from('posts').update({ like_count: Math.max(0, cur - 1) }).eq('id', postId);
+    // posts.like_count is kept in sync by the trg_sync_like_count_* triggers on reactions
   } else {
     _upLiked[postId] = true;
     btn.classList.add('lk');
     if (cnt) cnt.textContent = cur + 1;
-    await sb.from('reactions').upsert({ user_id: currentUser.id, entity_id: postId, entity_type: 'post', type: 'like' }, { onConflict: 'user_id,entity_id,entity_type,type' });
-    await sb.from('posts').update({ like_count: cur + 1 }).eq('id', postId);
+    await sb.from('reactions').upsert({ user_id: currentUser.id, entity_id: postId, entity_type: 'post', type: 'like' }, { onConflict: 'user_id,entity_id,entity_type,type', ignoreDuplicates: true });
   }
 }
 

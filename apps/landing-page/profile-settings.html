@@ -14,7 +14,29 @@ html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:'DM S
 body{padding-bottom:40px}
 .tb{position:fixed;top:0;left:0;right:0;height:calc(58px + env(safe-area-inset-top));z-index:100;display:flex;align-items:center;justify-content:space-between;padding:env(safe-area-inset-top) 16px 0;background:rgba(5,8,15,.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
 .back{display:flex;align-items:center;gap:5px;background:transparent;border:none;color:var(--mu2);font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;cursor:pointer;padding:0 4px;min-height:44px}
-.tb-title{font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.tb-title{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700}
+[hidden]{display:none!important}
+button:focus-visible,a:focus-visible,[role=button]:focus-visible,.inp:focus-visible,.psel:focus-visible{outline:2px solid var(--or);outline-offset:2px}
+/* Settings menu */
+.me-card{display:flex;align-items:center;gap:13px;width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px 15px;color:var(--tx);text-align:left;cursor:pointer;font:inherit}
+.me-card:active{background:var(--surf)}
+.me-av{position:relative;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:1.5rem;overflow:hidden;flex-shrink:0}
+.me-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.me-name{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-family:'Syne',sans-serif;font-size:1rem;font-weight:800}
+.me-edit{font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;color:var(--or);border:1px solid rgba(255,92,0,.35);border-radius:50px;padding:7px 14px;flex-shrink:0}
+.me-link{display:flex;align-items:center;min-height:44px;padding:0 4px;margin:4px 0 12px;font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;color:var(--mu2);text-decoration:none}
+.menu{background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:14px}
+.mrow{display:flex;align-items:center;gap:12px;width:100%;min-height:62px;padding:11px 15px;background:none;border:none;border-bottom:1px solid var(--border);color:var(--tx);text-align:left;cursor:pointer;font:inherit;text-decoration:none}
+.mrow:last-child{border-bottom:none}
+.mrow:active{background:var(--surf)}
+.mico{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.05rem;background:var(--surf2);flex-shrink:0}
+.mtxt{flex:1;min-width:0;display:flex;flex-direction:column}
+.mtitle{font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700}
+.msub{font-size:.74rem;color:var(--mu2);margin-top:2px;overflow-wrap:anywhere}
+.mchev{color:var(--mu);font-size:1.3rem;line-height:1}
+.ver{text-align:center;font-size:.7rem;color:var(--mu);margin-top:14px}
+.note{font-size:.76rem;color:var(--mu2);line-height:1.5;margin:0 2px 12px}
+.hint{font-size:.72rem;color:var(--mu);margin-top:10px}
 .content{padding:calc(70px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))}
 .av-wrap{display:flex;flex-direction:column;align-items:center;padding:0 0 22px;border-bottom:1px solid var(--border);margin-bottom:20px}
 .cov{position:relative;width:100%;height:120px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,rgba(176,38,255,.4),rgba(255,92,0,.26));background-size:cover;background-position:center;cursor:pointer;margin-bottom:-40px}
@@ -23,15 +45,13 @@ body{padding-bottom:40px}
 .av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .av-ov{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#fff;border-radius:50%;opacity:0;transition:opacity .2s}
 .av:active .av-ov{opacity:1}
-.av-name{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;margin-top:11px}
-.av-handle{font-size:.76rem;color:var(--mu)}
 .av-btn{margin-top:11px;background:transparent;border:1px solid var(--border2);border-radius:50px;padding:7px 18px;font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu2);cursor:pointer;min-height:44px}
 .av-btn:active{border-color:var(--or);color:var(--or)}
 .sec{background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:14px}
-.sec-head{padding:13px 15px 9px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);border-bottom:1px solid var(--border)}
+.sec-head{padding:13px 15px 9px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;color:var(--mu2);border-bottom:1px solid var(--border)}
 .field{padding:13px 15px;border-bottom:1px solid var(--border)}
 .field:last-child{border-bottom:none}
-.lbl{font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu2);margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.lbl{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:var(--mu2);margin-bottom:6px;display:flex;align-items:center;gap:6px}
 .ro{font-size:.57rem;background:rgba(255,255,255,.05);padding:2px 7px;border-radius:50px;color:var(--mu);font-weight:400}
 .verified{font-size:.57rem;background:rgba(198,255,74,.1);border:1px solid rgba(198,255,74,.25);color:var(--li);padding:2px 8px;border-radius:50px;font-weight:700}
 .unverified{font-size:.57rem;background:rgba(255,92,0,.1);border:1px solid rgba(255,92,0,.25);color:var(--or);padding:2px 8px;border-radius:50px;cursor:pointer;font-weight:700;position:relative}
@@ -67,14 +87,6 @@ textarea.inp{resize:none;height:78px;line-height:1.5}
 .gc.on .gc-chk{opacity:1}
 .psel{width:100%;min-height:44px;background:var(--surf);border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;color:var(--tx);font-family:'Syne',sans-serif;font-size:16px;font-weight:700;outline:none;cursor:pointer;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235A5870' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
 .psel option{background:#0D1424}
-.role-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700}
-.role-user{background:rgba(255,255,255,.05);color:var(--mu)}
-.role-admin{background:rgba(255,92,0,.12);color:var(--or);border:1px solid rgba(255,92,0,.3)}
-.role-mod{background:rgba(176,38,255,.12);color:#B026FF;border:1px solid rgba(176,38,255,.3)}
-.role-biz{background:rgba(0,229,255,.1);color:var(--cy);border:1px solid rgba(0,229,255,.28)}
-.status-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);font-size:.78rem;color:var(--mu2)}
-.status-row:last-child{border-bottom:none}
-.status-lbl{font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;color:var(--mu);min-width:90px}
 .save-btn{width:100%;background:linear-gradient(135deg,#B026FF,#CC4400);color:#fff;border:none;padding:15px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:opacity .2s}
 .save-btn:active{opacity:.85}
 .save-bar{position:sticky;bottom:0;z-index:50;margin:0 -16px 14px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(5,8,15,.96);backdrop-filter:blur(24px);border-top:1px solid var(--border)}
@@ -96,119 +108,137 @@ textarea.inp{resize:none;height:78px;line-height:1.5}
 </head>
 <body>
 <div class="tb">
-  <button class="back" onclick="history.back()">← Back</button>
-  <span class="tb-title">Profile Settings</span>
+  <button class="back" id="tb-back" onclick="goBack()" aria-label="Back">← Back</button>
+  <span class="tb-title" id="tb-title">Settings</span>
   <div style="width:60px"></div>
 </div>
 
 <div class="content">
-  <div class="av-wrap">
-    <div class="cov" id="cov-el" onclick="document.getElementById('cov-file').click()">
-      <div class="cov-ov">📷 Cover photo</div>
-    </div>
-    <input type="file" id="cov-file" accept="image/*" style="display:none" onchange="handleCover(this)"/>
-    <div class="av" id="av-el" onclick="document.getElementById('av-file').click()" style="z-index:1;border:3px solid var(--bg)">
-      <span id="av-emoji">😊</span>
-      <div class="av-ov">Change Photo</div>
-    </div>
-    <input type="file" id="av-file" accept="image/*" style="display:none" onchange="handleAvatar(this)"/>
-    <div class="av-name" id="av-name">Your Name</div>
-    <div class="av-handle" id="av-handle">@handle</div>
-    <button class="av-btn" onclick="window.location.href='/user-profile'">View Profile →</button>
-  </div>
 
-  <div class="sec">
-    <div class="sec-head">Account Information</div>
-    <div class="field">
-      <div class="lbl">Account Status &amp; Role</div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <span class="role-badge role-user" id="role-badge">👤 Standard User</span>
-        <span class="verified" id="verified-badge" style="display:none">✓ Verified</span>
-        <span id="status-badge" style="font-size:.7rem;color:var(--li)">● Active</span>
+  <!-- ══ MENU ══ -->
+  <section class="view" id="v-menu" aria-label="Settings">
+    <button class="me-card" type="button" onclick="openView('edit')">
+      <span class="me-av" id="me-av"><span id="me-av-emoji">😊</span></span>
+      <span class="mtxt">
+        <span class="me-name"><span id="av-name">Your name</span> <span class="verified" id="verified-badge" style="display:none">✓ Verified</span></span>
+        <span class="msub" id="av-handle">@handle</span>
+      </span>
+      <span class="me-edit">Edit</span>
+    </button>
+    <a class="me-link" href="/user-profile">View my profile →</a>
+
+    <div class="menu">
+      <button class="mrow" type="button" onclick="openView('edit')"><span class="mico">🪪</span><span class="mtxt"><span class="mtitle">Edit profile</span><span class="msub">Photo, cover, name, bio and social links</span></span><span class="mchev" aria-hidden="true">›</span></button>
+      <button class="mrow" type="button" onclick="openView('music')"><span class="mico">🎧</span><span class="mtxt"><span class="mtitle">Your music</span><span class="msub">Genres you're into, for better picks</span></span><span class="mchev" aria-hidden="true">›</span></button>
+      <button class="mrow" type="button" onclick="openView('account')"><span class="mico">👤</span><span class="mtxt"><span class="mtitle">Account</span><span class="msub">Email, phone, birthday, location, password</span></span><span class="mchev" aria-hidden="true">›</span></button>
+      <button class="mrow" type="button" onclick="openView('privacy')"><span class="mico">🔒</span><span class="mtxt"><span class="mtitle">Privacy</span><span class="msub" id="privacy-sum">Who can see your profile and comment</span></span><span class="mchev" aria-hidden="true">›</span></button>
+      <button class="mrow" type="button" onclick="openView('notifs')"><span class="mico">🔔</span><span class="mtxt"><span class="mtitle">Notifications</span><span class="msub">What shows up in your bell</span></span><span class="mchev" aria-hidden="true">›</span></button>
+    </div>
+
+    <div class="menu">
+      <a class="mrow" href="mailto:support@pulsefy.co.za?subject=Pulsefy%20help"><span class="mico">💬</span><span class="mtxt"><span class="mtitle">Help &amp; support</span><span class="msub">support@pulsefy.co.za</span></span><span class="mchev" aria-hidden="true">›</span></a>
+      <a class="mrow" href="/terms"><span class="mico">📄</span><span class="mtxt"><span class="mtitle">Terms &amp; privacy policy</span></span><span class="mchev" aria-hidden="true">›</span></a>
+    </div>
+
+    <button class="out-btn" type="button" onclick="logout()">Log out</button>
+    <button class="del-btn" type="button" onclick="deleteAccount()">Delete account</button>
+    <div class="ver">Pulsefy · Beta</div>
+  </section>
+
+  <!-- ══ EDIT PROFILE ══ -->
+  <section class="view" id="v-edit" hidden aria-label="Edit profile">
+    <div class="av-wrap">
+      <div class="cov" id="cov-el" role="button" tabindex="0" aria-label="Change cover photo" onclick="document.getElementById('cov-file').click()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">
+        <div class="cov-ov">📷 Cover photo</div>
+      </div>
+      <input type="file" id="cov-file" accept="image/*" style="display:none" onchange="handleCover(this)"/>
+      <div class="av" id="av-el" role="button" tabindex="0" aria-label="Change profile photo" onclick="document.getElementById('av-file').click()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" style="z-index:1;border:3px solid var(--bg)">
+        <span id="av-emoji">😊</span>
+        <div class="av-ov">Change</div>
+      </div>
+      <input type="file" id="av-file" accept="image/*" style="display:none" onchange="handleAvatar(this)"/>
+      <div class="hint">Tap the photo or cover to change it</div>
+    </div>
+    <div class="sec">
+      <div class="sec-head">About you</div>
+      <div class="field"><label class="lbl" for="display-name">Display name</label><input class="inp" id="display-name" type="text" placeholder="How you appear on Pulsefy"/></div>
+      <div class="field"><label class="lbl" for="username">Username</label><input class="inp" id="username" type="text" placeholder="yourhandle" autocomplete="off"/></div>
+      <div class="field"><label class="lbl" for="bio">Bio</label><textarea class="inp" id="bio" placeholder="Tell the squad about yourself…"></textarea></div>
+    </div>
+    <div class="sec">
+      <div class="sec-head">Social links</div>
+      <div class="field"><label class="lbl" for="sl-instagram">Instagram</label><input class="inp" id="sl-instagram" type="text" placeholder="@handle" autocomplete="off"/></div>
+      <div class="field"><label class="lbl" for="sl-tiktok">TikTok</label><input class="inp" id="sl-tiktok" type="text" placeholder="@handle" autocomplete="off"/></div>
+      <div class="field"><label class="lbl" for="sl-facebook">Facebook</label><input class="inp" id="sl-facebook" type="text" placeholder="Page or username" autocomplete="off"/></div>
+      <div class="field"><label class="lbl" for="sl-x">X / Twitter</label><input class="inp" id="sl-x" type="text" placeholder="@handle" autocomplete="off"/></div>
+      <div class="field"><label class="lbl" for="sl-whatsapp">WhatsApp</label><input class="inp" id="sl-whatsapp" type="tel" placeholder="e.g. 072 123 4567"/></div>
+    </div>
+    <div class="save-bar"><button class="save-btn" type="button" onclick="saveAll()">Save changes</button></div>
+  </section>
+
+  <!-- ══ MUSIC ══ -->
+  <section class="view" id="v-music" hidden aria-label="Your music">
+    <p class="note">Pick what you're into. We use it to show you better events. Saves automatically.</p>
+    <div class="sec">
+      <div class="gg" id="genres-container">
+        <div class="gc" data-genre="amapiano"><span class="gc-ico">🎶</span><span class="gc-lbl">Amapiano</span><span class="gc-chk">✓</span></div>
+        <div class="gc" data-genre="gqom"><span class="gc-ico">🔊</span><span class="gc-lbl">Gqom</span><span class="gc-chk">✓</span></div>
+        <div class="gc" data-genre="hiphop"><span class="gc-ico">🎤</span><span class="gc-lbl">Hip hop</span><span class="gc-chk">✓</span></div>
+        <div class="gc" data-genre="house"><span class="gc-ico">🎧</span><span class="gc-lbl">House</span><span class="gc-chk">✓</span></div>
+        <div class="gc" data-genre="afrobeats"><span class="gc-ico">🥁</span><span class="gc-lbl">Afrobeats</span><span class="gc-chk">✓</span></div>
+        <div class="gc" data-genre="rock"><span class="gc-ico">🎸</span><span class="gc-lbl">Rock</span><span class="gc-chk">✓</span></div>
+        <div class="gc" data-genre="gospel"><span class="gc-ico">🙏</span><span class="gc-lbl">Gospel</span><span class="gc-chk">✓</span></div>
+        <div class="gc" data-genre="jazz"><span class="gc-ico">🎷</span><span class="gc-lbl">Jazz</span><span class="gc-chk">✓</span></div>
+        <div class="gc" data-genre="sport"><span class="gc-ico">⚽</span><span class="gc-lbl">Sport</span><span class="gc-chk">✓</span></div>
+        <div class="gc" data-genre="maskandi"><span class="gc-ico">🪗</span><span class="gc-lbl">Maskandi</span><span class="gc-chk">✓</span></div>
       </div>
     </div>
-    <div class="field">
-      <div class="lbl">Member Since</div>
-      <div style="font-size:.84rem;color:var(--mu2)" id="created-at">—</div>
+  </section>
+
+  <!-- ══ ACCOUNT ══ -->
+  <section class="view" id="v-account" hidden aria-label="Account">
+    <div class="sec">
+      <div class="sec-head">Sign-in</div>
+      <div class="field"><label class="lbl" for="email-field">Email <span class="ro">Can't be changed here</span></label><input class="inp" id="email-field" type="email" disabled/>
+        <div style="margin-top:8px"><span id="email-verif-badge" class="unverified" onclick="resendVerification()">⚠ Not verified · tap to resend the email</span></div></div>
+      <div class="field"><div class="lbl">Password</div><button class="av-btn" type="button" style="margin-top:0" onclick="changePassword()">Send me a reset link</button></div>
     </div>
-    <div class="field">
-      <div class="lbl">Email Verification</div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <span id="email-verif-badge" class="unverified" onclick="resendVerification()">⚠ Unverified — Tap to resend</span>
+    <div class="sec">
+      <div class="sec-head">Personal details</div>
+      <div class="field"><label class="lbl" for="phone">Phone number <span class="ro">Optional</span></label><div class="phone-row"><div class="pcode">🇿🇦 +27</div><input class="inp" id="phone" type="tel" placeholder="72 123 4567" style="margin:0" maxlength="15"/></div></div>
+      <div class="field"><label class="lbl" for="dob">Date of birth</label><input class="inp" id="dob" type="date" style="color-scheme:dark"/></div>
+      <div class="field"><div class="row2"><div><label class="lbl" for="province">Province</label><select class="inp" id="province"><option value="">Select…</option><option value="KZN">KwaZulu-Natal</option><option value="GP">Gauteng</option><option value="WC">Western Cape</option><option value="EC">Eastern Cape</option><option value="MP">Mpumalanga</option><option value="LP">Limpopo</option><option value="NW">North West</option><option value="FS">Free State</option><option value="NC">Northern Cape</option></select></div><div><label class="lbl" for="city">City / suburb</label><input class="inp" id="city" type="text" placeholder="e.g. Umlazi"/></div></div></div>
+    </div>
+    <div class="note">Member since <span id="created-at">—</span></div>
+    <div class="save-bar"><button class="save-btn" type="button" onclick="saveAll()">Save changes</button></div>
+  </section>
+
+  <!-- ══ PRIVACY ══ -->
+  <section class="view" id="v-privacy" hidden aria-label="Privacy">
+    <p class="note">Changes save as soon as you make them.</p>
+    <div class="sec">
+      <div class="field"><label class="lbl" for="priv-profile">Who can see your profile</label><select class="psel" id="priv-profile" onchange="savePrivacy()"><option value="public">🌍 Everyone</option><option value="followers">🔒 Only my followers</option></select></div>
+      <div class="field"><label class="lbl" for="priv-comment">Who can comment on your posts</label><select class="psel" id="priv-comment" onchange="savePrivacy()"><option value="everyone">Everyone</option><option value="followers">Followers only</option><option value="nobody">Nobody</option></select></div>
+      <div class="field"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><div class="trow-title">Show events I've been to</div><div class="trow-sub">Others can see your event history</div></div><label class="tgl" aria-label="Show events I've been to"><input type="checkbox" id="priv-attended" onchange="savePrivacy()"/><span class="tgl-s"></span></label></div></div>
+    </div>
+  </section>
+
+  <!-- ══ NOTIFICATIONS ══ -->
+  <section class="view" id="v-notifs" hidden aria-label="Notifications">
+    <p class="note">Changes save as soon as you make them.</p>
+    <div class="sec">
+      <div style="padding:4px 15px">
+        <div class="trow"><div class="trow-info"><div class="trow-title">New followers</div><div class="trow-sub">When someone starts following you</div></div><label class="tgl" aria-label="New followers"><input type="checkbox" id="n-follow" checked onchange="saveNotifs()"/><span class="tgl-s"></span></label></div>
+        <div class="trow"><div class="trow-info"><div class="trow-title">Likes on your posts</div><div class="trow-sub">Hearts from the community</div></div><label class="tgl" aria-label="Likes on your posts"><input type="checkbox" id="n-like" checked onchange="saveNotifs()"/><span class="tgl-s"></span></label></div>
+        <div class="trow"><div class="trow-info"><div class="trow-title">Comments on your posts</div><div class="trow-sub">Comments and replies</div></div><label class="tgl" aria-label="Comments on your posts"><input type="checkbox" id="n-comment" checked onchange="saveNotifs()"/><span class="tgl-s"></span></label></div>
+        <div class="trow"><div class="trow-info"><div class="trow-title">Squad invites</div><div class="trow-sub">When a friend invites you to their squad</div></div><label class="tgl" aria-label="Squad invites"><input type="checkbox" id="n-squad_invite" checked onchange="saveNotifs()"/><span class="tgl-s"></span></label></div>
+        <div class="trow"><div class="trow-info"><div class="trow-title">Squad plans</div><div class="trow-sub">New outings planned in your squads</div></div><label class="tgl" aria-label="Squad plans"><input type="checkbox" id="n-squad_plan" checked onchange="saveNotifs()"/><span class="tgl-s"></span></label></div>
+        <div class="trow"><div class="trow-info"><div class="trow-title">Organiser updates</div><div class="trow-sub">Posts from organisers and venues you follow</div></div><label class="tgl" aria-label="Organiser updates"><input type="checkbox" id="n-business_post" checked onchange="saveNotifs()"/><span class="tgl-s"></span></label></div>
+        <div class="trow"><div class="trow-info"><div class="trow-title">Pulsefy news &amp; offers</div><div class="trow-sub">Occasional emails about events and deals</div></div><label class="tgl" aria-label="Pulsefy news and offers"><input type="checkbox" id="marketing-opt-in" onchange="saveNotifs()"/><span class="tgl-s"></span></label></div>
       </div>
     </div>
-    <div class="field">
-      <div class="lbl">Password</div>
-      <button class="av-btn" style="margin-top:0" onclick="changePassword()">Change password</button>
-    </div>
-  </div>
-
-  <div class="sec">
-    <div class="sec-head">Personal Information</div>
-    <div class="field"><div class="lbl">Display Name</div><input class="inp" id="display-name" type="text" placeholder="How you appear on Pulsefy"/></div>
-    <div class="field"><div class="lbl">Username / Handle</div><input class="inp" id="username" type="text" placeholder="@yourhandle" autocomplete="off"/></div>
-    <div class="field"><div class="lbl">Email <span class="ro">Read only</span></div><input class="inp" id="email-field" type="email" disabled/></div>
-    <div class="field"><div class="lbl">Phone Number <span class="ro">Optional</span></div><div class="phone-row"><div class="pcode">🇿🇦 +27</div><input class="inp" id="phone" type="tel" placeholder="72 123 4567" style="margin:0" maxlength="15"/></div></div>
-    <div class="field"><div class="lbl">Date of Birth</div><input class="inp" id="dob" type="date" style="color-scheme:dark"/></div>
-    <div class="field"><div class="lbl">Bio</div><textarea class="inp" id="bio" placeholder="Tell the squad about yourself…"></textarea></div>
-    <div class="field"><div class="row2"><div><div class="lbl">Province</div><select class="inp" id="province"><option value="">Select…</option><option value="KZN">KwaZulu-Natal</option><option value="GP">Gauteng</option><option value="WC">Western Cape</option><option value="EC">Eastern Cape</option><option value="MP">Mpumalanga</option><option value="LP">Limpopo</option><option value="NW">North West</option><option value="FS">Free State</option><option value="NC">Northern Cape</option></select></div><div><div class="lbl">City / Suburb</div><input class="inp" id="city" type="text" placeholder="e.g. Soweto"/></div></div></div>
-  </div>
-
-  <div class="sec">
-    <div class="sec-head">Social Links</div>
-    <div class="field"><div class="lbl">Instagram</div><input class="inp" id="sl-instagram" type="text" placeholder="@handle" autocomplete="off"/></div>
-    <div class="field"><div class="lbl">TikTok</div><input class="inp" id="sl-tiktok" type="text" placeholder="@handle" autocomplete="off"/></div>
-    <div class="field"><div class="lbl">Facebook</div><input class="inp" id="sl-facebook" type="text" placeholder="Page or username" autocomplete="off"/></div>
-    <div class="field"><div class="lbl">X / Twitter</div><input class="inp" id="sl-x" type="text" placeholder="@handle" autocomplete="off"/></div>
-    <div class="field"><div class="lbl">WhatsApp</div><input class="inp" id="sl-whatsapp" type="tel" placeholder="e.g. 072 123 4567"/></div>
-  </div>
-
-  <div class="sec">
-    <div class="sec-head">Music &amp; Vibe Preferences</div>
-    <div class="gg" id="genres-container">
-      <div class="gc" data-genre="amapiano"><span class="gc-ico">🎶</span><span class="gc-lbl">Amapiano</span><span class="gc-chk">✓</span></div>
-      <div class="gc" data-genre="gqom"><span class="gc-ico">🔊</span><span class="gc-lbl">Gqom</span><span class="gc-chk">✓</span></div>
-      <div class="gc" data-genre="hiphop"><span class="gc-ico">🎤</span><span class="gc-lbl">Hip Hop</span><span class="gc-chk">✓</span></div>
-      <div class="gc" data-genre="house"><span class="gc-ico">🎧</span><span class="gc-lbl">House</span><span class="gc-chk">✓</span></div>
-      <div class="gc" data-genre="afrobeats"><span class="gc-ico">🥁</span><span class="gc-lbl">Afrobeats</span><span class="gc-chk">✓</span></div>
-      <div class="gc" data-genre="rock"><span class="gc-ico">🎸</span><span class="gc-lbl">Rock</span><span class="gc-chk">✓</span></div>
-      <div class="gc" data-genre="gospel"><span class="gc-ico">🙏</span><span class="gc-lbl">Gospel</span><span class="gc-chk">✓</span></div>
-      <div class="gc" data-genre="jazz"><span class="gc-ico">🎷</span><span class="gc-lbl">Jazz</span><span class="gc-chk">✓</span></div>
-      <div class="gc" data-genre="sport"><span class="gc-ico">⚽</span><span class="gc-lbl">Sport</span><span class="gc-chk">✓</span></div>
-      <div class="gc" data-genre="maskandi"><span class="gc-ico">🪗</span><span class="gc-lbl">Maskandi</span><span class="gc-chk">✓</span></div>
-    </div>
-  </div>
-
-  <div class="sec">
-    <div class="sec-head">In-App Notifications</div>
-    <div style="padding:4px 15px">
-      <div class="trow"><div class="trow-info"><div class="trow-title">New followers</div><div class="trow-sub">When someone starts following you</div></div><label class="tgl"><input type="checkbox" id="n-follow" checked/><span class="tgl-s"></span></label></div>
-      <div class="trow"><div class="trow-info"><div class="trow-title">Likes on your posts</div><div class="trow-sub">Hearts from the community</div></div><label class="tgl"><input type="checkbox" id="n-like" checked/><span class="tgl-s"></span></label></div>
-      <div class="trow"><div class="trow-info"><div class="trow-title">Comments on your posts</div><div class="trow-sub">Replies and discussion</div></div><label class="tgl"><input type="checkbox" id="n-comment" checked/><span class="tgl-s"></span></label></div>
-      <div class="trow"><div class="trow-info"><div class="trow-title">Squad invites</div><div class="trow-sub">When a friend invites you to their squad</div></div><label class="tgl"><input type="checkbox" id="n-squad_invite" checked/><span class="tgl-s"></span></label></div>
-      <div class="trow"><div class="trow-info"><div class="trow-title">Squad plans</div><div class="trow-sub">New outings planned in your squads</div></div><label class="tgl"><input type="checkbox" id="n-squad_plan" checked/><span class="tgl-s"></span></label></div>
-      <div class="trow"><div class="trow-info"><div class="trow-title">Organizer updates</div><div class="trow-sub">Posts from organisers and venues you follow</div></div><label class="tgl"><input type="checkbox" id="n-business_post" checked/><span class="tgl-s"></span></label></div>
-      <div class="trow"><div class="trow-info"><div class="trow-title">Pulsefy news &amp; offers</div><div class="trow-sub">Occasional emails about events and deals</div></div><label class="tgl"><input type="checkbox" id="marketing-opt-in"/><span class="tgl-s"></span></label></div>
-    </div>
-    <div style="margin:8px 15px 4px;padding:9px 11px;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.18);border-radius:10px;font-size:.72rem;color:var(--mu2);line-height:1.5">
-      📬 Email, SMS &amp; push notifications are coming in v2. For now everything appears in your in-app bell 🔔.
-    </div>
-  </div>
-
-  <div class="sec">
-    <div class="sec-head">Privacy Settings</div>
-    <div class="field"><div class="lbl">Profile Visibility</div><select class="psel" id="priv-profile"><option value="public">🌍 Public — anyone can view</option><option value="followers">🔒 Private — only followers</option></select></div>
-    <div class="field"><div class="lbl">Who Can Comment</div><select class="psel" id="priv-comment"><option value="everyone">Everyone</option><option value="followers">Followers only</option><option value="nobody">Nobody</option></select></div>
-    <div class="field"><div style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700">Show events attended</div><div style="font-size:.68rem;color:var(--mu)">Others can see your history</div></div><label class="tgl"><input type="checkbox" id="priv-attended"/><span class="tgl-s"></span></label></div></div>
-  </div>
-
-  <div class="save-bar">
-    <button class="save-btn" onclick="saveAll()">Save All Changes</button>
-  </div>
-  <div style="margin-top:6px">
-    <button class="out-btn" onclick="logout()">Sign Out</button>
-    <button class="del-btn" onclick="deleteAccount()">Delete account</button>
-  </div>
+    <p class="note">Email, SMS and push notifications are coming later. For now everything shows in your in-app bell 🔔.</p>
+  </section>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -271,17 +301,10 @@ async function loadData() {
 
   if (currentUser.email_confirmed_at) {
     const b = document.getElementById('email-verif-badge');
-    b.className = 'verified'; b.textContent = '✓ Verified'; b.onclick = null;
+    b.className = 'verified'; b.textContent = '✓ Email verified'; b.onclick = null;
   }
 
-  const rb = document.getElementById('role-badge');
-  if (currentProfile.role === 'admin') { rb.className = 'role-badge role-admin'; rb.textContent = '🔑 Admin'; }
-  else if (currentProfile.role === 'organizer') { rb.className = 'role-badge role-mod'; rb.textContent = '🎤 Organiser'; }
-  else if (currentProfile.role === 'business') { rb.className = 'role-badge role-biz'; rb.textContent = '🏪 Business'; }
   if (currentProfile.is_verified) document.getElementById('verified-badge').style.display = '';
-  const sbd = document.getElementById('status-badge');
-  if (currentProfile.suspended) { sbd.textContent = '● Suspended'; sbd.style.color = 'var(--pk)'; }
-  else if (currentProfile.verif_status === 'pending') { sbd.textContent = '● Pending verification'; sbd.style.color = 'var(--or)'; }
 
   // user-profile.html renders social_links {instagram,tiktok,facebook,x,whatsapp}; legacy columns are the fallback
   const sl = currentProfile.social_links || {};
@@ -289,11 +312,7 @@ async function loadData() {
     document.getElementById('sl-' + k).value = (sl[k] !== undefined ? sl[k] : currentProfile[col]) || '';
   });
 
-  if (currentProfile.avatar_url) {
-    const img = document.createElement('img'); img.src = currentProfile.avatar_url;
-    document.getElementById('av-el').appendChild(img);
-    document.getElementById('av-emoji').style.display = 'none';
-  }
+  if (currentProfile.avatar_url) setAvatarImg(currentProfile.avatar_url);
 
   if (currentProfile.cover_url) {
     document.getElementById('cov-el').style.backgroundImage = 'url("' + currentProfile.cover_url + '")';
@@ -320,11 +339,95 @@ async function loadData() {
   document.getElementById('priv-profile').value = currentProfile.profile_visibility || 'public';
   document.getElementById('priv-comment').value = currentProfile.comment_permission || 'everyone';
   document.getElementById('priv-attended').checked = currentProfile.show_attended !== false;
+  updatePrivacySummary();
 }
 
-function toggleGenre(el, genre) {
+// Profile photo shows in two places: the menu card and the Edit profile screen
+function setAvatarImg(url) {
+  [['av-el', 'av-emoji'], ['me-av', 'me-av-emoji']].forEach(([boxId, emojiId]) => {
+    const box = document.getElementById(boxId);
+    let img = box.querySelector('img');
+    if (!img) { img = document.createElement('img'); img.alt = ''; box.appendChild(img); }
+    img.src = url;
+    document.getElementById(emojiId).style.display = 'none';
+  });
+}
+
+/* ── Screens: the menu, plus one screen per row. The address (#edit, #privacy…) holds the
+   open screen, so the phone's Back button returns to the menu. ── */
+const VIEWS = { menu: 'Settings', edit: 'Edit profile', music: 'Your music', account: 'Account', privacy: 'Privacy', notifs: 'Notifications' };
+let _openedFromMenu = false;
+function currentView() { const v = location.hash.slice(1); return VIEWS[v] && v !== 'menu' ? v : 'menu'; }
+function renderView() {
+  const v = currentView();
+  document.querySelectorAll('.view').forEach(s => { s.hidden = s.id !== 'v-' + v; });
+  document.getElementById('tb-title').textContent = VIEWS[v];
+  document.title = VIEWS[v] + ' — Pulsefy';
+  window.scrollTo(0, 0);
+}
+function openView(v) { _openedFromMenu = true; location.hash = v; }
+function goBack() {
+  if (currentView() === 'menu') { if (history.length > 1) history.back(); else location.href = '/user-profile'; return; }
+  if (_openedFromMenu) { _openedFromMenu = false; history.back(); return; }
+  history.replaceState(null, '', location.pathname + location.search); // opened straight on a screen → back to the menu
+  renderView();
+}
+window.addEventListener('hashchange', renderView);
+
+/* ── Instant saves for Privacy, Notifications and Music ── */
+async function saveFields(fields, okMsg) {
+  if (!currentUser) return false;
+  const { error } = await sb.from('profiles').update({ ...fields, updated_at: new Date().toISOString() }).eq('id', currentUser.id);
+  if (error) { showToast('Could not save: ' + error.message, 'err'); return false; }
+  Object.assign(currentProfile, fields);
+  showToast(okMsg || 'Saved ✓', 'ok');
+  return true;
+}
+function notifPrefsFromUI() {
+  const prefs = {};
+  ['follow','like','comment','squad_invite','squad_plan','business_post'].forEach(k => {
+    const el = document.getElementById('n-' + k);
+    if (el) prefs[k] = el.checked;
+  });
+  prefs.reply = prefs.comment; // replies follow the "Comments on your posts" toggle
+  return prefs;
+}
+function updatePrivacySummary() {
+  const vis = document.getElementById('priv-profile').value;
+  document.getElementById('privacy-sum').textContent = vis === 'followers' ? 'Private: only your followers see your profile' : 'Public: anyone can see your profile';
+}
+// If an instant save fails, put the switches back to what is really saved.
+function showSavedPrivacy() {
+  document.getElementById('priv-profile').value = currentProfile.profile_visibility || 'public';
+  document.getElementById('priv-comment').value = currentProfile.comment_permission || 'everyone';
+  document.getElementById('priv-attended').checked = currentProfile.show_attended !== false;
+  updatePrivacySummary();
+}
+async function savePrivacy() {
+  updatePrivacySummary();
+  const ok = await saveFields({
+    profile_visibility: document.getElementById('priv-profile').value,
+    comment_permission: document.getElementById('priv-comment').value,
+    show_attended: document.getElementById('priv-attended').checked,
+  }, 'Privacy updated ✓');
+  if (!ok) showSavedPrivacy();
+}
+async function saveNotifs() {
+  const prefs = notifPrefsFromUI();
+  const ok = await saveFields({ notification_prefs: prefs, marketing_opt_in: document.getElementById('marketing-opt-in').checked }, 'Notifications updated ✓');
+  if (ok) { try { localStorage.setItem('p_notif', JSON.stringify(prefs)); } catch (_) {} return; }
+  const saved = currentProfile.notification_prefs || {};
+  ['follow','like','comment','squad_invite','squad_plan','business_post'].forEach(k => { const el = document.getElementById('n-' + k); if (el) el.checked = saved[k] !== false; });
+  document.getElementById('marketing-opt-in').checked = currentProfile.marketing_opt_in === true;
+}
+async function toggleGenre(el, genre) {
   if (selectedGenres.has(genre)) { selectedGenres.delete(genre); el.classList.remove('on'); }
   else { selectedGenres.add(genre); el.classList.add('on'); }
+  const ok = await saveFields({ genres: Array.from(selectedGenres) }, 'Music saved ✓');
+  if (!ok) { // undo the tap so the screen matches what is saved
+    if (selectedGenres.has(genre)) { selectedGenres.delete(genre); el.classList.remove('on'); }
+    else { selectedGenres.add(genre); el.classList.add('on'); }
+  }
 }
 
 async function handleAvatar(input) {
@@ -339,10 +442,7 @@ async function handleAvatar(input) {
   const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(fileName);
   const { error: dbErr } = await sb.from('profiles').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
   if (dbErr) { showToast('Could not save photo: ' + dbErr.message, 'err'); return; }
-  const av = document.getElementById('av-el');
-  let img = av.querySelector('img');
-  if (!img) { img = document.createElement('img'); av.appendChild(img); document.getElementById('av-emoji').style.display = 'none'; }
-  img.src = publicUrl;
+  setAvatarImg(publicUrl);
   showToast('Photo updated ✓', 'ok');
 }
 
@@ -353,7 +453,7 @@ function handleCover(input) {
     document.getElementById('cov-el').style.backgroundImage = 'url("' + e.target.result + '")';
     const up = await compressImage(file, 1600);
     const fileName = `cover_${currentUser.id}_${Date.now()}.${up.name.split('.').pop() || 'jpg'}`;
-    const { error: storErr } = await sb.storage.from('avatars').upload(fileName, up, { upsert: true, contentType: up.type });
+    const { error: storErr } = await sb.storage.from('avatars').upload(fileName, up, { upsert: false, contentType: up.type });
     if (storErr) { showToast('Cover upload failed — try again', 'err'); return; }
     const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(fileName);
     const { error: dbErr } = await sb.from('profiles').update({ cover_url: publicUrl }).eq('id', currentUser.id);
@@ -371,6 +471,7 @@ async function resendVerification() {
 }
 
 async function saveAll() {
+  if (!currentUser) return; // profile still loading
   const displayName = document.getElementById('display-name').value.trim();
   const username = document.getElementById('username').value.trim().replace(/^@+/, '').toLowerCase();
   // Only validate a changed username, so legacy/empty handles don't block saving other settings
@@ -382,13 +483,8 @@ async function saveAll() {
   let phone = document.getElementById('phone').value.trim();
   phone = phone ? '+27' + phone.replace(/^0/, '').replace(/\s/g, '') : null;
 
-  const notifPrefs = {};
-  ['follow','like','comment','squad_invite','squad_plan','business_post'].forEach(k => {
-    const el = document.getElementById('n-' + k);
-    if (el) notifPrefs[k] = el.checked;
-  });
-  notifPrefs.reply = notifPrefs.comment; // replies follow the "Comments on your posts" toggle
-  localStorage.setItem('p_notif', JSON.stringify(notifPrefs));
+  const notifPrefs = notifPrefsFromUI();
+  try { localStorage.setItem('p_notif', JSON.stringify(notifPrefs)); } catch (_) {}
 
   // Store bare handles: strip URLs down to the handle and a leading @; empty → null
   // Only letters, digits, . _ - survive; anything else is dropped (stored-XSS guard).
@@ -415,9 +511,9 @@ async function saveAll() {
 
   document.getElementById('username').value = username;
   Object.keys(socialLinks).forEach(k => { document.getElementById('sl-' + k).value = socialLinks[k] || ''; });
-  document.getElementById('av-name').textContent = displayName || 'Your Name';
+  document.getElementById('av-name').textContent = displayName || 'Your name';
   document.getElementById('av-handle').textContent = '@' + (username || currentUser.email?.split('@')[0]);
-  showToast('✅ All changes saved!', 'ok');
+  showToast('Changes saved ✓', 'ok');
 }
 
 async function logout() { await sb.auth.signOut(); localStorage.clear(); window.location.href = '/signin'; }
@@ -442,6 +538,7 @@ async function deleteAccount() {
 }
 function showToast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast ' + type + ' show'; clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 3500); }
 
+renderView();
 loadData();
 </script>
 </body>
