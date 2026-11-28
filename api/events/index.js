@@ -312,12 +312,65 @@ module.exports = async (req, res) => {
       if (!existing) return res.status(404).json({ error: 'Business not found' });
       if (existing.owner_id !== auth.user.id) return res.status(403).json({ error: 'Not your business' });
 
-      const { hours } = req.body || {};
-      if (!Array.isArray(hours)) return res.status(400).json({ error: 'hours array required' });
+      // Whitelisted owner-editable fields only (never owner_id, is_verified, rating, …).
+      const body = req.body || {};
+      const has  = k => Object.prototype.hasOwnProperty.call(body, k);
+      const IMG_PREFIX = 'https://cjzewfvtdayjgjdpdmln.supabase.co/storage/v1/object/public/';
+      const isImg = s => typeof s === 'string' && s.startsWith(IMG_PREFIX) && s.length <= 500 && !/\s/.test(s);
+      const update = {};
+      const bad = msg => res.status(400).json({ error: msg });
 
-      const { error } = await sb().from('businesses').update({ hours }).eq('id', bizId);
+      if (has('hours')) {
+        if (!Array.isArray(body.hours)) return bad('hours must be an array');
+        update.hours = body.hours;
+      }
+      const TEXT = { name: 80, tagline: 120, description: 1000, address: 200, suburb: 60, city: 60 };
+      for (const [k, max] of Object.entries(TEXT)) {
+        if (!has(k)) continue;
+        if (body[k] != null && typeof body[k] !== 'string') return bad(`${k} must be text`);
+        const v = (body[k] || '').trim();
+        if (v.length > max) return bad(`${k} must be ${max} characters or fewer`);
+        if (k === 'name' && !v) return bad('name is required');
+        update[k] = v || null;
+      }
+      for (const k of ['phone', 'whatsapp']) {
+        if (!has(k)) continue;
+        const v = String(body[k] ?? '').trim();
+        if (v.length > 20 || !/^[0-9+ ]*$/.test(v)) return bad(`${k} may only contain digits, + and spaces (max 20)`);
+        update[k] = v || null;
+      }
+      for (const k of ['website', 'instagram', 'facebook']) {
+        if (!has(k)) continue;
+        const v = String(body[k] ?? '').trim();
+        if (v) {
+          let ok = v.length <= 300 && v.startsWith('https://');
+          try { ok = ok && new URL(v).protocol === 'https:'; } catch { ok = false; }
+          if (!ok) return bad(`${k} must be a https:// link (max 300 characters)`);
+        }
+        update[k] = v || null;
+      }
+      if (has('price_range')) {
+        const v = String(body.price_range ?? '').trim();
+        if (v && !['R', 'RR', 'RRR', 'RRRR'].includes(v)) return bad('price_range must be R, RR, RRR or RRRR');
+        update.price_range = v || null;
+      }
+      if (has('cover_image_url')) {
+        const v = body.cover_image_url || null;
+        if (v !== null && !isImg(v)) return bad('cover_image_url must be an uploaded Pulsify image');
+        update.cover_image_url = v;
+      }
+      if (has('gallery_urls')) {
+        if (!Array.isArray(body.gallery_urls)) return bad('gallery_urls must be an array');
+        if (!body.gallery_urls.every(isImg)) return bad('gallery_urls must only contain uploaded Pulsify images');
+        const g = [...new Set(body.gallery_urls)];
+        if (g.length > 12) return bad('gallery_urls can hold at most 12 photos');
+        update.gallery_urls = g;
+      }
+      if (!Object.keys(update).length) return bad('No valid fields to update');
+
+      const { data: updated, error } = await sb().from('businesses').update(update).eq('id', bizId).select().single();
       if (error) return res.status(400).json({ error: error.message });
-      return res.status(200).json({ success: true });
+      return res.status(200).json({ success: true, business: updated });
     }
 
     /* ─── POST /businesses/:id/menu-items (owner adds item) ── */
