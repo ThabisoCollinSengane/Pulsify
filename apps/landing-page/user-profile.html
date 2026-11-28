@@ -242,20 +242,6 @@ button.stat:active .stat-n{color:var(--or)}
   <div id="activity-list"></div>
 </div>
 <div id="fab-wrapper"></div>
-<div class="modal-ov" id="post-modal" onclick="if(event.target===this)closePostModal()">
-  <div class="modal-sheet">
-    <div class="modal-title">📸 Share a Memory</div>
-    <input type="file" id="post-file" accept="image/*" style="display:none" onchange="previewPost(this)"/>
-    <div id="post-preview" onclick="document.getElementById('post-file').click()" style="height:160px;background:var(--surf);border:1.5px dashed rgba(0,229,255,.3);border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-bottom:12px;font-size:.84rem;color:var(--cy);flex-direction:column;gap:8px;overflow:hidden">
-      <span style="font-size:2rem">📷</span>
-      <span>Tap to choose photo</span>
-    </div>
-    <input class="modal-inp" id="post-caption" placeholder="Write a caption…"/>
-    <input class="modal-inp" id="post-event" placeholder="Event name (optional)"/>
-    <button class="modal-btn" onclick="submitPost()">Share Memory 🔥</button>
-    <button class="modal-cancel" onclick="closePostModal()">Cancel</button>
-  </div>
-</div>
 <div class="modal-ov" id="share-sheet" onclick="if(event.target===this)closeShareSheet()">
   <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="sh-title">
     <div class="sh-head"><div class="modal-title" id="sh-title">Share profile</div><button type="button" class="sh-x" onclick="closeShareSheet()" aria-label="Close">✕</button></div>
@@ -1024,7 +1010,7 @@ async function renderAttended(userId, isOwnProfile) {
   const el = document.getElementById('events-list');
   el.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Loading…</div></div>';
   try {
-    const { data: attended, count } = await sb.from('event_attendances').select('event_id, events(id,name,venue_name,city,date_local,image_url)', { count: 'exact' }).eq('user_id', userId).order('created_at', { ascending: false }).limit(20);
+    const { data: attended, count } = await sb.from('event_attendances').select('event_id, events(id,name,venue_name,venue_city,date_local,image_url)', { count: 'exact' }).eq('user_id', userId).order('created_at', { ascending: false }).limit(20);
     document.getElementById('stat-events').textContent = count || 0;
     if (!attended?.length) {
       if(isOwnProfile) {
@@ -1037,11 +1023,11 @@ async function renderAttended(userId, isOwnProfile) {
     el.innerHTML = attended.map(a => {
       const ev = a.events || {};
       return `
-        <div class="ev-card" onclick="window.location.href='/?eid=${ev.id}'">
+        <div class="ev-card" onclick="window.location.href='/?eid=${escHtml(encodeURIComponent(ev.id || '').replace(/'/g, '%27'))}'">
           <div class="ev-thumb">${ev.image_url ? `<img src="${escHtml(ev.image_url)}" loading="lazy"/>` : '🎶'}</div>
           <div class="ev-info">
             <div class="ev-name">${escHtml(ev.name || 'Event')}</div>
-            <div class="ev-meta">📍 ${escHtml(ev.city || ev.venue_name || '')}${ev.date_local ? ' · ' + new Date(ev.date_local).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'}) : ''}</div>
+            <div class="ev-meta">📍 ${escHtml(ev.venue_city || ev.venue_name || '')}${ev.date_local ? ' · ' + new Date(ev.date_local).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'}) : ''}</div>
             <span class="ev-badge">✅ Attended</span>
           </div>
         </div>`;
@@ -1147,8 +1133,7 @@ function showToast(msg, type = '') {
 }
 
 // Functions for posting (only for own profile)
-function openPostModal() { if(profileId === currentUser?.id) document.getElementById('post-modal').classList.add('open'); }
-function closePostModal() { document.getElementById('post-modal').classList.remove('open'); /* reset form */ }
+function openPostModal() { if (profileId === currentUser?.id) window.location.href = '/feeds?compose=1'; }
 
 // Share profile: link + copy + native share + QR (QR image is only fetched when the sheet opens)
 function _profileLink() { return 'https://pulsefy.co.za/user-profile?id=' + encodeURIComponent(profileId || ''); }
@@ -1209,8 +1194,6 @@ document.addEventListener('keydown', e => {
 });
 
 let _postImageFile = null;
-function previewPost(input) { /* ... implementation unchanged ... */ }
-async function submitPost() { /* ... implementation largely unchanged, but ensure it uses currentUser.id ... */ }
 
 
 async function openFlList(type) {
