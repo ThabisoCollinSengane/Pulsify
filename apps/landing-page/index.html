@@ -3929,6 +3929,7 @@ function openBizLb(i) {
   const ph = window._bizPhotos || [];
   if (!ph.length) return;
   let lb = document.getElementById('biz-lb');
+  if (lb && lb.style.display === 'flex') return;   // already open — don't push a second history entry
   if (!lb) {
     lb = document.createElement('div');
     lb.id = 'biz-lb'; lb.className = 'bzlb';

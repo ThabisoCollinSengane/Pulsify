@@ -124,6 +124,75 @@ function haverBox(lat, lon, km) {
   return { minLat: lat - d, maxLat: lat + d, minLon: lon - dl, maxLon: lon + dl };
 }
 
+// Photo posts: regular users must be within 150 m of an active business or of the
+// venue of an active event dated yesterday/today (SA time). Roles below post from anywhere.
+// The user's coordinates are only used for this check — never stored.
+const PHOTO_RADIUS_M = 150;
+
+// Exempt only roles that are backed by something real: users can set their own role
+// to business/organizer, so require an owned listing / at least one event.
+async function postsFromAnywhere(userId, role) {
+  if (role === 'admin') return true;
+  if (role === 'business') {
+    const { count } = await sb().from('businesses').select('id', { count: 'exact', head: true }).eq('owner_id', userId);
+    return (count || 0) > 0;
+  }
+  if (role === 'organizer') {
+    const { count } = await sb().from('events').select('id', { count: 'exact', head: true }).eq('organiser_id', userId);
+    return (count || 0) > 0;
+  }
+  return false;
+}
+
+// The verified place tag for a photo post: the chosen nearby event, else the nearest
+// event, else the nearest business. Client-typed place names are not trusted.
+function placeTag(places, eventId) {
+  const ev = eventId ? places.events.find(e => String(e.id) === String(eventId)) : places.events[0];
+  if (ev) return { event_id: ev.id, event_name: ev.name };
+  return { event_id: null, event_name: places.businesses[0]?.name || null };
+}
+
+function distanceM(lat1, lon1, lat2, lon2) {
+  const r = Math.PI / 180;
+  const a = Math.sin((lat2 - lat1) * r / 2) ** 2 +
+    Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin((lon2 - lon1) * r / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(a));
+}
+
+async function findNearbyPlaces(lat, lon) {
+  const b = haverBox(lat, lon, PHOTO_RADIUS_M / 1000); // R=111 km/deg → box slightly wider than 150 m
+  const saDay = (daysAgo) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Johannesburg' })
+    .format(new Date(Date.now() - daysAgo * 86400000)); // SA has no DST
+  const [ev, biz] = await Promise.all([
+    sb().from('events').select('id,name,venue_lat,venue_lon').eq('is_active', true)
+      .gte('date_local', saDay(1)).lte('date_local', saDay(0))
+      .gte('venue_lat', b.minLat).lte('venue_lat', b.maxLat)
+      .gte('venue_lon', b.minLon).lte('venue_lon', b.maxLon),
+    sb().from('businesses').select('id,name,lat,lon').eq('is_active', true)
+      .gte('lat', b.minLat).lte('lat', b.maxLat)
+      .gte('lon', b.minLon).lte('lon', b.maxLon),
+  ]);
+  if (ev.error || biz.error) throw new Error((ev.error || biz.error).message);
+  const near = (rows, la, lo) => (rows || [])
+    .map(r => ({ ...r, dist_m: distanceM(lat, lon, r[la], r[lo]) }))
+    .filter(r => r.dist_m <= PHOTO_RADIUS_M)
+    .sort((x, y) => x.dist_m - y.dist_m);
+  return { events: near(ev.data, 'venue_lat', 'venue_lon'), businesses: near(biz.data, 'lat', 'lon') };
+}
+
+// Shared by POST /posts and PATCH /posts/:id → { reject: {status, body} } or { places }
+async function checkPhotoLocation(body) {
+  const { lat, lon } = body || {};
+  if (typeof lat !== 'number' || typeof lon !== 'number' || !(lat >= -35 && lat <= -22 && lon >= 16 && lon <= 33)) {
+    return { reject: { status: 400, body: { error: 'LOCATION_REQUIRED', message: "Turn on location so we can check you're at the venue." } } };
+  }
+  const places = await findNearbyPlaces(lat, lon);
+  if (!places.events.length && !places.businesses.length) {
+    return { reject: { status: 403, body: { error: 'NOT_AT_VENUE', message: "You can only share photos when you're at a venue or event listed on Pulsefy." } } };
+  }
+  return { places };
+}
+
 async function verifyToken(token) {
   if (!token) return null;
   try {
@@ -618,7 +687,8 @@ module.exports = async (req, res) => {
       const user  = await verifyToken(token);
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
-      const { caption, image_url, event_id, event_name, post_type } = req.body || {};
+      const { caption, image_url, post_type } = req.body || {};
+      let { event_id, event_name } = req.body || {};
       if (!caption && !image_url) return res.status(400).json({ error: 'caption or image_url required' });
 
       // Monthly post limit: free organizers/businesses get 5 posts/month during beta
@@ -628,6 +698,16 @@ module.exports = async (req, res) => {
         const { count } = await sb().from('posts').select('id', { count: 'exact', head: true })
           .eq('user_id', user.id).gte('created_at', monthStart.toISOString());
         if (count >= 5) return res.status(403).json({ error: 'POST_LIMIT_REACHED', limit: 5, used: count, message: "You've used all 5 free posts this month. Upgrade to Premium for unlimited posts." });
+      }
+
+      // Photo posts from regular users: must be at a listed venue / event right now
+      if (image_url && !(await postsFromAnywhere(user.id, poster?.role))) {
+        const loc = await checkPhotoLocation(req.body);
+        if (loc.reject) return res.status(loc.reject.status).json(loc.reject.body);
+        if (event_id && !loc.places.events.some(e => String(e.id) === String(event_id))) {
+          return res.status(403).json({ error: 'NOT_AT_VENUE', message: "You're not at that event's venue." });
+        }
+        ({ event_id, event_name } = placeTag(loc.places, event_id));
       }
 
       const { data: post, error } = await sb().from('posts').insert({
@@ -664,7 +744,7 @@ module.exports = async (req, res) => {
       if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
       // Ownership check — only the author can edit
-      const { data: existing } = await sb().from('posts').select('user_id').eq('id', editPostId).single();
+      const { data: existing } = await sb().from('posts').select('user_id,image_url').eq('id', editPostId).single();
       if (!existing) return res.status(404).json({ error: 'Post not found' });
       if (existing.user_id !== user.id) return res.status(403).json({ error: 'Not your post' });
 
@@ -674,6 +754,22 @@ module.exports = async (req, res) => {
       if (image_url !== undefined)  patch.image_url  = image_url || null;
       if (event_name !== undefined) patch.event_name = event_name || null;
       if (!Object.keys(patch).length) return res.status(400).json({ error: 'Nothing to update' });
+
+      // Photo posts by regular users: new photos need the location check, and the
+      // place tag stays the verified one (no free-text re-tagging).
+      const newPhoto = patch.image_url && patch.image_url !== existing.image_url;
+      if (newPhoto || (patch.event_name !== undefined && (patch.image_url ?? existing.image_url))) {
+        const { data: me } = await sb().from('profiles').select('role').eq('id', user.id).single();
+        if (!(await postsFromAnywhere(user.id, me?.role))) {
+          delete patch.event_name;
+          if (newPhoto) {
+            const loc = await checkPhotoLocation(req.body);
+            if (loc.reject) return res.status(loc.reject.status).json(loc.reject.body);
+            Object.assign(patch, placeTag(loc.places));
+          }
+          if (!Object.keys(patch).length) return res.status(400).json({ error: 'Nothing to update' });
+        }
+      }
 
       const { data: post, error } = await sb().from('posts').update(patch).eq('id', editPostId).select().single();
       if (error) return res.status(400).json({ error: error.message });

@@ -276,7 +276,7 @@ textarea.ff-c{resize:none;height:80px;line-height:1.55}
       <textarea class="ff-c" id="post-caption" placeholder="What's the vibe? Share an event check-in, photo caption, or anything on your mind…" maxlength="500" style="height:96px"></textarea>
 
       <div id="user-posting-note" style="display:none;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:10px 13px;font-size:.74rem;color:var(--mu2);line-height:1.5;margin-bottom:10px">
-        Share a vibe, photo, event check-in or anything on your mind. Your post shows up in the Community feed for all Pulsefy users to see.
+        Share a vibe, photo, event check-in or anything on your mind. Your post shows up in the Community feed for all Pulsefy users to see.<br>📍 Photos can only be shared while you're at a venue or event listed on Pulsefy — we check your location once and don't save it.
       </div>
 
       <!-- Organizer/business-only: dedicated text-only section -->
@@ -1272,6 +1272,20 @@ function handleImg(input) {
   };
   reader.readAsDataURL(file);
 }
+// Photo posts: the server checks the user is within 150 m of a listed venue/event.
+// Location is read once for that check and never stored.
+function _postLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error("this browser can't share your location, so photos can't be posted from here."));
+    navigator.geolocation.getCurrentPosition(
+      p => resolve({ lat: p.coords.latitude, lon: p.coords.longitude, accuracy: Math.round(p.coords.accuracy || 0) }),
+      e => reject(new Error(e.code === 1
+        ? "allow location so we can check you're at the venue. Photos can only be shared from a venue or event on Pulsefy."
+        : "we couldn't get your location. Try again in a moment.")),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
+  });
+}
+
 async function submitPost() {
   const isOrg    = ['organizer','business','admin'].includes(_session?.role);
   const caption  = document.getElementById('post-caption').value.trim();
@@ -1291,6 +1305,14 @@ async function submitPost() {
   let imageUrl = null;
 
   try {
+    // New photo: get the location first, before uploading anything
+    let geo = null;
+    if (_cImg && _cImgFile && sb && _uid) {
+      btn.textContent = "Checking you're at the venue…";
+      try { geo = await _postLocation(); }
+      catch (e) { if (!isOrg) throw e; }   // pages/organisers may be exempt — the server decides
+      btn.textContent = _editingPostId ? 'Saving…' : 'Sharing…';
+    }
     if (_cImg && _cImgFile && sb && _uid) {
       const _cf  = await compressImage(_cImgFile);
       const ext  = _cf.name.split('.').pop() || 'jpg';
@@ -1313,14 +1335,14 @@ async function submitPost() {
         // Only send image_url when a new photo was picked — otherwise a
         // multi-photo post (JSON array) would be cut down to its first photo
         const patch = { caption: finalCap, event_name: evName || null };
-        if (_cImgFile) patch.image_url = imageUrl;
+        if (_cImgFile) Object.assign(patch, { image_url: imageUrl }, geo || {});
         const res = await fetch('/api/posts/' + encodeURIComponent(_editingPostId), {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') },
           body: JSON.stringify(patch),
         });
         const data = await safeJson(res);
-        if (!res.ok) throw new Error(data.error || 'Could not save changes');
+        if (!res.ok) throw new Error(data.message || data.error || 'Could not save changes');
       }
       const ep = _posts.find(p => p.id === _editingPostId);
       if (ep) { ep.caption = finalCap; if (_cImgFile) ep.image_url = imageUrl; ep.event_name = evName || null; }
@@ -1332,14 +1354,14 @@ async function submitPost() {
       const res = await fetch('/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') },
-        body: JSON.stringify({ caption: finalCap, image_url: imageUrl, event_name: evName || null, post_type }),
+        body: JSON.stringify({ caption: finalCap, image_url: imageUrl, event_name: evName || null, post_type, ...(geo || {}) }),
       });
       const data = await safeJson(res);
       // Show the real error and keep the composer open (catch below)
       if (!res.ok || !data.post) throw new Error(data.message || data.error || ('HTTP ' + res.status));
       _posts.unshift({ id: data.post.id, user_id: _uid, username: uname, display_name: name,
         role: _session?.role||'user', avatar_url: _profile?.avatar_url||null,
-        event_name: evName||null, image_url: imageUrl, caption: finalCap,
+        event_name: data.post.event_name ?? (evName||null), image_url: imageUrl, caption: finalCap,
         likes:[], comments:[], reposts:[], ts: data.post.created_at });
       closeCompose();
       _page = 1; render();
