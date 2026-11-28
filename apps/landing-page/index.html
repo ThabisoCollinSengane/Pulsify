@@ -1079,9 +1079,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 
     <!-- Avatar + name + settings — fully below the cover, no overlap -->
     <div style="padding:12px 16px 4px;display:flex;align-items:center;gap:12px">
-      <div id="profile-av" style="width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#CC4400);display:flex;align-items:center;justify-content:center;font-size:1.8rem;border:2px solid var(--border2);overflow:hidden;flex-shrink:0">😊</div>
+      <div id="profile-av" onclick="window.location.href='/user-profile'" role="link" aria-label="Open my profile" style="cursor:pointer;width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#CC4400);display:flex;align-items:center;justify-content:center;font-size:1.8rem;border:2px solid var(--border2);overflow:hidden;flex-shrink:0">😊</div>
       <div style="flex:1;min-width:0">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="profile-name">Your Name</div>
+        <div onclick="window.location.href='/user-profile'" role="link" style="cursor:pointer;font-family:'Bebas Neue',sans-serif;font-size:1.5rem;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="profile-name">Your Name</div>
         <div style="font-size:.73rem;color:var(--mu)" id="profile-sub">@handle</div>
       </div>
       <button onclick="window.location.href='/profile-settings'" style="background:var(--surf);border:1px solid var(--border2);border-radius:50px;padding:8px 14px;font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;color:var(--mu2);cursor:pointer;flex-shrink:0">⚙️ Settings</button>
@@ -6823,6 +6823,8 @@ async function openFollowList(userId, type) {
 let _profLocked = null; // userId of the followers-only profile open in the overlay, else null
 const _PROF_LOCKED_HTML = '<div style="padding:28px;text-align:center;font-size:.8rem;color:var(--mu);border:1px dashed var(--border);border-radius:12px">🔒 This account is private — follow to see their posts</div>';
 async function openProfile(userId) {
+  // One profile design everywhere: people and organisers open the full /user-profile page
+  if (userId) { window.location.href = '/user-profile?id=' + encodeURIComponent(userId); return; }
   const ov = document.getElementById('prof-overlay');
   const body = document.getElementById('prof-overlay-body');
   if (!ov || !body) return;
