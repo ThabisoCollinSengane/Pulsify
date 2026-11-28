@@ -134,11 +134,12 @@ const PHOTO_RADIUS_M = 150;
 async function postsFromAnywhere(userId, role) {
   if (role === 'admin') return true;
   if (role === 'business') {
-    const { count } = await sb().from('businesses').select('id', { count: 'exact', head: true }).eq('owner_id', userId);
+    const { count } = await sb().from('businesses').select('id', { count: 'exact', head: true }).eq('owner_id', userId).eq('is_active', true);
     return (count || 0) > 0;
   }
   if (role === 'organizer') {
-    const { count } = await sb().from('events').select('id', { count: 'exact', head: true }).eq('organiser_id', userId);
+    // Only events an admin approved — creating an unapproved event mustn't unlock the exemption
+    const { count } = await sb().from('events').select('id', { count: 'exact', head: true }).eq('organiser_id', userId).eq('approved', true).eq('is_active', true);
     return (count || 0) > 0;
   }
   return false;
@@ -164,7 +165,7 @@ async function findNearbyPlaces(lat, lon) {
   const saDay = (daysAgo) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Johannesburg' })
     .format(new Date(Date.now() - daysAgo * 86400000)); // SA has no DST
   const [ev, biz] = await Promise.all([
-    sb().from('events').select('id,name,venue_lat,venue_lon').eq('is_active', true)
+    sb().from('events').select('id,name,venue_lat,venue_lon').eq('is_active', true).eq('approved', true)
       .gte('date_local', saDay(1)).lte('date_local', saDay(0))
       .gte('venue_lat', b.minLat).lte('venue_lat', b.maxLat)
       .gte('venue_lon', b.minLon).lte('venue_lon', b.maxLon),
