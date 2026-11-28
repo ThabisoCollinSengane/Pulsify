@@ -114,7 +114,7 @@ function openAvatarLightbox() {
 <script>(function(){var d=window.PULSIFY_SENTRY_DSN;if(!d)return;var s=document.createElement('script');s.src='https://browser.sentry-cdn.com/7.120.0/bundle.min.js';s.crossOrigin='anonymous';s.onload=function(){if(window.Sentry)window.Sentry.init({dsn:d,environment:location.hostname.indexOf('localhost')>-1?'dev':'prod',tracesSampleRate:0.1});};document.head.appendChild(s);})();</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#160C32;--bg2:#1C1140;--surf:#241652;--surf2:#2E1C66;--border:rgba(168,108,255,.16);--border2:rgba(168,108,255,.32);--or:#FF6B00;--li:#6EFF47;--pk:#FF2D88;--cy:#00EEFF;--pu:#CC44FF;--te:#00FFB8;--tx:#F4EDFF;--mu:#9A8BC4;--mu2:#B09CC8;--th:58px;--tk:30px;--bh:70px}
+:root{--bg:#160C32;--bg2:#1C1140;--surf:#241652;--surf2:#2E1C66;--border:rgba(168,108,255,.16);--border2:rgba(168,108,255,.32);--or:#FF6B00;--li:#6EFF47;--pk:#FF2D88;--cy:#00EEFF;--pu:#CC44FF;--te:#00FFB8;--tx:#F4EDFF;--mu:#9A8BC4;--mu2:#B09CC8;--th:58px;--tk:24px;--bh:70px}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
 ::-webkit-scrollbar{width:2px}::-webkit-scrollbar-thumb{background:var(--or);border-radius:2px}
 .tb{position:fixed;top:0;left:0;right:0;height:var(--th);z-index:800;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:rgba(22,12,50,.92);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)}
@@ -131,10 +131,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .nd{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--or);border:1.5px solid var(--bg);display:none;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:.56rem;font-weight:800;color:#fff;line-height:1;box-shadow:0 0 8px rgba(255,92,0,.6)}
 .sb{background:linear-gradient(135deg,#B026FF,#CC4400);color:#fff;border:none;padding:8px 18px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer;position:relative}
 .sb::after{content:'';position:absolute;left:0;right:0;top:50%;height:44px;margin-top:-22px}
-.tkr{position:fixed;top:var(--th);left:0;right:0;height:var(--tk);z-index:700;background:linear-gradient(90deg,#B026FF,#FF5C00,#FF2D78);overflow:hidden;display:flex;align-items:center}
+.tkr{position:fixed;top:var(--th);left:0;right:0;height:var(--tk);z-index:700;background:linear-gradient(90deg,#B026FF,#CC4400,#FF2D78);overflow:hidden;display:flex;align-items:center}
 .tkt{display:flex;white-space:nowrap;animation:sc 75s linear infinite}
 .tkt:hover{animation-play-state:paused}
-.ti{display:inline-flex;align-items:center;gap:8px;padding:0 20px;font-family:'Syne',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.9)}
+.ti{display:inline-flex;align-items:center;gap:8px;padding:0 18px;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#fff}
+.ti b{font-weight:800}
 .td{width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,.5)}
 @keyframes sc{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 .panel{display:none;position:fixed;top:calc(var(--th) + var(--tk));left:0;right:0;bottom:var(--bh);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:var(--bg);z-index:10}
@@ -154,8 +155,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .si{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:10px 16px 10px 40px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.86rem;outline:none;transition:border-color .2s}
 .si:focus{border-color:var(--or)}.si::placeholder{color:var(--mu)}
 .sic{position:absolute;left:26px;top:50%;transform:translateY(-50%);font-size:.95rem;color:var(--mu);pointer-events:none}
-.lb{display:flex;gap:6px;padding:4px 14px 6px;overflow-x:auto;scrollbar-width:none}
-.lb::-webkit-scrollbar{display:none}
 .ls{flex-shrink:0;white-space:nowrap;background:transparent;border:1px solid var(--border);border-radius:50px;color:var(--tx);font-family:'Syne',sans-serif;font-size:.67rem;font-weight:700;padding:5px 24px 5px 10px;min-height:44px;outline:none;cursor:pointer;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235A5870' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;transition:border-color .2s}
 .ls option{background:#1C1140}
 .cr{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:8px 14px 6px}
@@ -165,11 +164,43 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .cr-mini{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:4px 14px 10px}
 .chip-mini{flex-shrink:0;min-height:44px;display:inline-flex;align-items:center;padding:4px 10px;border-radius:50px;border:1px solid var(--border);background:rgba(168,108,255,.06);font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;color:var(--mu);cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent}
 .chip-mini.active{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.09)}
-.vr{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:4px 14px 8px}
-.vr::-webkit-scrollbar{display:none}
-.vibe-chip{flex-shrink:0;height:44px;box-sizing:border-box;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:999px;border:1px solid var(--border);background:rgba(168,108,255,.06);font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;color:var(--mu);cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:border-color .18s,background .18s,color .18s}
-.vibe-chip .ve{font-size:1.05rem;line-height:1}
+.vibe-chip{flex-shrink:0;height:44px;box-sizing:border-box;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;border:1px solid var(--border);background:rgba(168,108,255,.06);font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;color:var(--tx);cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:border-color .18s,background .18s,color .18s}
 .vibe-chip.active{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.12);box-shadow:0 0 12px rgba(255,92,0,.25)}
+/* Line icons — one small map. CSS masks over inline SVG, so they take currentColor like the
+   bottom-nav icons (1.8 stroke, round caps) with no JS and no pop-in. Emoji stay in user content. */
+.ic{display:inline-block;width:16px;height:16px;flex-shrink:0;vertical-align:-3px;margin-right:.45em;background:currentColor;-webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat}
+.ic-search{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.6-3.6'/%3E%3C/svg%3E")}
+.ic-pin{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s-7-6.2-7-11.5a7 7 0 0114 0C19 14.8 12 21 12 21z'/%3E%3Ccircle cx='12' cy='9.5' r='2.5'/%3E%3C/svg%3E")}
+.ic-chev{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")}
+.ic-ticket{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 7h18v3a2 2 0 000 4v3H3v-3a2 2 0 000-4z'/%3E%3Cpath d='M14 7v2M14 11v2M14 15v2'/%3E%3C/svg%3E")}
+.ic-map{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 20l-6-3V4l6 3m0 13l6-3m-6 3V7m6 10l6 3V7l-6-3m0 13V4M9 7l6-3'/%3E%3C/svg%3E")}
+.ic-moon{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 14.5A8 8 0 119.5 4a6.5 6.5 0 0010.5 10.5z'/%3E%3C/svg%3E")}
+.ic-tag{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20.6 13.4l-7.2 7.2a2 2 0 01-2.8 0L3 13V3h10l7.6 7.6a2 2 0 010 2.8z'/%3E%3Ccircle cx='7.5' cy='7.5' r='1.3'/%3E%3C/svg%3E")}
+.ic-near{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 11l18-8-8 18-2-8z'/%3E%3C/svg%3E")}
+.ic-cal{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M16 3v4M8 3v4M3 10h18'/%3E%3C/svg%3E")}
+.ic-flame{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22c4 0 7-2.7 7-6.8 0-4.2-3.3-6.7-4.6-10.2-.3 2.8-1.8 4.4-3.1 5.3C11.7 7.5 10.6 4.6 8 2.5 8.4 6.6 5 9.8 5 15.2 5 19.3 8 22 12 22z'/%3E%3C/svg%3E")}
+.ic-leaf{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 21c0-9 5-15 15-16-1 10-7 15-15 16z'/%3E%3Cpath d='M5 21l8-8'/%3E%3C/svg%3E")}
+.ic-gem{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3h12l4 6-10 12L2 9z'/%3E%3Cpath d='M2 9h20M9 3L7.5 9 12 21l4.5-12L15 3'/%3E%3C/svg%3E")}
+.ic-glass{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 3h8l-.5 6a3.5 3.5 0 01-7 0z'/%3E%3Cpath d='M12 12.5V20M8.5 20h7'/%3E%3C/svg%3E")}
+.ic-drum{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cellipse cx='12' cy='8' rx='8' ry='3'/%3E%3Cpath d='M4 8v8c0 1.7 3.6 3 8 3s8-1.3 8-3V8M8 10.7l2 8M16 10.7l-2 8'/%3E%3C/svg%3E")}
+.ic-trend{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 17l6-6 4 4 8-8'/%3E%3Cpath d='M15 7h6v6'/%3E%3C/svg%3E")}
+.ic-spark{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z'/%3E%3C/svg%3E")}
+.ic-fork{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 3v18M4 3v5a3 3 0 006 0V3'/%3E%3Cpath d='M17 21V3c-2.2 0-4 2.5-4 6s1.8 4 4 4'/%3E%3C/svg%3E")}
+.ic-beer{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 8h10v11a2 2 0 01-2 2H7a2 2 0 01-2-2z'/%3E%3Cpath d='M15 11h2a2 2 0 012 2v2a2 2 0 01-2 2h-2M5 8a3 3 0 015-2.2A3 3 0 0115 8'/%3E%3C/svg%3E")}
+.ic-music{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18V5l12-2v13'/%3E%3Ccircle cx='6' cy='18' r='3'/%3E%3Ccircle cx='18' cy='16' r='3'/%3E%3C/svg%3E")}
+.ic-disc{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Ccircle cx='12' cy='12' r='2.5'/%3E%3C/svg%3E")}
+.ic-bed{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6v14M3 11h14a4 4 0 014 4v5M3 17h18'/%3E%3Ccircle cx='7.5' cy='8.5' r='1.5'/%3E%3C/svg%3E")}
+.ic-home{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 11l9-7 9 7'/%3E%3Cpath d='M5 10v10h14V10M10 20v-5h4v5'/%3E%3C/svg%3E")}
+.ic-gift{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='8' width='18' height='4' rx='1'/%3E%3Cpath d='M5 12v9h14v-9M12 8v13M12 8S10.5 3 8 4.5 10 8 12 8zM12 8s1.5-5 4-3.5S14 8 12 8z'/%3E%3C/svg%3E")}
+.ic-help{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M9.5 9.5a2.5 2.5 0 114 2c-.9.6-1.5 1.1-1.5 2.2M12 17h.01'/%3E%3C/svg%3E")}
+.ic-speaker{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 9v6h4l5 4V5L8 9z'/%3E%3Cpath d='M16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12'/%3E%3C/svg%3E")}
+.ic-globe{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18'/%3E%3C/svg%3E")}
+.ic-mic{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='3' width='6' height='11' rx='3'/%3E%3Cpath d='M5 11a7 7 0 0014 0M12 18v3'/%3E%3C/svg%3E")}
+.ic-piano{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='16' rx='2'/%3E%3Cpath d='M7.5 4v8h2V4M14.5 4v8h2V4M12 12v8'/%3E%3C/svg%3E")}
+.ic-tent{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 20h20M4 20L12 5l8 15M9.5 20l2.5-5 2.5 5'/%3E%3C/svg%3E")}
+.ic-trophy{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 4h10v5a5 5 0 01-10 0z'/%3E%3Cpath d='M7 6H4a3 3 0 003 4M17 6h3a3 3 0 01-3 4M12 14v4M8 21h8M9.5 18h5'/%3E%3C/svg%3E")}
+.ic-smile{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M8.5 14.5a4.5 4.5 0 007 0M9 9.5h.01M15 9.5h.01'/%3E%3C/svg%3E")}
+.ic-zap{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2L4 14h7l-1 8 9-12h-7z'/%3E%3C/svg%3E")}
 /* ── Deal cards ── */
 .deal-card{flex-shrink:0;width:260px;height:120px;border-radius:16px;overflow:hidden;position:relative;cursor:pointer;border:1px solid rgba(232,255,0,.28);box-shadow:0 6px 20px rgba(0,0,0,.28),0 0 14px rgba(232,255,0,.12);display:flex;flex-direction:column;justify-content:flex-end;background:rgba(22,20,10,.92)}
 .deal-badge{position:absolute;top:9px;left:9px;background:#e8ff00;color:#111;font-family:'Syne',sans-serif;font-size:.52rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:50px}
@@ -197,7 +228,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .bt img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .btg{position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.6))}
 .bb2{position:absolute;top:7px;left:7px;z-index:1;background:rgba(8,4,20,.42);backdrop-filter:blur(8px);font-family:'Syne',sans-serif;font-size:.46rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:50px;color:var(--or);border:1px solid rgba(255,107,0,.55);box-shadow:0 0 8px rgba(255,107,0,.45),inset 0 0 5px rgba(255,107,0,.15)}
-.brk{position:absolute;bottom:6px;right:6px;z-index:1;background:linear-gradient(135deg,#B026FF,#FF5C00);font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;padding:2px 8px;border-radius:50px;color:#fff}
+.brk{position:absolute;bottom:6px;right:6px;z-index:1;background:linear-gradient(135deg,#B026FF,#CC4400);font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;padding:2px 8px;border-radius:50px;color:#fff}
 .bi{padding:8px 10px 10px}
 .bn2{font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;margin-bottom:2px;line-height:1.25}
 .bm{font-size:.64rem;color:var(--mu);margin-bottom:5px}
@@ -349,7 +380,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .bzlb-i figcaption{position:absolute;left:0;right:0;bottom:0;padding:28px 18px calc(env(safe-area-inset-bottom,0px) + 18px);background:linear-gradient(transparent,rgba(0,0,0,.8));color:#fff;font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;text-align:center}
 .bzg{position:absolute;inset:0;background:linear-gradient(transparent 25%,rgba(22,12,50,.92))}
 .bzhb{position:absolute;bottom:0;left:0;right:0;padding:16px 18px;z-index:1}
-.bzcb{display:inline-block;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 10px;border-radius:50px;margin-bottom:8px}
+.bzcb{display:inline-block;background:linear-gradient(135deg,#B026FF,#CC4400);color:#fff;font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 10px;border-radius:50px;margin-bottom:8px}
 .bzn{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.03em;line-height:1;margin-bottom:4px}
 .bzm{font-size:.76rem;color:var(--mu2);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .bzs{font-family:'Syne',sans-serif;font-weight:700;color:#F0C040}
@@ -415,7 +446,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .cir{display:flex;gap:8px;padding:10px 14px 16px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg2)}
 .ci{flex:1;background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:9px 16px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.84rem;outline:none;transition:border-color .2s}
 .ci:focus{border-color:var(--or)!important}
-.csnd{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.csnd{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#CC4400);border:none;color:#fff;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(14px);z-index:1000;display:none;align-items:flex-end;justify-content:center}
 .ov.open{display:flex}
 .sh{width:100%;max-width:520px;background:var(--bg2);border-radius:26px 26px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;animation:su .28s ease;max-height:90vh;overflow-y:auto}
@@ -537,7 +568,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .bp-img{height:90px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:2rem}
 .bp-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .bp-cat-badge{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.72);backdrop-filter:blur(5px);font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:50px;color:var(--or)}
-.bp-featured{position:absolute;bottom:6px;right:6px;background:linear-gradient(135deg,#B026FF,#FF5C00);font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;padding:2px 8px;border-radius:50px;color:#fff}
+.bp-featured{position:absolute;bottom:6px;right:6px;background:linear-gradient(135deg,#B026FF,#CC4400);font-family:'Syne',sans-serif;font-size:.5rem;font-weight:700;padding:2px 8px;border-radius:50px;color:#fff}
 .bp-info{padding:9px 11px 12px}
 .bp-name{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;margin-bottom:2px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bp-loc{font-size:.65rem;color:var(--mu);margin-bottom:6px}
@@ -619,7 +650,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .sq-lb-row:last-child{border-bottom:none}
 .sq-lb-rank{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;width:22px;text-align:center;color:var(--mu)}
 .sq-lb-rank.gold{color:#FFD700}.sq-lb-rank.silver{color:#C0C0C0}.sq-lb-rank.bronze{color:#CD7F32}
-.sq-member-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;flex-shrink:0;overflow:hidden}
+.sq-member-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#CC4400);display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;flex-shrink:0;overflow:hidden}
 .sq-checkin-btn{width:100%;padding:12px 14px;background:rgba(176,38,255,.12);border:1.5px solid rgba(176,38,255,.4);border-radius:12px;color:var(--pu);font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:8px;box-sizing:border-box}
 .sq-select{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--tx);font-size:.82rem;outline:none;margin-bottom:8px;box-sizing:border-box}
 .sq-tab-chip{flex-shrink:0;padding:8px 14px;border-radius:50px;border:1.5px solid var(--border);background:transparent;color:var(--mu);font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:all .2s}
@@ -700,45 +731,54 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 </header>
 
 <!-- TICKER -->
+<!-- Filled from real upcoming events by _fillTicker() (Trending rail's fetch); hidden when there are none -->
 <div class="tkr">
-  <div class="tkt" id="ticker-inner">
-    <span class="ti"><span class="td"></span>🔥 Eyadini Lounge — Umlazi's #1 Shisanyama</span>
-    <span class="ti"><span class="td"></span>🔊 Gqom Takeover — Eve's Lounge Mthwalume TONIGHT</span>
-    <span class="ti"><span class="td"></span>🌊 Ogabazin Lounge — South Coast Vibes · Mthwalume</span>
-    <span class="ti"><span class="td"></span>🏖 Margate Gqom Festival — Galaxy Nightclub FRIDAY</span>
-    <span class="ti"><span class="td"></span>🎷 The Joint Jazz Café — Live Jazz on the Promenade</span>
-    <span class="ti"><span class="td"></span>⚽ Dolphins vs Lions — Kingsmead Stadium SUNDAY</span>
-    <span class="ti"><span class="td"></span>✊ Solidarity March — KZN South Coast SATURDAY</span>
-    <span class="ti"><span class="td"></span>🍹 Joe Cools — Beachfront Vibes · Marine Parade</span>
-    <span class="ti"><span class="td"></span>🔥 Eyadini Lounge — Umlazi's #1 Shisanyama</span>
-    <span class="ti"><span class="td"></span>🔊 Gqom Takeover — Eve's Lounge Mthwalume TONIGHT</span>
-    <span class="ti"><span class="td"></span>🌊 Ogabazin Lounge — South Coast Vibes · Mthwalume</span>
-    <span class="ti"><span class="td"></span>🏖 Margate Gqom Festival — Galaxy Nightclub FRIDAY</span>
-    <span class="ti"><span class="td"></span>🎷 The Joint Jazz Café — Live Jazz on the Promenade</span>
-    <span class="ti"><span class="td"></span>⚽ Dolphins vs Lions — Kingsmead Stadium SUNDAY</span>
-    <span class="ti"><span class="td"></span>✊ Solidarity March — KZN South Coast SATURDAY</span>
-    <span class="ti"><span class="td"></span>🍹 Joe Cools — Beachfront Vibes · Marine Parade</span>
-  </div>
+  <div class="tkt" id="ticker-inner"></div>
 </div>
 
 <!-- ══ HOME ══ -->
 <style>
 /* ══ HOMEPAGE REDESIGN (experimental — branch claude/homepage-redesign-experiment) ══ */
-.rd-hero{position:relative;min-height:480px;display:flex;align-items:flex-end;overflow:hidden;background:url('/hero-tonight.jpg') center 40%/cover no-repeat,#0c0722}
-.rd-hero{background:image-set(url('/hero-tonight.webp') type('image/webp'),url('/hero-tonight.jpg') type('image/jpeg')) center 40%/cover no-repeat,#0c0722}
-.rd-hero-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(22,12,50,0) 0%,rgba(22,12,50,.08) 45%,rgba(22,12,50,.65) 72%,rgba(22,12,50,.96) 100%)}
-.rd-hero-inner{position:relative;z-index:1;padding:12px 18px 16px;width:100%}
+.rd-hero{position:relative;min-height:284px;display:flex;align-items:flex-end;overflow:hidden;background:url('/hero-tonight.jpg') center 38%/cover no-repeat,#0c0722}
+.rd-hero{background:image-set(url('/hero-tonight.webp') type('image/webp'),url('/hero-tonight.jpg') type('image/jpeg')) center 38%/cover no-repeat,#0c0722}
+.rd-hero-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(22,12,50,0) 0%,rgba(22,12,50,.12) 30%,rgba(22,12,50,.7) 62%,rgba(22,12,50,.97) 100%)}
+.rd-hero-inner{position:relative;z-index:1;padding:10px 16px 14px;width:100%}
 .rd-hero-h{font-family:'Bebas Neue',sans-serif;font-size:1.55rem;line-height:.96;letter-spacing:.01em;color:#fff;margin:0 0 4px;text-shadow:0 2px 22px rgba(0,0,0,.9)}
 .rd-hero-sub{font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;color:var(--tx);margin:0 0 10px;text-shadow:0 1px 10px rgba(0,0,0,.8)}
 .rd-hero-btns{display:flex;flex-wrap:wrap;gap:8px}
-.rd-hbtn{flex:0 0 auto;min-height:44px;background:rgba(36,22,82,.82);backdrop-filter:blur(6px);border:1px solid var(--border2);color:var(--tx);font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;padding:12px 18px;border-radius:50px;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent}
+.rd-hbtn{flex:0 0 auto;min-height:44px;display:inline-flex;align-items:center;background:rgba(36,22,82,.82);backdrop-filter:blur(6px);border:1px solid var(--border2);color:var(--tx);font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;padding:0 16px;border-radius:50px;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent}
 .rd-hbtn:active{transform:scale(.96)}
 .rd-hbtn-p{background:linear-gradient(135deg,#B026FF,#CC4400);border-color:transparent;color:#fff;box-shadow:0 4px 18px rgba(255,92,0,.28)}
-.rd-qa{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:12px 14px 6px}
-.rd-qa::-webkit-scrollbar{display:none}
-.rd-qbtn{flex-shrink:0;min-height:44px;white-space:nowrap;background:rgba(168,108,255,.08);border:1px solid var(--border);color:var(--tx);font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;padding:11px 18px;border-radius:50px;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent}
+/* Search + location pill on one row */
+.rd-srow{display:flex;gap:8px;align-items:center;padding:10px 14px 2px}
+.rd-sbox{position:relative;flex:1;min-width:0}
+.rd-sbox .sic{left:14px}
+.sw>.ic.sic{top:calc(50% + 4px)}
+.rd-sbox .si{min-height:44px;padding-left:38px}
+.rd-loc{flex-shrink:0;max-width:44%;min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border-radius:50px;border:1px solid var(--border);background:var(--surf);color:var(--tx);font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.rd-loc>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rd-loc .ic-pin{color:var(--mu2)}
+.rd-loc .ic-chev{width:14px;height:14px;margin:0 0 0 4px;color:var(--mu)}
+.rd-loc.on{border-color:var(--or)}
+.rd-loc.on .ic-pin{color:var(--or)}
+/* Location bottom sheet — direct child of <body> so it stacks above the bottom nav */
+.loc-ov{position:fixed;inset:0;z-index:2100;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);align-items:flex-end;justify-content:center}
+.loc-card{width:100%;max-width:520px;background:var(--bg2);border:1px solid var(--border2);border-bottom:none;border-radius:22px 22px 0 0;padding:10px 18px calc(18px + env(safe-area-inset-bottom));animation:su .25s ease}
+.loc-grab{width:40px;height:4px;border-radius:2px;background:var(--border2);margin:0 auto 12px}
+.loc-t{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800;color:var(--tx);margin-bottom:12px}
+.loc-l{display:block;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin:10px 0 6px}
+.loc-card .ls{width:100%;min-height:48px;font-size:.86rem;padding:0 36px 0 14px;background-color:var(--surf);background-position:right 14px center}
+.loc-card .ls:disabled{opacity:.5}
+.loc-done{width:100%;min-height:48px;margin-top:18px;border:none;border-radius:50px;background:#CC4400;color:#fff;font-family:'Syne',sans-serif;font-size:.86rem;font-weight:700;cursor:pointer}
+/* Quick actions + vibes: one scrolling chip row */
+.rd-chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:8px 14px 10px}
+.rd-chips::-webkit-scrollbar{display:none}
+.rd-chips .ic,.chip .ic{width:15px;height:15px;vertical-align:0}
+.rd-div{flex:0 0 1px;align-self:center;height:24px;background:var(--border2);margin:0 2px}
+.rd-qbtn{flex-shrink:0;height:44px;box-sizing:border-box;display:inline-flex;align-items:center;white-space:nowrap;background:rgba(168,108,255,.08);border:1px solid var(--border);color:var(--tx);font-family:'Syne',sans-serif;font-size:.74rem;font-weight:700;padding:0 14px;border-radius:50px;cursor:pointer;transition:transform .15s;-webkit-tap-highlight-color:transparent}
 .rd-qbtn:active{transform:scale(.96)}
 .rd-qbtn.active{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.1)}
+.sl .ic{color:var(--or);vertical-align:-4px}
 .rd-more-btn{color:var(--mu2)!important}
 .rd-trust{display:flex;flex-wrap:wrap;justify-content:center;gap:5px 12px;margin:10px 14px 6px;padding:8px 12px;background:rgba(36,22,82,.4);border:1px solid var(--border);border-radius:12px}
 .rd-trust-item{font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;color:var(--li);letter-spacing:.02em;display:inline-flex;align-items:center;gap:4px}
@@ -761,57 +801,32 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
         <h1 class="rd-hero-h">WHAT ARE YOU DOING THIS WEEKEND?</h1>
         <p class="rd-hero-sub">Find events near you.</p>
         <div class="rd-hero-btns">
-          <button class="rd-hbtn rd-hbtn-p" onclick="document.getElementById('feed-lbl').scrollIntoView({behavior:'smooth',block:'start'})">🎟 Browse Events</button>
-          <button class="rd-hbtn" onclick="showTab('map')">🗺 Explore Map</button>
+          <button class="rd-hbtn rd-hbtn-p" onclick="document.getElementById('feed-lbl').scrollIntoView({behavior:'smooth',block:'start'})"><i class="ic ic-ticket"></i>Browse Events</button>
+          <button class="rd-hbtn" onclick="showTab('map')"><i class="ic ic-map"></i>Explore Map</button>
         </div>
       </div>
     </div>
 
-    <!-- ══ SEARCH + LOCATION ══ -->
-    <div class="sw"><span class="sic">🔍</span>
-      <input class="si" type="search" id="search-inp" aria-label="Search events, venues, artists" placeholder="Search events, venues, artists…" autocomplete="off" oninput="handleSearch(this.value)"/>
-    </div>
-    <div class="lb">
-      <select class="ls" id="sel-province" aria-label="Filter by province" onchange="onProvChange(this.value)">
-        <option value="">🗺 Province</option>
-        <option value="KZN">KwaZulu-Natal</option>
-        <option value="GP">Gauteng</option>
-        <option value="WC">Western Cape</option>
-        <option value="EC">Eastern Cape</option>
-        <option value="MP">Mpumalanga</option>
-        <option value="LP">Limpopo</option>
-        <option value="NW">North West</option>
-        <option value="FS">Free State</option>
-        <option value="NC">Northern Cape</option>
-      </select>
-      <select class="ls" id="sel-city" aria-label="Filter by city" onchange="onCityChange(this.value)">
-        <option value="">🏙 All Cities</option>
-        <option value="Durban">🏖 Durban</option>
-        <option value="Cape Town">🌊 Cape Town</option>
-        <option value="Johannesburg">🏙 Johannesburg</option>
-        <option value="Pretoria">Pretoria</option>
-        <option value="Gqeberha">Gqeberha</option>
-        <option value="East London">East London</option>
-      </select>
-      <select class="ls" id="sel-area" aria-label="Filter by area" disabled style="display:none"><option value="">📍 Area</option></select>
+    <!-- ══ SEARCH + LOCATION (one row; the pill opens #loc-sheet with the province/city selects) ══ -->
+    <div class="rd-srow">
+      <div class="rd-sbox"><i class="ic ic-search sic"></i>
+        <input class="si" type="search" id="search-inp" aria-label="Search events, venues, artists" placeholder="Search events, venues…" autocomplete="off" oninput="handleSearch(this.value)"/>
+      </div>
+      <button class="rd-loc" id="loc-pill" type="button" onclick="openLocSheet()" aria-haspopup="dialog" aria-controls="loc-sheet" aria-label="Location: All SA. Change"><i class="ic ic-pin"></i><span id="loc-pill-lbl">All SA</span><i class="ic ic-chev"></i></button>
     </div>
 
-    <!-- ══ QUICK ACTIONS ══ -->
-    <div class="rd-qa">
-      <button class="rd-qbtn" onclick="homeQuick('tonight',this)">🔥 Tonight</button>
-      <button class="rd-qbtn" onclick="browseCategory('free')">✅ Free Events</button>
-      <button class="rd-qbtn" onclick="showTab('map')">📍 Near You</button>
-      <button class="rd-qbtn" onclick="homeQuick('weekend',this)">⚡ Popular This Weekend</button>
-    </div>
-
-    <!-- ══ VIBES — quick decision layer over the genre categories ══ -->
-    <div style="padding:8px 16px 2px;font-family:'Syne',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu)">✨ What's the vibe?</div>
-    <div class="vr" id="vibe-chip-row">
-      <button class="vibe-chip" data-v="party" onclick="browseVibe('party',this)"><span class="ve">🔥</span>Party</button>
-      <button class="vibe-chip" data-v="chill" onclick="browseVibe('chill',this)"><span class="ve">🌿</span>Chill</button>
-      <button class="vibe-chip" data-v="luxury" onclick="browseVibe('luxury',this)"><span class="ve">✨</span>Luxury</button>
-      <button class="vibe-chip" data-v="social" onclick="browseVibe('social',this)"><span class="ve">🥂</span>Social</button>
-      <button class="vibe-chip" data-v="cultural" onclick="browseVibe('cultural',this)"><span class="ve">🥁</span>Cultural</button>
+    <!-- ══ QUICK ACTIONS + VIBES — one chip row (id kept: browseVibe queries #vibe-chip-row .vibe-chip) ══ -->
+    <div class="rd-chips" id="vibe-chip-row">
+      <button class="rd-qbtn" onclick="homeQuick('tonight',this)"><i class="ic ic-moon"></i>Tonight</button>
+      <button class="rd-qbtn" onclick="browseCategory('free')"><i class="ic ic-tag"></i>Free</button>
+      <button class="rd-qbtn" onclick="showTab('map')"><i class="ic ic-near"></i>Near you</button>
+      <button class="rd-qbtn" onclick="homeQuick('weekend',this)"><i class="ic ic-cal"></i>This weekend</button>
+      <span class="rd-div" aria-hidden="true"></span>
+      <button class="vibe-chip" data-v="party" onclick="browseVibe('party',this)"><i class="ic ic-flame"></i>Party</button>
+      <button class="vibe-chip" data-v="chill" onclick="browseVibe('chill',this)"><i class="ic ic-leaf"></i>Chill</button>
+      <button class="vibe-chip" data-v="luxury" onclick="browseVibe('luxury',this)"><i class="ic ic-gem"></i>Luxury</button>
+      <button class="vibe-chip" data-v="social" onclick="browseVibe('social',this)"><i class="ic ic-glass"></i>Social</button>
+      <button class="vibe-chip" data-v="cultural" onclick="browseVibe('cultural',this)"><i class="ic ic-drum"></i>Cultural</button>
     </div>
 
     <!-- Admin promo banners slider -->
@@ -821,18 +836,18 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     <!-- Starts visible with a reserved-height skeleton so the load doesn't shift
          the feed; loadTonightRail() fills it or collapses it if empty. -->
     <div id="tonight-rail">
-      <div class="sl"><span id="tonight-rail-lbl">🔥 Happening Tonight</span><a onclick="seeAllTonight();return false">See all →</a></div>
+      <div class="sl"><span><i class="ic ic-moon"></i><span id="tonight-rail-lbl">Happening Tonight</span></span><a onclick="seeAllTonight();return false">See all →</a></div>
       <div class="hs" id="tonight-rail-row"><div class="rail-skel"><i></i><i></i><i></i></div></div>
     </div>
 
     <!-- ══ TRENDING NEARBY (auto — collapses when there's nothing to show) ══ -->
     <div id="trending-rail">
-      <div class="sl"><span>📈 Trending Nearby</span><a onclick="seeAllTrending();return false">See all →</a></div>
+      <div class="sl"><span><i class="ic ic-trend"></i>Trending Nearby</span><a onclick="seeAllTrending();return false">See all →</a></div>
       <div class="hs" id="trending-rail-row"><div class="rail-skel"><i></i><i></i><i></i></div></div>
     </div>
 
     <!-- ══ EVENTS ══ -->
-    <div class="sl"><span id="feed-lbl">🔥 Upcoming Events</span><a id="feed-refresh-btn" onclick="refreshFeed(this);return false" style="cursor:pointer">↻ Refresh</a></div>
+    <div class="sl"><span id="feed-lbl"><i class="ic ic-cal"></i>Upcoming Events</span><a id="feed-refresh-btn" onclick="refreshFeed(this);return false" style="cursor:pointer">↻ Refresh</a></div>
     <div id="events-feed"></div>
     <div class="pg" id="feed-pg" style="display:none">
       <button class="pb" id="pg-prev" onclick="changePage(-1)" disabled>← Prev</button>
@@ -842,7 +857,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 
     <!-- Hidden anchor for the featured-weekend promo renderer (never moved) -->
     <div id="featured-weekend" style="display:none">
-      <div class="sl"><span>⚡ Featured This Weekend</span></div>
+      <div class="sl"><span><i class="ic ic-zap"></i>Featured This Weekend</span></div>
       <div id="featured-weekend-cards"></div>
     </div>
     <nav aria-label="Site" style="margin:20px 14px 0;padding:14px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;justify-content:center;gap:8px 16px;font-size:.68rem">
@@ -862,17 +877,50 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
   </div>
 </div>
 
+<!-- ══ LOCATION SHEET (opened by #loc-pill). The selects keep their ids + onchange; changes apply live, Done closes. ══ -->
+<div id="loc-sheet" class="loc-ov" style="display:none" role="dialog" aria-modal="true" aria-labelledby="loc-sheet-t" onclick="if(event.target===this)closeLocSheet()" onkeydown="if(event.key==='Escape')closeLocSheet()">
+  <div class="loc-card">
+    <div class="loc-grab"></div>
+    <div class="loc-t" id="loc-sheet-t">Where are you looking?</div>
+    <label class="loc-l" for="sel-province">Province</label>
+    <select class="ls" id="sel-province" onchange="onProvChange(this.value)">
+      <option value="">All provinces</option>
+      <option value="KZN">KwaZulu-Natal</option>
+      <option value="GP">Gauteng</option>
+      <option value="WC">Western Cape</option>
+      <option value="EC">Eastern Cape</option>
+      <option value="MP">Mpumalanga</option>
+      <option value="LP">Limpopo</option>
+      <option value="NW">North West</option>
+      <option value="FS">Free State</option>
+      <option value="NC">Northern Cape</option>
+    </select>
+    <label class="loc-l" for="sel-city">City</label>
+    <select class="ls" id="sel-city" onchange="onCityChange(this.value)">
+      <option value="">All cities</option>
+      <option value="Durban">Durban</option>
+      <option value="Cape Town">Cape Town</option>
+      <option value="Johannesburg">Johannesburg</option>
+      <option value="Pretoria">Pretoria</option>
+      <option value="Gqeberha">Gqeberha</option>
+      <option value="East London">East London</option>
+    </select>
+    <select class="ls" id="sel-area" aria-label="Filter by area" disabled style="display:none"><option value="">Area</option></select>
+    <button class="loc-done" id="loc-sheet-done" type="button" onclick="closeLocSheet()">Done</button>
+  </div>
+</div>
+
 <!-- ══ DISCOVER ══ -->
 <div class="panel" id="tab-discover">
-  <div class="sw"><span class="sic">🔍</span><input class="si" type="search" placeholder="Search places & events…" oninput="handleDiscSearch(this.value)"/></div>
+  <div class="sw"><i class="ic ic-search sic"></i><input class="si" type="search" placeholder="Search places & events…" oninput="handleDiscSearch(this.value)"/></div>
   <div class="cr">
-    <button class="chip active" onclick="setDiscCat(this,'all')">✦ All</button>
-    <button class="chip" onclick="setDiscCat(this,'shisanyama')">🔥 Shisanyama</button>
-    <button class="chip" onclick="setDiscCat(this,'restaurant')">🍽️ Restaurants</button>
-    <button class="chip" onclick="setDiscCat(this,'bar')">🍺 Bars</button>
-    <button class="chip" onclick="setDiscCat(this,'club')">💃 Clubs</button>
-    <button class="chip" onclick="setDiscCat(this,'hotel')">🏨 Hotels</button>
-    <button class="chip" onclick="setDiscCat(this,'bnb')">🏡 BnB</button>
+    <button class="chip active" onclick="setDiscCat(this,'all')"><i class="ic ic-spark"></i>All</button>
+    <button class="chip" onclick="setDiscCat(this,'shisanyama')"><i class="ic ic-flame"></i>Shisanyama</button>
+    <button class="chip" onclick="setDiscCat(this,'restaurant')"><i class="ic ic-fork"></i>Restaurants</button>
+    <button class="chip" onclick="setDiscCat(this,'bar')"><i class="ic ic-beer"></i>Bars</button>
+    <button class="chip" onclick="setDiscCat(this,'club')"><i class="ic ic-music"></i>Clubs</button>
+    <button class="chip" onclick="setDiscCat(this,'hotel')"><i class="ic ic-bed"></i>Hotels</button>
+    <button class="chip" onclick="setDiscCat(this,'bnb')"><i class="ic ic-home"></i>BnB</button>
   </div>
   <div onclick="openLumiDiscovery()" style="margin:4px 0 8px;padding:13px 16px;background:linear-gradient(135deg,rgba(255,92,0,.07),rgba(255,45,120,.07));border:1px solid rgba(255,92,0,.18);border-radius:16px;cursor:pointer;display:flex;align-items:center;gap:12px">
     <span style="flex-shrink:0;width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#FF5C00,#FF2D78);display:inline-flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="pointer-events:none"><path d="M12 2L14.2 9.8L22 12L14.2 14.2L12 22L9.8 14.2L2 12L9.8 9.8Z" fill="white"/></svg></span>
@@ -880,31 +928,31 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     <span style="color:var(--or);font-size:1.1rem;flex-shrink:0">›</span>
   </div>
   <div class="cr" id="disc-loc-row">
-    <button class="chip" id="nm-btn" onclick="toggleNearMe()">📍 Near Me</button>
+    <button class="chip" id="nm-btn" onclick="toggleNearMe()"><i class="ic ic-near"></i>Near Me</button>
     <button class="chip active" id="nm-5km" onclick="setNearMeRadius(5,this)" style="display:none">5km</button>
     <button class="chip" id="nm-10km" onclick="setNearMeRadius(10,this)" style="display:none">10km</button>
     <button class="chip" id="nm-25km" onclick="setNearMeRadius(25,this)" style="display:none">25km</button>
     <button class="chip" id="nm-50km" onclick="setNearMeRadius(50,this)" style="display:none">50km</button>
   </div>
-  <div class="sl"><span id="disc-biz-hdr">📍 Places near you</span><a href="/map">View map →</a></div>
+  <div class="sl"><span id="disc-biz-hdr"><i class="ic ic-pin"></i>Places near you</span><a href="/map">View map →</a></div>
   <div class="hs" id="disc-biz-row"></div>
   <!-- Squad Deals: group offers featured in discovery (mid-feed, never at top) -->
   <div id="disc-squad-wrap" style="display:none">
-    <div class="sl"><span>🎁 Squad Deals</span><a onclick="openSocialSheet('squads');return false" style="cursor:pointer">Open Squads →</a></div>
+    <div class="sl"><span><i class="ic ic-gift"></i>Squad Deals</span><a onclick="openSocialSheet('squads');return false" style="cursor:pointer">Open Squads →</a></div>
     <div class="hs" id="disc-squad-row"></div>
   </div>
-  <div class="sl"><span>🎉 Events</span><a onclick="openFAQ()" style="cursor:pointer">❓ Help & FAQ</a></div>
+  <div class="sl"><span><i class="ic ic-ticket"></i>Events</span><a onclick="openFAQ()" style="cursor:pointer"><i class="ic ic-help"></i>Help & FAQ</a></div>
   <div class="cr" id="disc-genre-row">
-    <button class="chip active" onclick="setDiscGenre(this,'all')">✦ All</button>
-    <button class="chip" onclick="setDiscGenre(this,'amapiano')">🎶 Amapiano</button>
-    <button class="chip" onclick="setDiscGenre(this,'gqom')">🔊 Gqom</button>
-    <button class="chip" onclick="setDiscGenre(this,'afrobeats')">🌍 Afrobeats</button>
-    <button class="chip" onclick="setDiscGenre(this,'house')">🏠 House</button>
-    <button class="chip" onclick="setDiscGenre(this,'hip')">🎤 Hip-Hop</button>
-    <button class="chip" onclick="setDiscGenre(this,'jazz')">🎷 Jazz</button>
-    <button class="chip" onclick="setDiscGenre(this,'festival')">🎉 Festival</button>
-    <button class="chip" onclick="setDiscGenre(this,'sport')">⚽ Sport</button>
-    <button class="chip" onclick="setDiscGenre(this,'comedy')">😂 Comedy</button>
+    <button class="chip active" onclick="setDiscGenre(this,'all')"><i class="ic ic-spark"></i>All</button>
+    <button class="chip" onclick="setDiscGenre(this,'amapiano')"><i class="ic ic-piano"></i>Amapiano</button>
+    <button class="chip" onclick="setDiscGenre(this,'gqom')"><i class="ic ic-speaker"></i>Gqom</button>
+    <button class="chip" onclick="setDiscGenre(this,'afrobeats')"><i class="ic ic-globe"></i>Afrobeats</button>
+    <button class="chip" onclick="setDiscGenre(this,'house')"><i class="ic ic-disc"></i>House</button>
+    <button class="chip" onclick="setDiscGenre(this,'hip')"><i class="ic ic-mic"></i>Hip-Hop</button>
+    <button class="chip" onclick="setDiscGenre(this,'jazz')"><i class="ic ic-music"></i>Jazz</button>
+    <button class="chip" onclick="setDiscGenre(this,'festival')"><i class="ic ic-tent"></i>Festival</button>
+    <button class="chip" onclick="setDiscGenre(this,'sport')"><i class="ic ic-trophy"></i>Sport</button>
+    <button class="chip" onclick="setDiscGenre(this,'comedy')"><i class="ic ic-smile"></i>Comedy</button>
   </div>
   <div class="dg2" id="disc-events"></div>
   <div style="margin:20px 14px 8px;padding:12px 14px;border-top:1px solid var(--border);font-size:.62rem;color:var(--mu);line-height:1.7;text-align:center">
@@ -1031,7 +1079,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 
     <!-- Avatar + name + settings — fully below the cover, no overlap -->
     <div style="padding:12px 16px 4px;display:flex;align-items:center;gap:12px">
-      <div id="profile-av" style="width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:1.8rem;border:2px solid var(--border2);overflow:hidden;flex-shrink:0">😊</div>
+      <div id="profile-av" style="width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#CC4400);display:flex;align-items:center;justify-content:center;font-size:1.8rem;border:2px solid var(--border2);overflow:hidden;flex-shrink:0">😊</div>
       <div style="flex:1;min-width:0">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="profile-name">Your Name</div>
         <div style="font-size:.73rem;color:var(--mu)" id="profile-sub">@handle</div>
@@ -1134,7 +1182,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
         <div style="font-size:.78rem;color:var(--mu2);margin-bottom:12px">Share your QR code — they scan it and land straight on the Pulsefy signup page.</div>
         <img id="invite-qr-img" src="" alt="Your invite QR code" style="border-radius:10px;display:block;margin:0 auto;width:180px;height:180px;background:var(--surf2)"/>
         <div style="margin-top:10px;font-size:.62rem;color:var(--mu)" id="invite-qr-link"></div>
-        <button onclick="shareInviteLink()" style="margin-top:12px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;padding:10px 28px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:#fff;cursor:pointer">📤 Share Invite Link</button>
+        <button onclick="shareInviteLink()" style="margin-top:12px;background:linear-gradient(135deg,#B026FF,#CC4400);border:none;border-radius:50px;padding:10px 28px;font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;color:#fff;cursor:pointer">📤 Share Invite Link</button>
       </div>
     </div>
 
@@ -1253,7 +1301,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     </div>
     <div style="font-size:.75rem;color:var(--mu);margin-bottom:16px;line-height:1.5">Add your social handles so others can find and follow you. These appear above your bio on your public profile.</div>
     <div id="my-social-inputs"></div>
-    <button onclick="saveMySocialLinks()" style="width:100%;padding:13px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;margin-top:8px">Save Social Links</button>
+    <button onclick="saveMySocialLinks()" style="width:100%;padding:13px;background:linear-gradient(135deg,#B026FF,#CC4400);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;margin-top:8px">Save Social Links</button>
   </div>
 </div>
 
@@ -1521,13 +1569,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     </select>
     <div style="font-size:.76rem;color:var(--mu);margin-bottom:6px">Additional details <span style="color:var(--mu)">(optional)</span></div>
     <textarea id="report-detail" rows="3" placeholder="Tell us more..." style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--tx);font-size:.84rem;resize:none;outline:none;box-sizing:border-box"></textarea>
-    <button id="report-submit-btn" onclick="submitReport()" style="width:100%;margin-top:14px;padding:13px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Submit Report</button>
+    <button id="report-submit-btn" onclick="submitReport()" style="width:100%;margin-top:14px;padding:13px;background:linear-gradient(135deg,#B026FF,#CC4400);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Submit Report</button>
   </div>
 </div>
 
 <div id="ticket-confirm-modal" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.85);backdrop-filter:blur(14px);align-items:center;justify-content:center;padding:20px">
   <div style="width:100%;max-width:360px;background:var(--bg2);border-radius:22px;border:1px solid rgba(255,255,255,.12);overflow:hidden;animation:su .3s ease">
-    <div style="background:linear-gradient(135deg,#B026FF,#FF5C00);padding:20px;text-align:center">
+    <div style="background:linear-gradient(135deg,#B026FF,#CC4400);padding:20px;text-align:center">
       <div id="tc-mascot" style="display:flex;justify-content:center;font-size:2.5rem;margin-bottom:8px">🎟</div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.04em;color:#fff">Booking Confirmed!</div>
       <div id="tc-event" style="font-size:.8rem;color:rgba(255,255,255,.85);margin-top:4px"></div>
@@ -1545,7 +1593,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
       <div style="font-size:.72rem;color:var(--mu);text-align:center;margin-bottom:14px">Show this QR at the door. Confirmation sent to your email.</div>
       <div id="tc-squad-checkin" style="display:none;margin-bottom:12px"></div>
       <button onclick="goToMyBookings()" style="width:100%;background:var(--surf);border:1px solid var(--border2);color:var(--tx);padding:12px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;margin-bottom:8px">View My Bookings →</button>
-      <button onclick="closeTicketConfirm()" style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer">Done</button>
+      <button onclick="closeTicketConfirm()" style="width:100%;background:linear-gradient(135deg,#B026FF,#CC4400);color:#fff;border:none;padding:14px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer">Done</button>
     </div>
   </div>
 </div>
@@ -1556,7 +1604,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     <div style="width:64px;height:64px;margin:0 auto 16px;border-radius:18px;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:2rem">📱</div>
     <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;color:var(--tx);margin-bottom:6px">Open Pulsify</div>
     <div style="font-size:.8rem;color:var(--mu2);line-height:1.5;margin-bottom:22px">How would you like to continue?</div>
-    <button id="launch-app-btn" onclick="launchInApp()" style="width:100%;padding:14px;border:none;border-radius:50px;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;margin-bottom:10px">📱 Open the app</button>
+    <button id="launch-app-btn" onclick="launchInApp()" style="width:100%;padding:14px;border:none;border-radius:50px;background:linear-gradient(135deg,#B026FF,#CC4400);color:#fff;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;margin-bottom:10px">📱 Open the app</button>
     <button onclick="continueInBrowser()" style="width:100%;padding:13px;border:1px solid var(--border2);border-radius:50px;background:var(--surf);color:var(--mu2);font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer">🌐 Continue in browser</button>
     <label style="display:flex;align-items:center;justify-content:center;gap:7px;margin-top:16px;font-size:.72rem;color:var(--mu);cursor:pointer"><input type="checkbox" id="launch-remember" style="width:13px;height:13px"/> Remember my choice</label>
   </div>
@@ -1572,7 +1620,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     <div id="ob-title" style="font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:800;text-align:center;margin-bottom:8px"></div>
     <div id="ob-body" style="font-size:.84rem;color:var(--mu2);text-align:center;line-height:1.6;margin-bottom:18px"></div>
     <div id="ob-dots" style="display:flex;justify-content:center;gap:5px;margin-bottom:18px"></div>
-    <button id="ob-next" onclick="obNext()" style="width:100%;padding:14px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.92rem;font-weight:700;cursor:pointer;transition:opacity .15s">Next</button>
+    <button id="ob-next" onclick="obNext()" style="width:100%;padding:14px;background:linear-gradient(135deg,#B026FF,#CC4400);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-size:.92rem;font-weight:700;cursor:pointer;transition:opacity .15s">Next</button>
   </div>
 </div>
 
@@ -2104,6 +2152,7 @@ window.addEventListener('popstate', e => {
     ['friends-list-overlay', () => { document.getElementById('friends-list-overlay').style.display = 'none'; }], // z:3000
     ['squad-invite-overlay', closeSquadInvite],                                                                    // z:2700
     ['social-sheet-ov',      () => { document.getElementById('social-sheet-ov').style.display = 'none'; }],      // z:2600
+    ['loc-sheet',            closeLocSheet],                                                                       // z:2100 home location sheet
     ['notif-overlay',        closeNotifPanel],                                                                     // z:2000
   ];
   for (const [id, fn] of styleOverlays) {
@@ -2332,6 +2381,7 @@ async function loadFeed(resetPage = false, append = false) {
     feedEl.insertAdjacentHTML('beforeend', '<div id="feed-more-loader" style="text-align:center;padding:18px;color:var(--mu);font-size:.78rem">Loading more…</div>');
   } else {
     _ejectFeedBreaks(); // pull breaks out before clearing
+    _updLocPill();
     feedEl.innerHTML = feedSkeleton();
     document.getElementById('feed-pg').style.display = 'none';
   }
@@ -2357,7 +2407,7 @@ async function loadFeed(resetPage = false, append = false) {
     const _cityLbl = (feedCity && feedCity !== 'all') ? ' in ' + feedCity
                    : (feedProvince && feedProvince !== 'all') ? ' in ' + feedProvince
                    : '';
-    document.getElementById('feed-lbl').textContent = '🔥 ' + count + ' Upcoming Events' + _cityLbl;
+    document.getElementById('feed-lbl').innerHTML = '<i class="ic ic-cal"></i>' + x(count + ' Upcoming Events' + _cityLbl);
 
     const _loaderEl = document.getElementById('feed-more-loader');
     if (_loaderEl) _loaderEl.remove();
@@ -2869,7 +2919,7 @@ function setFeedCity(btn, city) {
 }
 function onProvChange(v) {
   const el = document.getElementById('sel-city');
-  el.innerHTML = '<option value="">🏙 City</option>' + (PROV_CITY[v] || []).map(c => `<option value="${c}">${c}</option>`).join('');
+  el.innerHTML = '<option value="">All cities</option>' + (PROV_CITY[v] || []).map(c => `<option value="${c}">${c}</option>`).join('');
   el.disabled = !v;
   document.getElementById('sel-area').disabled = true;
   feedCity = 'all';
@@ -2881,6 +2931,27 @@ function onCityChange(v) {
   feedProvince = v ? feedProvince : 'all';
   loadFeed(true);
 }
+// Location pill (search row) ⇄ bottom sheet holding #sel-province / #sel-city
+function openLocSheet() {
+  const s = document.getElementById('loc-sheet'); if (!s) return;
+  s.style.display = 'flex';
+  document.getElementById('sel-province')?.focus();
+}
+function closeLocSheet() {
+  const s = document.getElementById('loc-sheet'); if (!s || s.style.display === 'none') return;
+  s.style.display = 'none';
+  document.getElementById('loc-pill')?.focus({ preventScroll: true });
+}
+// Pill label follows the live filter (called from loadFeed, so ?city= links and Lumi links update it too)
+function _updLocPill() {
+  const pill = document.getElementById('loc-pill'), lbl = document.getElementById('loc-pill-lbl');
+  if (!pill || !lbl) return;
+  const where = (feedCity && feedCity !== 'all') ? feedCity
+              : (feedProvince && feedProvince !== 'all') ? feedProvince : '';
+  lbl.textContent = where || 'All SA';
+  pill.classList.toggle('on', !!where);
+  pill.setAttribute('aria-label', 'Location: ' + (where || 'All SA') + '. Change');
+}
 function handleSearch(val) {
   clearTimeout(searchTimer);
   if (!val.trim()) return;
@@ -2889,7 +2960,7 @@ function handleSearch(val) {
       const { results } = await Api.get('/events/search?q=' + encodeURIComponent(val) + '&limit=20');
       if (results?.length) {
         document.getElementById('events-feed').innerHTML = results.map((ev, i) => buildCard(ev, i)).join('');
-        document.getElementById('feed-lbl').textContent = '🔍 ' + results.length + ' results';
+        document.getElementById('feed-lbl').innerHTML = '<i class="ic ic-search"></i>' + results.length + ' results';
         triggerRev();
       }
     } catch(e) {}
@@ -2931,7 +3002,7 @@ function _renderBanner(idx) {
     ? `<div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:5px">${_banners.map((_,i)=>`<div style="width:6px;height:6px;border-radius:50%;background:${i===idx?'#fff':'rgba(255,255,255,.4)'}"></div>`).join('')}</div>`
     : '';
   wrap.onclick = b.target_url ? () => { if (b.target_url.startsWith('http')) window.open(b.target_url,'_blank'); else window.location.href = b.target_url; } : null;
-  wrap.innerHTML = `<div style="position:relative;height:80px;background:${b.bg_color||'#FF5C00'};${b.image_url?`background-image:url('${x(b.image_url)}');background-size:cover;background-position:center`:''};border-radius:16px;overflow:hidden">
+  wrap.innerHTML = `<div style="position:relative;height:80px;background:${b.bg_color||'#CC4400'};${b.image_url?`background-image:url('${x(b.image_url)}');background-size:cover;background-position:center`:''};border-radius:16px;overflow:hidden">
     <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.5) 0%,rgba(0,0,0,.1) 100%);display:flex;align-items:center;padding:0 16px;gap:12px">
       <div style="flex:1;min-width:0">
         <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:.88rem;color:#fff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(b.title||'')}</div>
@@ -3042,7 +3113,7 @@ async function loadTonightRail() {
     if (!events.length) { wrap.style.display = 'none'; return; }   // never show an empty section
     const hasLoc = userLat != null && userLon != null;
     if (hasLoc) events = _proximityRank(events);
-    if (lbl) lbl.textContent = hasLoc ? '🔥 Tonight Near You' : '🔥 Happening Tonight';
+    if (lbl) lbl.textContent = hasLoc ? 'Tonight Near You' : 'Happening Tonight';
     row.innerHTML = events.map(buildTonightCard).join('');
     wrap.style.display = '';
   } catch (e) { wrap.style.display = 'none'; console.warn('[TonightRail]', e.message); }
@@ -3055,11 +3126,36 @@ async function loadTrendingRail() {
   try {
     const today = new Date().toISOString().split('T')[0];
     let events = (await Api.get(`/events?from_date=${today}&limit=20&_t=${Date.now()}`)).events || [];
+    _fillTicker(events);
     if (!events.length) { wrap.style.display = 'none'; return; }   // never show an empty section
     events = _proximityRank(events).slice(0, 8);
     row.innerHTML = events.map(buildTrendingCard).join('');
     wrap.style.display = '';
-  } catch (e) { wrap.style.display = 'none'; console.warn('[TrendingRail]', e.message); }
+  } catch (e) { wrap.style.display = 'none'; _fillTicker([]); console.warn('[TrendingRail]', e.message); }
+}
+
+/* ══ TICKER — real upcoming events (same fetch as the Trending rail); collapses when empty ══ */
+function _fillTicker(events) {
+  const bar = document.querySelector('.tkr'), inner = document.getElementById('ticker-inner');
+  if (!bar || !inner) return;
+  const today = new Date().toISOString().split('T')[0];
+  const items = (events || []).filter(ev => ev && ev.name && (ev.date_local || '') >= today).slice(0, 10).map(ev => {
+    const d = ev.date_local ? new Date(ev.date_local + 'T12:00:00') : null;
+    const days = d ? Math.round((d - new Date(today + 'T12:00:00')) / 864e5) : -1;
+    const when = days === 0 ? 'Tonight' : days > 0 && days < 7 ? d.toLocaleDateString('en-ZA', { weekday: 'long' })
+               : d ? d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' }) : '';
+    const where = ev.venue_name || ev.venue_city || '';
+    return '<span class="ti"><span class="td"></span><span>' + x(ev.name) + (when ? ' · <b>' + x(when) + '</b>' : '') + (where ? ' · ' + x(where) : '') + '</span></span>';
+  });
+  if (!items.length) {   // nothing real to show → hide the strip and give its height back to the page
+    bar.style.display = 'none';
+    document.documentElement.style.setProperty('--tk', '0px');
+    return;
+  }
+  inner.innerHTML = items.join('') + items.join('');   // two copies → the -50% scroll loops seamlessly
+  inner.style.animationDuration = Math.max(20, Math.round(inner.scrollWidth / 2 / 45)) + 's';   // ~45px/s whatever the length
+  bar.style.display = '';
+  document.documentElement.style.removeProperty('--tk');
 }
 
 function buildTrendingCard(ev) {
@@ -4054,7 +4150,7 @@ async function loadBizMenu(bizId, bizName) {
       }).join('')}
     </div>`).join('') + `
   <div id="biz-cart-bar" style="display:none;position:sticky;bottom:0;background:var(--bg2);border-top:1px solid var(--border2);padding:10px 0 6px;margin-top:4px">
-    <button onclick="_openCartPreview()" style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:13px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+    <button onclick="_openCartPreview()" style="width:100%;background:linear-gradient(135deg,#B026FF,#CC4400);color:#fff;border:none;padding:13px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
       <span>🛒 View Order</span><span style="opacity:.8">—</span><span id="cart-total">R0.00</span>
     </button>
   </div>`;
@@ -4141,7 +4237,7 @@ function _renderCartPreview() {
           <span style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;color:var(--mu2)">Total</span>
           <span style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--or)">R${total.toFixed(2)}</span>
         </div>
-        <button onclick="_closeCartPreview();showPickupOrderForm()" style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:14px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer">Confirm Order →</button>
+        <button onclick="_closeCartPreview();showPickupOrderForm()" style="width:100%;background:linear-gradient(135deg,#B026FF,#CC4400);color:#fff;border:none;padding:14px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer">Confirm Order →</button>
       </div>
     </div>`;
 }
@@ -4177,7 +4273,7 @@ async function showPickupOrderForm() {
         <span style="font-size:.8rem;color:var(--mu2)">Total</span>
         <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.05rem;color:var(--or)">R${total.toFixed(2)}</span>
       </div>
-      <button onclick="submitPickupOrder('${x(bizId)}')" style="width:100%;background:linear-gradient(135deg,#B026FF,#FF5C00);color:#fff;border:none;padding:14px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer">Confirm Order →</button>
+      <button onclick="submitPickupOrder('${x(bizId)}')" style="width:100%;background:linear-gradient(135deg,#B026FF,#CC4400);color:#fff;border:none;padding:14px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer">Confirm Order →</button>
     </div>`;
   document.body.appendChild(ov);
 }
@@ -4388,17 +4484,17 @@ function toggleNearMe() {
     btn.classList.remove('active');
     radIds.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
     const hdr = document.getElementById('disc-biz-hdr');
-    if (hdr) hdr.textContent = '📍 Places near you';
+    if (hdr) hdr.innerHTML = '<i class="ic ic-pin"></i>Places near you';
     loadDiscover();
     return;
   }
   if (!navigator.geolocation) { showToast('Location not supported on this device', 'err'); return; }
-  btn.textContent = '⏳ Locating…';
+  btn.innerHTML = '<i class="ic ic-near"></i>Locating…';
   navigator.geolocation.getCurrentPosition(pos => {
     userLat = pos.coords.latitude;
     userLon = pos.coords.longitude;
     nearMeActive = true;
-    btn.textContent = '📍 Near Me';
+    btn.innerHTML = '<i class="ic ic-near"></i>Near Me';
     btn.classList.add('active');
     radIds.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = ''; });
     const active5 = document.getElementById('nm-5km');
@@ -4406,7 +4502,7 @@ function toggleNearMe() {
     nearMeRadius = 5;
     loadDiscover();
   }, () => {
-    btn.textContent = '📍 Near Me';
+    btn.innerHTML = '<i class="ic ic-near"></i>Near Me';
     showLocationHelp(toggleNearMe);
   }, { enableHighAccuracy: true, timeout: 10000 });
 }
@@ -4461,10 +4557,10 @@ async function loadDiscover(cat, append) {
         .filter(ev => ev.venue_lat && ev.venue_lon && _haversineKm(userLat, userLon, ev.venue_lat, ev.venue_lon) <= nearMeRadius)
         .sort((a, b) => _haversineKm(userLat, userLon, a.venue_lat, a.venue_lon) - _haversineKm(userLat, userLon, b.venue_lat, b.venue_lon));
       const hdr = document.getElementById('disc-biz-hdr');
-      if (hdr) hdr.textContent = `📍 Within ${nearMeRadius}km`;
+      if (hdr) hdr.innerHTML = `<i class="ic ic-pin"></i>Within ${x(nearMeRadius)}km`;
     } else {
       const hdr = document.getElementById('disc-biz-hdr');
-      if (hdr) hdr.textContent = q ? `🔍 Results for "${x(q)}"` : '📍 Places near you';
+      if (hdr) hdr.innerHTML = q ? `<i class="ic ic-search"></i>Results for "${x(q)}"` : '<i class="ic ic-pin"></i>Places near you';
     }
 
     const dr = document.getElementById('disc-biz-row');
@@ -7792,7 +7888,7 @@ document.addEventListener('DOMContentLoaded', () => {
     : d === 0 ? 'Sunday chill? 🌿'
     : h >= 17 ? 'Midweek link-up? 🥂'
     : 'What’s the plan later? 🎶';
-  PulseMascot.mount(el, { size: 58, mood: late ? 'sleepy' : 'idle', side: 'left' }).say(line, 7000);
+  PulseMascot.mount(el, { size: 46, mood: late ? 'sleepy' : 'idle', side: 'left' }).say(line, 7000);
 });
 
 /* ══════════════════════════════════════════════════
@@ -7860,12 +7956,13 @@ window.addEventListener('DOMContentLoaded', () => {
   else triggerRev();
 
   // ?lumi=1 (Pulse button on /feeds) opens Lumi; ?q= picks a preset starter question;
-  // from=feeds sends the user back there when they close Lumi.
+  // from=feeds|profile sends the user back there when they close Lumi (fixed map — no other values).
   const _lq = new URLSearchParams(location.search);
   if (_lq.get('lumi') === '1') {
     const _starters = { tonight: "What's on tonight near me?", weekend: 'What should I do this weekend?', shisanyama: 'Find me a good shisanyama', free: 'Any free events coming up?' };
     const _starter = Object.prototype.hasOwnProperty.call(_starters, _lq.get('q') || '') ? _starters[_lq.get('q')] : null;
-    window._lumiReturn = _lq.get('from') === 'feeds' ? '/feeds' : null;
+    const _returns = { feeds: '/feeds', profile: '/user-profile' };
+    window._lumiReturn = Object.prototype.hasOwnProperty.call(_returns, _lq.get('from') || '') ? _returns[_lq.get('from')] : null;
     const _u = new URL(location.href); ['lumi', 'q', 'from'].forEach(k => _u.searchParams.delete(k));
     history.replaceState(history.state, '', _u.pathname + _u.search + _u.hash);
     openLumiDiscovery();
