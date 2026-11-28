@@ -885,6 +885,7 @@ select.inp option{background:#1C1140}
     <div class="sn-handle"></div>
     <div class="sn-head"><div class="sn-title">💎 Upgrade to Premium</div><button class="sn-close" aria-label="Close" onclick="closeOrgSheet('org-upgrade-sheet')">✕</button></div>
     <div class="sn-body" style="padding-bottom:40px">
+      <div role="note" style="display:flex;gap:10px;align-items:flex-start;background:rgba(255,193,7,.14);border:1.5px solid #FFC107;border-radius:12px;padding:11px 13px;margin:0 0 14px;font-size:.8rem;line-height:1.45;color:var(--tx)"><span aria-hidden="true" style="font-size:1.15rem;line-height:1">🧪</span><div><b style="color:#FFC107;letter-spacing:.04em">BETA · PAYMENTS NOT ACCEPTED</b><br>Pulsefy is still in testing. No money is taken and nothing here is a real payment.</div></div>
       <div style="text-align:center;padding:20px 0 16px;background:linear-gradient(135deg,rgba(176,38,255,.15),rgba(255,92,0,.1));border-radius:16px;margin-bottom:18px;border:1px solid rgba(176,38,255,.2)">
         <div style="font-size:2rem;margin-bottom:4px">💎</div>
         <div style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.06em">ORGANIZER PREMIUM</div>
@@ -899,9 +900,8 @@ select.inp option{background:#1C1140}
         <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Priority support</div><div style="font-size:.71rem;color:var(--mu)">Faster response from the Pulsefy team</div></div></div>
         <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Lumi AI Assistant</div><div style="font-size:.71rem;color:var(--mu)">AI handles customer questions & sells tickets while you sleep</div></div></div>
       </div>
-      <div style="background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.3);border-radius:12px;padding:10px 12px;font-size:.76rem;color:var(--tx);margin-bottom:12px">🚧 Beta: payments aren't live yet, so no real payments are taken. Premium opens when payments go live.</div>
-      <button class="btn-primary" style="width:100%;padding:15px;font-size:.92rem" id="org-pay-btn" onclick="startOrgPayment()">Pay R220/month · Activate Premium 🚀</button>
-      <div id="org-pay-msg" style="text-align:center;font-size:.68rem;color:var(--mu);margin-top:10px">🔒 Secured by Paystack · Cancel anytime · Monthly billing</div>
+      <button class="btn-primary" style="width:100%;padding:15px;font-size:.92rem;opacity:.55;cursor:not-allowed" id="org-pay-btn" disabled>Payments not accepted yet · Beta</button>
+      <div id="org-pay-msg" style="text-align:center;font-size:.68rem;color:var(--mu);margin-top:10px">Premium opens when payments go live. Nothing is charged.</div>
     </div>
   </div>
 </div>
