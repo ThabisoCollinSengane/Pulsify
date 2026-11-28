@@ -308,15 +308,18 @@ module.exports = async (req, res) => {
       const auth = await authUser(req);
       if (!auth) return res.status(401).json({ error: 'Unauthorized' });
 
-      const { data: existing } = await sb().from('businesses').select('owner_id').eq('id', bizId).single();
+      const { data: existing } = await sb().from('businesses').select('owner_id,gallery_urls').eq('id', bizId).single();
       if (!existing) return res.status(404).json({ error: 'Business not found' });
       if (existing.owner_id !== auth.user.id) return res.status(403).json({ error: 'Not your business' });
 
       // Whitelisted owner-editable fields only (never owner_id, is_verified, rating, …).
       const body = req.body || {};
       const has  = k => Object.prototype.hasOwnProperty.call(body, k);
-      const IMG_PREFIX = 'https://cjzewfvtdayjgjdpdmln.supabase.co/storage/v1/object/public/';
-      const isImg = s => typeof s === 'string' && s.startsWith(IMG_PREFIX) && s.length <= 500 && !/\s/.test(s);
+      // New images must be dashboard uploads (public `uploads` bucket); no path tricks.
+      const IMG_PREFIX = 'https://cjzewfvtdayjgjdpdmln.supabase.co/storage/v1/object/public/uploads/';
+      const isImg = s => typeof s === 'string' && s.startsWith(IMG_PREFIX) && s.length <= 500 && !/\s|\.\.|%2e/i.test(s);
+      // Photos already on the listing (older imports) may stay even if hosted elsewhere.
+      const oldGallery = (() => { const g = existing.gallery_urls; try { return Array.isArray(g) ? g : JSON.parse(g || '[]'); } catch { return []; } })();
       const update = {};
       const bad = msg => res.status(400).json({ error: msg });
 
@@ -361,7 +364,7 @@ module.exports = async (req, res) => {
       }
       if (has('gallery_urls')) {
         if (!Array.isArray(body.gallery_urls)) return bad('gallery_urls must be an array');
-        if (!body.gallery_urls.every(isImg)) return bad('gallery_urls must only contain uploaded Pulsify images');
+        if (!body.gallery_urls.every(u => isImg(u) || oldGallery.includes(u))) return bad('gallery_urls must only contain uploaded Pulsify images');
         const g = [...new Set(body.gallery_urls)];
         if (g.length > 12) return bad('gallery_urls can hold at most 12 photos');
         update.gallery_urls = g;
