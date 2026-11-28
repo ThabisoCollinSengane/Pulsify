@@ -4281,6 +4281,7 @@ async function showPickupOrderForm() {
         <span style="font-size:.8rem;color:var(--mu2)">Total</span>
         <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.05rem;color:var(--or)">R${total.toFixed(2)}</span>
       </div>
+      <div style="font-size:.72rem;color:var(--mu2);text-align:center;margin:-2px 0 10px">No card is charged online. Pay the business when you collect your order.</div>
       <button onclick="submitPickupOrder('${x(bizId)}')" style="width:100%;background:linear-gradient(135deg,#B026FF,#CC4400);color:#fff;border:none;padding:14px;border-radius:13px;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer">Confirm Order →</button>
     </div>`;
   document.body.appendChild(ov);
@@ -4392,7 +4393,8 @@ function showOrderConfirmation(orderRef, bizName, total, items) {
       </div>
       <div style="font-size:.78rem;color:var(--mu2);margin-bottom:4px">Show this QR at <strong style="color:var(--tx)">${x(bizName)}</strong> to collect.</div>
       <div style="font-family:monospace;font-size:.72rem;color:var(--mu);margin-bottom:6px">Ref: ${x(orderRef)}</div>
-      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;color:var(--or);margin-bottom:18px">R${(+total || 0).toFixed(2)}</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;color:var(--or);margin-bottom:4px">R${(+total || 0).toFixed(2)}</div>
+      <div style="font-size:.72rem;color:var(--mu2);margin-bottom:16px">Pay at pickup. Nothing was charged online.</div>
       <button onclick="goToMyOrders()" style="width:100%;background:var(--surf);border:1px solid var(--border2);color:var(--tx);padding:12px;border-radius:12px;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;margin-bottom:8px">View in My Orders →</button>
       <button onclick="this.closest('#order-confirm-overlay').remove()" style="width:100%;background:linear-gradient(135deg,#B026FF,#CC4400);color:#fff;border:none;padding:13px;border-radius:12px;font-family:'Syne',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer">Done</button>
     </div>`;
