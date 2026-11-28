@@ -2805,14 +2805,29 @@ async function deleteMenuItem(id, btn) {
 // ════════════════════════════════════════════════════════════
 //  PICKUP HOURS
 // ════════════════════════════════════════════════════════════
+// The listing's id in `businesses` (getBizId() is the owner's user id, which only
+// matches for some listings). PATCH/GET /api/businesses/:id need the real id.
+async function _ownBizId() {
+  if (_pfBiz?.id) return _pfBiz.id;
+  try {
+    const sb = getSB();
+    const { data: { session } } = sb ? await sb.auth.getSession() : { data: { session: null } };
+    if (!session) return null;
+    const { data } = await sb.from('businesses').select('id').eq('owner_id', session.user.id).limit(1).maybeSingle();
+    return data?.id || null;
+  } catch (_) { return null; }
+}
+
 async function renderHoursEditor() {
   const defHours = DAYS.map(d => ({ day:d, open:d!=='Sunday', from:'10:00', to:'18:00' }));
   let hours = defHours;
   try {
-    const r = await fetch('/api/businesses/' + getBizId());
-    if (r.ok) {
+    const id = await _ownBizId();
+    const r = id ? await fetch('/api/businesses/' + encodeURIComponent(id)) : null;
+    if (r?.ok) {
       const { business } = await r.json();
-      if (Array.isArray(business?.hours) && business.hours.length) hours = business.hours;
+      // Only the editor's own {day, open, from, to} shape; seeded "Mon-Fri" rows start from defaults
+      if (Array.isArray(business?.hours) && business.hours.length && business.hours.every(h => h && DAYS.includes(h.day))) hours = business.hours;
     }
   } catch(_) {}
   document.getElementById('hours-editor').innerHTML = hours.map((h, i) => `
@@ -2838,7 +2853,9 @@ async function saveHours() {
   const sb = getSB();
   const { data: { session } } = sb ? await sb.auth.getSession() : { data: { session: null } };
   if (!session) return toast('Session expired — please sign in again', 'err');
-  const r = await fetch('/api/businesses/' + getBizId(), {
+  const bizId = await _ownBizId();
+  if (!bizId) return toast("Your public listing isn't set up yet — contact support.", 'err');
+  const r = await fetch('/api/businesses/' + encodeURIComponent(bizId), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
     body: JSON.stringify({ hours }),
