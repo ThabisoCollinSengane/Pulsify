@@ -110,7 +110,16 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .verified-pill .puls-badge::after{font-size:7px}
 .verified-pill .verified-txt{font-family:'Syne',sans-serif;font-size:.44rem;font-weight:700;letter-spacing:.04em;color:#FF5C00;text-transform:uppercase;line-height:1;opacity:.85}
 @keyframes puls-glow{0%,100%{box-shadow:0 0 6px rgba(255,92,0,.7),0 0 12px rgba(255,45,120,.4)}50%{box-shadow:0 0 12px rgba(255,92,0,1),0 0 24px rgba(255,45,120,.8)}}
-.fab{position:fixed;bottom:calc(var(--bh) + 14px);right:16px;z-index:200;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:1.2rem;cursor:pointer;box-shadow:0 4px 18px rgba(176,38,255,.4);display:flex;align-items:center;justify-content:center}
+#pulse-fab{position:fixed;bottom:calc(var(--bh) + 6px);right:10px;z-index:200}
+#pulse-fab .pm-say{display:none!important}
+.pf-menu{position:fixed;right:12px;bottom:calc(var(--bh) + 84px);z-index:201;width:min(280px,calc(100vw - 24px));background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:12px;box-shadow:0 14px 40px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:6px;transform-origin:bottom right;animation:pfIn .22s cubic-bezier(.3,1.4,.5,1)}
+.pf-menu[hidden]{display:none}
+.pf-hd{font-family:'Syne',sans-serif;font-weight:800;font-size:.9rem;line-height:1.3;padding:2px 4px 6px}
+.pf-sub{font-family:'DM Sans',sans-serif;font-size:.74rem;font-weight:500;color:var(--mu);margin-top:2px}
+.pf-menu a,.pf-menu button{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border-radius:12px;background:var(--surf);border:1px solid var(--border);color:var(--tx);font:600 .86rem 'DM Sans',sans-serif;text-decoration:none;text-align:left;cursor:pointer}
+.pf-menu a:active,.pf-menu button:active{border-color:var(--or)}
+@keyframes pfIn{from{opacity:0;transform:scale(.85) translateY(8px)}}
+@media (prefers-reduced-motion:reduce){.pf-menu{animation:none}}
 .co{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(10px);z-index:1200;display:none;align-items:flex-end;justify-content:center}
 .co.open{display:flex}
 .cs{width:100%;max-width:520px;background:var(--bg2);border-radius:22px 22px 0 0;border:1px solid rgba(255,255,255,.1);border-bottom:none;animation:su .25s ease;display:flex;flex-direction:column;max-height:85vh;overflow-y:auto}
@@ -216,7 +225,17 @@ textarea.ff-c{resize:none;height:80px;line-height:1.55}
 
 <div class="feed" id="feed"></div>
 
-<button class="fab" onclick="openCompose()" title="Share a post">✏️</button>
+<!-- Pulse helper: tap the mascot for quick Lumi questions (opened on the home app) or to post -->
+<div id="pulse-fab" data-pulse-mascot="idle" data-size="60"></div>
+<div class="pf-menu" id="pf-menu" hidden>
+  <div class="pf-hd">Hey, I'm Pulse 👋 What's the plan?<div class="pf-sub">Lumi, our AI guide, will sort you out</div></div>
+  <a href="/?lumi=1&amp;q=tonight&amp;from=feeds">🔥 What's on tonight?</a>
+  <a href="/?lumi=1&amp;q=weekend&amp;from=feeds">🎉 Plans for this weekend</a>
+  <a href="/?lumi=1&amp;q=shisanyama&amp;from=feeds">🍖 Find a shisanyama</a>
+  <a href="/?lumi=1&amp;q=free&amp;from=feeds">🎟 Free events</a>
+  <a href="/?lumi=1&amp;from=feeds">✨ Ask my own question</a>
+  <button type="button" onclick="_pfToggle(false);openCompose()">📝 Share a post</button>
+</div>
 
 <!-- Same 5 tabs as the home app (index.html); ?tab= opens that tab there -->
 <nav class="bn">
@@ -1657,6 +1676,16 @@ async function submitReportPost() {
     b.disabled = false; b.textContent = 'Submit Report';
   }
 }
+
+/* Pulse helper button (replaces the old pen button) */
+function _pfToggle(open) {
+  const m = document.getElementById('pf-menu'); if (!m) return;
+  m.hidden = !(open ?? m.hidden);
+  const b = document.querySelector('#pulse-fab .pm'); if (b) b.setAttribute('aria-expanded', String(!m.hidden));
+}
+document.getElementById('pulse-fab').addEventListener('click', () => _pfToggle());
+document.addEventListener('click', e => { if (!e.target.closest('#pulse-fab,#pf-menu')) _pfToggle(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') _pfToggle(false); });
 </script>
 
 <!-- REPORT POST MODAL -->
