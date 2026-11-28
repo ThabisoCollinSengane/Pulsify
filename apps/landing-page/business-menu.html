@@ -123,6 +123,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:'DM S
     <div class="sheet-handle"></div>
     <div class="sheet-head"><div class="sheet-title">Checkout</div><button class="sheet-close" onclick="closeSheet('checkout-sheet')">✕</button></div>
     <div class="sheet-body">
+      <div role="note" style="display:flex;gap:10px;align-items:flex-start;background:rgba(255,193,7,.14);border:1.5px solid #FFC107;border-radius:12px;padding:11px 13px;margin:0 0 14px;font-size:.8rem;line-height:1.45;color:var(--tx)"><span aria-hidden="true" style="font-size:1.15rem;line-height:1">🧪</span><div><b style="color:#FFC107;letter-spacing:.04em">BETA · PAYMENTS NOT ACCEPTED</b><br>Pulsefy is still in testing. No money is taken and nothing here is a real payment.</div></div>
       <div class="order-summary" id="order-summary-display"></div>
       <label class="ff-label">Your Name *</label>
       <input class="ff" type="text" id="co-name" placeholder="Full name" autocomplete="name"/>

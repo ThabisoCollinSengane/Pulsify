@@ -3251,6 +3251,7 @@ async function openEv(evId) {
     let tkHTML = '';
     if (tiers.length) {
       tkHTML = `<div class="tkb"><div class="tkt2">🎟 Select Tickets</div>
+        ${!iF && !_paidTicketsLive ? _BETA_PAY_NOTE : ''}
         ${tiers.map((t, i) => `<div class="tier ${i === 0 && !t.sold_out ? 'sel' : ''}" onclick="selT(this,'${x(ev.id)}',${i})" ${t.sold_out ? 'style="opacity:.5;cursor:not-allowed"' : ''}>
           <div><div class="tn">${x(t.name)}${t.sold_out ? ' <span style="color:var(--pk);font-size:.64rem">(Sold Out)</span>' : ''}</div>
           <div class="tav">${t.sold_out ? '❌ Sold out' : (t.capacity ? '✅ ' + Math.max(0, t.capacity - (t.sold || 0)) + ' left' : '✅ Available')}</div></div>
@@ -3526,6 +3527,7 @@ function startLumiBuy() {
   form.style.display = 'block';
   const hasEmail = currentUser?.email;
   form.innerHTML = `
+    ${_BETA_PAY_NOTE}
     <div style="font-size:.8rem;color:var(--mu);margin-bottom:8px">How many tickets?</div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
       <button onclick="if(_lumiBuyQty>1)_lumiBuyQty--;document.getElementById('lumi-qty-display').textContent=_lumiBuyQty" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--surf);color:var(--tx);font-size:1.1rem;cursor:pointer">−</button>
@@ -3828,6 +3830,9 @@ function _bizArr(v) {
 }
 // Only plain http(s) URLs are allowed into href/src
 function _httpUrl(u) { u = typeof u === 'string' ? u.trim() : ''; return /^https?:\/\/[^\s<>"']+$/i.test(u) ? u : ''; }
+
+// Beta: shown at the top of every checkout so nobody thinks a real payment is happening.
+const _BETA_PAY_NOTE = '<div role="note" style="display:flex;gap:10px;align-items:flex-start;background:rgba(255,193,7,.14);border:1.5px solid #FFC107;border-radius:12px;padding:11px 13px;margin:0 0 14px;font-size:.8rem;line-height:1.45;color:var(--tx);text-align:left"><span aria-hidden="true" style="font-size:1.15rem;line-height:1">🧪</span><div><b style="color:#FFC107;letter-spacing:.04em">BETA · PAYMENTS NOT ACCEPTED</b><br>Pulsefy is still in testing. No money is taken and nothing here is a real payment.</div></div>';
 
 /* Opening hours. Two row formats exist:
    seeded:    {day:'Mon-Fri', time:'11:00-Late', open:true}
@@ -4241,6 +4246,7 @@ function _renderCartPreview() {
           </div>`).join('')}
       </div>
       <div class="cp-foot">
+        ${_BETA_PAY_NOTE}
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
           <span style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;color:var(--mu2)">Total</span>
           <span style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--or)">R${total.toFixed(2)}</span>
@@ -4272,6 +4278,7 @@ async function showPickupOrderForm() {
       <div style="width:40px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 14px"></div>
       <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.04em;margin-bottom:4px">📦 Pickup Order</div>
       <div style="font-size:.72rem;color:var(--mu2);margin-bottom:14px">${x(bizName)} · ${x(summary)}</div>
+      ${_BETA_PAY_NOTE}
       <input id="po-name"  placeholder="Your name *" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;color:var(--tx);font-size:.84rem;margin-bottom:8px;box-sizing:border-box;outline:none"/>
       <input id="po-phone" placeholder="Phone number *" type="tel" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;color:var(--tx);font-size:.84rem;margin-bottom:8px;box-sizing:border-box;outline:none"/>
       <input id="po-email" placeholder="Email (for your confirmation)" type="email" autocomplete="email" style="width:100%;background:var(--surf);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;color:var(--tx);font-size:.84rem;margin-bottom:8px;box-sizing:border-box;outline:none"/>
