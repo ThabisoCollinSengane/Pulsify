@@ -48,11 +48,24 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .cr::-webkit-scrollbar{display:none}
 .chip{flex-shrink:0;min-height:44px;display:inline-flex;align-items:center;padding:6px 14px;border-radius:50px;border:1px solid var(--border);background:rgba(255,255,255,.02);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--mu);cursor:pointer;transition:all .2s;white-space:nowrap;-webkit-tap-highlight-color:transparent}
 .chip.active{border-color:var(--or);color:var(--or);background:rgba(255,92,0,.09)}
+/* Line icons for the filter chips — CSS masks over inline SVG, so they take currentColor
+   (1.8 stroke, round caps, same set as the home page). Emoji stay in posts. */
+.ic{display:inline-block;width:15px;height:15px;flex-shrink:0;margin-right:.45em;background:currentColor;-webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat}
+.ic-spark{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z'/%3E%3C/svg%3E")}
+.ic-users{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='8' r='3.2'/%3E%3Cpath d='M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 4.5a3.2 3.2 0 010 7M18 14.2c1.8.8 3 2.7 3 5.8'/%3E%3C/svg%3E")}
+.ic-trend{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 17l6-6 4 4 8-8'/%3E%3Cpath d='M15 7h6v6'/%3E%3C/svg%3E")}
+.ic-mega{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 10v4l12 5V5z'/%3E%3Cpath d='M8 15.6V19a1.5 1.5 0 003 0v-2.3M20 10v4'/%3E%3C/svg%3E")}
+.ic-user{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8'/%3E%3C/svg%3E")}
+.ic-speaker{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 9v6h4l5 4V5L8 9z'/%3E%3Cpath d='M16.5 8.5a5 5 0 010 7M19 6a8.5 8.5 0 010 12'/%3E%3C/svg%3E")}
+.ic-piano{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='16' rx='2'/%3E%3Cpath d='M7.5 4v8h2V4M14.5 4v8h2V4M12 12v8'/%3E%3C/svg%3E")}
+.ic-globe{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18'/%3E%3C/svg%3E")}
+.ic-tent{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 20h20M4 20L12 5l8 15M9.5 20l2.5-5 2.5 5'/%3E%3C/svg%3E")}
+.ic-trophy{--ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 4h10v5a5 5 0 01-10 0z'/%3E%3Cpath d='M7 6H4a3 3 0 003 4M17 6h3a3 3 0 01-3 4M12 14v4M8 21h8M9.5 18h5'/%3E%3C/svg%3E")}
 .feed{position:fixed;top:calc(var(--th) + 53px);left:0;right:0;bottom:var(--bh);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:76px}
 .feed::-webkit-scrollbar{display:none}
 .fc{margin:0 0 2px;border-bottom:1px solid var(--border);background:var(--surf);cursor:default;-webkit-tap-highlight-color:transparent}
 .fh{display:flex;align-items:center;gap:10px;padding:12px 14px 8px}
-.fa{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;border:1.5px solid var(--border);overflow:hidden;background:linear-gradient(135deg,#B026FF,#FF5C00)}
+.fa{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;border:1.5px solid var(--border);overflow:hidden;background:linear-gradient(135deg,#B026FF,#CC4400)}
 .fa img{width:100%;height:100%;object-fit:cover}
 .fa.org{border-color:rgba(255,92,0,.6)}
 .fo{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;line-height:1.2;display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap}
@@ -90,7 +103,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .ci{flex:1;background:var(--surf);border:1px solid var(--border);border-radius:50px;padding:8px 14px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none;transition:border-color .2s}
 .ci:focus{border-color:var(--or)!important}
 .ci::placeholder{color:var(--mu)}
-.csnd{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;color:#fff;font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.csnd{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#CC4400);border:none;color:#fff;font-size:.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .cmt-reply-btn{background:none;border:none;color:var(--mu);font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.04em;cursor:pointer;padding:2px 0;margin-top:3px}
 .cmt-reply-btn:hover{color:var(--or)}
 .cmt-like-btn{background:none;border:none;color:var(--mu);font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;cursor:pointer;padding:2px 4px;display:inline-flex;align-items:center;gap:2px;line-height:1}
@@ -211,16 +224,16 @@ textarea.ff-c{resize:none;height:80px;line-height:1.55}
 </div>
 
 <div class="cr">
-  <button class="chip active" onclick="setFilter(this,'all')">✦ All</button>
-  <button class="chip" onclick="setFilter(this,'following')">👥 Following</button>
-  <button class="chip" onclick="setFilter(this,'trending')">🔥 Trending</button>
-  <button class="chip" onclick="setFilter(this,'organizers')">📢 Organisers</button>
-  <button class="chip" onclick="setFilter(this,'fans')">👤 Fan Posts</button>
-  <button class="chip" onclick="setFilter(this,'gqom')">🎵 Gqom</button>
-  <button class="chip" onclick="setFilter(this,'amapiano')">🎹 Amapiano</button>
-  <button class="chip" onclick="setFilter(this,'afrobeats')">🌍 Afrobeats</button>
-  <button class="chip" onclick="setFilter(this,'festival')">🎪 Festivals</button>
-  <button class="chip" onclick="setFilter(this,'sport')">🏆 Sport</button>
+  <button class="chip active" onclick="setFilter(this,'all')"><i class="ic ic-spark"></i>All</button>
+  <button class="chip" onclick="setFilter(this,'following')"><i class="ic ic-users"></i>Following</button>
+  <button class="chip" onclick="setFilter(this,'trending')"><i class="ic ic-trend"></i>Trending</button>
+  <button class="chip" onclick="setFilter(this,'organizers')"><i class="ic ic-mega"></i>Organisers</button>
+  <button class="chip" onclick="setFilter(this,'fans')"><i class="ic ic-user"></i>Fan Posts</button>
+  <button class="chip" onclick="setFilter(this,'gqom')"><i class="ic ic-speaker"></i>Gqom</button>
+  <button class="chip" onclick="setFilter(this,'amapiano')"><i class="ic ic-piano"></i>Amapiano</button>
+  <button class="chip" onclick="setFilter(this,'afrobeats')"><i class="ic ic-globe"></i>Afrobeats</button>
+  <button class="chip" onclick="setFilter(this,'festival')"><i class="ic ic-tent"></i>Festivals</button>
+  <button class="chip" onclick="setFilter(this,'sport')"><i class="ic ic-trophy"></i>Sport</button>
 </div>
 
 <div class="feed" id="feed"></div>
@@ -263,7 +276,7 @@ textarea.ff-c{resize:none;height:80px;line-height:1.55}
       <textarea class="ff-c" id="post-caption" placeholder="What's the vibe? Share an event check-in, photo caption, or anything on your mind…" maxlength="500" style="height:96px"></textarea>
 
       <div id="user-posting-note" style="display:none;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:10px 13px;font-size:.74rem;color:var(--mu2);line-height:1.5;margin-bottom:10px">
-        Share a vibe, photo, event check-in or anything on your mind. Your post shows up in the Community feed for all Pulsefy users to see.
+        Share a vibe, photo, event check-in or anything on your mind. Your post shows up in the Community feed for all Pulsefy users to see.<br>📍 Photos can only be shared while you're at a venue or event listed on Pulsefy — we check your location once and don't save it.
       </div>
 
       <!-- Organizer/business-only: dedicated text-only section -->
@@ -1089,7 +1102,7 @@ async function openFlList(userId, type) {
     body.innerHTML = list.map(p => {
       const init  = (p.display_name||p.username||'?')[0].toUpperCase();
       const isOrg = ['organizer','business'].includes(p.role);
-      const grad  = isOrg ? 'linear-gradient(135deg,#FF5C00,#FF2D78)' : 'linear-gradient(135deg,#B026FF,#FF5C00)';
+      const grad  = isOrg ? 'linear-gradient(135deg,#FF5C00,#FF2D78)' : 'linear-gradient(135deg,#B026FF,#CC4400)';
       const vbadge = p.is_verified ? '<span class="puls-badge" title="Verified by Pulsefy" style="width:11px;height:11px;margin-left:3px"></span>' : '';
       const av   = p.avatar_url ? '<img src="' + x(p.avatar_url) + '" style="width:100%;height:100%;object-fit:cover">' : init;
       const onClickStr = 'document.getElementById(\u0027fl-overlay\u0027).style.display=\u0027none\u0027;openProfile(\u0027' + x(p.id) + '\u0027)';
@@ -1132,10 +1145,10 @@ async function openProfile(userId) {
     body.innerHTML =
       '<div style="height:60px;background:linear-gradient(135deg,rgba(176,38,255,.3),rgba(255,92,0,.2));border-radius:12px;margin-bottom:-28px"></div>' +
       '<div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:12px">' +
-        '<div style="width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#FF5C00);display:flex;align-items:center;justify-content:center;font-size:1.7rem;border:3px solid var(--bg2);overflow:hidden">' +
+        '<div style="width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#B026FF,#CC4400);display:flex;align-items:center;justify-content:center;font-size:1.7rem;border:3px solid var(--bg2);overflow:hidden">' +
           (profile.avatar_url ? '<img src="'+x(profile.avatar_url)+'" style="width:100%;height:100%;object-fit:cover"/>' : init) +
         '</div>' +
-        (_uid && _uid !== userId ? '<button id="po-follow-btn" onclick="doFollowOverlay(\u0027'+x(userId)+'\u0027)" style="background:'+(isFollowing?'transparent':'linear-gradient(135deg,#B026FF,#FF5C00)')+';border:'+(isFollowing?'1px solid var(--border2)':'none')+';color:'+(isFollowing?'var(--mu2)':'#fff')+';padding:8px 18px;border-radius:50px;font-family:\u0027Syne\u0027,sans-serif;font-size:.74rem;font-weight:700;cursor:pointer;align-self:flex-end;margin-bottom:4px">'+(isFollowing?'\u2713 Following':'+ Follow')+'</button>' : '') +
+        (_uid && _uid !== userId ? '<button id="po-follow-btn" onclick="doFollowOverlay(\u0027'+x(userId)+'\u0027)" style="background:'+(isFollowing?'transparent':'linear-gradient(135deg,#B026FF,#CC4400)')+';border:'+(isFollowing?'1px solid var(--border2)':'none')+';color:'+(isFollowing?'var(--mu2)':'#fff')+';padding:8px 18px;border-radius:50px;font-family:\u0027Syne\u0027,sans-serif;font-size:.74rem;font-weight:700;cursor:pointer;align-self:flex-end;margin-bottom:4px">'+(isFollowing?'\u2713 Following':'+ Follow')+'</button>' : '') +
       '</div>' +
       '<div style="font-family:\u0027Bebas Neue\u0027,sans-serif;font-size:1.5rem;line-height:1;margin-bottom:2px">'+x(profile.display_name||profile.username)+'</div>' +
       '<div style="font-size:.74rem;color:var(--mu);margin-bottom:'+(profile.bio?'8px':'10px')+'">@'+x(profile.username||'user')+(profile.city?' · '+x(profile.city):'')+(isOrg?' · <span style="color:var(--or)">'+profile.role+'</span>':'')+'</div>' +
@@ -1167,7 +1180,7 @@ async function doFollowOverlay(targetId) {
     });
     if (!res.ok) throw new Error((await res.json()).error || 'Failed');
     if (isF) {
-      if (btn) { btn.textContent = '+ Follow'; btn.style.background = 'linear-gradient(135deg,#B026FF,#FF5C00)'; btn.style.border = 'none'; btn.style.color = '#fff'; }
+      if (btn) { btn.textContent = '+ Follow'; btn.style.background = 'linear-gradient(135deg,#B026FF,#CC4400)'; btn.style.border = 'none'; btn.style.color = '#fff'; }
       showToast('Unfollowed');
     } else {
       if (btn) { btn.textContent = '\u2713 Following'; btn.style.background = 'transparent'; btn.style.border = '1px solid var(--border2)'; btn.style.color = 'var(--mu2)'; }
@@ -1259,6 +1272,20 @@ function handleImg(input) {
   };
   reader.readAsDataURL(file);
 }
+// Photo posts: the server checks the user is within 150 m of a listed venue/event.
+// Location is read once for that check and never stored.
+function _postLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error("this browser can't share your location, so photos can't be posted from here."));
+    navigator.geolocation.getCurrentPosition(
+      p => resolve({ lat: p.coords.latitude, lon: p.coords.longitude, accuracy: Math.round(p.coords.accuracy || 0) }),
+      e => reject(new Error(e.code === 1
+        ? "allow location so we can check you're at the venue. Photos can only be shared from a venue or event on Pulsefy."
+        : "we couldn't get your location. Try again in a moment.")),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
+  });
+}
+
 async function submitPost() {
   const isOrg    = ['organizer','business','admin'].includes(_session?.role);
   const caption  = document.getElementById('post-caption').value.trim();
@@ -1278,6 +1305,14 @@ async function submitPost() {
   let imageUrl = null;
 
   try {
+    // New photo: get the location first, before uploading anything
+    let geo = null;
+    if (_cImg && _cImgFile && sb && _uid) {
+      btn.textContent = "Checking you're at the venue…";
+      try { geo = await _postLocation(); }
+      catch (e) { if (!isOrg) throw e; }   // pages/organisers may be exempt — the server decides
+      btn.textContent = _editingPostId ? 'Saving…' : 'Sharing…';
+    }
     if (_cImg && _cImgFile && sb && _uid) {
       const _cf  = await compressImage(_cImgFile);
       const ext  = _cf.name.split('.').pop() || 'jpg';
@@ -1300,14 +1335,14 @@ async function submitPost() {
         // Only send image_url when a new photo was picked — otherwise a
         // multi-photo post (JSON array) would be cut down to its first photo
         const patch = { caption: finalCap, event_name: evName || null };
-        if (_cImgFile) patch.image_url = imageUrl;
+        if (_cImgFile) Object.assign(patch, { image_url: imageUrl }, geo || {});
         const res = await fetch('/api/posts/' + encodeURIComponent(_editingPostId), {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') },
           body: JSON.stringify(patch),
         });
         const data = await safeJson(res);
-        if (!res.ok) throw new Error(data.error || 'Could not save changes');
+        if (!res.ok) throw new Error(data.message || data.error || 'Could not save changes');
       }
       const ep = _posts.find(p => p.id === _editingPostId);
       if (ep) { ep.caption = finalCap; if (_cImgFile) ep.image_url = imageUrl; ep.event_name = evName || null; }
@@ -1319,14 +1354,14 @@ async function submitPost() {
       const res = await fetch('/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') },
-        body: JSON.stringify({ caption: finalCap, image_url: imageUrl, event_name: evName || null, post_type }),
+        body: JSON.stringify({ caption: finalCap, image_url: imageUrl, event_name: evName || null, post_type, ...(geo || {}) }),
       });
       const data = await safeJson(res);
       // Show the real error and keep the composer open (catch below)
       if (!res.ok || !data.post) throw new Error(data.message || data.error || ('HTTP ' + res.status));
       _posts.unshift({ id: data.post.id, user_id: _uid, username: uname, display_name: name,
         role: _session?.role||'user', avatar_url: _profile?.avatar_url||null,
-        event_name: evName||null, image_url: imageUrl, caption: finalCap,
+        event_name: data.post.event_name ?? (evName||null), image_url: imageUrl, caption: finalCap,
         likes:[], comments:[], reposts:[], ts: data.post.created_at });
       closeCompose();
       _page = 1; render();
@@ -1708,7 +1743,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') _pfToggle(fa
     </select>
     <div style="font-size:.76rem;color:var(--mu);margin-bottom:6px">Additional details <span style="color:var(--mu)">(optional)</span></div>
     <textarea id="rp-detail" rows="3" placeholder="Tell us more..." style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--tx);font-size:.84rem;resize:none;outline:none;box-sizing:border-box"></textarea>
-    <button id="rp-submit" onclick="submitReportPost()" style="width:100%;margin-top:14px;padding:13px;background:linear-gradient(135deg,#B026FF,#FF5C00);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Submit Report</button>
+    <button id="rp-submit" onclick="submitReportPost()" style="width:100%;margin-top:14px;padding:13px;background:linear-gradient(135deg,#B026FF,#CC4400);border:none;border-radius:50px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer">Submit Report</button>
   </div>
 </div>
 
