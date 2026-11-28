@@ -2128,6 +2128,7 @@ function goHome() { showTab('home'); }
 window.addEventListener('popstate', e => {
   // Lightbox closed with ✕/Esc already hid itself and stepped back off its own entry
   if (window._bizLbSkipPop) { window._bizLbSkipPop = false; return; }
+  if (window._locSkipPop) { window._locSkipPop = false; return; }
   // Lumi opened from the Pulse button on /feeds: back returns there
   if (window._lumiReturn && document.getElementById('lumi-chat-sheet')?.style.display === 'flex') { location.href = window._lumiReturn; return; }
   // Priority 1 — close any open overlay/panel; keep user on current tab
@@ -2935,12 +2936,17 @@ function onCityChange(v) {
 // Location pill (search row) ⇄ bottom sheet holding #sel-province / #sel-city
 function openLocSheet() {
   const s = document.getElementById('loc-sheet'); if (!s) return;
+  if (s.style.display === 'flex') return;
   s.style.display = 'flex';
+  // Own history entry so Android back closes the sheet without eating the PWA exit sentinel
+  history.pushState({ tab: curTab, detail: false, loc: 1 }, '');
   document.getElementById('sel-province')?.focus();
 }
 function closeLocSheet() {
   const s = document.getElementById('loc-sheet'); if (!s || s.style.display === 'none') return;
   s.style.display = 'none';
+  // Closed with Done/Esc/backdrop: step back off the sheet's entry (popstate skips it)
+  if (history.state && history.state.loc) { window._locSkipPop = true; history.back(); }
   document.getElementById('loc-pill')?.focus({ preventScroll: true });
 }
 // Pill label follows the live filter (called from loadFeed, so ?city= links and Lumi links update it too)
