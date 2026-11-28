@@ -1268,11 +1268,13 @@ async function submitVerification() {
     if (!session) { showMsg('verif-msg', 'Please sign in first.', 'err'); return; }
     const uid = session.user.id;
     const facePath = `${uid}/face_${Date.now()}.jpg`;
-    await sb.storage.from('verification-docs').upload(facePath, _vfFaceScanBlob, { contentType: 'image/jpeg', upsert: true });
+    const { error: faceErr } = await sb.storage.from('verification-docs').upload(facePath, _vfFaceScanBlob, { contentType: 'image/jpeg', upsert: false });
+    if (faceErr) throw new Error('Face scan upload failed: ' + faceErr.message);
     const { data: { publicUrl: faceScanUrl } } = sb.storage.from('verification-docs').getPublicUrl(facePath);
     const ext = (_vfIdDocFile.name.split('.').pop() || 'jpg').toLowerCase();
     const idPath = `${uid}/id_doc_${Date.now()}.${ext}`;
-    await sb.storage.from('verification-docs').upload(idPath, _vfIdDocFile, { upsert: true });
+    const { error: idErr } = await sb.storage.from('verification-docs').upload(idPath, _vfIdDocFile, { upsert: false });
+    if (idErr) throw new Error('ID document upload failed: ' + idErr.message);
     const { data: { publicUrl: idDocUrl } } = sb.storage.from('verification-docs').getPublicUrl(idPath);
     const payload = {
       is_registered: _isRegistered,
@@ -1834,7 +1836,7 @@ async function renderStats() {
         const queries = [
           sb2.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', session.user.id),
           sb2.from('events').select('id', { count: 'exact', head: true }).eq('organiser_id', session.user.id),
-          sb2.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', session.user.id),
+          sb2.from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', session.user.id),
           bizId
             ? sb2.from('menu_items').select('id', { count: 'exact', head: true }).eq('business_id', bizId)
             : Promise.resolve({ count: 0 }),
@@ -1909,7 +1911,7 @@ async function renderAnalytics() {
     { data: recentOrders },
     { data: allOrders },
   ] = await Promise.all([
-    sb.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', uid),
+    sb.from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', uid),
     sb.from('posts').select('id,caption,image_url,like_count,comment_count,created_at').eq('user_id', uid).order('created_at', { ascending: false }).limit(20),
     sb.from('events').select('id,name,date_local,capacity,tickets_sold,attendance_count').eq('organiser_id', uid).order('date_local', { ascending: false }).limit(10),
     sb.from('pickup_orders').select('id,total,status,created_at').eq('business_id', bizId).gte('created_at', sevenDaysAgo.toISOString()).order('created_at', { ascending: false }),

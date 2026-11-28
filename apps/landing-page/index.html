@@ -818,7 +818,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
     <!-- ══ QUICK ACTIONS + VIBES — one chip row (id kept: browseVibe queries #vibe-chip-row .vibe-chip) ══ -->
     <div class="rd-chips" id="vibe-chip-row">
       <button class="rd-qbtn" onclick="homeQuick('tonight',this)"><i class="ic ic-moon"></i>Tonight</button>
-      <button class="rd-qbtn" onclick="browseCategory('free')"><i class="ic ic-tag"></i>Free</button>
+      <button class="rd-qbtn" onclick="browseCategory('free',this)"><i class="ic ic-tag"></i>Free</button>
       <button class="rd-qbtn" onclick="showTab('map')"><i class="ic ic-near"></i>Near you</button>
       <button class="rd-qbtn" onclick="homeQuick('weekend',this)"><i class="ic ic-cal"></i>This weekend</button>
       <span class="rd-div" aria-hidden="true"></span>
@@ -2440,8 +2440,8 @@ async function loadFeed(resetPage = false, append = false) {
       feedEl.innerHTML = `
         <div class="no-results">
           <div class="no-results-ico" data-pulse-mascot="sleepy" style="display:flex;justify-content:center">🎟</div>
-          <div class="no-results-title">No events found</div>
-          <div class="no-results-sub">Try a different city or genre</div>
+          <div class="no-results-title">${feedGenre === 'free' ? 'No free events right now' : 'No events found'}</div>
+          <div class="no-results-sub">${feedGenre === 'free' ? 'Free events show up here as soon as organisers list them. Tap Free again to see everything.' : 'Try a different city or genre'}</div>
           <button class="no-results-btn" onclick="feedCity='all';feedGenre='all';feedFrom='';feedTo='';_homeQuickActive=null;feedPage=1;document.querySelectorAll('.rd-qbtn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('#city-chip-row .chip,#genre-chip-row .chip-mini,#vibe-chip-row .vibe-chip').forEach(b=>b.classList.remove('active'));document.querySelector('#city-chip-row .chip')?.classList.add('active');document.querySelector('#genre-chip-row .chip-mini')?.classList.add('active');loadFeed(true)">Show All Events</button>
         </div>`;
       window.PulseMascot && PulseMascot.scan(feedEl);
@@ -2864,13 +2864,18 @@ function browseVibe(vibe, btn) {
 }
 let _homeQuickActive = null;
 function browseCategory(genre, btn) {
+  const wasActive = !!btn && btn.classList.contains('active') && genre !== 'all';
   document.querySelectorAll('#vibe-chip-row .vibe-chip').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('#genre-chip-row .chip-mini').forEach(b => b.classList.remove('active'));
+  _homeQuickActive = null;
+  document.querySelectorAll('.rd-qbtn').forEach(b => b.classList.remove('active')); // clear before highlighting, or the Free quick button loses its own highlight
+  feedFrom = ''; feedTo = '';
+  if (wasActive) { // tapping the active filter again turns it off
+    document.querySelector('#genre-chip-row .chip-mini[data-g="all"]')?.classList.add('active');
+    feedGenre = 'all'; loadFeed(true); return;
+  }
   if (btn) btn.classList.add('active');
   else { const c = document.querySelector('#genre-chip-row .chip-mini[data-g="' + genre + '"]'); if (c) c.classList.add('active'); }
-  _homeQuickActive = null;
-  document.querySelectorAll('.rd-qbtn').forEach(b => b.classList.remove('active'));
-  feedFrom = ''; feedTo = '';
   feedGenre = genre;
   loadFeed(true);
 }
@@ -9293,7 +9298,7 @@ async function uploadSquadAvatar(squadId, input) {
     const up   = await compressImage(file, 512);
     const ext  = (up.name.split('.').pop() || 'jpg').toLowerCase();
     const path = `squads/${squadId}/${Date.now()}.${ext}`;
-    const { error: upErr } = await sb.storage.from('avatars').upload(path, up, { upsert: true, contentType: up.type });
+    const { error: upErr } = await sb.storage.from('avatars').upload(path, up, { upsert: false, contentType: up.type });
     if (upErr) return showToast('Upload failed: ' + upErr.message, 'err');
     const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(path);
     try {
@@ -9509,18 +9514,18 @@ function obClose() {
 // Row click = navigate to the step; circle tap = mark done manually.
 const _CL_STEPS = {
   fan: [
-    { id:'photo',  label:'Add a profile photo',    desc:'Let friends recognise you',          href:'/profile-settings', icon:'🤳' },
-    { id:'city',   label:'Set your city',           desc:'See events near you',                href:'/profile-settings', icon:'📍' },
+    { id:'photo',  label:'Add a profile photo',    desc:'Let friends recognise you',          href:'/profile-settings#edit', icon:'🤳' },
+    { id:'city',   label:'Set your city',           desc:'See events near you',                href:'/profile-settings#account', icon:'📍' },
     { id:'squad',  label:'Find your first squad',   desc:'Connect with people at events',      tab:'discover',           icon:'👥' },
     { id:'save',   label:'Save an event',           desc:'Tap ♥ on any event to bookmark',    tab:'home',               icon:'🎟' },
   ],
   organizer: [
-    { id:'profile', label:'Complete your profile',  desc:'Add avatar, bio & city',             href:'/profile-settings', icon:'🎨' },
+    { id:'profile', label:'Complete your profile',  desc:'Add avatar, bio & city',             href:'/profile-settings#edit', icon:'🎨' },
     { id:'event',   label:'Create your first event',desc:'Takes under 3 minutes to go live',   href:'/organizer',        icon:'🎟' },
     { id:'share',   label:'Share your event link',  desc:'Post to socials & WhatsApp',         href:'/organizer',        icon:'📢' },
   ],
   business: [
-    { id:'profile', label:'Complete your profile',  desc:'Add logo, bio & city',               href:'/profile-settings', icon:'🎨' },
+    { id:'profile', label:'Complete your profile',  desc:'Add logo, bio & city',               href:'/profile-settings#edit', icon:'🎨' },
     { id:'listing', label:'Set up your listing',    desc:'Hours, photos & description',        href:'/business',         icon:'📍' },
     { id:'menu',    label:'Add your menu',           desc:'Let customers browse & order',       href:'/business',         icon:'🍽' },
   ],
@@ -9542,7 +9547,7 @@ async function startChecklist(role, userId) {
     if (sev.length) done.add('save');
     const sb = getSB();
     if (sb && !done.has('squad')) {
-      const { count } = await sb.from('follows').select('id', { count: 'exact', head: true }).eq('follower_id', userId);
+      const { count } = await sb.from('follows').select('follower_id', { count: 'exact', head: true }).eq('follower_id', userId);
       if (count > 0) done.add('squad');
     }
     if (effectiveRole === 'organizer' && sb) {

@@ -237,6 +237,12 @@ A static `#vibe-chip-row` (5 pills: Party/Chill/Luxury/Social/Cultural) sits in 
 - **The API runs as service role, so any new route returning posts, comments or attendances must call `hiddenAuthorIds` / `canSeePost` (api/index.js).** Policies can't read profile columns outside the grant directly — use a definer helper.
 - Following is instant (no follow requests yet). "Show email" was removed.
 
+### Storage uploads: never `upsert: true`; service_role grants (28 Nov 2026)
+- Storage buckets only grant INSERT on `storage.objects`. `upload(..., { upsert: true })` also needs SELECT+UPDATE, so it fails with an RLS error (broke squad photo, profile cover, ID verification). Paths are timestamped — always `upsert: false`.
+- Table upserts on tables without an UPDATE policy (e.g. `reactions`) must use `ignoreDuplicates: true` (ON CONFLICT DO NOTHING).
+- `service_role` had lost all privileges on 19 tables (feature_flags, payments, pending_emails, …) → `flagEnabled()` read every flag as OFF and those API routes errored. Restored in `db/restore_service_role_grants.sql`. If API calls fail with `permission denied for table X`, check grants first: `has_table_privilege('service_role','public.X','SELECT')`.
+- `follows` has no `id` column — count with `select('follower_id', { count:'exact', head:true })`.
+
 ### Notifications come from DB triggers — don't insert them in the API too
 `trg_notif_on_reaction` (likes), `trg_notif_on_follow`, `trg_notif_on_comment` (comments + replies) create these notifications; `_sync_comment_count` / `_sync_like_count` keep the counts. An API-side insert/`+1` on top doubles them (happened 27 Nov 2026). Reposts have no trigger — the API sends that one.
 
