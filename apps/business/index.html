@@ -204,6 +204,18 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
 .pf-name{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.03em;line-height:1}
 .pf-type{font-size:.7rem;color:var(--mu2);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
 .pf-city{font-size:.72rem;color:var(--mu);margin-top:4px}
+.pf-cover{position:relative;height:160px;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,rgba(176,38,255,.22),rgba(255,92,0,.18));border:1px solid var(--border);margin-bottom:12px;display:flex;align-items:center;justify-content:center;color:var(--mu2);font-size:.76rem}
+.pf-cover img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
+.pf-cover .btn-sec{position:absolute;right:10px;bottom:10px;min-height:44px;padding:10px 16px;font-size:.74rem}
+.pf-gal{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.pf-tile{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--surf2);border:1px solid var(--border)}
+.pf-tile img{width:100%;height:100%;object-fit:cover;display:block}
+.pf-x{position:absolute;top:0;right:0;width:44px;height:44px;border:none;background:none;padding:6px;cursor:pointer;display:flex;align-items:flex-start;justify-content:flex-end;-webkit-tap-highlight-color:transparent}
+.pf-x span{width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;font-size:.72rem;display:flex;align-items:center;justify-content:center}
+.pf-add{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:100%;border:1.5px dashed var(--border2);background:rgba(168,108,255,.06);color:var(--mu2);font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;cursor:pointer}
+.pf-busy::after{content:'';position:absolute;top:50%;left:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;animation:pf-spin .8s linear infinite}
+.pf-busy img{opacity:.45}
+@keyframes pf-spin{to{transform:rotate(360deg)}}
 
 /* ── MENU LINK CARD ── */
 .menu-link-card{background:linear-gradient(135deg,rgba(176,38,255,.15),rgba(255,92,0,.1));border:1px solid rgba(176,38,255,.3);border-radius:18px;margin:14px;padding:16px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 6px 18px rgba(0,0,0,.18)}
@@ -568,23 +580,36 @@ textarea.ff{min-height:80px;resize:vertical;line-height:1.5}
   </div>
   <div style="padding:0 14px 20px">
     <div class="section-label" style="margin-top:6px">Edit Profile</div>
-    <label class="ff-label">Business Name</label>
-    <input class="ff" type="text" id="pf-name" placeholder="Business Name"/>
-    <label class="ff-label">Tagline / Description</label>
-    <textarea class="ff" id="pf-desc" placeholder="Describe your business…" rows="3"></textarea>
-    <label class="ff-label">Address</label>
-    <input class="ff" type="text" id="pf-address" placeholder="Full street address"/>
-    <div class="ff-row">
-      <div><label class="ff-label">Phone</label><input class="ff" type="tel" id="pf-phone" placeholder="+27 xx xxx xxxx"/></div>
-      <div><label class="ff-label">City</label><input class="ff" type="text" id="pf-city" placeholder="e.g. Durban"/></div>
+    <div class="info-box" id="pf-status">Loading your listing…</div>
+    <div id="pf-form" style="display:none">
+      <label class="ff-label">Cover photo</label>
+      <div class="pf-cover" id="pf-cover"></div>
+      <input type="file" id="pf-cover-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="pfPickCover(this)"/>
+      <label class="ff-label">Business Name</label>
+      <input class="ff" type="text" id="pf-name" maxlength="80" placeholder="Business Name"/>
+      <label class="ff-label">Tagline</label>
+      <input class="ff" type="text" id="pf-tagline" maxlength="120" placeholder="e.g. Durban's best shisanyama"/>
+      <label class="ff-label">Description</label>
+      <textarea class="ff" id="pf-desc" maxlength="1000" placeholder="Describe your business…" rows="3"></textarea>
+      <label class="ff-label">Address</label>
+      <input class="ff" type="text" id="pf-address" maxlength="200" placeholder="Full street address"/>
+      <div class="ff-row">
+        <div><label class="ff-label">Phone</label><input class="ff" type="tel" id="pf-phone" maxlength="20" placeholder="+27 xx xxx xxxx"/></div>
+        <div><label class="ff-label">City</label><input class="ff" type="text" id="pf-city" maxlength="60" placeholder="e.g. Durban"/></div>
+      </div>
+      <label class="ff-label">Price range</label>
+      <select class="ff" id="pf-price"><option value="">Not set</option><option value="R">R — budget</option><option value="RR">RR — moderate</option><option value="RRR">RRR — pricey</option><option value="RRRR">RRRR — luxury</option></select>
+      <label class="ff-label">Website</label>
+      <input class="ff" type="url" id="pf-website" maxlength="300" placeholder="https://…"/>
+      <label class="ff-label">Instagram</label>
+      <input class="ff" type="text" id="pf-instagram" maxlength="300" placeholder="@yourhandle or https://instagram.com/…"/>
+      <label class="ff-label">WhatsApp Number (for order notifications)</label>
+      <input class="ff" type="tel" id="pf-wa" maxlength="20" placeholder="+27 82 xxx xxxx"/>
+      <label class="ff-label" style="display:flex;justify-content:space-between">Photos <span id="pf-gal-count">0/12</span></label>
+      <div class="pf-gal" id="pf-gal"></div>
+      <input type="file" id="pf-gal-file" accept="image/jpeg,image/png,image/webp" multiple style="display:none" onchange="pfPickGallery(this)"/>
+      <button class="btn-primary" id="pf-save-btn" style="width:100%;margin-top:4px;min-height:44px" onclick="saveProfile()">Save Profile</button>
     </div>
-    <label class="ff-label">Logo URL</label>
-    <input class="ff" type="url" id="pf-logo" placeholder="https://…/logo.jpg"/>
-    <label class="ff-label">Website / Social Link</label>
-    <input class="ff" type="url" id="pf-website" placeholder="https://…"/>
-    <label class="ff-label">WhatsApp Number (for order notifications)</label>
-    <input class="ff" type="tel" id="pf-wa" placeholder="+27 82 xxx xxxx"/>
-    <button class="btn-primary" style="width:100%;margin-top:4px" onclick="saveProfile()">Save Profile</button>
     <div class="info-box" style="margin-top:12px">🌐 Your public order page: <span id="profile-menu-url" style="font-weight:700"></span></div>
   </div>
 
@@ -1472,7 +1497,6 @@ function initDashboard() {
   renderMenu();
   loadOrders();
   renderHoursEditor();
-  renderProfile();
   renderBizFAQ();
   loadVerifStatus();
   loadPayoutStatus();
@@ -1512,6 +1536,7 @@ function showTab(name, _noPush) {
   if (name === 'promote')   loadBizPromotions();
   if (name === 'events')    loadDiscoverEvents();
   if (name === 'sqpromos') { loadMyOffers(); loadMyBizSquadPromos(); }
+  if (name === 'profile')   renderProfile();
   if (name === 'profile')   renderBizFAQ();
   if (name === 'profile')   loadBizSocialLinks();
   if (name === 'profile')   loadBizLocationStatus();
@@ -2923,40 +2948,134 @@ function renderHomeOrdersPreview() {
 // ════════════════════════════════════════════════════════════
 //  PROFILE
 // ════════════════════════════════════════════════════════════
-function renderProfile() {
-  const pf = load('profile', { name:BIZ.name, type:BIZ.type, city:BIZ.city, province:BIZ.province||'', phone:BIZ.phone, logo:'', address:'', desc:'', website:'', wa:'' });
-  const typeEmoji = { club:'🌙', shisanyama:'🥩', restaurant:'🍽️', bar:'🍺', hotel:'🏨', venue:'🎪', food:'🍔', other:'📍' };
-  const emo = typeEmoji[pf.type || BIZ.type] || '🏪';
-  document.getElementById('profile-hero').innerHTML = `
-    <div class="profile-logo">${pf.logo ? `<img src="${xe(pf.logo)}" loading="lazy" decoding="async" onerror="this.style.display='none'" alt=""/>` : ''}${emo}</div>
-    <div>
-      <div class="pf-name">${xe(pf.name || BIZ.name)}</div>
-      <div class="pf-type">${pf.type || BIZ.type}</div>
-      <div class="pf-city">📍 ${xe((pf.city || BIZ.city) + (pf.province ? ', '+pf.province : ''))}</div>
-      ${pf.phone ? `<div style="font-size:.7rem;color:var(--mu);margin-top:2px">📞 ${xe(pf.phone)}</div>` : ''}
-    </div>`;
-  ['name','desc','address','phone','city','logo','website','wa'].forEach(f => {
-    const el = document.getElementById('pf-' + f); if (el) el.value = pf[f] || '';
-  });
+// The public listing lives in `businesses` (owner_id = auth user id). Owners can't
+// UPDATE it via RLS, so saves go through PATCH /api/businesses/:id.
+const PF_FIELDS = { name:'name', tagline:'tagline', desc:'description', address:'address', city:'city', phone:'phone', wa:'whatsapp', website:'website', instagram:'instagram', price:'price_range' };
+const PF_MAX_PHOTOS = 12, PF_MAX_BYTES = 10 * 1024 * 1024, PF_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+let _pfBiz = null, _pfCover = '', _pfGallery = [], _pfPending = [], _pfCoverBusy = false;
+
+async function renderProfile() {
+  if (_pfPending.length || _pfCoverBusy) return; // don't clobber uploads in progress
+  const st = document.getElementById('pf-status'), form = document.getElementById('pf-form');
+  let row = null, failed = false;
+  try {
+    const sb = getSB();
+    const { data: { session } } = sb ? await sb.auth.getSession() : { data: { session: null } };
+    if (session) {
+      const { data, error } = await sb.from('businesses').select('*').eq('owner_id', session.user.id).limit(1).maybeSingle();
+      if (error) failed = true; else row = data;
+    } else failed = true;
+  } catch (_) { failed = true; }
+  _pfBiz = row;
+  if (!row) {
+    form.style.display = 'none'; st.style.display = '';
+    st.textContent = failed ? 'Could not load your listing — check your connection and try again.' : "Your public listing isn't set up yet — contact support.";
+    return;
+  }
+  st.style.display = 'none'; form.style.display = '';
+  const priceSel = document.getElementById('pf-price'); // keep an old non-R value selectable so saving doesn't wipe it
+  if (row.price_range && ![...priceSel.options].some(o => o.value === row.price_range)) priceSel.add(new Option(row.price_range, row.price_range));
+  Object.entries(PF_FIELDS).forEach(([f, col]) => { const el = document.getElementById('pf-' + f); if (el) el.value = row[col] || ''; });
+  _pfCover   = row.cover_image_url || '';
+  _pfGallery = Array.isArray(row.gallery_urls) ? row.gallery_urls.slice() : [];
+  pfRenderCover(); pfRenderGallery();
 }
 
-function saveProfile() {
-  const pf = {
-    name:    document.getElementById('pf-name').value.trim()    || BIZ.name,
-    desc:    document.getElementById('pf-desc').value.trim(),
-    address: document.getElementById('pf-address').value.trim(),
-    phone:   document.getElementById('pf-phone').value.trim(),
-    city:    document.getElementById('pf-city').value.trim(),
-    logo:    document.getElementById('pf-logo').value.trim(),
-    website: document.getElementById('pf-website').value.trim(),
-    wa:      document.getElementById('pf-wa').value.trim(),
-    type:    BIZ.type, province: BIZ.province || '',
-  };
-  save('profile', pf);
-  BIZ = { ...BIZ, ...pf };
-  localStorage.setItem('biz_session', JSON.stringify(BIZ));
-  document.getElementById('tb-biz-name').textContent = BIZ.name;
-  renderProfile(); toast('Profile saved ✅', 'ok');
+function pfRenderCover() {
+  document.getElementById('pf-cover').innerHTML =
+    (_pfCover ? `<img src="${xe(_pfCover)}" alt="Cover photo" decoding="async"/>` : '<span>No cover photo yet</span>') +
+    `<button class="btn-sec" type="button" onclick="document.getElementById('pf-cover-file').click()"${_pfCoverBusy ? ' disabled' : ''}>${_pfCoverBusy ? 'Uploading…' : 'Change cover'}</button>`;
+  document.getElementById('pf-cover').classList.toggle('pf-busy', _pfCoverBusy);
+}
+
+function pfRenderGallery() {
+  const n = _pfGallery.length + _pfPending.length;
+  document.getElementById('pf-gal-count').textContent = n + '/' + PF_MAX_PHOTOS;
+  document.getElementById('pf-gal').innerHTML =
+    _pfGallery.map((u, i) => `<div class="pf-tile"><img src="${xe(u)}" alt="" loading="lazy" decoding="async"/><button class="pf-x" type="button" aria-label="Remove photo" onclick="pfRemovePhoto(${i})"><span>✕</span></button></div>`).join('') +
+    _pfPending.map(p => `<div class="pf-tile pf-busy"><img src="${xe(p.preview)}" alt=""/></div>`).join('') +
+    (n < PF_MAX_PHOTOS ? `<button class="pf-tile pf-add" type="button" onclick="document.getElementById('pf-gal-file').click()"><span style="font-size:1.4rem;line-height:1">+</span>Add photos</button>` : '');
+}
+
+function pfCheckFile(file) {
+  if (!PF_TYPES.includes(file.type)) { toast('Please choose a JPG, PNG or WebP photo', 'err'); return false; }
+  if (file.size > PF_MAX_BYTES)      { toast('That photo is over 10MB — pick a smaller one', 'err'); return false; }
+  return true;
+}
+
+async function pfPickCover(input) {
+  const file = input.files[0]; input.value = '';
+  if (!file || !_pfBiz || !pfCheckFile(file)) return;
+  _pfCoverBusy = true; pfRenderCover();
+  try { _pfCover = await uploadToUploads(file, 'biz/' + _pfBiz.id); }
+  catch (_) { toast('Cover upload failed — please try again', 'err'); }
+  _pfCoverBusy = false; pfRenderCover();
+}
+
+async function pfPickGallery(input) {
+  const files = Array.from(input.files || []); input.value = '';
+  if (!_pfBiz) return;
+  const room = PF_MAX_PHOTOS - _pfGallery.length - _pfPending.length;
+  const ok = files.filter(pfCheckFile).slice(0, Math.max(0, room));
+  if (files.length > room) toast(`Max ${PF_MAX_PHOTOS} photos — only ${Math.max(0, room)} more allowed`, 'err');
+  await Promise.all(ok.map(async file => {
+    const p = { preview: URL.createObjectURL(file) };
+    _pfPending.push(p); pfRenderGallery();
+    try { _pfGallery.push(await uploadToUploads(file, 'biz/' + _pfBiz.id)); }
+    catch (_) { toast('A photo failed to upload — please try again', 'err'); }
+    _pfPending = _pfPending.filter(x => x !== p); URL.revokeObjectURL(p.preview);
+    pfRenderGallery();
+  }));
+}
+
+function pfRemovePhoto(i) { _pfGallery.splice(i, 1); pfRenderGallery(); }
+
+// Accept "club.co.za" / "@handle" and turn them into the https:// links the API requires.
+function pfLink(v, ig) {
+  v = v.trim();
+  if (!v || /^[a-z]+:/i.test(v)) return v;
+  if (ig && /^@?[A-Za-z0-9._]+$/.test(v)) return 'https://instagram.com/' + v.replace(/^@/, '');
+  return 'https://' + v;
+}
+
+async function saveProfile() {
+  if (!_pfBiz) return;
+  if (_pfPending.length || _pfCoverBusy) return toast('Wait for your photos to finish uploading', 'err');
+  const val = f => document.getElementById('pf-' + f).value.trim();
+  if (!val('name')) return toast('Business name is required', 'err');
+  const all = {};
+  Object.entries(PF_FIELDS).forEach(([f, col]) => { all[col] = val(f); });
+  all.website = pfLink(all.website); all.instagram = pfLink(all.instagram, true);
+  all.cover_image_url = _pfCover; all.gallery_urls = _pfGallery;
+  // Send only what changed, so an old value saved before the API rules (e.g. an
+  // external cover URL) can't block saving the fields the owner did edit.
+  const body = {};
+  Object.entries(all).forEach(([col, v]) => {
+    const was = col === 'gallery_urls' ? JSON.stringify(_pfBiz[col] || []) : (_pfBiz[col] || '');
+    if ((col === 'gallery_urls' ? JSON.stringify(v) : v) !== was) body[col] = v;
+  });
+  if (!Object.keys(body).length) return toast('No changes to save');
+  const btn = document.getElementById('pf-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const sb = getSB();
+    const { data: { session } } = sb ? await sb.auth.getSession() : { data: { session: null } };
+    if (!session) throw new Error('Session expired — please sign in again');
+    const r = await fetch('/api/businesses/' + encodeURIComponent(_pfBiz.id), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'Could not save — please try again');
+    if (d.business) _pfBiz = d.business;
+    document.getElementById('pf-website').value = all.website; document.getElementById('pf-instagram').value = all.instagram;
+    BIZ ={ ...BIZ, name: all.name, city: all.city || BIZ.city, phone: all.phone };
+    localStorage.setItem('biz_session', JSON.stringify(BIZ));
+    document.getElementById('tb-biz-name').textContent = BIZ.name;
+    toast('Saved — customers can see it now ✅', 'ok');
+  } catch (e) { toast(e.message, 'err'); }
+  btn.disabled = false; btn.textContent = 'Save Profile';
 }
 
 // ════════════════════════════════════════════════════════════
