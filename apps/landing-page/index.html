@@ -305,18 +305,20 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .bzhero-dots i.on{width:16px;border-radius:3px;background:#fff}
 .bzhero .bzg,.bzhero .bzhb{pointer-events:none}
 .bzhero .bzhb{padding-bottom:24px}
+.bzhero .bzn{overflow-wrap:anywhere}
+.bzhero.nophoto{height:min(34vh,260px)}
 .bzar{display:none;position:absolute;top:50%;margin-top:-22px;z-index:3;width:44px;height:44px;border-radius:50%;border:none;background:rgba(0,0,0,.55);color:#fff;font-size:1.3rem;cursor:pointer;align-items:center;justify-content:center}
 .bzar.l{left:10px}.bzar.r{right:10px}
 @media (hover:hover) and (pointer:fine){.bzar{display:flex}}
 /* Quick facts + labelled actions */
 .bzfacts{display:flex;flex-wrap:wrap;gap:6px;padding:12px 16px 0}
-.bzf{display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:4px 11px;border-radius:50px;background:var(--surf);border:1px solid var(--border);font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;color:var(--mu2)}
-.bzf.op{color:#4ADE80;border-color:rgba(74,222,128,.35);background:rgba(74,222,128,.08)}
-.bzf.cl{color:var(--pk);border-color:rgba(255,45,136,.35);background:rgba(255,45,136,.08)}
+.bzf{display:inline-flex;align-items:center;gap:5px;min-height:28px;white-space:nowrap;padding:4px 11px;border-radius:50px;background:var(--surf);border:1px solid var(--border);font-family:'Syne',sans-serif;font-size:.68rem;font-weight:700;color:var(--mu2)}
+.bzf.is-op{color:#4ADE80;border-color:rgba(74,222,128,.35);background:rgba(74,222,128,.08)}
+.bzf.is-cl{color:var(--pk);border-color:rgba(255,45,136,.35);background:rgba(255,45,136,.08)}
 .bzf .bdist{margin-left:0}.bzf .puls-badge{margin-left:0;width:14px;height:14px}
 .bzacts{display:flex;gap:8px;padding:12px 16px 14px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
 .bzacts::-webkit-scrollbar{display:none}
-.bza{flex:1 1 0;min-width:62px;min-height:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:8px 4px;border-radius:14px;background:var(--surf);border:1px solid var(--border);color:var(--tx);text-decoration:none;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .18s}
+.bza{flex:1 1 0;min-width:62px;max-width:120px;min-height:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:8px 4px;border-radius:14px;background:var(--surf);border:1px solid var(--border);color:var(--tx);text-decoration:none;font-family:'Syne',sans-serif;font-size:.62rem;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .18s}
 .bza:active{background:var(--surf2)}
 .bza .ic{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center}
 /* Info tab cards, photo strip, gallery grid */
@@ -359,7 +361,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .hr2:last-child{border-bottom:none}
 .hrd{color:var(--mu);font-family:'Syne',sans-serif;font-weight:600;font-size:.74rem}
 .hrt{font-family:'Syne',sans-serif;font-weight:700;font-size:.74rem}
-.hrt.op{color:#4ADE80}.hrt.cl{color:var(--pk)}
+.hrt.is-op{color:#4ADE80}.hrt.is-cl{color:var(--pk)}
 .tg{display:inline-block;background:rgba(255,92,0,.08);border:1px solid rgba(255,92,0,.2);color:var(--or);font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;padding:4px 11px;border-radius:50px;margin:3px}
 .dg2{display:grid;grid-template-columns:1fr 1fr;gap:11px;padding:0 14px 20px}
 .de{background:var(--surf);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .2s;-webkit-tap-highlight-color:transparent}
@@ -2076,6 +2078,8 @@ function goBack() { history.back(); }
 function goHome() { showTab('home'); }
 
 window.addEventListener('popstate', e => {
+  // Lightbox closed with ✕/Esc already hid itself and stepped back off its own entry
+  if (window._bizLbSkipPop) { window._bizLbSkipPop = false; return; }
   // Lumi opened from the Pulse button on /feeds: back returns there
   if (window._lumiReturn && document.getElementById('lumi-chat-sheet')?.style.display === 'flex') { location.href = window._lumiReturn; return; }
   // Priority 1 — close any open overlay/panel; keep user on current tab
@@ -2094,7 +2098,8 @@ window.addEventListener('popstate', e => {
   // Style-toggled overlays (display:flex or display:block when visible)
   const styleOverlays = [
     ['fl-overlay',           () => { document.getElementById('fl-overlay').style.display = 'none'; }],           // z:4000
-    ['comments-overlay',     closeComments],                                                                       // z:3600
+    ['biz-lb',               () => closeBizLb(true)],                                                              // z:3800 business photo lightbox
+    ['comments-overlay',     closeComments],                                                                     // z:3600
     ['prof-overlay',         closeProfOverlay],                                                                    // z:3500
     ['friends-list-overlay', () => { document.getElementById('friends-list-overlay').style.display = 'none'; }], // z:3000
     ['squad-invite-overlay', closeSquadInvite],                                                                    // z:2700
@@ -2105,7 +2110,8 @@ window.addEventListener('popstate', e => {
     const el = document.getElementById(id);
     if (el && el.style.display !== '' && el.style.display !== 'none') {
       fn();
-      history.replaceState({ tab: curTab, detail: false }, '');
+      // The lightbox pushed its own entry, so the one we land on is the business page itself
+      history.replaceState({ tab: curTab, detail: id === 'biz-lb' }, '');
       return;
     }
   }
@@ -3712,69 +3718,269 @@ async function initPay(evId) {
 /* ══════════════════════════════════════════════════
    BUSINESS DETAIL — live API call
 ══════════════════════════════════════════════════ */
+// JSON column that may arrive as a string -> array (never throws)
+function _bizArr(v) {
+  if (typeof v === 'string') { try { v = JSON.parse(v || '[]'); } catch(e) { return []; } }
+  return Array.isArray(v) ? v : [];
+}
+// Only plain http(s) URLs are allowed into href/src
+function _httpUrl(u) { u = typeof u === 'string' ? u.trim() : ''; return /^https?:\/\/[^\s<>"']+$/i.test(u) ? u : ''; }
+
+/* Opening hours. Two row formats exist:
+   seeded:    {day:'Mon-Fri', time:'11:00-Late', open:true}
+   dashboard: {day:'Monday', open:true, from:'10:00', to:'18:00'}
+   _bizRowTime() turns either into one time string ('11:00-Late' / '10:00-18:00' / 'Closed'). */
+function _bizRowTime(h) {
+  if (!h || typeof h !== 'object') return '';
+  if (h.open === false) return 'Closed';
+  if (typeof h.time === 'string' && h.time.trim()) return h.time.trim();
+  if (h.from && h.to) return String(h.from).trim() + '-' + String(h.to).trim();
+  return '';
+}
+// Day spec -> [0..6] (0 = Sun), or null if it can't be read. Accepts Mon, Monday, Mon-Fri, Fri-Mon,
+// "Mon, Wed", Daily / Every day, Weekdays, Weekends.
+function _bizDays(spec) {
+  const FULL = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+  const day = w => { w = w.replace(/\.$/, ''); return w.length >= 3 ? FULL.findIndex(f => f.startsWith(w)) : -1; };
+  const out = new Set();
+  for (const part of String(spec || '').toLowerCase().split(/,|&|\band\b/)) {
+    const p = part.trim();
+    if (!p) continue;
+    if (/^(daily|every ?day|all week)$/.test(p)) { [0,1,2,3,4,5,6].forEach(d => out.add(d)); continue; }
+    if (p === 'weekdays') { [1,2,3,4,5].forEach(d => out.add(d)); continue; }
+    if (p === 'weekends' || p === 'weekend') { out.add(6); out.add(0); continue; }
+    const m = p.match(/^([a-z]+\.?)\s*(?:-|–|to)\s*([a-z]+\.?)$/);
+    if (m) {
+      const a = day(m[1]), b = day(m[2]);
+      if (a < 0 || b < 0) return null;
+      for (let d = a; ; d = (d + 1) % 7) { out.add(d); if (d === b) break; }
+      continue;
+    }
+    const d = day(p);
+    if (d < 0) return null;
+    out.add(d);
+  }
+  return out.size ? [...out] : null;
+}
+// "11:00-23:00" / "20:00-04:00" / "11:00-Late" -> {s, e, late} in minutes from that day's 00:00 (e may pass 1440)
+function _bizSpan(t) {
+  const m = String(t || '').trim().toLowerCase().match(/^(\d{1,2})[:h.](\d{2})\s*(?:-|–|to)\s*(?:(late)|(\d{1,2})[:h.](\d{2}))$/);
+  if (!m || +m[1] > 23 || +m[2] > 59) return null;
+  const s = +m[1] * 60 + +m[2];
+  if (m[3]) return { s, e: 1440, late: true };
+  if (+m[4] > 24 || +m[5] > 59 || (+m[4] === 24 && +m[5] > 0)) return null;
+  let e = +m[4] * 60 + +m[5];
+  if (e <= s) e += 1440; // overnight, e.g. 20:00-04:00
+  return { s, e, late: false };
+}
+function _bizHM(min) { min = ((min % 1440) + 1440) % 1440; return String(Math.floor(min / 60)).padStart(2, '0') + ':' + String(min % 60).padStart(2, '0'); }
+// SA day-of-week + minutes. Africa/Johannesburg is UTC+2 all year (no DST).
+function _sastNow(now) { const t = new Date((now || new Date()).getTime() + 2 * 3600e3); return { d: t.getUTCDay(), m: t.getUTCHours() * 60 + t.getUTCMinutes() }; }
+// Best-effort {open, label} or null when we can't be sure. Never guesses: any unreadable row,
+// an unlisted or contradictory day (listed both open and closed), or the hours after a "Late"
+// close all give null, and the chip is simply not shown.
+function _bizOpenState(rows, now) {
+  rows = Array.isArray(rows) ? rows : [];
+  if (!rows.length) return null;
+  const week = Array.from({ length: 7 }, () => ({ op: false, cl: false, iv: [] }));
+  for (const r of rows) {
+    const days = r && typeof r === 'object' ? _bizDays(r.day) : null;
+    if (!days) return null;
+    const t = _bizRowTime(r);
+    const closed = /^closed$/i.test(t);
+    const iv = closed ? null : _bizSpan(t);
+    if (!closed && !iv) return null;
+    days.forEach(d => { if (closed) week[d].cl = true; else { week[d].op = true; week[d].iv.push(iv); } });
+  }
+  const ok = i => (week[i].op || week[i].cl) && !(week[i].op && week[i].cl);
+  const { d, m } = _sastNow(now), y = (d + 6) % 7;
+  // Still open from last night? (unknown yesterday: only trust today after 06:00)
+  if (!ok(y)) { if (m < 360) return null; }
+  else for (const v of week[y].iv) {
+    if (m + 1440 < v.e) return { open: true, label: 'Open now · until ' + _bizHM(v.e) };
+    if (v.late && m < 360) return null; // closed "Late" — can't tell if it's still open after midnight
+  }
+  if (!ok(d)) return null;
+  for (const v of week[d].iv) if (m >= v.s && m < v.e) return { open: true, label: 'Open now · until ' + (v.late ? 'late' : _bizHM(v.e)) };
+  const DN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  for (let k = 0; k <= 7; k++) {
+    const di = (d + k) % 7;
+    if (!ok(di)) break;
+    const st = week[di].iv.map(v => v.s).filter(s => k > 0 || s > m).sort((a, b) => a - b);
+    if (st.length) return { open: false, label: 'Closed · opens ' + (k === 0 ? '' : k === 1 ? 'tomorrow ' : DN[di] + ' ') + _bizHM(st[0]) };
+  }
+  return { open: false, label: 'Closed now' };
+}
+
+/* Photo carousel + full-screen lightbox (#biz-lb, z-index 3800) */
+function _bizSmooth() { return matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'; }
+function _bizHeroScroll(el) {
+  const n = el.children.length, i = Math.min(n - 1, Math.round(el.scrollLeft / (el.clientWidth || 1))), hero = el.parentNode;
+  const ct = hero.querySelector('.bzhero-ct');
+  if (ct) ct.textContent = (i + 1) + '/' + n;
+  hero.querySelectorAll('.bzhero-dots i').forEach((dot, k) => dot.classList.toggle('on', k === i));
+}
+function _bizHeroStep(n) { const s = document.querySelector('#biz-detail .bzhero-s'); if (s) s.scrollBy({ left: n * s.clientWidth, behavior: _bizSmooth() }); }
+function _bizShowGallery() {
+  const t = document.querySelector('#biz-detail .bztb .bzt:nth-child(3)'), pn = document.getElementById('tab-biz-detail');
+  if (!t || !pn) return;
+  switchBT(t, 'bp-gallery');
+  const g = document.getElementById('bp-gallery');
+  pn.scrollTop += g.getBoundingClientRect().top - t.closest('.bztb').getBoundingClientRect().bottom;
+}
+function openBizLb(i) {
+  const ph = window._bizPhotos || [];
+  if (!ph.length) return;
+  let lb = document.getElementById('biz-lb');
+  if (!lb) {
+    lb = document.createElement('div');
+    lb.id = 'biz-lb'; lb.className = 'bzlb';
+    lb.setAttribute('role', 'dialog'); lb.setAttribute('aria-modal', 'true'); lb.setAttribute('aria-label', 'Photos');
+    document.body.appendChild(lb);
+  }
+  lb.innerHTML = `<div class="bzlb-top"><span class="bzlb-ct"></span><button class="bzlb-x" onclick="closeBizLb()" aria-label="Close photos">✕</button></div>
+    <div class="bzlb-s" onscroll="_bizLbCount()">${ph.map((p, k) => `<figure class="bzlb-i"><img src="${x(iU(p.u, 1600, 85))}" ${Math.abs(k - i) > 1 ? 'loading="lazy" ' : ''}decoding="async" alt="${x(p.cap)}"/>${p.cap ? `<figcaption>${x(p.cap)}</figcaption>` : ''}</figure>`).join('')}</div>
+    ${ph.length > 1 ? '<button class="bzar l" onclick="_bizLbStep(-1)" aria-label="Previous photo">‹</button><button class="bzar r" onclick="_bizLbStep(1)" aria-label="Next photo">›</button>' : ''}`;
+  lb.style.display = 'flex';
+  const s = lb.querySelector('.bzlb-s');
+  s.scrollLeft = i * s.clientWidth;
+  _bizLbCount();
+  document.addEventListener('keydown', _bizLbKey);
+  // Own history entry so the phone's back button closes the photo, not the page
+  history.pushState({ tab: curTab, detail: true, lb: 1 }, '');
+  lb.querySelector('.bzlb-x').focus();
+}
+function closeBizLb(fromPop) {
+  const lb = document.getElementById('biz-lb');
+  if (!lb || lb.style.display !== 'flex') return;
+  lb.style.display = 'none'; lb.innerHTML = '';
+  document.removeEventListener('keydown', _bizLbKey);
+  if (!fromPop && history.state && history.state.lb) { window._bizLbSkipPop = true; history.back(); }
+}
+function _bizLbKey(e) {
+  if (e.key === 'Escape') closeBizLb();
+  else if (e.key === 'ArrowRight') _bizLbStep(1);
+  else if (e.key === 'ArrowLeft') _bizLbStep(-1);
+}
+function _bizLbStep(n) { const s = document.querySelector('#biz-lb .bzlb-s'); if (s) s.scrollBy({ left: n * s.clientWidth, behavior: _bizSmooth() }); }
+function _bizLbCount() {
+  const lb = document.getElementById('biz-lb'), s = lb && lb.querySelector('.bzlb-s');
+  if (!s) return;
+  const n = s.children.length;
+  lb.querySelector('.bzlb-ct').textContent = Math.min(n, Math.round(s.scrollLeft / (s.clientWidth || 1)) + 1) + ' / ' + n;
+}
+
 async function openBiz(bizId) {
   window._currentBizId = bizId;
-  document.getElementById('biz-detail').innerHTML = `<div style="padding:40px;text-align:center"><div class="skel" style="height:250px;border-radius:0;margin-bottom:20px"></div></div>`;
+  document.getElementById('biz-detail').innerHTML = `<div class="bzhero skel" style="border-radius:0"></div><div style="padding:16px"><div class="skel" style="height:62px;border-radius:14px;margin-bottom:12px"></div><div class="skel" style="height:120px;border-radius:14px"></div></div>`;
   showDetailTab('biz-detail');
 
   try {
     const sb = getSB();
-    const [{ business: b }, { count: bizLikeCount }, bizLikedRes] = await Promise.all([
+    const [{ business: b }, { count: bizLikeCount }, bizLikedRes, menuPhotoRes] = await Promise.all([
       Api.get('/businesses/' + encodeURIComponent(bizId)).catch(() => ({})),
       sb.from('reactions').select('user_id', { count: 'exact', head: true }).eq('entity_id', bizId).eq('entity_type', 'businesses'),
       currentUser ? sb.from('reactions').select('user_id').eq('entity_id', bizId).eq('entity_type', 'businesses').eq('user_id', currentUser.id).maybeSingle() : Promise.resolve({ data: null }),
+      sb.from('menu_items').select('image_url,name').eq('business_id', bizId).eq('is_available', true).not('image_url', 'is', null).limit(12).then(r => r, () => ({ data: [] })),
     ]);
     if (!b) throw new Error('Not found');
     const bizLiked = !!bizLikedRes.data;
 
-    const emo  = ce(b.category);
-    const stars = '★'.repeat(Math.round(b.rating || 0)) + '☆'.repeat(5 - Math.round(b.rating || 0));
-    const hours   = typeof b.hours   === 'string' ? JSON.parse(b.hours   || '[]') : (b.hours   || []);
-    const tags    = typeof b.tags    === 'string' ? JSON.parse(b.tags    || '[]') : (b.tags    || []);
-    const gallery = typeof b.gallery_urls === 'string' ? JSON.parse(b.gallery_urls || '[]') : (b.gallery_urls || []);
+    const emo   = ce(b.category);
+    const hours = _bizArr(b.hours).filter(h => h && typeof h === 'object');
+    const chips = [...new Set([..._bizArr(b.tags), ..._bizArr(b.amenities)].filter(t => typeof t === 'string' && t.trim()))];
+    // Photos: cover, then gallery, then menu dishes (captioned). http(s) only, no duplicates.
+    const photos = [], seen = new Set();
+    const addPhoto = (u, cap) => { u = _httpUrl(u); if (u && !seen.has(u)) { seen.add(u); photos.push({ u, cap: cap || '' }); } };
+    addPhoto(b.cover_image_url);
+    _bizArr(b.gallery_urls).forEach(u => addPhoto(u));
+    ((menuPhotoRes && menuPhotoRes.data) || []).forEach(mi => addPhoto(mi.image_url, String(mi.name || '')));
+    window._bizPhotos = photos;
+    const tile = (p, i, w) => `<button class="bzph" onclick="openBizLb(${i})" aria-label="${x(p.cap || 'Photo ' + (i + 1))}"><img src="${x(iU(p.u, w, 70))}" loading="lazy" decoding="async" alt="" onerror="this.style.visibility='hidden'"/>${p.cap ? `<span class="bzph-cap">${x(p.cap)}</span>` : ''}</button>`;
+
+    const rating = parseFloat(b.rating) || 0, reviews = parseInt(b.review_count, 10) || 0;
+    const state = _bizOpenState(hours);
+    const today = _sastNow().d;
+    const lat = parseFloat(b.lat), lon = parseFloat(b.lon);
+    const inSA = lat >= -35 && lat <= -22 && lon >= 16 && lon <= 33;
+    const dirUrl = inSA ? 'https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lon
+      : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent([b.address || b.name, b.suburb, b.city].filter(Boolean).join(', '));
+    const tel = String(b.phone || '').replace(/[^\d+]/g, '');
+    let wa = String(b.whatsapp || b.phone || '').replace(/\D/g, '');
+    if (wa.startsWith('0')) wa = '27' + wa.slice(1); // SA local number -> international for wa.me
+    const site = _httpUrl(b.website), fb = _httpUrl(b.facebook);
+    const igHandle = String(b.instagram || '').trim().replace(/^@/, '');
+    const ig = /instagram\.com/i.test(igHandle) ? _httpUrl(igHandle) : (/^[A-Za-z0-9._]{1,30}$/.test(igHandle) ? 'https://instagram.com/' + igHandle : '');
+    const act = (href, bg, svg, label, ext) => `<a class="bza" href="${x(href)}"${ext ? ' target="_blank" rel="noopener"' : ''}><span class="ic" style="background:${bg}">${svg}</span>${label}</a>`;
+    const SVG_CALL = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.8 19.79 19.79 0 01.01 2.18 2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>';
+    const SVG_WA = '<svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.135.563 4.14 1.543 5.876L0 24l6.276-1.517A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.895 0-3.668-.518-5.19-1.42l-.37-.22-3.853.932.976-3.743-.242-.385A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>';
+    const SVG_DIR = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>';
+    const SVG_WEB = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>';
+    const SVG_IG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.5" cy="6.5" r="1.1" fill="#fff" stroke="none"/></svg>';
+    const SVG_FB = '<svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>';
+    const addrMain = String(b.address || '').trim();
+    const addrRest = [...new Set([b.suburb, b.city, b.province].map(v => String(v || '').trim()).filter(v => v && v !== addrMain))].join(', ');
+    const dist = _bizDist(b);
+    const facts = [
+      state ? `<span class="bzf ${state.open ? 'is-op' : 'is-cl'}">● ${x(state.label)}</span>` : '',
+      b.price_range ? `<span class="bzf">${x(b.price_range)}</span>` : '',
+      dist ? `<span class="bzf">${dist}</span>` : '',
+      b.is_verified ? `<span class="bzf"><span class="puls-badge" title="Verified by Pulsefy"></span>Verified</span>` : '',
+    ].join('');
 
     document.getElementById('biz-detail').innerHTML = `
-      <div class="bzh"><img src="${x(iU(b.cover_image_url, 1200, 80))}" alt="${x(b.name)}" onerror="this.style.display='none'"/>
-        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:5rem;opacity:.25">${emo}</div>
+      <div class="bzhero${photos.length ? '' : ' nophoto'}">
+        ${photos.length ? `<div class="bzhero-s" onscroll="_bizHeroScroll(this)">${photos.map((p, i) => `<div class="bzhero-i" onclick="openBizLb(${i})"><img src="${x(iU(p.u, 1200, 80))}" ${i ? 'loading="lazy" ' : 'fetchpriority="high" '}decoding="async" alt="${x(p.cap || b.name)}" onerror="this.style.visibility='hidden'"/></div>`).join('')}</div>` : `<div class="bzhero-ph">${emo}</div>`}
         <div class="bzg"></div>
+        ${photos.length > 1 ? `<span class="bzhero-ct">1/${photos.length}</span>${photos.length <= 10 ? `<div class="bzhero-dots">${photos.map((_, i) => `<i${i ? '' : ' class="on"'}></i>`).join('')}</div>` : ''}<button class="bzar l" onclick="_bizHeroStep(-1)" aria-label="Previous photo">‹</button><button class="bzar r" onclick="_bizHeroStep(1)" aria-label="Next photo">›</button>` : ''}
         <div class="bzhb">
-          <div class="bzcb">${x(b.category)}${b.is_frontline ? ' ⭐ Featured' : ''}${b.is_verified ? ' <span class="puls-badge" title="Verified by Pulsefy" style="width:14px;height:14px"></span>' : ''}</div>
+          <div class="bzcb">${x(b.category)}${b.is_frontline ? ' ⭐ Featured' : ''}</div>
           <div class="bzn">${x(b.name)}</div>
-          <div class="bzm"><span style="font-family:'Syne',sans-serif;font-weight:700;color:#F0C040">${stars} ${b.rating || ''}</span><span>(${(b.review_count || 0).toLocaleString()} reviews)</span>${b.price_range ? `<span>${b.price_range}</span>` : ''}<span>${x(b.suburb || b.city || '')}</span></div>
+          <div class="bzm">${rating ? `<span class="bzs">★ ${rating.toFixed(1)}</span><span>(${reviews.toLocaleString()} reviews)</span>` : '<span>New on Pulsefy</span>'}${b.suburb || b.city ? `<span>📍 ${x(b.suburb || b.city)}</span>` : ''}</div>
         </div>
       </div>
-      <div class="cr2">
-        ${b.phone ? `<a class="cb ph" href="tel:${x(b.phone)}" title="Call"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.8 19.79 19.79 0 01.01 2.18 2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg></a>` : ''}
-        ${b.phone ? `<a class="cb wa" href="https://wa.me/${(b.phone || '').replace(/\D/g, '')}" target="_blank" title="WhatsApp"><svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.135.563 4.14 1.543 5.876L0 24l6.276-1.517A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.895 0-3.668-.518-5.19-1.42l-.37-.22-3.853.932.976-3.743-.242-.385A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg></a>` : ''}
-        ${b.website ? `<a class="cb wb" href="${x(b.website)}" target="_blank" title="Website"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg></a>` : ''}
-        <a class="cb fb2" href="https://www.facebook.com/search?q=${encodeURIComponent(b.name)}" target="_blank" title="Facebook"><svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
-        <button class="cb dr" onclick="window.open('https://maps.google.com/?q=${encodeURIComponent((b.address || b.name) + ', ' + (b.city || ''))}','_blank')" title="Directions"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--mu2)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></button>
+      ${facts ? `<div class="bzfacts">${facts}</div>` : ''}
+      <div class="bzacts">
+        ${tel.replace(/\D/g, '').length >= 9 ? act('tel:' + tel, '#34C759', SVG_CALL, 'Call') : ''}
+        ${wa.length >= 10 ? act('https://wa.me/' + wa, '#25D366', SVG_WA, 'WhatsApp', 1) : ''}
+        ${act(dirUrl, 'var(--or)', SVG_DIR, 'Directions', 1)}
+        ${site ? act(site, '#7A3CFF', SVG_WEB, 'Website', 1) : ''}
+        ${ig ? act(ig, 'linear-gradient(45deg,#F58529,#DD2A7B,#8134AF)', SVG_IG, 'Instagram', 1) : ''}
+        ${fb ? act(fb, '#1877F2', SVG_FB, 'Facebook', 1) : ''}
       </div>
       <div class="rx">
         <button class="rb ${bizLiked?'lk':''}" onclick="toggleLike(this,'${x(b.id)}','businesses')"><span class="ai">${bizLiked?'❤️':'🤍'}</span><span>${fn(bizLikeCount||0)}</span></button>
-        <button class="rb" onclick="openComments('${x(b.id)}',${jsStr(b.name)})"><span class="ri">💬</span><span class="rl">${fn(Math.round((b.review_count || 0) * .15))}</span></button>
+        <button class="rb" onclick="openComments('${x(b.id)}',${jsStr(b.name)})"><span class="ri">💬</span><span class="rl">Comments</span></button>
         <button class="rb" onclick="toggleSave('biz','${x(b.id)}',this)"><span class="ri">${savedBz.includes(b.id) ? '🔖' : '🏷'}</span><span class="rl">Save</span></button>
         <button class="rb" onclick="shareIt(${jsStr(b.name)})"><span class="ri">🔗</span><span class="rl">Share</span></button>
         <button class="rb" onclick="openReportModal('business','${x(b.id)}',${jsStr(b.name)})"><span class="ri">🚩</span><span class="rl">Report</span></button>
       </div>
-      <div class="bztb"><div class="bzt active" onclick="switchBT(this,'bp-info')">ℹ️ Info</div><div class="bzt" onclick="switchBT(this,'bp-menu');loadBizMenu('${x(b.id)}',${jsStr(b.name)})">🍽 Menu</div><div class="bzt" onclick="switchBT(this,'bp-gallery')">📸 Gallery</div></div>
+      <div class="bztb"><div class="bzt active" onclick="switchBT(this,'bp-info')">ℹ️ Info</div><div class="bzt" onclick="switchBT(this,'bp-menu');loadBizMenu('${x(b.id)}',${jsStr(b.name)})">🍽 Menu</div><div class="bzt" onclick="switchBT(this,'bp-gallery')">📸 Gallery${photos.length ? ' · ' + photos.length : ''}</div></div>
       <div class="bzp" id="bp-menu"><div id="biz-menu-body" style="padding:4px 0"><div style="padding:20px;text-align:center;color:var(--mu);font-size:.78rem">Tap to load menu</div></div></div>
       <div class="bzp active" id="bp-info">
-        <div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px">
-          <div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">About</div>
+        <div class="bzcard">
+          <div class="bzcard-h">About</div>
           ${b.tagline ? `<p style="font-size:.82rem;color:var(--mu2);font-style:italic;margin-bottom:6px">${x(b.tagline)}</p>` : ''}
-          <p style="font-size:.82rem;line-height:1.65;color:var(--mu2)">${x(b.description || '')}</p>
+          ${b.description ? `<p style="font-size:.82rem;line-height:1.65;color:var(--mu2)">${x(b.description)}</p>` : (b.tagline ? '' : `<p style="font-size:.82rem;line-height:1.65;color:var(--mu2)">${x(b.name)} hasn't written a description yet. Tap Directions to find them, or check the menu.</p>`)}
         </div>
-        ${hours.length ? `<div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px"><div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Opening Hours</div>${hours.map(h => `<div class="hr2"><span class="hrd">${x(h.day)}</span><span class="hrt ${h.open ? 'op' : 'cl'}">${x(h.time)}</span></div>`).join('')}</div>` : ''}
-        ${tags.length ? `<div style="background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px"><div style="font-family:'Syne',sans-serif;font-size:.64rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Tags</div><div style="display:flex;flex-wrap:wrap;gap:4px">${tags.map(t => `<span class="tg">${x(t)}</span>`).join('')}</div></div>` : ''}
+        ${photos.length >= 2 ? `<div class="bzcard"><div class="bzcard-h">Photos<button class="bzsee" onclick="_bizShowGallery()">See all ${photos.length} →</button></div><div class="bzstrip">${photos.slice(0, 8).map((p, i) => tile(p, i, 400)).join('')}</div></div>` : ''}
+        ${hours.length ? `<div class="bzcard"><div class="bzcard-h">Opening hours</div>${hours.map(h => {
+          const isToday = (_bizDays(h.day) || []).includes(today);
+          const t = _bizRowTime(h);
+          const closed = /^closed$/i.test(t);
+          return `<div class="hr2${isToday ? ' today' : ''}"><span class="hrd">${x(h.day)}${isToday ? ' · Today' : ''}</span><span class="hrt ${closed ? 'is-cl' : t ? 'is-op' : ''}">${closed ? 'Closed' : t ? x(t.replace(/\s*(?:-|–)\s*/, ' – ')) : '—'}</span></div>`;
+        }).join('')}</div>` : ''}
+        ${addrMain || addrRest ? `<div class="bzcard"><div class="bzcard-h">Address</div><div class="bzaddr">${addrMain ? x(addrMain) + '<br>' : ''}${x(addrRest)}</div><a class="bzdir" href="${x(dirUrl)}" target="_blank" rel="noopener">${SVG_DIR} Get directions</a></div>` : ''}
+        ${chips.length ? `<div class="bzcard"><div class="bzcard-h">Good to know</div><div style="display:flex;flex-wrap:wrap;gap:4px">${chips.map(t => `<span class="tg">${x(t)}</span>`).join('')}</div></div>` : ''}
         <div style="background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.2);border-radius:12px;padding:12px">
           <div style="font-size:.75rem;color:var(--mu2);line-height:1.5">🏪 <strong style="color:var(--cy)">Is this your business?</strong> Claim your Pulsefy profile.</div>
-          <button onclick="openClaimForm()" style="margin-top:8px;background:rgba(0,229,255,.12);border:1px solid rgba(0,229,255,.3);color:var(--cy);padding:7px 16px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer">Claim Profile →</button>
+          <button onclick="openClaimForm()" style="margin-top:8px;min-height:44px;background:rgba(0,229,255,.12);border:1px solid rgba(0,229,255,.3);color:var(--cy);padding:7px 16px;border-radius:50px;font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;cursor:pointer">Claim Profile →</button>
         </div>
       </div>
       <div class="bzp" id="bp-gallery">
-        ${gallery.length ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">${gallery.map(u => `<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--surf2)"><img src="${x(u)}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.background='var(--surf2)'"/></div>`).join('')}</div>` : '<p style="color:var(--mu);font-size:.84rem;padding:8px 0">No photos yet.</p>'}
+        ${photos.length ? `<div class="bzgrid">${photos.map((p, i) => tile(p, i, i ? 500 : 900)).join('')}</div>` : _stateHtml('📸', `No photos yet. ${x(b.name)} will be adding pictures soon.`, '', '', 'idle')}
       </div>`;
+    if (!photos.length && window.PulseMascot) PulseMascot.scan(document.getElementById('bp-gallery'));
 
     if (window._pendingBizTab === 'menu') {
       window._pendingBizTab = null;
@@ -3783,7 +3989,7 @@ async function openBiz(bizId) {
     }
     triggerRev();
   } catch(err) {
-    document.getElementById('biz-detail').innerHTML = `<div style="padding:40px;text-align:center;color:var(--mu)">Could not load place. <button onclick="goBack()" style="color:var(--or);background:none;border:none;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700">Go back</button></div>`;
+    document.getElementById('biz-detail').innerHTML = `<div style="padding:calc(var(--th) + var(--tk) + 40px) 40px 40px;text-align:center;color:var(--mu)">Could not load place. <button onclick="goBack()" style="color:var(--or);background:none;border:none;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700">Go back</button></div>`;
   }
 }
 function switchBT(tab, paneId) { tab.closest('.bztb').querySelectorAll('.bzt').forEach(t => t.classList.remove('active')); tab.classList.add('active'); document.querySelectorAll('.bzp').forEach(p => p.classList.remove('active')); document.getElementById(paneId)?.classList.add('active'); }
