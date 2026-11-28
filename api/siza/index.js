@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { sb, sbAs, corsHeaders, verifyToken, rateLimited, captureError, validate } = require('../../lib/shared');
+const { sb, sbAs, corsHeaders, verifyToken, rateLimited, captureError, validate, flagEnabled } = require('../../lib/shared');
 const { groqChat, groqEmbed, buildLumiSystemPrompt, buildPartnerPrompt, lastGroqModel } = require('../../lib/groq');
 
 /* ─── Lumi context helpers ─────────────────────────────────── */
@@ -742,6 +742,7 @@ ${text.slice(0, 4000)}`;
     /* ─── POST /siza/order ────────────────────────────────────── */
     if (url === '/siza/order' && req.method === 'POST') {
       const { eventId, conversationId, customerName, customerEmail, customerPhone, quantity } = req.body || {};
+      if (!await flagEnabled('paystack_live')) return res.status(503).json({ error: 'PAYMENTS_NOT_LIVE', message: "Payments aren't live yet. Pulsefy is in beta, so no real payments are taken. Tickets and subscriptions will open once payments go live." });
       if (!eventId || !customerEmail || !quantity) {
         return res.status(400).json({ error: 'eventId, customerEmail and quantity required' });
       }

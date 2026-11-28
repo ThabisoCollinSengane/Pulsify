@@ -899,6 +899,7 @@ select.inp option{background:#1C1140}
         <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Priority support</div><div style="font-size:.71rem;color:var(--mu)">Faster response from the Pulsefy team</div></div></div>
         <div style="display:flex;gap:10px;align-items:flex-start"><span style="color:#00e564;flex-shrink:0">✅</span><div><div style="font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700">Lumi AI Assistant</div><div style="font-size:.71rem;color:var(--mu)">AI handles customer questions & sells tickets while you sleep</div></div></div>
       </div>
+      <div style="background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.3);border-radius:12px;padding:10px 12px;font-size:.76rem;color:var(--tx);margin-bottom:12px">🚧 Beta: payments aren't live yet, so no real payments are taken. Premium opens when payments go live.</div>
       <button class="btn-primary" style="width:100%;padding:15px;font-size:.92rem" id="org-pay-btn" onclick="startOrgPayment()">Pay R220/month · Activate Premium 🚀</button>
       <div id="org-pay-msg" style="text-align:center;font-size:.68rem;color:var(--mu);margin-top:10px">🔒 Secured by Paystack · Cancel anytime · Monthly billing</div>
     </div>
@@ -1127,7 +1128,7 @@ async function startOrgPayment() {
       body: JSON.stringify({ type: 'subscription_organizer', email: session.user.email })
     });
     const d = await r.json();
-    if (!r.ok) throw new Error(d.error || 'Could not start payment');
+    if (!r.ok) throw new Error(d.message || d.error || 'Could not start payment');
     await paystackReady;
     if (btn) { btn.disabled = false; btn.textContent = 'Pay R220/month · Activate Premium 🚀'; }
     PaystackPop.resumeTransaction(d.access_code, {

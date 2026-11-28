@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError, validate } = require('../../lib/shared');
+const { sb, sbAs, authUser, tokenFrom, corsHeaders, verifyToken, logAdminAction, rateLimited, captureError, validate, flagEnabled } = require('../../lib/shared');
 const { queueEmail } = require('../../lib/email-queue');
 
 // Monthly subscription prices (kobo/cents). Must match the dashboards: organizer R220, business R360.
@@ -188,6 +188,7 @@ module.exports = async (req, res) => {
         email:  { required: true, type: 'email' },
       });
       if (!pv) return;
+      if (!await flagEnabled('paystack_live')) return res.status(503).json({ error: 'PAYMENTS_NOT_LIVE', message: "Payments aren't live yet. Pulsefy is in beta, so no real payments are taken. Tickets and subscriptions will open once payments go live." });
       const { type, email } = pv;
       // The price is set here, never by the browser (a client amount let anyone buy premium for R1).
       const amount = SUBSCRIPTION_PRICES_KOBO[type];

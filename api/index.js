@@ -998,7 +998,7 @@ module.exports = async (req, res) => {
       const total_paid = +(subtotal + commission + psf).toFixed(2);
 
       if (unit_price === 0) return res.status(400).json({ error: 'Use /ticket/purchase for free tickets' });
-      if (!await flagEnabled('paystack_live')) return res.status(503).json({ error: 'Paid tickets are not yet enabled — check back soon.' });
+      if (!await flagEnabled('paystack_live')) return res.status(503).json({ error: 'PAYMENTS_NOT_LIVE', message: "Payments aren't live yet. Pulsefy is in beta, so no real payments are taken. Tickets and subscriptions will open once payments go live." });
 
       const booking_ref = `PKF-${Date.now()}-${require('crypto').randomBytes(5).toString('hex').toUpperCase()}`;
       const qr_sig      = signQr(booking_ref, event_id);
@@ -3139,6 +3139,7 @@ module.exports = async (req, res) => {
       const { user, profile } = auth;
       const { type, entity_id, amount, email } = req.body || {};
       if (!type || !amount || !email) return res.status(400).json({ error: 'type, amount, and email required' });
+      if (!await flagEnabled('paystack_live')) return res.status(503).json({ error: 'PAYMENTS_NOT_LIVE', message: "Payments aren't live yet. Pulsefy is in beta, so no real payments are taken. Tickets and subscriptions will open once payments go live." });
       if (!['ticket','subscription_organizer','subscription_business','promotion'].includes(type))
         return res.status(400).json({ error: 'Invalid payment type' });
       if (!Number.isInteger(amount) || amount < 1) return res.status(400).json({ error: 'amount must be a positive integer in cents' });
