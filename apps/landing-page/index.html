@@ -3268,9 +3268,9 @@ async function openEv(evId) {
         <input class="ff" id="buyer-name" placeholder="Full name *" style="margin-bottom:8px"/>
         <input class="ff" id="buyer-email" type="email" placeholder="Email (ticket sent here) *" style="margin-bottom:12px"/>
         <button class="paybtn" onclick="initPay('${x(ev.id)}')">
-          <span class="psb">PAYSTACK</span><span>${iF ? 'RSVP Free — Confirm Spot' : 'Pay Securely'}</span>
+          ${iF || _paidTicketsLive ? `<span class="psb">PAYSTACK</span><span>${iF ? 'RSVP Free — Confirm Spot' : 'Pay Securely'}</span>` : `<span>Tickets open soon 🎟️</span>`}
         </button>
-        <div style="text-align:center;font-size:.66rem;color:var(--mu);margin-top:8px">🔒 Secured by Paystack · No card data stored</div>
+        ${iF || _paidTicketsLive ? `<div style="text-align:center;font-size:.66rem;color:var(--mu);margin-top:8px">🔒 Secured by Paystack · No card data stored</div>` : `<div style="text-align:center;font-size:.66rem;color:var(--mu);margin-top:8px">Beta — online payments are not live yet. No money is taken.</div>`}
       </div>`;
     } else if (ev.external_url) {
       const srcLabel = { eventbrite:'Eventbrite', ticketmaster:'Ticketmaster', quicket:'Quicket' }[ev.source] || 'Ticket Partner';
